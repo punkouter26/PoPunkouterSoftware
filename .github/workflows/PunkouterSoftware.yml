@@ -1,10 +1,10 @@
-name: Build and deploy .NET Core application to Web App PoPunkouterSoftware
+name: Build and deploy .NET Core application to Web App PunkouterSoftware
 on:
   push:
     branches:
     - master
 env:
-  AZURE_WEBAPP_NAME: PoPunkouterSoftware
+  AZURE_WEBAPP_NAME: PunkouterSoftware
   AZURE_WEBAPP_PACKAGE_PATH: PoPunkouterSoftware\published
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
@@ -44,5 +44,5 @@ jobs:
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.PoPunkouterSoftware_1439 }}
+        publish-profile: ${{ secrets.PunkouterSoftware_957E }}
         package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
