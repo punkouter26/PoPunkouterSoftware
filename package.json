@@ -1,0 +1,23 @@
+{
+  "name": "popunkoutersoftware",
+  "version": "1.0.0",
+  "description": "- [Project Overview](#project-overview)\r - [Installation Instructions](#installation-instructions)\r - [Usage Guidelines](#usage-guidelines)\r - [Contribution Guidelines](#contribution-guidelines)\r - [Issue Reporting](#issue-reporting)\r - [License](#license)\r - [Acknowledgments](#acknowledgments)\r - [Badges](#badges)\r - [Related Documentation](#related-documentation)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/punkouter25/PoPunkouterSoftware.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/punkouter25/PoPunkouterSoftware/issues"
+  },
+  "homepage": "https://github.com/punkouter25/PoPunkouterSoftware#readme",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

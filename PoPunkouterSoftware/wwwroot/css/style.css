@@ -1,14 +1,46 @@
-/* Reset some basic elements */
+/* Reset and base styles */
+:root {
+    --primary-color: #00c6ff;
+    --secondary-color: #0072ff;
+    --accent-color: #32ffa7;
+    --dark-bg: #1a1b26;
+    --light-bg: #24253a;
+    --text-primary: #ffffff;
+    --text-secondary: #b4b4b4;
+    --link-color: #ffd700;
+}
+
 body, h1, h2, p, ul {
     margin: 0;
     padding: 0;
 }
 
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'Roboto', 'Arial', sans-serif;
     line-height: 1.6;
-    color: #333;
+    color: var(--text-primary);
+    background-color: var(--dark-bg);
     padding: 20px;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Circuit board background effect */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(var(--dark-bg) 2px, transparent 2px),
+        linear-gradient(90deg, var(--dark-bg) 2px, transparent 2px);
+    background-size: 30px 30px;
+    background-position: -2px -2px;
+    opacity: 0.1;
+    z-index: -1;
+    pointer-events: none;
 }
 
 /* Header and Navigation Styles */
@@ -16,66 +48,198 @@ header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center; /* Ensure this is set */
-    width: 100%; /* Ensure full width */
-    padding: 10px 0;
+    justify-content: center;
+    width: 100%;
+    padding: 20px 0;
+    background: var(--light-bg);
+    border-bottom: 2px solid var(--primary-color);
+    box-shadow: 0 2px 20px rgba(0, 198, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Tech accent line */
+header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent 0%,
+        var(--primary-color) 20%,
+        var(--accent-color) 50%,
+        var(--primary-color) 80%,
+        transparent 100%
+    );
 }
 
 nav ul {
     list-style: none;
     display: flex;
-    flex-direction: column; /* Change to row on larger screens */
+    flex-direction: column;
     align-items: center;
-    justify-content: center; /* Add this line */
-    width: auto; /* Adjust width to fit content */
-    margin: 0 auto; /* Center the ul within the nav */
-    margin-left: -20px; /* Move the ul 10 pixels to the left */
+    justify-content: center;
+    width: auto;
+    margin: 0 auto;
+    gap: 15px;
 }
 
 nav ul li {
-    margin-left: 20px;
+    position: relative;
 }
 
 nav ul li a {
     text-decoration: none;
-    color: #333;
+    color: var(--link-color);
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    background: var(--light-bg);
+    border: 1px solid transparent;
+}
+
+nav ul li a:hover {
+    color: var(--accent-color);
+    border-color: var(--link-color);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+    transform: translateY(-2px);
 }
 
 .logo {
-    max-width: 100px;
+    max-width: 120px;
+    filter: drop-shadow(0 0 10px var(--primary-color));
 }
 
 /* Main content styles */
 main {
-    margin-top: 20px;
+    margin-top: 40px;
+    background: var(--light-bg);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(0, 198, 255, 0.1);
 }
 
+/* Section headers */
+h1, h2 {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+h1::after, h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+}
+
+/* Gallery styles */
 #gallery {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
 }
 
 .rotating-image {
-    max-width: 100%;
-    margin: 10px;
-    display: block; /* Change to none; using JS to display images */
-    opacity: 1; /* Ensure images are fully visible by default */
+    max-width: 50%;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+    border: 2px solid transparent;
+    margin: 0 auto; /* Center the image */
 }
 
+.rotating-image:hover {
+    transform: scale(1.05);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(0, 198, 255, 0.3);
+}
+
+/* Team section */
 #team article {
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(36, 37, 58, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 198, 255, 0.1);
+    transition: all 0.3s ease;
 }
 
-#team img {
-    max-width: 100%;
-    height: auto;
+#team article:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0, 198, 255, 0.2);
+}
+
+.team-member img {
+    width: 400px;
+    height: 400px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 0 20px rgba(0, 198, 255, 0.2);
+}
+
+/* Testimonial section */
+.testimonial {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 20px;
+    background: rgba(36, 37, 58, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 198, 255, 0.1);
+}
+
+.testimonial video {
+    flex: 1;
+    width: 300px;
+    height: 200px;
+    border-radius: 8px;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 0 20px rgba(0, 198, 255, 0.2);
+}
+
+.testimonial p {
+    flex: 2;
+    color: var(--text-secondary);
+    font-size: 1.1em;
+    line-height: 1.8;
 }
 
 /* Footer Styles */
 footer {
     text-align: center;
-    margin-top: 20px;
+    margin-top: 40px;
+    padding: 20px;
+    background: var(--light-bg);
+    border-top: 2px solid var(--primary-color);
+    color: var(--text-secondary);
+    position: relative;
+}
+
+footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent 0%,
+        var(--primary-color) 20%,
+        var(--accent-color) 50%,
+        var(--primary-color) 80%,
+        transparent 100%
+    );
 }
 
 /* Responsive Design */
@@ -85,100 +249,144 @@ footer {
     }
 
     nav ul {
-        padding: 30px;
         flex-direction: row;
-        justify-content: center; /* Ensure this remains set */
-    }
-
-    nav ul li {
-        margin-left: 30px;
-    }
-
-    #gallery {
-        justify-content: space-around;
+        gap: 30px;
     }
 
     #team article {
         display: flex;
         align-items: center;
+        gap: 30px;
     }
 
     #team img {
         max-width: 50%;
     }
-
-    #team h2, #team p {
-        margin-left: 20px;
-    }
 }
 
 @media (min-width: 1024px) {
     body {
-        max-width: 960px;
+        max-width: 1200px;
         margin: auto;
     }
 
     header {
         flex-direction: row;
+        padding: 20px 40px;
     }
 
     nav ul {
         flex-direction: row;
     }
 }
- 
-.team-member img {
-    width: 400px; /* Adjust the width as needed */
-    height: 400px; /* Adjust the height as needed */
-    object-fit: cover; /* This ensures the aspect ratio is maintained without distorting the image */
-}
-.testimonial {
-    display: flex;
-    align-items: center; /* This ensures that the items are vertically centered */
-    justify-content: space-between; /* This adds space between the video and the text */
-    gap: 20px; /* This adds some space between the video and the text */
-}
 
-.testimonial video {
-    flex: 1; /* Allows the video to grow and take up available space */
-    width: 300px; /* Set your desired width */
-    height: 200px; /* Set your desired height */
-}
-
-.testimonial p {
-    flex: 2; /* Allows the text to take up twice as much space as the video */
-}
-
-/* Add styles for the experiments page */
-.experiments-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    text-align: center;
-}
-
-.experiments-container h1 {
-    font-size: 2.5em;
-    margin-bottom: 20px;
-}
-
-.experiments-container p {
-    font-size: 1.2em;
-    margin-bottom: 20px;
-}
-
-.experiments-container a {
-    display: inline-block;
-    margin: 10px;
+/* Microchip-inspired button styles */
+button, 
+input[type="submit"] {
+    background: var(--light-bg);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
     padding: 10px 20px;
-    font-size: 1.1em;
-    color: #fff;
-    background-color: #007BFF;
-    text-decoration: none;
-    border-radius: 5px;
-    transition: background-color 0.3s ease;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
-.experiments-container a:hover {
-    background-color: #0056b3;
+button:hover,
+input[type="submit"]:hover {
+    background: var(--primary-color);
+    color: var(--dark-bg);
+    box-shadow: 0 0 20px rgba(0, 198, 255, 0.3);
+}
+
+/* Add subtle animation for tech feel */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 198, 255, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 198, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 198, 255, 0); }
+}
+
+.tech-pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Add styles for home page image */
+.home-image {
+    max-width: 25%;
+    height: auto;
+    margin: 0 auto;
+    display: block;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .home-image {
+        max-width: 50%;
+    }
+}
+
+/* Regular link styles */
+a {
+    color: var(--link-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+/* Web Apps Grid */
+.apps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    padding: 20px 0;
+}
+
+.app-card {
+    background: rgba(36, 37, 58, 0.5);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid var(--primary-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.app-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0, 198, 255, 0.2);
+}
+
+.app-card h3 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 1.5em;
+}
+
+.app-card .year {
+    color: var(--accent-color);
+    font-size: 0.9em;
+    margin-bottom: 10px;
+}
+
+.app-card .technologies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.app-card .tech-tag {
+    background: var(--dark-bg);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    border: 1px solid var(--primary-color);
 }
