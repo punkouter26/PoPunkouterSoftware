@@ -9,6 +9,9 @@ on:
       - master
   workflow_dispatch:
 
+env:
+  PUBLISH_PATH: published
+
 jobs:
   build:
     runs-on: windows-latest
@@ -21,19 +24,22 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore PoPunkouterSoftware
 
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build PoPunkouterSoftware --configuration Release --no-restore
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+        run: dotnet publish PoPunkouterSoftware -c Release --no-build -o "${{ env.PUBLISH_PATH }}"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ${{ env.PUBLISH_PATH }}
 
   deploy:
     runs-on: windows-latest
@@ -50,6 +56,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: .net-app
+          path: ${{ env.PUBLISH_PATH }}
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -64,5 +71,4 @@ jobs:
         with:
           app-name: 'PoPunkouterSoftware'
           slot-name: 'Production'
-          package: .
-          
+          package: ${{ env.PUBLISH_PATH }} 
