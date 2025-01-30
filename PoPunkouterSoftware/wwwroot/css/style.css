@@ -396,7 +396,7 @@ a:hover {
 /* Web Apps Grid */
 .apps-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 15px;
     padding: 5px 0;
 }
@@ -555,5 +555,17 @@ a:hover {
     .team-member img {
         width: 150px;
         height: 150px;
+    }
+}
+
+@media (max-width: 900px) {
+    .apps-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .apps-grid {
+        grid-template-columns: 1fr;
     }
 }
