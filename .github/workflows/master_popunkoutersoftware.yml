@@ -9,14 +9,9 @@ on:
       - master
   workflow_dispatch:
 
-env:
-  PUBLISH_PATH: published
-
 jobs:
   build:
     runs-on: windows-latest
-    permissions:
-      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -26,20 +21,17 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore PoPunkouterSoftware
-
       - name: Build with dotnet
-        run: dotnet build PoPunkouterSoftware --configuration Release --no-restore
+        run: dotnet build PoPunkouterSoftware --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish PoPunkouterSoftware -c Release --no-build -o "${{ env.PUBLISH_PATH }}"
+        run: dotnet publish PoPunkouterSoftware -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{ env.PUBLISH_PATH }}
+          path: ${{env.DOTNET_ROOT}}/myapp
 
   deploy:
     runs-on: windows-latest
@@ -47,28 +39,17 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: .net-app
-          path: ${{ env.PUBLISH_PATH }}
-      
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_ED73E9EFCEA847F3A58061815FA35DF7 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5B552AAA10F143B99E1D278D71DE6C21 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_3477B135F72648718E0879656673547B }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'PoPunkouterSoftware'
-          slot-name: 'Production'
-          package: ${{ env.PUBLISH_PATH }} 
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+          package: . 
