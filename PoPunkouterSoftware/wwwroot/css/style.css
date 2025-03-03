@@ -8,19 +8,22 @@
     --text-primary: #ffffff;
     --text-secondary: #b4b4b4;
     --link-color: #ffd700;
+    --transition-speed: 0.3s;
 }
 
-body, h1, h2, p, ul {
+/* Modern CSS reset */
+*, *::before, *::after {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
 body {
-    font-family: 'Roboto', 'Arial', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
     background-color: var(--dark-bg);
-    padding: 10px;
+    padding: clamp(10px, 2vw, 20px);
     position: relative;
     overflow-x: hidden;
     max-width: 100%;
@@ -89,33 +92,35 @@ nav {
     min-width: 280px;
 }
 
-nav ul {
-    list-style: none;
+.nav-list {
     display: flex;
-    align-items: center;
     flex-wrap: wrap;
+    gap: clamp(4px, 1vw, 20px);
     justify-content: center;
-    gap: 4px;
-    padding: 0 4px;
-    margin: 4px 0;
+    list-style: none;
+    padding: 0;
 }
 
-nav ul li {
-    flex: 0 1 auto;
-}
-
-nav ul li a {
+.nav-list a {
     display: block;
-    text-decoration: none;
     color: var(--link-color);
-    font-weight: 500;
-    padding: 4px 8px;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
     border-radius: 4px;
-    background: var(--light-bg);
-    border: 1px solid transparent;
-    font-size: 0.85em;
-    text-align: center;
-    min-width: 60px;
+    transition: 
+        color var(--transition-speed) ease,
+        background-color var(--transition-speed) ease;
+}
+
+.nav-list a:hover,
+.nav-list a:focus {
+    color: var(--accent-color);
+    background-color: rgba(255, 255, 255, 0.1);
+    outline: none;
+}
+
+.nav-list a[aria-current="page"] {
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 @media (min-width: 480px) {
@@ -123,12 +128,12 @@ nav ul li a {
         max-width: 80px;
     }
 
-    nav ul {
+    .nav-list {
         gap: 6px;
         padding: 0 6px;
     }
 
-    nav ul li a {
+    .nav-list a {
         padding: 6px 10px;
         font-size: 0.9em;
     }
@@ -148,11 +153,11 @@ nav ul li a {
         justify-content: flex-end;
     }
 
-    nav ul {
+    .nav-list {
         gap: 8px;
     }
 
-    nav ul li a {
+    .nav-list a {
         padding: 8px 12px;
         font-size: 1em;
     }
@@ -201,6 +206,8 @@ h1::after, h2::after {
     display: block;
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    will-change: opacity;
+    contain: content;
 }
 
 /* Team section */
@@ -285,14 +292,10 @@ footer::before {
         max-width: 150px;
     }
 
-    nav ul {
+    .nav-list {
         flex-direction: row;
         justify-content: center;
         gap: 20px;
-    }
-
-    nav ul li {
-        width: auto;
     }
 
     .apps-grid {
@@ -532,12 +535,12 @@ a:hover {
         max-height: 150px;
     }
 
-    nav ul {
+    .nav-list {
         gap: 5px;
         padding: 0 5px;
     }
 
-    nav ul li a {
+    .nav-list a {
         padding: 6px 12px;
     }
 
@@ -567,5 +570,15 @@ a:hover {
 @media (max-width: 600px) {
     .apps-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Performance optimizations */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
