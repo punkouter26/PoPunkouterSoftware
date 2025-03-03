@@ -19,19 +19,19 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Build with dotnet
-        run: dotnet build PoPunkouterSoftware --configuration Release
+        run: dotnet build "./PoPunkouterSoftware/PoPunkouterSoftware.csproj" --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish PoPunkouterSoftware -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish "./PoPunkouterSoftware/PoPunkouterSoftware.csproj" --configuration Release --output "./publish"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ./publish
 
   deploy:
     runs-on: windows-latest
@@ -52,4 +52,4 @@ jobs:
         with:
           app-name: 'PoPunkouterSoftware'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
-          package: . 
+          package: .
