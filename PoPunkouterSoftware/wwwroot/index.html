@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PoPunkouterSoftware</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- Application Insights JavaScript SDK -->
+    <script type="text/javascript">
+        !function(T,l,y){var S=T.location,k="script",D="instrumentationKey",C="ingestionendpoint",I="disableExceptionTracking",E="ai.device.",b="toLowerCase",w="crossOrigin",N="POST",e="appInsightsSDK",t=y.name||"appInsights";(y.name||T[e])&&(T[e]=t);var n=T[t]||function(d){var g=!1,f=!1,m={initialize:!0,queue:[],sv:"5",version:2,config:d};function v(e,t){var n={},a="Browser";return n[E+"id"]=a[b](),n[E+"type"]=a,n["ai.operation.name"]=S&&S.pathname||"_unknown_",n["ai.internal.sdkVersion"]="javascript:snippet_"+(m.sv||m.version),{time:function(){var e=new Date;function t(e){var t=""+e;return 1===t.length&&(t="0"+t),t}return e.getUTCFullYear()+"-"+t(1+e.getUTCMonth())+"-"+t(e.getUTCDate())+"T"+t(e.getUTCHours())+":"+t(e.getUTCMinutes())+":"+t(e.getUTCSeconds())+"."+((e.getUTCMilliseconds()/1000).toFixed(3)+"").slice(2,5)+"Z"}(),iKey:e,name:"Microsoft.ApplicationInsights."+e.replace(/-/g,"")+"."+t,sampleRate:100,tags:n,data:{baseData:{ver:2}}}}var h=d.url||y.src;if(h){function a(e){var t,n,a,i,r,o,s,c,u,p,l;g=!0,m.queue=[],f||(f=!0,t=h,s=function(){var e={},t=d.connectionString;if(t)for(var n=t.split(";"),a=0;a<n.length;a++){var i=n[a].split("=");2===i.length&&(e[i[0][b]()]=i[1])}if(!e[C]){var r=e.endpointsuffix,o=r?e.location:null;e[C]="https://"+(o?o+".":"")+"dc."+(r||"services.visualstudio.com")}return e}(),c=s[D]||d[D]||"",u=s[C],p=u?u+"/v2/track":d.endpointUrl,l=[].concat(d.disableLogger||[]),se(p,"POST",function(e){for(var t=0;t<l.length;t++)if(l[t](e))return;(e.data&&e.data.baseType&&(i=p,r=N,o=e.headers||{},e&&e.data&&(a=e.data,(o["Content-Type"]="application/x-json-stream",se(i,r,function(e){},o,a))),(a=n).trackException&&a.trackException({exception:new Error("Network error sending data to Application Insights endpoint.")}))),(a=n).trackException&&a.trackException({exception:new Error("Error sending the data.")})}),o(function(){m.queue&&(m.queue=m.queue.filter(function(e){return!e.isAborted}))}),r)}var e=function(e,t){},i=function(e,t){return{unload:r}};function r(){f||(f=!0,se(t,"GET",o,{}))}function o(e){m.queue.push({name:e,time:Ta,event:"unload"})}function s(e){if(delete m.initialize,g)return!0;var t,n,a,i,r,o,s,c,u;(i=Ta)&&(r=i.pathname,o=i.hash),a=(function(){var e,t,n,a,i,r,o,s=y.currentScript||function(){for(var e=y.getElementsByTagName(k),t=e.length;t--;)if(e[t].dataset&&e[t].dataset.scriptid)return e[t]}();if(s){var c=s.src,u=c&&c.match&&c.match(/^[^?]+/);if(u)return u[0]}return""})(),(n=m).context=n.context||{},e&&(n.context.user=n.context.user||{},n.context.user.authId=e),t=function(){c={baseType:"",baseData:{},name:"Microsoft.ApplicationInsights.Message",sampleRate:100,time:Ta,ver:2}},function(e){return l[w]&&l[k].setAttribute(w,"anonymous")}}return m.initialize&&(m.initialize=s),n=m,e("warn","The app insights javascript sdk is changed to a new snippet. AIS instrumentation keys from west europe and north europe are not supported in the new version. Please refer to https://github.com/microsoft/ApplicationInsights-JS/issues/1761 for more details. Application will continue to work as is, but data may not be emitted to AIS."),n.SeverityLevel={Verbose:0,Information:1,Warning:2,Error:3,Critical:4},d.autoTrackPageVisitTime&&i(function(){return function(){var a,i=T.performance;if(i&&i.timing&&i.timing.navigationStart){var r=(a=i.timing.navigationStart,function(){return Math.round(Date.now()-a)}),o=parseInt(d.autoTrackPageVisitTimeThreshold)||10000;r()>o&&n.trackEvent({name:"PageVisitTime",properties:{PageVisitTime:r(),PageVisitTimeThreshold:o},measurements:{PageVisitTime:r(),PageVisitTimeThreshold:o}}),e("trackPageVisit",{PageVisitTime:r(),PageVisitTimeThreshold:o})}}}()),function o(e){if(e){var t=function(){e(),o(e.queue&&e.queue[0])};n.core&&n.core.initialized?t():setTimeout(t,500)}else n.onInit&&n.onInit.forEach(function(e){e(n)})}(m.queue&&m.queue.shift()),n}({}),m=n.queue=[];function se(e,t,n,a,i){if(e&&n){a=a||{};var r=new XMLHttpRequest;r.onreadystatechange=function(){4===r.readyState&&n({statusCode:r.status,response:r.responseText})},r.open(t||"GET",e),Object.keys(a).forEach(function(e){r.setRequestHeader(e,a[e])}),r.send(i||null)}else n({statusCode:0,response:""})}var Ta=new Date;(i=n.context=n.context||{}).operation=i.operation||{},n.core=n.core||{},i.session=t(),i.device=function(){var e="non-IE";try{if("undefined"!=typeof navigator&&navigator&&navigator.appName)switch(navigator.appName){case"Microsoft Internet Explorer":e="IE";break;case"Netscape":navigator.appVersion.indexOf("Edge")>-1?e="Edge":"Chrome"in window?e="Chrome":e="non-IE"}}catch(e){}return e}(),i.internal=i.internal||{},n.core.initialized=!0,n.core.trackPageView=function(e){null==e&&(e={}),e.properties=e.properties||{};var t=e.name;null==t&&(t=document.title),e.name=t,e.uri=e.uri||window.location.href,n.track("Microsoft.ApplicationInsights.Pageview",e)},n.core.track=function(e,t){var n=function(e,t){return{baseType:e.indexOf(".")>-1?e.substring(e.indexOf(".")+1):"",baseData:t}}(e,t);se("https://dc.services.visualstudio.com/v2/track","POST",function(){},{"Content-Type":"application/json"},JSON.stringify(n))},n}();
+        window.appInsights=appInsights;
+        window.appInsights.trackPageView({
+            name: 'Home - PoPunkouterSoftware',
+            uri: window.location.href
+        });
+    </script>
 </head>
 
 <body>
@@ -43,6 +52,33 @@
         <p>&copy; 2024 Punkouter Software. All rights reserved.</p>
     </footer>
     <script src="js/script.js"></script>
+    <script>
+        // Track custom events when users interact with the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Track when rotating images change
+            const rotatingImages = document.querySelectorAll('.rotating-image');
+            if (rotatingImages.length > 0) {
+                if (window.appInsights) {
+                    window.appInsights.trackEvent({name: "RotatingImagesLoaded", properties: {count: rotatingImages.length}});
+                }
+            }
+            
+            // Track navigation link clicks
+            document.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    if (window.appInsights) {
+                        window.appInsights.trackEvent({
+                            name: "LinkClicked", 
+                            properties: {
+                                linkText: e.target.innerText || 'Unknown',
+                                destination: e.target.href
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

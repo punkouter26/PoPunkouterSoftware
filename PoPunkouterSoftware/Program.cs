@@ -1,6 +1,17 @@
 using Microsoft.AspNetCore.Rewrite;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.DependencyCollector;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Application Insights to the service container
+builder.Services.AddApplicationInsightsTelemetry();
+
+// Enable dependency tracking
+builder.Services.ConfigureTelemetryModule<DependencyTrackingTelemetryModule>((module, o) =>
+{
+    module.EnableSqlCommandTextInstrumentation = true;
+});
 
 // Add services to the container
 builder.Services.AddRazorPages();
