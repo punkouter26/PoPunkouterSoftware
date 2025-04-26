@@ -184,7 +184,8 @@ h1::after, h2::after {
     content: '';
     position: absolute;
     bottom: 0;
-    left: 0;
+    left: 50%; /* Center the underline */
+    transform: translateX(-50%); /* Adjust for the element's width */
     width: 60px;
     height: 3px;
     background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
@@ -203,11 +204,11 @@ h1::after, h2::after {
     width: 100%;
     height: auto;
     margin: 0 0 10px 0;
-    display: block;
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     will-change: opacity;
     contain: content;
+    display: none; /* Consolidated from inline style */
 }
 
 /* Team section */
@@ -507,8 +508,10 @@ a:hover {
 }
 
 #contact img {
-    max-width: 200px;
+    max-width: 200px; /* Keep existing max-width */
     margin: 10px auto;
+    width: 50%; /* Consolidated from inline style */
+    height: auto; /* Consolidated from inline style */
 }
 
 /* Responsive adjustments */
