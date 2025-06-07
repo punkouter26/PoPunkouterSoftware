@@ -1,5 +1,0 @@
-{
-    "appService.preDeployTask": "publish-release",
-    "appService.deploySubpath": "PoPunkouterSoftware\\bin\\Release\\net8.0\\publish",
-    "appService.defaultWebAppToDeploy": "/subscriptions/479062d5-f1b2-47ff-b5f6-c5ae7db0954d/resourceGroups/PoPunkouterSoftware/providers/Microsoft.Web/sites/PoPunkouterSoftware"
-}

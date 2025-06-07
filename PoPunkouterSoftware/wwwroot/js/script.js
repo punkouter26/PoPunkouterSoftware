@@ -9,47 +9,101 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeNavigation() {
+    const placeholder = document.getElementById('navigation-placeholder');
+    
+    // Add loading state
+    placeholder.innerHTML = '<nav aria-label="Loading navigation"><p>Loading navigation...</p></nav>';
+    
     fetch('navigation.html')
-        .then(response => response.text())
-        .then(text => {
-            document.getElementById('navigation-placeholder').innerHTML = text;
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
         })
-        .catch(error => console.error('Error loading navigation:', error));
+        .then(text => {
+            placeholder.innerHTML = text;
+            
+            // Enhance navigation accessibility
+            const nav = placeholder.querySelector('nav');
+            if (nav && !nav.getAttribute('aria-label')) {
+                nav.setAttribute('aria-label', 'Main navigation');
+            }
+            
+            // Track successful navigation load
+            if (window.appInsights) {
+                window.appInsights.trackEvent({
+                    name: "NavigationLoaded",
+                    properties: { success: true }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading navigation:', error);
+            placeholder.innerHTML = `
+                <nav aria-label="Navigation error">
+                    <p>Navigation temporarily unavailable</p>
+                    <button onclick="location.reload()" aria-label="Reload page to retry navigation">
+                        Retry
+                    </button>
+                </nav>
+            `;
+            
+            // Track navigation error
+            if (window.appInsights) {
+                window.appInsights.trackEvent({
+                    name: "NavigationError",
+                    properties: { 
+                        error: error.message,
+                        success: false 
+                    }
+                });
+            }
+        });
 }
 
 function initializeImageRotation() {
     const images = document.querySelectorAll('.rotating-image');
     if (!images.length) return;
 
-    // Initialize image states
-    let currentImage = 0;
-    images[0].style.display = 'block';
+    // Check if user prefers reduced motion
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
+    let currentIndex = 0;
+    
+    // Initialize first image
     images.forEach((img, index) => {
-        if (index !== 0) img.style.display = 'none';
-        img.style.transition = 'opacity 0.5s ease-in-out';
+        img.style.opacity = index === 0 ? '1' : '0';
+        img.style.position = 'absolute';
+        img.style.transition = prefersReducedMotion ? 'none' : 'opacity 0.8s ease-in-out';
+        img.style.top = '0';
+        img.style.left = '0';
     });
 
-    // Set up rotation
-    setInterval(() => rotateImage(images, currentImage++), 2000);
-    currentImage %= images.length;
-}
+    // Skip rotation if user prefers reduced motion
+    if (prefersReducedMotion) {
+        console.log('Image rotation disabled due to reduced motion preference');
+        return;
+    }
 
-function rotateImage(images, current) {
-    const next = (current + 1) % images.length;
-    
-    // Fade out current image
-    images[current].style.opacity = '0';
-    
-    // Switch images after fade
-    setTimeout(() => {
-        images[current].style.display = 'none';
-        images[next].style.display = 'block';
+    function rotateImages() {
+        const nextIndex = (currentIndex + 1) % images.length;
         
-        // Trigger fade in
-        requestAnimationFrame(() => {
-            images[next].style.opacity = '1';
-        });
-    }, 500);
+        images[currentIndex].style.opacity = '0';
+        images[nextIndex].style.opacity = '1';
+        
+        currentIndex = nextIndex;
+        
+        // Track rotation event
+        if (window.appInsights) {
+            window.appInsights.trackEvent({
+                name: "ImageRotated", 
+                properties: { imageIndex: currentIndex }
+            });
+        }
+    }
+
+    setInterval(rotateImages, 3000); // Slower, more pleasant transition
 }
 
 function isHomePage() {
