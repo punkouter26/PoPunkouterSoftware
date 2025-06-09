@@ -213,17 +213,10 @@ h1::after, h2::after {
     top: 0;
     left: 0;
     transition: opacity 0.8s ease-in-out;
-}
-
-.rotating-image {
-    width: 100%;
-    height: auto;
-    margin: 0 0 10px 0;
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     will-change: opacity;
     contain: content;
-    display: none; /* Consolidated from inline style */
 }
 
 /* Team section */
