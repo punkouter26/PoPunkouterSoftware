@@ -2,28 +2,26 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch PoPunkouterSoftware",
-            "type": "coreclr",
+            "name": "🌐 Launch Website (Local Server)",
+            "type": "node",
             "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/PoPunkouterSoftware/bin/Debug/net9.0/PoPunkouterSoftware.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/PoPunkouterSoftware",
-            "stopAtEntry": false,
+            "program": "${workspaceFolder}/server.js",
+            "console": "integratedTerminal",
             "serverReadyAction": {
-                "action": "openExternally",
-                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
-                "uriFormat": "%s"
+                "pattern": "Server running at (http://localhost:[0-9]+)",
+                "uriFormat": "%s",
+                "action": "openExternally"
             },
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "NODE_ENV": "development"
             }
         },
         {
-            "name": "Attach to Process",
-            "type": "coreclr",
-            "request": "attach",
-            "processId": "${command:pickProcess}"
+            "name": "📂 Open Website (Direct File)",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/open-browser.js",
+            "console": "integratedTerminal"
         }
     ]
 }
