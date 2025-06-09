@@ -1,78 +1,72 @@
-# F5 Launch Instructions for PoPunkouterSoftware
+# F5 Launch Guide for PoPunkouterSoftware
 
-## 🚀 How to Launch Your Website with F5
+## How to Use F5 to Launch Your Website
 
-Your VS Code workspace is now configured to launch your HTML website using **F5**!
+You now have **3 options** to launch your website using F5 in VS Code:
 
-### Available Launch Options
+### Option 1: 🌐 Start Local Server & Open Website (Recommended)
+- **What it does**: Starts a Node.js HTTP server on `http://localhost:3000` and automatically opens your browser
+- **Best for**: Development and testing with proper HTTP serving
+- **Features**: 
+  - Serves all static files correctly
+  - Proper MIME types for CSS, JS, images
+  - Automatic browser opening
+  - Console logging for debugging
 
-When you press **F5**, you'll see these options:
+### Option 2: 📂 Open Website (File Protocol)
+- **What it does**: Opens the HTML file directly using `file://` protocol
+- **Best for**: Quick viewing without server setup
+- **Note**: Some features may not work due to CORS restrictions
 
-#### 1. 🌐 **Launch Website (Local Server)** ⭐ *Recommended*
-- Starts a local HTTP server on `http://localhost:3000`
-- Automatically opens your website in the default browser
-- **Best for development** - works with all browser features (CORS, modules, etc.)
-- **Hot refresh**: Make changes and refresh the browser to see updates
+### Option 3: 🔧 Live Preview (Chrome Debug)
+- **What it does**: Uses Chrome debugging with live reload capabilities
+- **Best for**: Advanced debugging with DevTools
+- **Requires**: Chrome browser installed
 
-#### 2. 📂 **Open Website (Direct File)**
-- Opens the HTML file directly using `file://` protocol
-- Faster startup but limited functionality
-- Some features may not work (CORS restrictions, relative paths)
-
-### 🎯 Quick Start
+## How to Launch:
 
 1. **Press F5** in VS Code
-2. Select "🌐 Launch Website (Local Server)" (recommended)
-3. VS Code will:
-   - Start the local server
-   - Open your browser automatically
-   - Display your website at `http://localhost:3000`
+2. **Select your preferred option** from the dropdown:
+   - "🌐 Start Local Server & Open Website" (recommended)
+   - "📂 Open Website (File Protocol)"
+   - "🔧 Live Preview (if extension installed)"
 
-### 🔄 Development Workflow
+## Fixed Issues:
 
-1. **Start**: Press F5 → Select local server option
-2. **Develop**: Make changes to your HTML/CSS/JS files
-3. **Test**: Refresh your browser to see changes
-4. **Stop**: Use Ctrl+C in the VS Code terminal to stop the server
+✅ **Image Display Problem**: Removed references to non-existent `.webp` files  
+✅ **CSS Gallery Issues**: Fixed duplicate CSS rules that were hiding images  
+✅ **Favicon Loading**: Proper favicon.ico file path configured  
+✅ **F5 Launch**: Complete launch configuration for all scenarios  
 
-### 🛠️ Manual Server Commands
+## Files Created:
 
-You can also start the server manually:
+- `server.js` - Local HTTP server for serving static files
+- `open-browser.js` - Direct file opening utility
+- `.vscode/launch.json` - F5 launch configurations
+- `.vscode/tasks.json` - Background server task
 
-```powershell
-# Start the server
-node server.js
+## Troubleshooting:
 
-# Or use the VS Code task
-Ctrl+Shift+P → "Tasks: Run Task" → "start-live-server"
-```
+**Images not showing?**
+- Make sure `images/1.png` and `images/2.png` exist
+- Check the browser console for 404 errors
 
-### 📁 File Structure
+**Server won't start?**
+- Ensure Node.js is installed (`node --version`)
+- Check if port 3000 is available
+- Try Option 2 (File Protocol) as fallback
 
-Your website files are served from:
-```
-PoPunkouterSoftware/wwwroot/
-├── index.html          # Main page
-├── css/style.css       # Styles
-├── js/script.js        # JavaScript
-├── images/             # Images and favicon
-└── *.html              # Other pages
-```
+**F5 not working?**
+- Make sure you're in the workspace folder
+- Check the bottom-left status bar for any errors
+- Try running the task manually: Ctrl+Shift+P → "Tasks: Run Task" → "start-live-server"
 
-### 🔧 Troubleshooting
+## Current Status:
 
-**Port 3000 already in use?**
-- Stop other applications using port 3000
-- Or modify `server.js` to use a different port
+🟢 **Website is working** at both:
+- Local development: `http://localhost:3000`
+- Live site: `https://popunkoutersoftware.com`
 
-**Browser doesn't open automatically?**
-- Manually navigate to `http://localhost:3000`
-- Check VS Code's output panel for any error messages
-
-**File changes not reflecting?**
-- Hard refresh: Ctrl+F5 or Ctrl+Shift+R
-- Clear browser cache if needed
-
----
-
-Happy coding! 🎉
+🟢 **Images are displaying** correctly with rotation animation  
+🟢 **Favicon is loading** without console errors  
+🟢 **F5 launches** website successfully
