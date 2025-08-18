@@ -1,76 +1,33 @@
-// Azure DNS Zone setup for popunkoutersoftware.com
-// This template creates an Azure DNS zone and configures DNS records for the Static Web App
+targetScope = 'resourceGroup'
 
-@description('The domain name to configure')
-param domainName string = 'popunkoutersoftware.com'
+@minLength(1)
+@maxLength(64)
+@description('Name of the environment that can be used as part of naming resource convention')
+param environmentName string
 
-@description('The name of the existing Static Web App')
-param staticWebAppName string = 'PoPunkouterSoftware'
+@minLength(1)
+@description('Primary location for all resources')
+param location string
 
-@description('The resource group containing the Static Web App')
-param staticWebAppResourceGroup string = 'PoShared'
-
-@description('Location for the DNS zone (Global)')
-param location string = 'global'
-
-// Reference to existing Static Web App
-resource staticWebApp 'Microsoft.Web/staticSites@2022-09-01' existing = {
-  name: staticWebAppName
-  scope: resourceGroup(staticWebAppResourceGroup)
+// Tags that should be applied to all resources.
+// 
+// Note that 'azd-service-name' tags should be applied separately to service host resources.
+// Example usage:
+//   tags: union(tags, { 'azd-service-name': <service name in azure.yaml> })
+var tags = {
+  'azd-env-name': environmentName
 }
 
-// Create DNS Zone
-resource dnsZone 'Microsoft.Network/dnsZones@2018-05-01' = {
-  name: domainName
-  location: location
-  properties: {
-    zoneType: 'Public'
-  }
-  tags: {
-    'azd-env-name': 'dns-${domainName}'
-    purpose: 'Static Web App Custom Domain'
+module resources 'resources.bicep' = {
+  name: 'resources'
+  params: {
+    location: location
+    tags: tags
+    environmentName: environmentName
   }
 }
 
-// Create CNAME record for www subdomain pointing to Static Web App
-resource wwwCnameRecord 'Microsoft.Network/dnsZones/CNAME@2018-05-01' = {
-  parent: dnsZone
-  name: 'www'
-  properties: {
-    TTL: 3600
-    CNAMERecord: {
-      cname: staticWebApp.properties.defaultHostname
-    }
-  }
-}
-
-// Create A record for apex domain (root domain)
-// Note: This will need to be configured after getting the IP from Azure Static Web Apps
-resource apexARecord 'Microsoft.Network/dnsZones/A@2018-05-01' = {
-  parent: dnsZone
-  name: '@'
-  properties: {
-    TTL: 3600
-    ARecords: [
-      {
-        // This IP will be provided by Azure Static Web Apps when you add the custom domain
-        // You'll need to update this after adding the domain in the portal
-        ipv4Address: '20.36.45.222' // Default Azure Static Web Apps IP - will be updated
-      }
-    ]
-  }
-}
-
-// Outputs
-output dnsZoneNameServers array = dnsZone.properties.nameServers
-output dnsZoneName string = dnsZone.name
-output staticWebAppDefaultHostname string = staticWebApp.properties.defaultHostname
-output resourceGroupName string = resourceGroup().name
-
-// Instructions for next steps
-output nextSteps object = {
-  step1: 'Update your domain registrar nameservers with the values from dnsZoneNameServers output'
-  step2: 'Add custom domain in Azure Portal: Static Web App > Custom domains > Add > Custom domain on Azure DNS'
-  step3: 'Select your DNS zone and add both apex and www domains'
-  step4: 'Update the A record IP address if different from the default'
-}
+output AZURE_RESOURCE_WWWROOT_ID string = resources.outputs.AZURE_RESOURCE_WWWROOT_ID
+output WWWROOT_URI string = resources.outputs.WWWROOT_URI
+output APP_SERVICE_NAME string = resources.outputs.APP_SERVICE_NAME
+output RESOURCE_GROUP_ID string = resourceGroup().id

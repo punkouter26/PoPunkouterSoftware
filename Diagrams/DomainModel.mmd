@@ -1,0 +1,184 @@
+erDiagram
+    COMPANY ||--o{ WEB_APPLICATION : "develops"
+    COMPANY ||--o{ MOBILE_APPLICATION : "develops"
+    COMPANY ||--o{ TEAM_MEMBER : "employs"
+    COMPANY ||--|| WEBSITE : "owns"
+    
+    WEBSITE ||--o{ PAGE : "contains"
+    WEBSITE ||--|| NAVIGATION : "includes"
+    WEBSITE ||--|| STYLING_SYSTEM : "uses"
+    WEBSITE ||--|| ASSET_LIBRARY : "manages"
+    
+    PAGE ||--o{ COMPONENT : "contains"
+    PAGE ||--|| SEO_METADATA : "includes"
+    PAGE ||--o{ EXTERNAL_LINK : "references"
+    
+    COMPONENT ||--o{ UI_ELEMENT : "composed_of"
+    COMPONENT ||--o{ INTERACTION : "supports"
+    
+    WEB_APPLICATION ||--|| AZURE_DEPLOYMENT : "deployed_on"
+    WEB_APPLICATION ||--o{ TECHNOLOGY_STACK : "uses"
+    
+    MOBILE_APPLICATION ||--|| APP_STORE_LISTING : "listed_on"
+    MOBILE_APPLICATION ||--o{ TECHNOLOGY_STACK : "uses"
+    
+    COMPANY {
+        string name "Punkouter Software"
+        string mission "Revolutionary AI-driven software solutions"
+        string vision "Diversity and inclusivity in technology"
+        date founded "2024"
+        string domain "popunkoutersoftware.com"
+        string brand_colors "Cyan, Blue, Tech Green"
+    }
+    
+    TEAM_MEMBER {
+        string name
+        string role
+        string bio
+        string photo_url
+        date join_date
+        string specialization
+    }
+    
+    WEBSITE {
+        string domain "popunkoutersoftware.com"
+        string type "Corporate Portfolio"
+        string framework "Static HTML/CSS/JS"
+        boolean responsive "true"
+        string accessibility_level "WCAG 2.1 AA"
+        string performance_target "< 3 seconds load time"
+    }
+    
+    PAGE {
+        string name
+        string url_path
+        string title
+        string meta_description
+        string page_type
+        boolean has_navigation "true"
+        string canonical_url
+        string og_properties
+    }
+    
+    NAVIGATION {
+        string component_file "navigation.html"
+        string load_method "Dynamic JavaScript Fetch"
+        boolean responsive "true"
+        string accessibility_features "ARIA labels"
+        string error_handling "Retry mechanism"
+    }
+    
+    COMPONENT {
+        string name
+        string type
+        string file_location
+        boolean reusable
+        string responsive_behavior
+        string accessibility_features
+        string interaction_type
+    }
+    
+    UI_ELEMENT {
+        string element_type
+        string content
+        string styling_class
+        string semantic_role
+        string aria_label
+        boolean interactive
+    }
+    
+    STYLING_SYSTEM {
+        string main_file "style.css"
+        string methodology "CSS Custom Properties"
+        string layout_system "Flexbox/Grid"
+        string design_approach "Mobile-First"
+        string color_scheme "Dark Theme"
+        string typography "System Fonts"
+    }
+    
+    ASSET_LIBRARY {
+        string location "wwwroot/images/"
+        string logo_file "logo.png"
+        string favicon "favicon.ico"
+        string gallery_images "1.png, 2.png"
+        string optimization "Lazy Loading"
+        string formats "PNG, WebP, ICO"
+    }
+    
+    SEO_METADATA {
+        string title
+        string description
+        string keywords
+        string og_title
+        string og_description
+        string og_image
+        string twitter_card
+        string canonical_url
+        string structured_data
+    }
+    
+    EXTERNAL_LINK {
+        string url
+        string target_type
+        string rel_attributes
+        boolean opens_new_tab
+        string link_purpose
+        string tracking_params
+    }
+    
+    WEB_APPLICATION {
+        string name
+        string url
+        string description
+        date release_date
+        string category
+        string status "Production"
+        string performance_metrics
+    }
+    
+    AZURE_DEPLOYMENT {
+        string service_type "Azure App Service"
+        string hosting_plan
+        string domain
+        string ssl_certificate "true"
+        string backup_strategy
+        string monitoring "Application Insights"
+    }
+    
+    MOBILE_APPLICATION {
+        string name
+        string app_id
+        string platform
+        date release_date
+        string category
+        string rating
+        string download_stats
+    }
+    
+    APP_STORE_LISTING {
+        string store_name "Apple App Store"
+        string listing_url
+        string app_id
+        string category
+        string rating
+        date last_updated
+        string screenshots
+    }
+    
+    TECHNOLOGY_STACK {
+        string technology_name
+        string version
+        string purpose
+        string category
+        boolean current_version
+        string documentation_url
+    }
+    
+    INTERACTION {
+        string interaction_type
+        string trigger_event
+        string response_action
+        string feedback_mechanism
+        boolean accessible
+        string performance_impact
+    }

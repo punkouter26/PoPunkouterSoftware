@@ -1,0 +1,10 @@
+{
+  "name": "popunkoutersoftware-web",
+  "version": "1.0.0",
+  "description": "PoPunkouterSoftware static website",
+  "scripts": {
+    "build": "echo 'No build process needed for static site'"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

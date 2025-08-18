@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: PoPunkouterSoftware
+metadata:
+    template: azd-init@1.18.1
+services:
+    wwwroot:
+        project: PoPunkouterSoftware/wwwroot
+        host: appservice
+        language: js
+resources:
+    wwwroot:
+        type: host.appservice
