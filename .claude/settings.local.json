@@ -4,7 +4,10 @@
       "Bash(python:*)",
       "Bash(az:*)",
       "Bash(git add:*)",
-      "Read(//c/Users/punko/**)"
+      "Read(//c/Users/punko/**)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh:*)"
     ],
     "deny": [],
     "ask": []
