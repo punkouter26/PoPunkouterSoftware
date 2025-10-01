@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(az:*)",
+      "Bash(git add:*)",
+      "Read(//c/Users/punko/**)"
     ],
     "deny": [],
     "ask": []
