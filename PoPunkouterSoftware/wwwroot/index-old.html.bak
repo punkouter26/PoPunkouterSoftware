@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -17,22 +17,29 @@
     <meta name="twitter:description" content="Revolutionary software solutions for the future">
     <meta name="twitter:image" content="images/logo.png">
     <title>PoPunkouterSoftware - Revolutionary Software Solutions</title>
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="canonical" href="https://popunkoutersoftware.com">
 </head>
 
 <body>
-    <!-- Web Component Header -->
-    <site-header></site-header>
-
-    <main>
-        <section id="introduction" aria-labelledby="welcome-heading">
-            <figure class="intro-figure">
-                <img src="/images/1.png" alt="Punkouter Software team collaboration" class="intro-image" width="400" height="300">
-            </figure>
-            <h1 id="welcome-heading">Welcome to Punkouter Software</h1>
-            <p>
+    <header>
+        <img src="images/logo.png" alt="Punkouter Software Logo" class="logo">
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="index.html" aria-current="page">Home</a></li>
+                <li><a href="OurTeam.html">Our Team</a></li>
+                <li><a href="OurWebApps.html">Web Apps</a></li>
+                <li><a href="OurPhoneApps.html">Phone Apps</a></li>
+                <li><a href="Contact.html">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>        <section id="gallery" aria-label="Company showcase images">
+            <img src="images/1.png" alt="Punkouter Software innovative workspace showcasing modern development environment" class="rotating-image" loading="lazy" width="400" height="300">
+            <img src="images/2.png" alt="Punkouter Software team collaboration and cutting-edge technology solutions" class="rotating-image" loading="lazy" width="400" height="300">
+        </section><section id="introduction" aria-labelledby="welcome-heading">
+            <h1 id="welcome-heading">Welcome to Punkouter Software</h1>            <p>
                 Transform your business with revolutionary software solutions designed for the future. 
                 At Punkouter Software, we create innovative AI-driven applications that push boundaries 
                 while fostering diversity and inclusion.
@@ -43,12 +50,10 @@
                 as a bridge to a more inclusive global community.
             </p>
         </section>
-    </main>
-    
-    <!-- Web Component Footer -->
-    <site-footer></site-footer>
-    
-    <script type="module" src="/js/main.js"></script>
+    </main>    <footer role="contentinfo">
+        <p>&copy; 2025 Punkouter Software. All rights reserved.</p>
+    </footer>
+    <script src="js/script.js"></script>
 </body>
 
 </html>

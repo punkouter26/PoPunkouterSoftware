@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Apps - Punkouter Software</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <!-- Web Component Header -->
+    <site-header></site-header>
+    
+    <main>
+        <section id="apps-intro">
+            <h1>Web Apps</h1>
+            <p>Explore our collection of innovative web applications designed to solve real-world problems.</p>
+
+            <!-- Sort Controls -->
+            <div class="controls-bar">
+                <div class="sort-control">
+                    <label for="sort-select">Sort by:</label>
+                    <select id="sort-select" class="sort-dropdown">
+                        <option value="alphabetical">Alphabetical (A-Z)</option>
+                        <option value="alphabetical-desc">Alphabetical (Z-A)</option>
+                        <option value="status">Status (Active First)</option>
+                        <option value="category">Category</option>
+                    </select>
+                </div>
+                <div class="app-count">
+                    <span id="app-count-text">Loading apps...</span>
+                </div>
+            </div>
+
+            <!-- Apps Grid - Dynamically loaded from JSON -->
+            <div class="apps-grid">
+                <!-- App cards will be loaded here by JavaScript -->
+            </div>
+        </section>
+    </main>
+    
+    <!-- Web Component Footer -->
+    <site-footer></site-footer>
+    
+    <script type="module" src="/js/main.js"></script>
+</body>
+
+</html>
+                    <div class="card-header">
+                        <h3 class="app-name">PoBabyTouch</h3>
+                        <span class="status-badge status-broken">
+                            <span class="status-icon">⚠</span>
+                            <span class="status-text">Broken</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-games">🎮 Games</div>
+                    <p class="app-description">A game for kids to test reflexes and hand-eye coordination</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure Table Storage</span>
+                        <span class="tech-badge">Azure App Service</span>
+                    </div>
+                    <a href="https://pobabytouchgc.azurewebsites.net/" target="_blank" class="app-link disabled">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="active" data-category="ai" data-name="PoHappyTrump">
+                    <div class="card-header">
+                        <h3 class="app-name">PoHappyTrump</h3>
+                        <span class="status-badge status-active">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Active</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-ai">🤖 AI Tools</div>
+                    <p class="app-description">Translates political messages into positive, constructive content using AI</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">RSS Feed</span>
+                        <span class="tech-badge">Azure OpenAI</span>
+                        <span class="tech-badge">Blazor</span>
+                    </div>
+                    <a href="https://pohappytrump.azurewebsites.net/" target="_blank" class="app-link">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="active" data-category="ai" data-name="PoVicTranslate">
+                    <div class="card-header">
+                        <h3 class="app-name">PoVicTranslate</h3>
+                        <span class="status-badge status-active">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Active</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-ai">🤖 AI Tools</div>
+                    <p class="app-description">Transform modern text into authentic Victorian-era English with AI-powered translation and voice output</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure OpenAI GPT-4</span>
+                        <span class="tech-badge">Speech Services</span>
+                        <span class="tech-badge">Blazor</span>
+                    </div>
+                    <a href="https://povictranslate.azurewebsites.net/" target="_blank" class="app-link">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="active" data-category="productivity" data-name="PoRemoveBad">
+                    <div class="card-header">
+                        <h3 class="app-name">PoRemoveBad</h3>
+                        <span class="status-badge status-active">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Active</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-productivity">📊 Productivity</div>
+                    <p class="app-description">Improve writing quality by automatically detecting and removing unwanted words, buzzwords, and filler text</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Text Processing</span>
+                        <span class="tech-badge">App Insights</span>
+                        <span class="tech-badge">Blazor</span>
+                    </div>
+                    <a href="https://poremovebad.azurewebsites.net/" target="_blank" class="app-link">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="disabled" data-category="games" data-name="PoConnectFive">
+                    <div class="card-header">
+                        <h3 class="app-name">PoConnectFive</h3>
+                        <span class="status-badge status-disabled">
+                            <span class="status-icon">○</span>
+                            <span class="status-text">Disabled</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-games">🎮 Games</div>
+                    <p class="app-description">Web-based implementation of the classic Connect Five game with multiplayer support</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure Storage</span>
+                        <span class="tech-badge">Blazor</span>
+                    </div>
+                    <a href="https://poconnectfive.azurewebsites.net/" target="_blank" class="app-link disabled">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="disabled" data-category="productivity" data-name="PoFoxNews">
+                    <div class="card-header">
+                        <h3 class="app-name">PoFoxNews</h3>
+                        <span class="status-badge status-disabled">
+                            <span class="status-icon">○</span>
+                            <span class="status-text">Disabled</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-productivity">📊 Productivity</div>
+                    <p class="app-description">News aggregator with AI-powered article summaries and text-to-speech playback</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure OpenAI</span>
+                        <span class="tech-badge">Speech Services</span>
+                        <span class="tech-badge">RSS Feed</span>
+                    </div>
+                    <a href="https://pofoxnews.azurewebsites.net/" target="_blank" class="app-link disabled">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="disabled" data-category="productivity" data-name="PoRepoLineTracker">
+                    <div class="card-header">
+                        <h3 class="app-name">PoRepoLineTracker</h3>
+                        <span class="status-badge status-disabled">
+                            <span class="status-icon">○</span>
+                            <span class="status-text">Disabled</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-productivity">📊 Productivity</div>
+                    <p class="app-description">Automated GitHub repository analysis tracking code metrics, commit trends, and repository growth over time</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">GitHub API</span>
+                        <span class="tech-badge">Azure Storage</span>
+                        <span class="tech-badge">Data Viz</span>
+                    </div>
+                    <a href="https://porepolinetracker.azurewebsites.net/" target="_blank" class="app-link disabled">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="disabled" data-category="productivity" data-name="PoRobotStocks">
+                    <div class="card-header">
+                        <h3 class="app-name">PoRobotStocks</h3>
+                        <span class="status-badge status-disabled">
+                            <span class="status-icon">○</span>
+                            <span class="status-text">Disabled</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-productivity">📊 Productivity</div>
+                    <p class="app-description">AI-Powered analysis of robotics and automation sector stocks with sentiment analysis</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure OpenAI</span>
+                        <span class="tech-badge">Language Services</span>
+                        <span class="tech-badge">Financial APIs</span>
+                    </div>
+                    <a href="https://porobotstocks.azurewebsites.net/" target="_blank" class="app-link disabled">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="disabled" data-category="games" data-name="PoTicTac">
+                    <div class="card-header">
+                        <h3 class="app-name">PoTicTac</h3>
+                        <span class="status-badge status-disabled">
+                            <span class="status-icon">○</span>
+                            <span class="status-text">Disabled</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-games">🎮 Games</div>
+                    <p class="app-description">Retro-styled 6x6 Tic Tac Toe game with 4-in-a-row victory condition and classic gaming aesthetics</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure Storage</span>
+                        <span class="tech-badge">Blazor</span>
+                        <span class="tech-badge">Canvas</span>
+                    </div>
+                    <a href="https://potictac.azurewebsites.net/" target="_blank" class="app-link disabled">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="disabled" data-category="ai" data-name="PoDebateRap">
+                    <div class="card-header">
+                        <h3 class="app-name">PoDebateRap</h3>
+                        <span class="status-badge status-disabled">
+                            <span class="status-icon">○</span>
+                            <span class="status-text">Disabled</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-ai">🤖 AI Tools</div>
+                    <p class="app-description">Generate AI-powered competitive rap battles on any topic with voice synthesis</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure OpenAI GPT-4</span>
+                        <span class="tech-badge">Speech Services</span>
+                        <span class="tech-badge">Blazor</span>
+                    </div>
+                    <a href="https://podebaterap.azurewebsites.net/" target="_blank" class="app-link disabled">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="active" data-category="productivity" data-name="PoSeeReview">
+                    <div class="card-header">
+                        <h3 class="app-name">PoSeeReview</h3>
+                        <span class="status-badge status-active">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Active</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-productivity">📊 Productivity</div>
+                    <p class="app-description">Location-based review platform with geolocation and social sharing capabilities</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Geolocation API</span>
+                        <span class="tech-badge">Social Sharing</span>
+                        <span class="tech-badge">Blazor</span>
+                    </div>
+                    <a href="https://poseereview.azurewebsites.net/" target="_blank" class="app-link">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="active" data-category="games" data-name="PoFunQuiz">
+                    <div class="card-header">
+                        <h3 class="app-name">PoFunQuiz</h3>
+                        <span class="status-badge status-active">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Active</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-games">🎮 Games</div>
+                    <p class="app-description">Interactive trivia and quiz game platform for entertainment and learning</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure App Service</span>
+                        <span class="tech-badge">Blazor</span>
+                        <span class="tech-badge">Azure Storage</span>
+                    </div>
+                    <a href="https://pofunquiz.azurewebsites.net/" target="_blank" class="app-link">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="active" data-category="games" data-name="PoCoupleQuiz">
+                    <div class="card-header">
+                        <h3 class="app-name">PoCoupleQuiz</h3>
+                        <span class="status-badge status-active">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Active</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-games">🎮 Games</div>
+                    <p class="app-description">Relationship compatibility quiz for couples to test their knowledge of each other</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">App Insights</span>
+                        <span class="tech-badge">Radzen Blazor</span>
+                        <span class="tech-badge">Azure Storage</span>
+                    </div>
+                    <a href="https://pocouplequiz.azurewebsites.net/" target="_blank" class="app-link">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="active" data-category="creative" data-name="PoRedoImage">
+                    <div class="card-header">
+                        <h3 class="app-name">PoRedoImage</h3>
+                        <span class="status-badge status-active">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Active</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-creative">🎨 Creative</div>
+                    <p class="app-description">AI-powered image translation and regeneration tool for visual content transformation</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure OpenAI</span>
+                        <span class="tech-badge">Image Processing</span>
+                        <span class="tech-badge">Blazor</span>
+                    </div>
+                    <a href="https://poredoimage.azurewebsites.net/" target="_blank" class="app-link">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="active" data-category="games" data-name="PoFastType">
+                    <div class="card-header">
+                        <h3 class="app-name">PoFastType</h3>
+                        <span class="status-badge status-active">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Active</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-games">🎮 Games</div>
+                    <p class="app-description">Retro arcade-styled typing speed test and training game</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Radzen Blazor</span>
+                        <span class="tech-badge">Bootstrap 5</span>
+                        <span class="tech-badge">Retro CSS</span>
+                    </div>
+                    <a href="https://pofasttype.azurewebsites.net/" target="_blank" class="app-link">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+
+                <div class="app-card" data-status="disabled" data-category="games" data-name="PoDropSquare">
+                    <div class="card-header">
+                        <h3 class="app-name">PoDropSquare</h3>
+                        <span class="status-badge status-disabled">
+                            <span class="status-icon">○</span>
+                            <span class="status-text">Disabled</span>
+                        </span>
+                    </div>
+                    <div class="category-tag tag-games">🎮 Games</div>
+                    <p class="app-description">Puzzle game featuring falling squares with strategic gameplay mechanics</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Azure App Service</span>
+                        <span class="tech-badge">Blazor</span>
+                        <span class="tech-badge">Game State</span>
+                    </div>
+                    <a href="https://podropsquare.azurewebsites.net/" target="_blank" class="app-link disabled">
+                        <span>Visit Site</span>
+                        <span class="link-icon">→</span>
+                    </a>
+                </div>
+            <!-- Apps Grid - Dynamically loaded from JSON -->
+            <div class="apps-grid">
+                <!-- App cards will be loaded here by JavaScript -->
+            </div>
+        </section>
+    </main>
+    
+    <!-- Web Component Footer -->
+    <site-footer></site-footer>
+    
+    <script type="module" src="/js/main.js"></script>
+</body>
+
+</html>

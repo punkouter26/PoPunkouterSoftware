@@ -1,0 +1,148 @@
+{
+  "apps": [
+    {
+      "id": "pobabytouch",
+      "name": "PoBabyTouch",
+      "description": "A game for kids to test reflexes and hand-eye coordination",
+      "category": "games",
+      "status": "broken",
+      "technologies": ["Azure Table Storage", "Azure App Service"],
+      "url": "https://pobabytouchgc.azurewebsites.net/"
+    },
+    {
+      "id": "pohappytrump",
+      "name": "PoHappyTrump",
+      "description": "Translates political messages into positive, constructive content using AI",
+      "category": "ai",
+      "status": "active",
+      "technologies": ["RSS Feed", "Azure OpenAI", "Blazor"],
+      "url": "https://pohappytrump.azurewebsites.net/"
+    },
+    {
+      "id": "povictranslate",
+      "name": "PoVicTranslate",
+      "description": "Transform modern text into authentic Victorian-era English with AI-powered translation and voice output",
+      "category": "ai",
+      "status": "active",
+      "technologies": ["Azure OpenAI GPT-4", "Speech Services", "Blazor"],
+      "url": "https://povictranslate.azurewebsites.net/"
+    },
+    {
+      "id": "poremovebad",
+      "name": "PoRemoveBad",
+      "description": "Improve writing quality by automatically detecting and removing unwanted words, buzzwords, and filler text",
+      "category": "productivity",
+      "status": "active",
+      "technologies": ["Text Processing", "App Insights", "Blazor"],
+      "url": "https://poremovebad.azurewebsites.net/"
+    },
+    {
+      "id": "poconnectfive",
+      "name": "PoConnectFive",
+      "description": "Web-based implementation of the classic Connect Five game with multiplayer support",
+      "category": "games",
+      "status": "disabled",
+      "technologies": ["Azure Storage", "Blazor"],
+      "url": "https://poconnectfive.azurewebsites.net/"
+    },
+    {
+      "id": "pofoxnews",
+      "name": "PoFoxNews",
+      "description": "News aggregator with AI-powered article summaries and text-to-speech playback",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": ["Azure OpenAI", "Speech Services", "RSS Feed"],
+      "url": "https://pofoxnews.azurewebsites.net/"
+    },
+    {
+      "id": "porepolinetracker",
+      "name": "PoRepoLineTracker",
+      "description": "Automated GitHub repository analysis tracking code metrics, commit trends, and repository growth over time",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": ["GitHub API", "Azure Storage", "Data Viz"],
+      "url": "https://porepolinetracker.azurewebsites.net/"
+    },
+    {
+      "id": "porobotstocks",
+      "name": "PoRobotStocks",
+      "description": "AI-Powered analysis of robotics and automation sector stocks with sentiment analysis",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": ["Azure OpenAI", "Language Services", "Financial APIs"],
+      "url": "https://porobotstocks.azurewebsites.net/"
+    },
+    {
+      "id": "potictac",
+      "name": "PoTicTac",
+      "description": "Retro-styled 6x6 Tic Tac Toe game with 4-in-a-row victory condition and classic gaming aesthetics",
+      "category": "games",
+      "status": "disabled",
+      "technologies": ["Azure Storage", "Blazor", "Canvas"],
+      "url": "https://potictac.azurewebsites.net/"
+    },
+    {
+      "id": "podebaterap",
+      "name": "PoDebateRap",
+      "description": "Generate AI-powered competitive rap battles on any topic with voice synthesis",
+      "category": "ai",
+      "status": "disabled",
+      "technologies": ["Azure OpenAI GPT-4", "Speech Services", "Blazor"],
+      "url": "https://podebaterap.azurewebsites.net/"
+    },
+    {
+      "id": "poseereview",
+      "name": "PoSeeReview",
+      "description": "Location-based review platform with geolocation and social sharing capabilities",
+      "category": "productivity",
+      "status": "active",
+      "technologies": ["Geolocation API", "Social Sharing", "Blazor"],
+      "url": "https://poseereview.azurewebsites.net/"
+    },
+    {
+      "id": "pofunquiz",
+      "name": "PoFunQuiz",
+      "description": "Interactive trivia and quiz game platform for entertainment and learning",
+      "category": "games",
+      "status": "active",
+      "technologies": ["Azure App Service", "Blazor", "Azure Storage"],
+      "url": "https://pofunquiz.azurewebsites.net/"
+    },
+    {
+      "id": "pocouplequiz",
+      "name": "PoCoupleQuiz",
+      "description": "Relationship compatibility quiz for couples to test their knowledge of each other",
+      "category": "games",
+      "status": "active",
+      "technologies": ["App Insights", "Radzen Blazor", "Azure Storage"],
+      "url": "https://pocouplequiz.azurewebsites.net/"
+    },
+    {
+      "id": "poredoimage",
+      "name": "PoRedoImage",
+      "description": "AI-powered image translation and regeneration tool for visual content transformation",
+      "category": "creative",
+      "status": "active",
+      "technologies": ["Azure OpenAI", "Image Processing", "Blazor"],
+      "url": "https://poredoimage.azurewebsites.net/"
+    },
+    {
+      "id": "pofasttype",
+      "name": "PoFastType",
+      "description": "Retro arcade-styled typing speed test and training game",
+      "category": "games",
+      "status": "active",
+      "technologies": ["Radzen Blazor", "Bootstrap 5", "Retro CSS"],
+      "url": "https://pofasttype.azurewebsites.net/"
+    },
+    {
+      "id": "podropsquare",
+      "name": "PoDropSquare",
+      "description": "Puzzle game featuring falling squares with strategic gameplay mechanics",
+      "category": "games",
+      "status": "disabled",
+      "technologies": ["Azure App Service", "Blazor", "Game State"],
+      "url": "https://podropsquare.azurewebsites.net/"
+    }
+  ]
+}

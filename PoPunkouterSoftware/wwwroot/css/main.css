@@ -1,0 +1,30 @@
+/**
+ * Main Stylesheet - Modular CSS Architecture
+ * Imports organized stylesheets for better maintainability
+ */
+
+/* Core Styles - Variables and resets */
+@import url('./core/variables.css');
+@import url('./core/reset.css');
+
+/* Layout - Page structure */
+@import url('./layout/main.css');
+@import url('./layout/header.css');
+@import url('./layout/footer.css');
+
+/* Components - Reusable UI elements */
+@import url('./components/cards.css');
+@import url('./components/badges.css');
+@import url('./components/buttons.css');
+@import url('./components/controls.css');
+@import url('./components/gallery.css');
+
+/* Utilities - Animations and helpers */
+@import url('./utils/animations.css');
+@import url('./utils/legacy-table.css');
+
+/* Page-specific styles */
+@import url('./pages/home.css');
+@import url('./pages/team.css');
+@import url('./pages/contact.css');
+
