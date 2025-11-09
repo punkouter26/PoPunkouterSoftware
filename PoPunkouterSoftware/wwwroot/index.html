@@ -29,7 +29,7 @@
     <main>
         <section id="introduction" aria-labelledby="welcome-heading">
             <figure class="intro-figure">
-                <img src="/images/1.png" alt="Punkouter Software team collaboration" class="intro-image" width="400" height="300">
+                <img src="/images/1.png" alt="Punkouter Software team collaboration" class="intro-image" id="hero-image" width="400" height="300">
             </figure>
             <h1 id="welcome-heading">Welcome to Punkouter Software</h1>
             <p>
@@ -49,6 +49,16 @@
     <site-footer></site-footer>
     
     <script type="module" src="/js/main.js"></script>
+    <script>
+        // Rotate hero image between 1.png and 2.png every 3 seconds
+        const heroImage = document.getElementById('hero-image');
+        let currentImage = 1;
+        
+        setInterval(() => {
+            currentImage = currentImage === 1 ? 2 : 1;
+            heroImage.src = `/images/${currentImage}.png`;
+        }, 3000);
+    </script>
 </body>
 
 </html>
