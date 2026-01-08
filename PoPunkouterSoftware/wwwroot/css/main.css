@@ -21,7 +21,6 @@
 
 /* Utilities - Animations and helpers */
 @import url('./utils/animations.css');
-@import url('./utils/legacy-table.css');
 
 /* Page-specific styles */
 @import url('./pages/home.css');

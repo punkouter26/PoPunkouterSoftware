@@ -12,14 +12,14 @@ class SiteHeader extends HTMLElement {
     render() {
         this.innerHTML = `
             <header>
-                <img src="/images/logo.png" alt="Punkouter Software Logo" class="logo">
+                <img src="images/logo.png" alt="Punkouter Software Logo" class="logo">
                 <nav aria-label="Main navigation">
                     <ul class="nav-list">
-                        <li><a href="/index.html">Home</a></li>
-                        <li><a href="/OurTeam.html">Our Team</a></li>
-                        <li><a href="/OurWebApps.html">Web Apps</a></li>
-                        <li><a href="/OurPhoneApps.html">Phone Apps</a></li>
-                        <li><a href="/Contact.html">Contact</a></li>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="OurTeam.html">Our Team</a></li>
+                        <li><a href="OurWebApps.html">Web Apps</a></li>
+                        <li><a href="OurPhoneApps.html">Phone Apps</a></li>
+                        <li><a href="Contact.html">Contact</a></li>
                     </ul>
                 </nav>
             </header>
@@ -32,15 +32,14 @@ class SiteHeader extends HTMLElement {
         
         links.forEach(link => {
             const href = link.getAttribute('href');
-            if (href === currentPage || (currentPage === '/index.html' && href === '/index.html')) {
+            if (currentPage.includes(href) || (currentPage.endsWith('/') && href === 'index.html')) {
                 link.setAttribute('aria-current', 'page');
             }
         });
     }
 
     getCurrentPageName() {
-        const path = window.location.pathname;
-        return path === '/' || path === '' ? '/index.html' : path;
+        return window.location.pathname;
     }
 }
 

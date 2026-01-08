@@ -1,0 +1,16 @@
+# AI Context Optimization
+
+# Git
+.git/
+
+# IDE/Editor
+.vscode/
+.vs/
+
+# Images (binary files)
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.ico
+*.gif
