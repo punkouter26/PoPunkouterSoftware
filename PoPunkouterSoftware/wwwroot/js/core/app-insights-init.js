@@ -11,18 +11,12 @@
     sdkScript.crossOrigin = 'anonymous';
     
     sdkScript.onload = function() {
-        const connectionString = 'InstrumentationKey=85672f16-e8e5-4f0f-882f-1ca7eff6b93f;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=274cd1bb-b5db-4e99-a352-ac2deb893eda';
+        const connectionString = 'InstrumentationKey=85672f16-e8e5-4f0f-882f-1ca7eff6b93f;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/';
         
         const config = {
             connectionString: connectionString,
             enableAutoRouteTracking: true,
-            enableCorsCorrelation: true,
-            enableRequestHeaderTracking: true,
-            enableResponseHeaderTracking: true,
-            disableFetchTracking: false,
-            disableAjaxTracking: false,
-            autoTrackPageVisitTime: true,
-            enableUnhandledPromiseRejectionTracking: true
+            autoTrackPageVisitTime: true
         };
 
         // Initialize Application Insights
