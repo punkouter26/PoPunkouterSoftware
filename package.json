@@ -1,0 +1,13 @@
+{
+  "name": "popunkoutersoftware",
+  "version": "0.1.0",
+  "description": "PoPunkouterSoftware Static Web App",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.41.0"
+  }
+}

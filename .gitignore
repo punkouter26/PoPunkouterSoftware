@@ -1,13 +1,4 @@
-# IDE/Editor
-.vscode/
-.vs/
-*.suo
-*.user
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Environment files
-.env
-.env.local
+node_modules/
+playwright-report/
+test-results/
+.playwright-mcp/
