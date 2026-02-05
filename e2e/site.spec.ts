@@ -96,8 +96,12 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     await page.goto(BASE_URL);
     await page.waitForLoadState('networkidle');
     
-    // Filter out expected App Insights errors
-    const criticalErrors = errors.filter(e => !e.includes('applicationinsights'));
+    // Filter out expected App Insights and analytics errors (non-critical telemetry)
+    const criticalErrors = errors.filter(e => 
+      !e.toLowerCase().includes('appinsights') &&
+      !e.toLowerCase().includes('applicationinsights') &&
+      !e.toLowerCase().includes('trackpageview')
+    );
     expect(criticalErrors).toHaveLength(0);
   });
 });

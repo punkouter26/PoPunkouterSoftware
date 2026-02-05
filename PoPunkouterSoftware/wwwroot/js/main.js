@@ -12,7 +12,8 @@ import { SELECTORS } from './constants/app-constants.js';
 
 class App {
     constructor() {
-        this.analytics = new Analytics(window.appInsights);
+        // Analytics will be initialized after DOM ready when appInsights may be available
+        this.analytics = null;
         this.components = [];
     }
 
@@ -21,8 +22,12 @@ class App {
      */
     init() {
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize analytics with window.appInsights (may be undefined, Analytics handles null gracefully)
+            this.analytics = new Analytics(window.appInsights || null);
             this.initializeComponents();
-            this.analytics.trackPageView();
+            if (this.analytics) {
+                this.analytics.trackPageView();
+            }
         });
     }
 
