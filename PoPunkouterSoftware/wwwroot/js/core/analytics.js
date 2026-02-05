@@ -35,7 +35,7 @@ class Analytics {
      * @param {Object} properties - Event properties
      */
     track(name, properties = {}) {
-        if (this.appInsights) {
+        if (this.appInsights && typeof this.appInsights.trackEvent === 'function') {
             this.appInsights.trackEvent({ name, properties });
         } else {
             console.log('Analytics:', name, properties);
@@ -46,7 +46,7 @@ class Analytics {
      * Track a page view
      */
     trackPageView() {
-        if (this.appInsights) {
+        if (this.appInsights && typeof this.appInsights.trackPageView === 'function') {
             this.appInsights.trackPageView();
         }
     }
@@ -57,7 +57,7 @@ class Analytics {
      * @param {Object} properties - Additional properties
      */
     trackException(error, properties = {}) {
-        if (this.appInsights) {
+        if (this.appInsights && typeof this.appInsights.trackException === 'function') {
             this.appInsights.trackException({ 
                 exception: error, 
                 properties 
