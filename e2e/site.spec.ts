@@ -77,7 +77,7 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     await page.goto(`${BASE_URL}/OurWebApps.html`);
     
     // Wait for apps to load
-    await expect(page.locator('.app-card')).toHaveCount(16, { timeout: 10000 });
+    await expect(page.locator('.app-card')).toHaveCount(23, { timeout: 10000 });
     
     // Change sort to Status
     await page.selectOption('#sort-select', 'status');
