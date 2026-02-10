@@ -2,10 +2,15 @@
   "name": "popunkoutersoftware",
   "version": "0.1.0",
   "description": "PoPunkouterSoftware Static Web App",
+  "type": "module",
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "discover-apps": "node scripts/discover-azure-apps.js",
+    "update-apps": "node scripts/update-apps-from-report.js",
+    "cleanup-apps": "node scripts/cleanup-apps.js",
+    "sync-azure": "npm run discover-apps && npm run cleanup-apps"
   },
   "devDependencies": {
     "@playwright/test": "^1.41.0"
