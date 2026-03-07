@@ -25,7 +25,7 @@
                     stewardship, Punkouter Software is not just navigating the future; we are actively sculpting it, one
                     groundbreaking application at a time.
                 </p>
-                <img src="images/matt.png" alt="Matthew Herb, CEO" id="matt-image" onmouseenter="this.src='images/MATT2.png'" onmouseleave="this.src='images/matt.png'">
+                <img src="images/matt.png" alt="Matthew Herb, CEO" id="matt-image">
             </div>
         </section>
     </main>
@@ -33,5 +33,12 @@
     <site-footer></site-footer>
     
     <script type="module" src="js/main.js"></script>
+    <script type="module">
+        const img = document.getElementById('matt-image');
+        if (img) {
+            img.addEventListener('mouseenter', () => { img.src = 'images/MATT2.png'; });
+            img.addEventListener('mouseleave', () => { img.src = 'images/matt.png'; });
+        }
+    </script>
 </body>
 </html>

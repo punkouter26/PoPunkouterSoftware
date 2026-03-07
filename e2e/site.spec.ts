@@ -48,7 +48,7 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     await expect(page.locator('#sort-select')).toBeVisible();
     
     // Wait for apps to load and check count
-    await expect(page.locator('.app-card')).toHaveCount(23, { timeout: 10000 });
+    await expect(page.locator('.app-card')).toHaveCount(26, { timeout: 10000 });
   });
 
   test('Phone Apps page loads', async ({ page }) => {
@@ -77,7 +77,7 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     await page.goto(`${BASE_URL}/OurWebApps.html`);
     
     // Wait for apps to load
-    await expect(page.locator('.app-card')).toHaveCount(23, { timeout: 10000 });
+    await expect(page.locator('.app-card')).toHaveCount(26, { timeout: 10000 });
     
     // Change sort to Status
     await page.selectOption('#sort-select', 'status');

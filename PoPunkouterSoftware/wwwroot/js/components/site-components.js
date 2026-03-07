@@ -29,17 +29,16 @@ class SiteHeader extends HTMLElement {
     highlightCurrentPage() {
         const currentPage = this.getCurrentPageName();
         const links = this.querySelectorAll('nav a');
-        
         links.forEach(link => {
-            const href = link.getAttribute('href');
-            if (currentPage.includes(href) || (currentPage.endsWith('/') && href === 'index.html')) {
+            if (link.getAttribute('href') === currentPage) {
                 link.setAttribute('aria-current', 'page');
             }
         });
     }
 
     getCurrentPageName() {
-        return window.location.pathname;
+        const parts = window.location.pathname.split('/').filter(Boolean);
+        return parts.length > 0 ? parts[parts.length - 1] : 'index.html';
     }
 }
 
