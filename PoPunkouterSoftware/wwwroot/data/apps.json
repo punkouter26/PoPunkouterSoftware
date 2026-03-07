@@ -18,7 +18,7 @@
       "name": "PoBabyTouch",
       "description": "A game for kids to test reflexes and hand-eye coordination",
       "category": "games",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
@@ -30,7 +30,7 @@
       "name": "PoConnectFive",
       "description": "Web-based implementation of the classic Connect Five game with multiplayer support",
       "category": "games",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
@@ -48,7 +48,7 @@
         "Blazor",
         "Azure Storage"
       ],
-      "url": "https://pocouplequiz-server.braveground-e6b1356c.eastus.azurecontainerapps.io"
+      "url": "https://pocouplequiz-app.azurewebsites.net"
     },
     {
       "id": "podebaterap",
@@ -68,7 +68,7 @@
       "name": "PoDropSquare",
       "description": "Puzzle game featuring falling squares with strategic gameplay mechanics",
       "category": "games",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure Container Apps",
         "Docker"
@@ -93,7 +93,7 @@
       "name": "PoFight",
       "description": "Competitive fighting game with multiplayer support",
       "category": "games",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
@@ -153,6 +153,18 @@
       "url": "https://app-pojoker.azurewebsites.net"
     },
     {
+      "id": "pominiapps",
+      "name": "PoMiniApps",
+      "description": "Collection of small utility apps and mini tools",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://pominiapps.azurewebsites.net"
+    },
+    {
       "id": "ponovaweight",
       "name": "PoNovaWeight",
       "description": "Weight tracking and fitness progress monitoring application",
@@ -162,14 +174,14 @@
         "Azure Container Apps",
         "Docker"
       ],
-      "url": "https://ca-ponovaweight.braveground-e6b1356c.eastus.azurecontainerapps.io"
+      "url": "https://ponovaweight-app.azurewebsites.net"
     },
     {
       "id": "poraceragdoll",
       "name": "PoRaceRagdoll",
       "description": "Racing game with physics-based ragdoll mechanics",
       "category": "games",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
@@ -194,7 +206,7 @@
       "name": "PoReflex",
       "description": "Reflex and reaction time testing game",
       "category": "games",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
@@ -232,7 +244,7 @@
       "name": "PoRobotStocks",
       "description": "AI-Powered analysis of robotics and automation sector stocks with sentiment analysis",
       "category": "productivity",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure OpenAI",
         "Language Services",
@@ -241,11 +253,23 @@
       "url": "https://porobotstocks-web.azurewebsites.net"
     },
     {
+      "id": "porunner",
+      "name": "PoRunner",
+      "description": "Endless runner browser game with increasing difficulty",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure Static Web Apps",
+        "JavaScript"
+      ],
+      "url": "https://victorious-ocean-06635bc1e.6.azurestaticapps.net"
+    },
+    {
       "id": "poseereview",
       "name": "PoSeeReview",
       "description": "Location-based review platform with geolocation and social sharing capabilities",
       "category": "productivity",
-      "status": "broken",
+      "status": "disabled",
       "technologies": [
         "Geolocation API",
         "Social Sharing",
@@ -258,7 +282,7 @@
       "name": "PoSnakeGame",
       "description": "Classic snake game with modern graphics and gameplay enhancements",
       "category": "games",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
@@ -266,11 +290,23 @@
       "url": "https://purple-pebble-04f6a500f.2.azurestaticapps.net"
     },
     {
+      "id": "pominigames",
+      "name": "PoMiniGames",
+      "description": "Collection of fun mini browser games",
+      "category": "games",
+      "status": "active",
+      "technologies": [
+        "Azure Static Web Apps",
+        "JavaScript"
+      ],
+      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net"
+    },
+    {
       "id": "potictac",
       "name": "PoTicTac",
       "description": "Retro-styled 6x6 Tic Tac Toe game with 4-in-a-row victory condition and classic gaming aesthetics",
       "category": "games",
-      "status": "active",
+      "status": "disabled",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
