@@ -1,6 +1,66 @@
 {
   "apps": [
     {
+      "id": "apppohappytrump2jr7zldry26xa",
+      "name": "app-pohappytrump-2jr7zldry26xa",
+      "description": "AI-powered happytrump-2jr7zldry26xa application",
+      "category": "ai",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net"
+    },
+    {
+      "id": "apppojoker",
+      "name": "app-pojoker",
+      "description": "Creative joker application",
+      "category": "creative",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-pojoker.azurewebsites.net"
+    },
+    {
+      "id": "appporepolinetracker",
+      "name": "app-porepolinetracker",
+      "description": "repolinetracker productivity tool",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-porepolinetracker.azurewebsites.net"
+    },
+    {
+      "id": "appposeereview",
+      "name": "app-poseereview",
+      "description": "seereview productivity tool",
+      "category": "productivity",
+      "status": "broken",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-poseereview.azurewebsites.net"
+    },
+    {
+      "id": "poissues",
+      "name": "po-issues",
+      "description": "-issues productivity tool",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://po-issues.azurewebsites.net"
+    },
+    {
       "id": "poappidea",
       "name": "PoAppIdea",
       "description": "AI-powered app idea generator and brainstorming tool",
@@ -10,6 +70,18 @@
         "Azure App Service",
         "Blazor",
         "Azure OpenAI"
+      ],
+      "url": "https://poappidea-web.azurewebsites.net"
+    },
+    {
+      "id": "poappideaweb",
+      "name": "poappidea-web",
+      "description": "appidea productivity tool",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
       ],
       "url": "https://poappidea-web.azurewebsites.net"
     },
@@ -51,6 +123,18 @@
       "url": "https://pocouplequiz-app.azurewebsites.net"
     },
     {
+      "id": "pocouplequizapp",
+      "name": "pocouplequiz-app",
+      "description": "Interactive couplequiz-app game application",
+      "category": "games",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://pocouplequiz-app.azurewebsites.net"
+    },
+    {
       "id": "podebaterap",
       "name": "PoDebateRap",
       "description": "Generate AI-powered competitive rap battles on any topic with voice synthesis",
@@ -74,6 +158,18 @@
         "Docker"
       ],
       "url": "https://ca-podropsquare-api.braveground-e6b1356c.eastus.azurecontainerapps.io"
+    },
+    {
+      "id": "pofacedevweb",
+      "name": "poface-dev-web",
+      "description": "face-dev productivity tool",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://poface-dev-web.azurewebsites.net"
     },
     {
       "id": "pofasttype",
@@ -165,6 +261,18 @@
       "url": "https://pominiapps.azurewebsites.net"
     },
     {
+      "id": "pominigames",
+      "name": "PoMiniGames",
+      "description": "Collection of fun mini browser games",
+      "category": "games",
+      "status": "active",
+      "technologies": [
+        "Azure Static Web Apps",
+        "JavaScript"
+      ],
+      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net"
+    },
+    {
       "id": "ponovaweight",
       "name": "PoNovaWeight",
       "description": "Weight tracking and fitness progress monitoring application",
@@ -175,6 +283,30 @@
         "Docker"
       ],
       "url": "https://ponovaweight-app.azurewebsites.net"
+    },
+    {
+      "id": "ponovaweightapp",
+      "name": "ponovaweight-app",
+      "description": "novaweight-app productivity tool",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://ponovaweight-app.azurewebsites.net"
+    },
+    {
+      "id": "popunkoutersoftware",
+      "name": "PoPunkouterSoftware",
+      "description": "PunkouterSoftware productivity tool",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure Static Web Apps",
+        "JavaScript"
+      ],
+      "url": "https://witty-smoke-014bc370f.2.azurestaticapps.net"
     },
     {
       "id": "poraceragdoll",
@@ -253,6 +385,18 @@
       "url": "https://porobotstocks-web.azurewebsites.net"
     },
     {
+      "id": "porobotstocksporobotstocksweb",
+      "name": "PoRobotStocks-PoRobotStocks-web",
+      "description": "RobotStocks-PoRobotStocks productivity tool",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net"
+    },
+    {
       "id": "porunner",
       "name": "PoRunner",
       "description": "Endless runner browser game with increasing difficulty",
@@ -290,18 +434,6 @@
       "url": "https://purple-pebble-04f6a500f.2.azurestaticapps.net"
     },
     {
-      "id": "pominigames",
-      "name": "PoMiniGames",
-      "description": "Collection of fun mini browser games",
-      "category": "games",
-      "status": "active",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net"
-    },
-    {
       "id": "potictac",
       "name": "PoTicTac",
       "description": "Retro-styled 6x6 Tic Tac Toe game with 4-in-a-row victory condition and classic gaming aesthetics",
@@ -325,6 +457,30 @@
         "Blazor"
       ],
       "url": "https://povictranslate.azurewebsites.net/"
+    },
+    {
+      "id": "stapp5ln5hfdrvof5u",
+      "name": "stapp-5ln5hfdrvof5u",
+      "description": "stapp-5ln5hfdrvof5u productivity tool",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure Static Web Apps",
+        "JavaScript"
+      ],
+      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net"
+    },
+    {
+      "id": "waporunner",
+      "name": "wa-porunner",
+      "description": "wa-porunner productivity tool",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://wa-porunner.azurewebsites.net"
     }
   ]
 }

@@ -2,9 +2,21 @@ node_modules/
 playwright-report/
 test-results/
 .playwright-mcp/
+TESTRESULTS/
 
 # Azure discovery artifacts
 azure-apps-report.json
+azure-full-report.json
+azure-spend-detail-report.json
+azure-cost-audit-report.json
+AZURE-REPORT.md
+AZURE-ARCHITECTURE.mmd
+AZURE-DEPENDENCIES.mmd
+AZURE-RESOURCE-BREAKDOWN.mmd
+AZURE-SERVICE-HEALTH.mmd
+AZURE-EXPORTS-INDEX.md
+.potune-state.json
+*.log
 *.backup
 *.old
 discovery-log.txt

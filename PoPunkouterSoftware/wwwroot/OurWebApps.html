@@ -10,8 +10,19 @@
 </head>
 
 <body>
-    <!-- Web Component Header -->
-    <site-header current-page="OurWebApps.html"></site-header>
+    <!-- Header -->
+    <header>
+        <img src="images/logo.png" alt="Punkouter Software Logo" class="logo">
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="OurTeam.html">Our Team</a></li>
+                <li><a href="OurWebApps.html" aria-current="page">Web Apps</a></li>
+                <li><a href="OurPhoneApps.html">Phone Apps</a></li>
+                <li><a href="Contact.html">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
     
     <main>
         <section id="apps-intro">
@@ -24,14 +35,9 @@
                     <label for="sort-select">Sort by:</label>
                     <select id="sort-select" class="sort-dropdown">
                         <option value="alphabetical">Alphabetical (A-Z)</option>
-                        <option value="alphabetical-desc">Alphabetical (Z-A)</option>
                         <option value="status">Status (Active First)</option>
-                        <option value="category">Category</option>
                     </select>
                 </div>
-                <label class="filter-control">
-                    <input type="checkbox" id="show-disabled"> Show disabled apps
-                </label>
                 <div class="app-count">
                     <span id="app-count-text">Loading apps...</span>
                 </div>
@@ -44,8 +50,10 @@
         </section>
     </main>
     
-    <!-- Web Component Footer -->
-    <site-footer></site-footer>
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Punkouter Software. All rights reserved.</p>
+    </footer>
     
     <script type="module" src="js/main.js"></script>
 </body>

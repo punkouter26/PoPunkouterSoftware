@@ -1,10 +1,17 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.TEST_URL || 'https://witty-smoke-014bc370f.2.azurestaticapps.net';
+const BASE_URL = process.env.TEST_URL || 'http://127.0.0.1:3000';
+
+async function getExpectedAppCount(request: import('@playwright/test').APIRequestContext): Promise<number> {
+  const response = await request.get(`${BASE_URL}/data/apps.json`);
+  expect(response.ok()).toBeTruthy();
+  const payload = await response.json();
+  return Array.isArray(payload.apps) ? payload.apps.length : 0;
+}
 
 test.describe('PoPunkouterSoftware Static Web App', () => {
   
-  test('Homepage loads correctly', async ({ page }) => {
+  test('Homepage loads correctly @smoke', async ({ page }) => {
     await page.goto(BASE_URL);
     
     // Check page title
@@ -21,7 +28,7 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     await expect(page.locator('footer')).toContainText('Punkouter Software');
   });
 
-  test('Navigation links work', async ({ page }) => {
+  test('Navigation links work @smoke', async ({ page }) => {
     await page.goto(BASE_URL);
     
     // Check all nav links exist
@@ -31,14 +38,15 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     }
   });
 
-  test('Our Team page loads', async ({ page }) => {
+  test('Our Team page loads @regression', async ({ page }) => {
     await page.goto(`${BASE_URL}/OurTeam.html`);
     
     await expect(page).toHaveTitle(/About Us/);
     await expect(page.locator('h2')).toContainText('Meet Our Team');
   });
 
-  test('Web Apps page loads with app cards', async ({ page }) => {
+  test('Web Apps page loads with app cards @smoke', async ({ page, request }) => {
+    const expectedCount = await getExpectedAppCount(request);
     await page.goto(`${BASE_URL}/OurWebApps.html`);
     
     await expect(page).toHaveTitle(/Web Apps/);
@@ -48,17 +56,17 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     await expect(page.locator('#sort-select')).toBeVisible();
     
     // Wait for apps to load and check count
-    await expect(page.locator('.app-card')).toHaveCount(26, { timeout: 10000 });
+    await expect(page.locator('.app-card')).toHaveCount(expectedCount, { timeout: 10000 });
   });
 
-  test('Phone Apps page loads', async ({ page }) => {
+  test('Phone Apps page loads @regression', async ({ page }) => {
     await page.goto(`${BASE_URL}/OurPhoneApps.html`);
     
     await expect(page).toHaveTitle(/Phone Apps/);
     await expect(page.locator('h1')).toContainText('Phone Apps');
   });
 
-  test('Contact page loads', async ({ page }) => {
+  test('Contact page loads @smoke', async ({ page }) => {
     await page.goto(`${BASE_URL}/Contact.html`);
     
     await expect(page).toHaveTitle(/Contact/);
@@ -66,18 +74,19 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     await expect(page.getByRole('link', { name: 'Email Us' })).toBeVisible();
   });
 
-  test('Privacy Policy page loads', async ({ page }) => {
+  test('Privacy Policy page loads @regression', async ({ page }) => {
     await page.goto(`${BASE_URL}/PrivacyPolicy.html`);
     
     await expect(page).toHaveTitle(/Privacy Policy/);
     await expect(page.locator('h1').first()).toContainText('Privacy Policy');
   });
 
-  test('Web Apps sorting works', async ({ page }) => {
+  test('Web Apps sorting works @regression', async ({ page, request }) => {
+    const expectedCount = await getExpectedAppCount(request);
     await page.goto(`${BASE_URL}/OurWebApps.html`);
     
     // Wait for apps to load
-    await expect(page.locator('.app-card')).toHaveCount(26, { timeout: 10000 });
+    await expect(page.locator('.app-card')).toHaveCount(expectedCount, { timeout: 10000 });
     
     // Change sort to Status
     await page.selectOption('#sort-select', 'status');
@@ -87,7 +96,7 @@ test.describe('PoPunkouterSoftware Static Web App', () => {
     await expect(firstCard).toHaveAttribute('data-status', 'active');
   });
 
-  test('No JavaScript errors on homepage', async ({ page }) => {
+  test('No JavaScript errors on homepage @smoke', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => {
       errors.push(error.message);

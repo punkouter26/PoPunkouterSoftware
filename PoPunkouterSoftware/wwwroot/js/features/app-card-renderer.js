@@ -1,13 +1,7 @@
-/**
- * App Card Renderer - Renders app cards from JSON data
- * Implements data-driven UI pattern
- */
-
 import { 
     APP_STATUS, 
     CATEGORY_LABELS, 
-    STATUS_LABELS, 
-    STATUS_ICONS,
+    STATUS_DISPLAY,
     SELECTORS 
 } from '../constants/app-constants.js';
 
@@ -15,7 +9,6 @@ class AppCardRenderer {
     constructor(containerElement) {
         this.container = containerElement;
         this.apps = [];
-        this._showDisabled = true;
     }
 
     renderSkeleton(count = 3) {
@@ -52,9 +45,6 @@ class AppCardRenderer {
         }
     }
 
-    /**
-     * Render all app cards
-     */
     render() {
         if (!this.container) {
             console.error('Container element not found');
@@ -66,133 +56,53 @@ class AppCardRenderer {
             const card = this.createCard(app);
             this.container.appendChild(card);
         });
-
         this.updateAppCount();
     }
 
     createCard(app) {
+        const { label, icon } = STATUS_DISPLAY[app.status] || { label: 'Unknown', icon: '?' };
+        const isActive = app.status === APP_STATUS.ACTIVE;
+        const safeUrl = isActive && /^https?:\/\//i.test(app.url) ? app.url : '#';
+        const techsHtml = (app.technologies || []).map(t => `<span class="tech-badge">${this.escapeHtml(t)}</span>`).join('');
+        const categoryLabel = CATEGORY_LABELS[app.category] || app.category;
+        const linkHtml = isActive
+            ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="app-link"><span>Visit Site</span><span class="link-icon">→</span></a>`
+            : `<button type="button" class="app-link disabled" disabled aria-disabled="true"><span>Visit Site</span><span class="link-icon">→</span></button>`;
+
         const card = document.createElement('div');
         card.className = SELECTORS.APP_CARD;
         card.dataset.status = app.status;
         card.dataset.category = app.category;
         card.dataset.name = app.name;
-
-        const header = document.createElement('div');
-        header.className = 'card-header';
-
-        const h3 = document.createElement('h3');
-        h3.className = 'app-name';
-        h3.textContent = app.name;
-        header.appendChild(h3);
-        header.appendChild(this.createStatusBadge(app.status));
-        card.appendChild(header);
-
-        card.appendChild(this.createCategoryTag(app.category));
-
-        const desc = document.createElement('p');
-        desc.className = 'app-description';
-        desc.textContent = app.description;
-        card.appendChild(desc);
-
-        card.appendChild(this.createTechStack(app.technologies));
-        card.appendChild(this.createAppLink(app.url, app.status));
-
+        card.innerHTML = `
+            <div class="card-header">
+                <h3 class="app-name">${this.escapeHtml(app.name)}</h3>
+                <span class="status-badge status-${app.status}"><span class="status-icon">${icon}</span><span class="status-text">${label}</span></span>
+            </div>
+            <div class="category-tag tag-${app.category}">${categoryLabel}</div>
+            <p class="app-description">${this.escapeHtml(app.description)}</p>
+            <div class="tech-stack">${techsHtml}</div>
+            ${linkHtml}
+        `;
         return card;
-    }
-
-    createStatusBadge(status) {
-        const span = document.createElement('span');
-        span.className = `status-badge status-${status}`;
-
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'status-icon';
-        iconSpan.textContent = STATUS_ICONS[status] || '?';
-
-        const textSpan = document.createElement('span');
-        textSpan.className = 'status-text';
-        textSpan.textContent = STATUS_LABELS[status] || 'Unknown';
-
-        span.appendChild(iconSpan);
-        span.appendChild(textSpan);
-        return span;
-    }
-
-    createCategoryTag(category) {
-        const div = document.createElement('div');
-        div.className = `category-tag tag-${category}`;
-        div.textContent = CATEGORY_LABELS[category] || category;
-        return div;
-    }
-
-    createTechStack(technologies) {
-        const div = document.createElement('div');
-        div.className = 'tech-stack';
-        (technologies || []).forEach(tech => {
-            const badge = document.createElement('span');
-            badge.className = 'tech-badge';
-            badge.textContent = tech;
-            div.appendChild(badge);
-        });
-        return div;
-    }
-
-    createAppLink(url, status) {
-        const isActive = status === APP_STATUS.ACTIVE;
-        const safeUrl = isActive && /^https?:\/\//i.test(url) ? url : '#';
-
-        const textSpan = document.createElement('span');
-        textSpan.textContent = 'Visit Site';
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'link-icon';
-        iconSpan.textContent = '→';
-
-        if (!isActive) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'app-link disabled';
-            btn.disabled = true;
-            btn.setAttribute('aria-disabled', 'true');
-            btn.appendChild(textSpan);
-            btn.appendChild(iconSpan);
-            return btn;
-        }
-
-        const a = document.createElement('a');
-        a.href = safeUrl;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.className = 'app-link';
-        a.appendChild(textSpan);
-        a.appendChild(iconSpan);
-        return a;
-    }
-
-    filterDisabled(show) {
-        this._showDisabled = show;
-        const cards = this.container.querySelectorAll(`.${SELECTORS.APP_CARD}[data-status="disabled"]`);
-        cards.forEach(card => { card.style.display = show ? '' : 'none'; });
-        this.updateAppCount();
     }
 
     updateAppCount() {
         const countElement = document.getElementById(SELECTORS.APP_COUNT);
         if (countElement) {
-            const count = this._showDisabled
-                ? this.apps.length
-                : this.apps.filter(a => a.status === APP_STATUS.ACTIVE).length;
-            countElement.textContent = `${count} apps`;
+            countElement.textContent = `${this.apps.length} apps`;
         }
     }
 
     renderError() {
         if (!this.container) return;
-        const p = document.createElement('p');
-        p.textContent = 'Failed to load applications. Please try again later.';
+        this.container.innerHTML = '<p class="error-message">Failed to load applications. Please try again later.</p>';
+    }
+
+    escapeHtml(text) {
         const div = document.createElement('div');
-        div.className = 'error-message';
-        div.appendChild(p);
-        this.container.innerHTML = '';
-        this.container.appendChild(div);
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 

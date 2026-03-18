@@ -44,7 +44,86 @@ npm run discover-apps
 - Full app details with connectivity test results
 - Azure resource metadata (tags, resource group, type)
 
-### 2. Update Apps (`npm run update-apps`)
+### 2. Azure Full Report (`npm run azure-report`)
+
+Consolidated single-pass audit — replaces running discover, cleanup, and cost-audit separately.
+
+```bash
+npm run azure-report
+```
+
+**What it does (one command):**
+1. Verifies `az login` and loads subscription info
+2. Discovers every App Service, Container App, and Static Web App across all resource groups
+3. Live-tests HTTP connectivity to every URL
+4. Queries ALL Azure resources via Resource Graph
+5. Checks every resource against a free-tier knowledge base
+6. Detects unused/idle resources (orphaned IPs, empty plans, Azure Advisor flags)
+7. Pulls 30-day consumption cost data
+8. Diffs discovered apps against `wwwroot/data/apps.json`
+9. Prints a full console summary with copy-paste `az` commands
+10. Saves everything to **`azure-full-report.json`**
+
+**Report sections:**
+- Web services: URL, HTTP status, response time, free-tier status per service
+- All Azure resources: count by type
+- Free-tier analysis: on free / can go free / no free option
+- Unused/idle resources with remediation commands
+- 30-day cost breakdown + top cost drivers
+- apps.json sync diff (new/removed/updated)
+- Quick actions (copy-paste `az` commands to downgrade SKUs or delete idle resources)
+
+---
+
+### 3. 7-Day Spend Detail (`npm run spend-detail`)
+
+Deep-dives into the past 7 days of Azure usage — identifies the top 3 cost/usage drivers and explains exactly what each resource consumed.
+
+```bash
+npm run spend-detail
+```
+
+**What it does:**
+- Fetches all consumption usage records for the last 7 days
+- Aggregates by resource, then by meter type (e.g. "Compute Hours", "Data Stored", "Tokens")
+- Identifies the **top 3 resources** by spend (or by raw usage quantity if subscription uses credits)
+- For each top resource:
+  - Shows the resource group and Azure service type
+  - Lists every meter that generated charges, with a plain-English description of what it measures
+  - Prints a **day-by-day timeline** with ASCII progress bars
+  - Fetches live ARM detail (SKU, location, state, URL)
+- Prints global meter-type summary across all resources
+- Saves everything to **`azure-spend-detail-report.json`**
+
+**Note on credits subscriptions (Visual Studio / MSDN / sponsored):**
+The Azure consumption API returns `$0.00` costs when charges are covered by credits.
+In that case, the script automatically switches to ranking by **usage quantity** instead,
+so you still see which resources are doing the most work. Check the Azure portal Cost
+Management blade for actual credit utilization if needed.
+
+---
+
+### 4. Azure Cost & Usage Audit (`npm run audit-azure`)
+
+Scans every Azure resource in your subscription for unused resources and free-tier opportunities.
+
+```bash
+npm run audit-azure
+```
+
+**What it does:**
+- Lists every resource across all resource groups
+- Checks each resource against a free-tier knowledge base (App Service, Static Web Apps, Cosmos DB, Azure SQL, Cognitive Services, Log Analytics, SignalR, AI Search, and more)
+- Flags resources that could be downgraded to F0/F1/Free SKU
+- Identifies unused/idle resources: orphaned public IPs, empty App Service Plans, etc.
+- Pulls Azure Advisor Cost & High-Impact recommendations
+- Fetches 30-day consumption cost data and ranks top cost drivers
+- Prints a formatted console report with ready-to-run `az` commands
+- Saves full JSON results to `azure-cost-audit-report.json`
+
+---
+
+### 3. Update Apps (`npm run update-apps`)
 
 Merges the discovery report with your existing `apps.json`.
 

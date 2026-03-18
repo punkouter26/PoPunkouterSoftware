@@ -5,9 +5,7 @@
 
 export const SORT_TYPES = {
     ALPHA_ASC: 'alphabetical',
-    ALPHA_DESC: 'alphabetical-desc',
-    STATUS: 'status',
-    CATEGORY: 'category'
+    STATUS: 'status'
 };
 
 export const APP_STATUS = {
@@ -30,16 +28,10 @@ export const CATEGORY_LABELS = {
     [APP_CATEGORIES.CREATIVE]: '🎨 Creative'
 };
 
-export const STATUS_LABELS = {
-    [APP_STATUS.ACTIVE]: 'Active',
-    [APP_STATUS.DISABLED]: 'Disabled',
-    [APP_STATUS.BROKEN]: 'Broken'
-};
-
-export const STATUS_ICONS = {
-    [APP_STATUS.ACTIVE]: '●',
-    [APP_STATUS.DISABLED]: '○',
-    [APP_STATUS.BROKEN]: '⚠'
+export const STATUS_DISPLAY = {
+    [APP_STATUS.ACTIVE]: { label: 'Active', icon: '●' },
+    [APP_STATUS.DISABLED]: { label: 'Disabled', icon: '○' },
+    [APP_STATUS.BROKEN]: { label: 'Broken', icon: '⚠' }
 };
 
 export const ANIMATION_TIMINGS = {
@@ -49,20 +41,8 @@ export const ANIMATION_TIMINGS = {
 };
 
 export const SELECTORS = {
-    SORT_SELECT: 'sort-select',
-    APPS_GRID: 'apps-grid',
     APP_CARD: 'app-card',
     APP_COUNT: 'app-count-text'
 };
 
-export const EVENT_NAMES = {
-    APP_SORTED: 'app:sorted',
-    LINK_CLICKED: 'link:clicked',
-    APPS_LOADED: 'apps:loaded'
-};
 
-export const ANALYTICS_EVENTS = {
-    APPS_SORTED: 'AppsSorted',
-    LINK_CLICKED: 'LinkClicked',
-    APPS_LOADED: 'AppsLoaded'
-};
