@@ -12,6 +12,9 @@ on:
 permissions:
   contents: write          # needed to commit the updated JSON
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -26,6 +29,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
