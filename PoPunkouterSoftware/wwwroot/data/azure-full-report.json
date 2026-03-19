@@ -1,0 +1,2208 @@
+{
+  "generatedAt": "2026-03-19T02:14:53.003Z",
+  "subscription": {
+    "name": "Punkouter26",
+    "id": "bbb8dfbe-9169-432f-9b7a-fbf861b51037",
+    "tenantId": "1639b208-d5bf-4d71-9096-06163884a5e4",
+    "state": "Enabled"
+  },
+  "webServices": {
+    "total": 14,
+    "byStatus": {
+      "active": 10,
+      "broken": 1,
+      "other": 3
+    },
+    "byType": {
+      "appService": 11,
+      "containerApp": 0,
+      "staticWebApp": 3
+    },
+    "services": [
+      {
+        "name": "PoRobotStocks-PoRobotStocks-web",
+        "friendlyName": "PoRobotStocks",
+        "resourceGroup": "PoRobotStocks",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 538,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 414,
+          "Http5xx": 0,
+          "AverageResponseTime": 12.22
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "RobotStocks-PoRobotStocks productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {
+          "azd-env-name": "PoRobotStocks",
+          "azd-service-name": "web",
+          "environment": "dev",
+          "hidden-link: /app-insights-resource-id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/microsoft.insights/components/poappideinsights8f9c9a4e"
+        }
+      },
+      {
+        "name": "poface-dev-web",
+        "friendlyName": "PoFace",
+        "resourceGroup": "PoFace",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://poface-dev-web.azurewebsites.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 524,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 704,
+          "Http5xx": 0,
+          "AverageResponseTime": 66.67
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "face-dev productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {
+          "hidden-link: /app-insights-resource-id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/microsoft.insights/components/poappideinsights8f9c9a4e"
+        }
+      },
+      {
+        "name": "wa-porunner",
+        "friendlyName": "PoRunner",
+        "resourceGroup": "PoRunner",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://wa-porunner.azurewebsites.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 1862,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 49,
+          "Http5xx": 0,
+          "AverageResponseTime": 390.17
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "wa-porunner productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {
+          "project": "PoRunner"
+        }
+      },
+      {
+        "name": "app-porepolinetracker",
+        "friendlyName": "PoRepoLineTracker",
+        "resourceGroup": "PoRepoLineTracker",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://app-porepolinetracker.azurewebsites.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 1036,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 8,
+          "Http5xx": 0,
+          "AverageResponseTime": 210.49
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux,container",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "repolinetracker productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {
+          "azd-service-name": "api"
+        }
+      },
+      {
+        "name": "pocouplequiz-app",
+        "friendlyName": "PoCoupleQuiz",
+        "resourceGroup": "PoCoupleQuiz",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://pocouplequiz-app.azurewebsites.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 560,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 632,
+          "Http5xx": 0,
+          "AverageResponseTime": 6.17
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "games",
+        "description": "Interactive couplequiz game",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {}
+      },
+      {
+        "name": "app-poseereview",
+        "friendlyName": "PoSeeReview",
+        "resourceGroup": "PoSeeReview",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://app-poseereview.azurewebsites.net",
+        "httpStatus": "broken",
+        "platformState": "Running",
+        "connectivity": {
+          "success": false,
+          "statusCode": 400,
+          "responseTime": 720,
+          "error": null,
+          "statusClass": "4xx-client-error",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 1415,
+          "Http5xx": 75,
+          "AverageResponseTime": 50.58
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "seereview productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {}
+      },
+      {
+        "name": "app-polinks",
+        "friendlyName": "PoLinks",
+        "resourceGroup": "PoLinks",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://app-polinks.azurewebsites.net",
+        "httpStatus": "unreachable",
+        "platformState": "Running",
+        "connectivity": {
+          "success": false,
+          "statusCode": null,
+          "responseTime": 10329,
+          "error": "Timeout",
+          "statusClass": "error",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 726,
+          "Http5xx": 27,
+          "AverageResponseTime": 16.99
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "links productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {}
+      },
+      {
+        "name": "app-5ln5hfdrvof5u",
+        "friendlyName": "PoMiniGames",
+        "resourceGroup": "PoMiniGames",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
+        "httpStatus": "unreachable",
+        "platformState": "Running",
+        "connectivity": {
+          "success": false,
+          "statusCode": null,
+          "responseTime": 10349,
+          "error": "Timeout",
+          "statusClass": "error",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 72,
+          "Http5xx": 2,
+          "AverageResponseTime": 19.05
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "app-5ln5hfdrvof5u productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {
+          "azd-env-name": "pominigames-prod",
+          "azd-service-name": "api"
+        }
+      },
+      {
+        "name": "ponovaweight-app",
+        "friendlyName": "PoNovaWeight",
+        "resourceGroup": "PoNovaWeight",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://ponovaweight-app.azurewebsites.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 688,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 2040,
+          "Http5xx": 0,
+          "AverageResponseTime": 23.86
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "novaweight productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {
+          "azd-service-name": "app"
+        }
+      },
+      {
+        "name": "app-pojoker",
+        "friendlyName": "PoJoker",
+        "resourceGroup": "PoJoker",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://app-pojoker.azurewebsites.net",
+        "httpStatus": "unreachable",
+        "platformState": "Running",
+        "connectivity": {
+          "success": false,
+          "statusCode": null,
+          "responseTime": 10359,
+          "error": "Timeout",
+          "statusClass": "error",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 2,
+          "Http5xx": 0,
+          "AverageResponseTime": 35.75
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "creative",
+        "description": "Creative joker app",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {}
+      },
+      {
+        "name": "poappidea-web",
+        "friendlyName": "PoAppIdea",
+        "resourceGroup": "PoAppIdea",
+        "resourceType": "Microsoft.Web/sites",
+        "url": "https://poappidea-web.azurewebsites.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 302,
+          "responseTime": 921,
+          "error": null,
+          "statusClass": "3xx-redirect",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": {
+          "Requests": 2040,
+          "Http5xx": 0,
+          "AverageResponseTime": 6.15
+        },
+        "freeTierCheck": {
+          "label": "App Service (Web App)",
+          "currentSku": "app,linux",
+          "freeSku": "F1",
+          "freeSkuLabel": "Free (F1)",
+          "freeQuota": null,
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true,
+          "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low."
+        },
+        "sku": null,
+        "category": "productivity",
+        "description": "appidea productivity tool",
+        "technologies": [
+          "Azure App Service",
+          "Blazor"
+        ],
+        "tags": {}
+      },
+      {
+        "name": "stapp-5ln5hfdrvof5u",
+        "friendlyName": "PoMiniGames",
+        "resourceGroup": "PoMiniGames",
+        "resourceType": "Microsoft.Web/staticSites",
+        "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 167,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": null,
+        "freeTierCheck": {
+          "label": "Static Web App",
+          "currentSku": "Free",
+          "freeSku": "Free",
+          "freeSkuLabel": "Free",
+          "freeQuota": null,
+          "isOnFreeTier": true,
+          "isOnPaidTier": false,
+          "canGoFree": false,
+          "recommendation": "Free tier: 100 GB bandwidth/month + custom domains. Sufficient for personal/hobby sites."
+        },
+        "sku": "Free",
+        "category": "productivity",
+        "description": "stapp-5ln5hfdrvof5u productivity tool",
+        "technologies": [
+          "Azure Static Web Apps",
+          "JavaScript"
+        ],
+        "tags": {
+          "azd-env-name": "pominigames-prod",
+          "azd-service-name": "web"
+        }
+      },
+      {
+        "name": "swa-porunner",
+        "friendlyName": "PoRunner",
+        "resourceGroup": "PoRunner",
+        "resourceType": "Microsoft.Web/staticSites",
+        "url": "https://victorious-ocean-06635bc1e.6.azurestaticapps.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 159,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": null,
+        "freeTierCheck": {
+          "label": "Static Web App",
+          "currentSku": "Free",
+          "freeSku": "Free",
+          "freeSkuLabel": "Free",
+          "freeQuota": null,
+          "isOnFreeTier": true,
+          "isOnPaidTier": false,
+          "canGoFree": false,
+          "recommendation": "Free tier: 100 GB bandwidth/month + custom domains. Sufficient for personal/hobby sites."
+        },
+        "sku": "Free",
+        "category": "productivity",
+        "description": "runner productivity tool",
+        "technologies": [
+          "Azure Static Web Apps",
+          "JavaScript"
+        ],
+        "tags": {}
+      },
+      {
+        "name": "PoPunkouterSoftware",
+        "friendlyName": "PoPunkouterSoftware",
+        "resourceGroup": "PoPunkouterSoftware",
+        "resourceType": "Microsoft.Web/staticSites",
+        "url": "https://witty-smoke-014bc370f.2.azurestaticapps.net",
+        "httpStatus": "active",
+        "platformState": "Running",
+        "connectivity": {
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 163,
+          "error": null,
+          "statusClass": "2xx-ok",
+          "isAzureErrorPage": false
+        },
+        "resourceHealth": null,
+        "metrics7Days": null,
+        "freeTierCheck": {
+          "label": "Static Web App",
+          "currentSku": "Free",
+          "freeSku": "Free",
+          "freeSkuLabel": "Free",
+          "freeQuota": null,
+          "isOnFreeTier": true,
+          "isOnPaidTier": false,
+          "canGoFree": false,
+          "recommendation": "Free tier: 100 GB bandwidth/month + custom domains. Sufficient for personal/hobby sites."
+        },
+        "sku": "Free",
+        "category": "productivity",
+        "description": "PunkouterSoftware productivity tool",
+        "technologies": [
+          "Azure Static Web Apps",
+          "JavaScript"
+        ],
+        "tags": {}
+      }
+    ]
+  },
+  "allResourceSummary": {
+    "total": 44,
+    "byType": {
+      "Microsoft.OperationalInsights/workspaces": 1,
+      "Microsoft.KeyVault/vaults": 1,
+      "Microsoft.Insights/components": 1,
+      "Microsoft.CognitiveServices/accounts": 5,
+      "microsoft.insights/actiongroups": 1,
+      "Microsoft.Storage/storageAccounts": 13,
+      "Microsoft.ManagedIdentity/userAssignedIdentities": 1,
+      "Microsoft.Web/serverFarms": 2,
+      "Microsoft.Web/staticSites": 3,
+      "Microsoft.Web/sites": 11,
+      "Microsoft.Maps/accounts": 1,
+      "Microsoft.Sql/servers": 1,
+      "Microsoft.Sql/servers/databases": 2,
+      "Microsoft.ContainerRegistry/registries": 1
+    }
+  },
+  "freeTier": {
+    "onFree": [
+      {
+        "name": "PoPunkouterSoftware",
+        "type": "Microsoft.Web/staticSites",
+        "label": "Static Web App",
+        "resourceGroup": "PoPunkouterSoftware",
+        "location": "eastus2",
+        "currentSku": "Free",
+        "freeSku": "Free",
+        "freeSkuLabel": "Free",
+        "freeQuota": null,
+        "recommendation": "Free tier: 100 GB bandwidth/month + custom domains. Sufficient for personal/hobby sites."
+      },
+      {
+        "name": "cv-poshared-eastus",
+        "type": "Microsoft.CognitiveServices/accounts",
+        "label": "Cognitive Services / Azure AI",
+        "resourceGroup": "PoShared",
+        "location": "eastus",
+        "currentSku": "F0",
+        "freeSku": "F0",
+        "freeSkuLabel": "Free (F0)",
+        "freeQuota": null,
+        "recommendation": "F0 provides limited free calls/month — sufficient for dev/hobby use."
+      },
+      {
+        "name": "speech-poshared-eastus",
+        "type": "Microsoft.CognitiveServices/accounts",
+        "label": "Cognitive Services / Azure AI",
+        "resourceGroup": "PoShared",
+        "location": "eastus",
+        "currentSku": "F0",
+        "freeSku": "F0",
+        "freeSkuLabel": "Free (F0)",
+        "freeQuota": null,
+        "recommendation": "F0 provides limited free calls/month — sufficient for dev/hobby use."
+      },
+      {
+        "name": "pofaceapi",
+        "type": "Microsoft.CognitiveServices/accounts",
+        "label": "Cognitive Services / Azure AI",
+        "resourceGroup": "PoShared",
+        "location": "eastus",
+        "currentSku": "F0",
+        "freeSku": "F0",
+        "freeSkuLabel": "Free (F0)",
+        "freeQuota": null,
+        "recommendation": "F0 provides limited free calls/month — sufficient for dev/hobby use."
+      },
+      {
+        "name": "asp-poface-free",
+        "type": "Microsoft.Web/serverFarms",
+        "label": "App Service Plan",
+        "resourceGroup": "PoShared",
+        "location": "westus2",
+        "currentSku": "F1",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Downgrade to F1 if all hosted apps have low traffic. Delete if no apps are hosted."
+      },
+      {
+        "name": "language-poshared-eastus",
+        "type": "Microsoft.CognitiveServices/accounts",
+        "label": "Cognitive Services / Azure AI",
+        "resourceGroup": "poshared",
+        "location": "eastus",
+        "currentSku": "F0",
+        "freeSku": "F0",
+        "freeSkuLabel": "Free (F0)",
+        "freeQuota": null,
+        "recommendation": "F0 provides limited free calls/month — sufficient for dev/hobby use."
+      },
+      {
+        "name": "stapp-5ln5hfdrvof5u",
+        "type": "Microsoft.Web/staticSites",
+        "label": "Static Web App",
+        "resourceGroup": "PoMiniGames",
+        "location": "westus2",
+        "currentSku": "Free",
+        "freeSku": "Free",
+        "freeSkuLabel": "Free",
+        "freeQuota": null,
+        "recommendation": "Free tier: 100 GB bandwidth/month + custom domains. Sufficient for personal/hobby sites."
+      },
+      {
+        "name": "swa-porunner",
+        "type": "Microsoft.Web/staticSites",
+        "label": "Static Web App",
+        "resourceGroup": "PoRunner",
+        "location": "westus2",
+        "currentSku": "Free",
+        "freeSku": "Free",
+        "freeSkuLabel": "Free",
+        "freeQuota": null,
+        "recommendation": "Free tier: 100 GB bandwidth/month + custom domains. Sufficient for personal/hobby sites."
+      }
+    ],
+    "canGoFree": [
+      {
+        "name": "PoShared-LogAnalytics",
+        "type": "Microsoft.OperationalInsights/workspaces",
+        "label": "Log Analytics Workspace",
+        "resourceGroup": "PoShared",
+        "location": "eastus2",
+        "currentSku": "unknown",
+        "freeSku": "Free",
+        "freeSkuLabel": "Free (500 MB/day, 7-day retention)",
+        "freeQuota": null,
+        "recommendation": "Free SKU: 500 MB/day, 7-day retention. Set a data cap on paid SKUs.",
+        "upgradeAction": "Downgrade to free SKU: Free"
+      },
+      {
+        "name": "openai-poshared-eastus",
+        "type": "Microsoft.CognitiveServices/accounts",
+        "label": "Cognitive Services / Azure AI",
+        "resourceGroup": "PoShared",
+        "location": "eastus",
+        "currentSku": "S0",
+        "freeSku": "F0",
+        "freeSkuLabel": "Free (F0)",
+        "freeQuota": null,
+        "recommendation": "F0 provides limited free calls/month — sufficient for dev/hobby use.",
+        "upgradeAction": "Downgrade to free SKU: F0"
+      },
+      {
+        "name": "asp-poshared-linux",
+        "type": "Microsoft.Web/serverFarms",
+        "label": "App Service Plan",
+        "resourceGroup": "PoShared",
+        "location": "westus2",
+        "currentSku": "B1",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Downgrade to F1 if all hosted apps have low traffic. Delete if no apps are hosted.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "app-porepolinetracker",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoRepoLineTracker",
+        "location": "westus2",
+        "currentSku": "app,linux,container",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "app-poseereview",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoSeeReview",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "pocouplequiz-app",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoCoupleQuiz",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "potraffic-sql-shared-22602/master",
+        "type": "Microsoft.Sql/servers/databases",
+        "label": "Azure SQL Database",
+        "resourceGroup": "PoShared",
+        "location": "westus2",
+        "currentSku": "GP_SYSTEM",
+        "freeSku": "Free",
+        "freeSkuLabel": "Free offer (32 GB serverless)",
+        "freeQuota": null,
+        "recommendation": "One free Azure SQL offer per subscription (serverless 32 GB).",
+        "upgradeAction": "Downgrade to free SKU: Free"
+      },
+      {
+        "name": "potraffic-sql-shared-22602/free-sql-db-6747937",
+        "type": "Microsoft.Sql/servers/databases",
+        "label": "Azure SQL Database",
+        "resourceGroup": "PoShared",
+        "location": "westus2",
+        "currentSku": "GP_S_Gen5",
+        "freeSku": "Free",
+        "freeSkuLabel": "Free offer (32 GB serverless)",
+        "freeQuota": null,
+        "recommendation": "One free Azure SQL offer per subscription (serverless 32 GB).",
+        "upgradeAction": "Downgrade to free SKU: Free"
+      },
+      {
+        "name": "poappidea-web",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoAppIdea",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "app-pojoker",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoJoker",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "app-5ln5hfdrvof5u",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoMiniGames",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "ponovaweight-app",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoNovaWeight",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "wa-porunner",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoRunner",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "poface-dev-web",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoFace",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "PoRobotStocks-PoRobotStocks-web",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoRobotStocks",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      },
+      {
+        "name": "app-polinks",
+        "type": "Microsoft.Web/sites",
+        "label": "App Service (Web App)",
+        "resourceGroup": "PoLinks",
+        "location": "westus2",
+        "currentSku": "app,linux",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "freeQuota": null,
+        "recommendation": "Free F1 provides 60 CPU-min/day, 1 GB RAM. Switch if traffic is low.",
+        "upgradeAction": "Downgrade to free SKU: F1"
+      }
+    ],
+    "noFreeTier": [
+      {
+        "name": "kv-poshared",
+        "type": "Microsoft.KeyVault/vaults",
+        "label": "Key Vault",
+        "resourceGroup": "PoShared",
+        "location": "eastus",
+        "currentSku": "unknown",
+        "freeSku": null,
+        "freeSkuLabel": "~$0.03 per 10k operations",
+        "freeQuota": null,
+        "recommendation": "Standard vault is cost-effective. Consolidate multiple vaults when possible."
+      },
+      {
+        "name": "poappideinsights8f9c9a4e",
+        "type": "Microsoft.Insights/components",
+        "label": "Application Insights",
+        "resourceGroup": "PoShared",
+        "location": "eastus2",
+        "currentSku": "web",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB/month free ingestion",
+        "freeQuota": "5 GB/month free — enable sampling + set a daily cap",
+        "recommendation": "Enable adaptive sampling to stay under 5 GB/month free limit."
+      },
+      {
+        "name": "stpoappidea",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoAppIdea",
+        "location": "eastus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stpocouplequizapp",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoCoupleQuiz",
+        "location": "eastus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stporepolinetracker",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoRepoLineTracker",
+        "location": "eastus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stposeereview",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoSeeReview",
+        "location": "eastus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "crporepofmtbyv47b6yo6",
+        "type": "Microsoft.ContainerRegistry/registries",
+        "label": "Container Registry",
+        "resourceGroup": "PoRepoLineTracker",
+        "location": "westus2",
+        "currentSku": "Basic",
+        "freeSku": null,
+        "freeSkuLabel": "No free tier",
+        "freeQuota": null,
+        "recommendation": "Basic ~$5/mo. Consider GitHub Container Registry (ghcr.io) for free private images."
+      },
+      {
+        "name": "stpojoker26",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoJoker",
+        "location": "westus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stporunnerjpuvwduj",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoRunner",
+        "location": "westus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stpominiapps26",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoMiniApps",
+        "location": "westus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stponovaweight",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoNovaWeight",
+        "location": "westus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "pofacedevsa",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoFace",
+        "location": "westus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stlzwajfaczgake",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoRobotStocks",
+        "location": "westus2",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stpofunquiz26",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoFunQuiz",
+        "location": "eastus",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stporedoimage26",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoRedoImage",
+        "location": "eastus",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      },
+      {
+        "name": "stpolinksdev01",
+        "type": "Microsoft.Storage/storageAccounts",
+        "label": "Storage Account",
+        "resourceGroup": "PoLinks",
+        "location": "eastus",
+        "currentSku": "Standard_LRS",
+        "freeSku": null,
+        "freeSkuLabel": "5 GB Blob free/month (12 mo, new accounts)",
+        "freeQuota": null,
+        "recommendation": "Use LRS for lowest cost. Enable lifecycle policies to archive/delete old data."
+      }
+    ]
+  },
+  "unusedResources": [],
+  "zombieApps": [],
+  "advisorHighlights": [
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "GA",
+        "recommendationOfferingId": "ed05f3b7-8949-4698-9b38-49ab8abb5ee0",
+        "recommendationSubCategory": "MonitoringAndAlerting"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/providers/Microsoft.Advisor/recommendations/33dfea74-4440-e9ec-eec9-ffd7c03a8c49",
+      "impact": "High",
+      "impactedField": "Microsoft.Subscriptions/subscriptions",
+      "impactedValue": "bbb8dfbe-9169-432f-9b7a-fbf861b51037",
+      "lastUpdated": "2026-03-19T01:05:49.902524+00:00",
+      "metadata": null,
+      "name": "33dfea74-4440-e9ec-eec9-ffd7c03a8c49",
+      "recommendationTypeId": "242639fd-cd73-4be2-8f55-70478db8d1a5",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Create an Azure Service Health alert",
+        "solution": "Create an Azure Service Health alert"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "Preview",
+        "recommendationOfferingId": "df36aee8-c644-400b-a0ab-fd0f1191211d",
+        "recommendationSubCategory": "HighAvailability"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/Microsoft.Web/serverFarms/asp-poface-free/providers/Microsoft.Advisor/recommendations/f75acb19-4b3c-81fc-b20f-6518b82db771",
+      "impact": "High",
+      "impactedField": "MICROSOFT.WEB/SITES",
+      "impactedValue": "asp-poface-free",
+      "lastUpdated": "2026-03-18T14:14:11.458441+00:00",
+      "metadata": null,
+      "name": "f75acb19-4b3c-81fc-b20f-6518b82db771",
+      "recommendationTypeId": "dc298556-8232-4aa8-bfe0-5204c5017be0",
+      "resourceGroup": "PoShared",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/Microsoft.Web/serverFarms/asp-poface-free",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Use Standard or Premium tier",
+        "solution": "Use Standard or Premium tier"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "Preview",
+        "recommendationOfferingId": "df36aee8-c644-400b-a0ab-fd0f1191211d",
+        "recommendationSubCategory": "HighAvailability"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/Microsoft.Web/serverFarms/asp-poshared-linux/providers/Microsoft.Advisor/recommendations/83eed4de-7b76-16a0-2314-d53e9738ce2b",
+      "impact": "High",
+      "impactedField": "MICROSOFT.WEB/SITES",
+      "impactedValue": "asp-poshared-linux",
+      "lastUpdated": "2026-03-18T14:13:22.853143+00:00",
+      "metadata": null,
+      "name": "83eed4de-7b76-16a0-2314-d53e9738ce2b",
+      "recommendationTypeId": "dc298556-8232-4aa8-bfe0-5204c5017be0",
+      "resourceGroup": "PoShared",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/Microsoft.Web/serverFarms/asp-poshared-linux",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Use Standard or Premium tier",
+        "solution": "Use Standard or Premium tier"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "Preview",
+        "recommendationOfferingId": "3c737fd7-1389-4626-868f-c18df5790cb6",
+        "recommendationSubCategory": "HighAvailability"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoRepoLineTracker/providers/Microsoft.ContainerRegistry/registries/crporepofmtbyv47b6yo6/providers/Microsoft.Advisor/recommendations/3101c56e-d819-15c5-8e35-ef3e765dfcf2",
+      "impact": "High",
+      "impactedField": "MICROSOFT.CONTAINERREGISTRY/REGISTRIES",
+      "impactedValue": "crporepofmtbyv47b6yo6",
+      "lastUpdated": "2026-03-18T22:31:51.209390+00:00",
+      "metadata": null,
+      "name": "3101c56e-d819-15c5-8e35-ef3e765dfcf2",
+      "recommendationTypeId": "af0cdbce-c610-499b-9bd7-b169cdb1bb2e",
+      "resourceGroup": "PoRepoLineTracker",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoRepoLineTracker/providers/Microsoft.ContainerRegistry/registries/crporepofmtbyv47b6yo6",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Use Premium tier for critical production workloads",
+        "solution": "Use Premium tier for critical production workloads"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "Preview",
+        "recommendationOfferingId": "df36aee8-c644-400b-a0ab-fd0f1191211d",
+        "recommendationSubCategory": "MonitoringAndAlerting"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoIssues/providers/Microsoft.Web/sites/po-issues/providers/Microsoft.Advisor/recommendations/3d367d6c-e8ab-b333-4b84-5ec5af2c20ed",
+      "impact": "High",
+      "impactedField": "MICROSOFT.WEB/SITES",
+      "impactedValue": "po-issues",
+      "lastUpdated": "2026-03-18T04:58:28.050057+00:00",
+      "metadata": null,
+      "name": "3d367d6c-e8ab-b333-4b84-5ec5af2c20ed",
+      "recommendationTypeId": "72063b96-92fa-4b74-9457-b84b662155f9",
+      "resourceGroup": "PoIssues",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoIssues/providers/Microsoft.Web/sites/po-issues",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Enable Health check for App Service",
+        "solution": "Enable Health check for App Service"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "Preview",
+        "recommendationOfferingId": "df36aee8-c644-400b-a0ab-fd0f1191211d",
+        "recommendationSubCategory": "MonitoringAndAlerting"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoSeeReview/providers/Microsoft.Web/sites/app-poseereview/providers/Microsoft.Advisor/recommendations/2465475c-faf7-b257-73ce-7fb920aab495",
+      "impact": "High",
+      "impactedField": "MICROSOFT.WEB/SITES",
+      "impactedValue": "app-poseereview",
+      "lastUpdated": "2026-03-18T19:40:11.799470+00:00",
+      "metadata": null,
+      "name": "2465475c-faf7-b257-73ce-7fb920aab495",
+      "recommendationTypeId": "72063b96-92fa-4b74-9457-b84b662155f9",
+      "resourceGroup": "PoSeeReview",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoSeeReview/providers/Microsoft.Web/sites/app-poseereview",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Enable Health check for App Service",
+        "solution": "Enable Health check for App Service"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "Preview",
+        "recommendationOfferingId": "df36aee8-c644-400b-a0ab-fd0f1191211d",
+        "recommendationSubCategory": "MonitoringAndAlerting"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoJoker/providers/Microsoft.Web/sites/app-pojoker/providers/Microsoft.Advisor/recommendations/236d4f4e-ac40-c242-6c45-4e11e332d0d7",
+      "impact": "High",
+      "impactedField": "MICROSOFT.WEB/SITES",
+      "impactedValue": "app-pojoker",
+      "lastUpdated": "2026-03-18T08:25:39.463600+00:00",
+      "metadata": null,
+      "name": "236d4f4e-ac40-c242-6c45-4e11e332d0d7",
+      "recommendationTypeId": "72063b96-92fa-4b74-9457-b84b662155f9",
+      "resourceGroup": "PoJoker",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoJoker/providers/Microsoft.Web/sites/app-pojoker",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Enable Health check for App Service",
+        "solution": "Enable Health check for App Service"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "Preview",
+        "recommendationOfferingId": "df36aee8-c644-400b-a0ab-fd0f1191211d",
+        "recommendationSubCategory": "Scalability"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/Microsoft.Web/serverFarms/asp-poface-free/providers/Microsoft.Advisor/recommendations/d8820b05-0d07-4b3f-7724-fa48af192e81",
+      "impact": "High",
+      "impactedField": "MICROSOFT.WEB/SITES",
+      "impactedValue": "asp-poface-free",
+      "lastUpdated": "2026-03-18T17:04:57.145884+00:00",
+      "metadata": null,
+      "name": "d8820b05-0d07-4b3f-7724-fa48af192e81",
+      "recommendationTypeId": "e987dcce-fd2c-4683-8abf-f1a34bbad737",
+      "resourceGroup": "PoShared",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/Microsoft.Web/serverFarms/asp-poface-free",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Set minimum instance count for App Service to 2",
+        "solution": "Set minimum instance count for App Service to 2"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "maturityLevel": "Preview",
+        "recommendationOfferingId": "df36aee8-c644-400b-a0ab-fd0f1191211d",
+        "recommendationSubCategory": "Scalability"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/Microsoft.Web/serverFarms/asp-poshared-linux/providers/Microsoft.Advisor/recommendations/5879630a-6253-df67-8908-c698bbab431e",
+      "impact": "High",
+      "impactedField": "MICROSOFT.WEB/SITES",
+      "impactedValue": "asp-poshared-linux",
+      "lastUpdated": "2026-03-18T16:52:26.227761+00:00",
+      "metadata": null,
+      "name": "5879630a-6253-df67-8908-c698bbab431e",
+      "recommendationTypeId": "e987dcce-fd2c-4683-8abf-f1a34bbad737",
+      "resourceGroup": "PoShared",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/Microsoft.Web/serverFarms/asp-poshared-linux",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Set minimum instance count for App Service to 2",
+        "solution": "Set minimum instance count for App Service to 2"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    },
+    {
+      "category": "HighAvailability",
+      "extendedProperties": {
+        "descriptionOfChanges": "[\"SKU Availability: Geo-replication is only available on specific Azure Container Registry SKUs. Customers may need to use a supported SKU to enable this feature.\",\"Additional Regional Replicas: Each replica deploys the registry service in an additional region, increasing overall service cost based on the number of regions configured.\",\"Total Registry Storage Size: Images are replicated to each region, but storage is billed based on the total logical registry size, not per replica. For example: a 1 GB image replicated to two regions still counts as 1 GB of storage.\",\"Cross-Region Replication Traffic: Pushing images may generate cross-region data transfer as layers are replicated between regions.\",\"Network Egress for Pulls: Image pulls may incur data egress charges depending on the network path between workloads and the registry replica.\"]",
+        "maturityLevel": "Preview",
+        "recommendationCostImplication": "Low",
+        "recommendationOfferingId": "3c737fd7-1389-4626-868f-c18df5790cb6",
+        "recommendationSubCategory": "DisasterRecovery",
+        "resiliencyCostImpact": "unknown",
+        "resiliencyExperience": "False"
+      },
+      "id": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoRepoLineTracker/providers/Microsoft.ContainerRegistry/registries/crporepofmtbyv47b6yo6/providers/Microsoft.Advisor/recommendations/9692005c-d871-d15c-593a-68d79dfdd56b",
+      "impact": "High",
+      "impactedField": "MICROSOFT.CONTAINERREGISTRY/REGISTRIES",
+      "impactedValue": "crporepofmtbyv47b6yo6",
+      "lastUpdated": "2026-03-18T16:32:45.300104+00:00",
+      "metadata": null,
+      "name": "9692005c-d871-d15c-593a-68d79dfdd56b",
+      "recommendationTypeId": "dcfa2602-227e-4b6c-a60d-7b1f6514e690",
+      "resourceGroup": "PoRepoLineTracker",
+      "resourceMetadata": {
+        "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoRepoLineTracker/providers/Microsoft.ContainerRegistry/registries/crporepofmtbyv47b6yo6",
+        "source": null
+      },
+      "risk": null,
+      "shortDescription": {
+        "problem": "Ensure Geo-replication is enabled for resilience",
+        "solution": "Ensure Geo-replication is enabled for resilience"
+      },
+      "suppressionIds": null,
+      "type": "Microsoft.Advisor/recommendations"
+    }
+  ],
+  "dependencyMap": {
+    "sharedPlans": [],
+    "sqlServers": [
+      {
+        "serverName": "potraffic-sql-shared-22602",
+        "resourceGroup": "PoShared",
+        "dbCount": 2,
+        "databases": [
+          "potraffic-sql-shared-22602/master",
+          "potraffic-sql-shared-22602/free-sql-db-6747937"
+        ]
+      }
+    ]
+  },
+  "appInsightsMetrics": [
+    {
+      "name": "poappideinsights8f9c9a4e",
+      "resourceGroup": "PoShared",
+      "exceptions7Days": 0,
+      "requests7Days": 0,
+      "failedRequests7Days": 0
+    }
+  ],
+  "cost": {
+    "totalCost30Days": 99.9165,
+    "totalFormatted": "$99.92",
+    "currency": "USD",
+    "topCostDrivers": [
+      {
+        "name": "Foundry Tools (poshared)",
+        "cost": 59.7581
+      },
+      {
+        "name": "SQL Database (poshared)",
+        "cost": 24.4155
+      },
+      {
+        "name": "Azure App Service (poshared)",
+        "cost": 7.4032
+      },
+      {
+        "name": "Foundry Models (poshared)",
+        "cost": 3.2728
+      },
+      {
+        "name": "Container Registry (poshared)",
+        "cost": 2.9062
+      },
+      {
+        "name": "Container Registry (porepolinetracker)",
+        "cost": 1.5154
+      },
+      {
+        "name": "Key Vault (poshared)",
+        "cost": 0.4457
+      },
+      {
+        "name": "Azure App Service (porobot-dev)",
+        "cost": 0.1214
+      },
+      {
+        "name": "SQL Database (potraffic)",
+        "cost": 0.0542
+      },
+      {
+        "name": "Azure App Service (poface)",
+        "cost": 0.0141
+      },
+      {
+        "name": "Bandwidth (pofunquiz)",
+        "cost": 0.006
+      },
+      {
+        "name": "Azure App Service (potraffic)",
+        "cost": 0.0011
+      },
+      {
+        "name": "Azure App Service (pominiapps)",
+        "cost": 0.0009
+      },
+      {
+        "name": "Storage (poseereview)",
+        "cost": 0.0007
+      },
+      {
+        "name": "Storage (poappidea)",
+        "cost": 0.0005
+      },
+      {
+        "name": "Storage (porobotstocks)",
+        "cost": 0.0003
+      },
+      {
+        "name": "Storage (poface)",
+        "cost": 0.0002
+      },
+      {
+        "name": "Bandwidth (poappidea)",
+        "cost": 0.0001
+      },
+      {
+        "name": "Bandwidth (porepolinetracker)",
+        "cost": 0.0001
+      },
+      {
+        "name": "Storage (ponovaweight)",
+        "cost": 0.0001
+      }
+    ],
+    "source": "CostManagement",
+    "rawRecordCount": 62,
+    "note": null
+  },
+  "appsJsonDiff": {
+    "currentCount": 12,
+    "discoveredCount": 12,
+    "newApps": [],
+    "removedApps": [],
+    "updatedApps": [
+      "PoRobotStocks-PoRobotStocks-web",
+      "poface-dev-web",
+      "swa-porunner",
+      "app-porepolinetracker",
+      "pocouplequiz-app",
+      "app-poseereview",
+      "app-polinks",
+      "stapp-5ln5hfdrvof5u",
+      "ponovaweight-app",
+      "app-pojoker",
+      "poappidea-web",
+      "PoPunkouterSoftware"
+    ]
+  },
+  "securityPosture": {
+    "total": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "findings": []
+  },
+  "costTrend": {
+    "months": [
+      {
+        "month": "2025--1",
+        "cost": 0.43
+      },
+      {
+        "month": "2025--1",
+        "cost": 11.44
+      },
+      {
+        "month": "2025--1",
+        "cost": 10.7
+      },
+      {
+        "month": "2026--0",
+        "cost": 50.25
+      },
+      {
+        "month": "2026--0",
+        "cost": 49.32
+      },
+      {
+        "month": "2026--0",
+        "cost": 70.09
+      }
+    ]
+  },
+  "sslExpiry": [
+    {
+      "name": "PoRobotStocks-PoRobotStocks-web",
+      "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "poface-dev-web",
+      "url": "https://poface-dev-web.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "wa-porunner",
+      "url": "https://wa-porunner.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "app-porepolinetracker",
+      "url": "https://app-porepolinetracker.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "pocouplequiz-app",
+      "url": "https://pocouplequiz-app.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "app-poseereview",
+      "url": "https://app-poseereview.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "app-polinks",
+      "url": "https://app-polinks.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "app-5ln5hfdrvof5u",
+      "url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "ponovaweight-app",
+      "url": "https://ponovaweight-app.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "app-pojoker",
+      "url": "https://app-pojoker.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "poappidea-web",
+      "url": "https://poappidea-web.azurewebsites.net",
+      "expiry": "2026-08-25",
+      "daysLeft": 159,
+      "subject": "*.azurewebsites.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "stapp-5ln5hfdrvof5u",
+      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net",
+      "expiry": "2026-08-21",
+      "daysLeft": 155,
+      "subject": "*.1.azurestaticapps.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "swa-porunner",
+      "url": "https://victorious-ocean-06635bc1e.6.azurestaticapps.net",
+      "expiry": "2026-08-24",
+      "daysLeft": 158,
+      "subject": "*.6.azurestaticapps.net",
+      "error": null,
+      "warning": null
+    },
+    {
+      "name": "PoPunkouterSoftware",
+      "url": "https://witty-smoke-014bc370f.2.azurestaticapps.net",
+      "expiry": "2026-08-23",
+      "daysLeft": 157,
+      "subject": "*.2.azurestaticapps.net",
+      "error": null,
+      "warning": null
+    }
+  ],
+  "configDrift": [
+    {
+      "name": "PoRobotStocks-PoRobotStocks-web",
+      "friendlyName": "PoRobotStocks",
+      "resourceGroup": "PoRobotStocks",
+      "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "Always-On disabled (cold starts)",
+          "field": "alwaysOn",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "poface-dev-web",
+      "friendlyName": "PoFace",
+      "resourceGroup": "PoFace",
+      "url": "https://poface-dev-web.azurewebsites.net",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "Always-On disabled (cold starts)",
+          "field": "alwaysOn",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "wa-porunner",
+      "friendlyName": "PoRunner",
+      "resourceGroup": "PoRunner",
+      "url": "https://wa-porunner.azurewebsites.net",
+      "issueCount": 3,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "HTTP/2 disabled",
+          "field": "http20Enabled",
+          "value": false
+        },
+        {
+          "severity": "low",
+          "issue": "Always-On disabled (cold starts)",
+          "field": "alwaysOn",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "app-porepolinetracker",
+      "friendlyName": "PoRepoLineTracker",
+      "resourceGroup": "PoRepoLineTracker",
+      "url": "https://app-porepolinetracker.azurewebsites.net",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "Always-On disabled (cold starts)",
+          "field": "alwaysOn",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "pocouplequiz-app",
+      "friendlyName": "PoCoupleQuiz",
+      "resourceGroup": "PoCoupleQuiz",
+      "url": "https://pocouplequiz-app.azurewebsites.net",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "Always-On disabled (cold starts)",
+          "field": "alwaysOn",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "app-poseereview",
+      "friendlyName": "PoSeeReview",
+      "resourceGroup": "PoSeeReview",
+      "url": "https://app-poseereview.azurewebsites.net",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "app-polinks",
+      "friendlyName": "PoLinks",
+      "resourceGroup": "PoLinks",
+      "url": "https://app-polinks.azurewebsites.net",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "Always-On disabled (cold starts)",
+          "field": "alwaysOn",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "app-5ln5hfdrvof5u",
+      "friendlyName": "PoMiniGames",
+      "resourceGroup": "PoMiniGames",
+      "url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
+      "issueCount": 3,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "HTTP/2 disabled",
+          "field": "http20Enabled",
+          "value": false
+        },
+        {
+          "severity": "low",
+          "issue": "Always-On disabled (cold starts)",
+          "field": "alwaysOn",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "ponovaweight-app",
+      "friendlyName": "PoNovaWeight",
+      "resourceGroup": "PoNovaWeight",
+      "url": "https://ponovaweight-app.azurewebsites.net",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "HTTP/2 disabled",
+          "field": "http20Enabled",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "app-pojoker",
+      "friendlyName": "PoJoker",
+      "resourceGroup": "PoJoker",
+      "url": "https://app-pojoker.azurewebsites.net",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "Always-On disabled (cold starts)",
+          "field": "alwaysOn",
+          "value": false
+        },
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "poappidea-web",
+      "friendlyName": "PoAppIdea",
+      "resourceGroup": "PoAppIdea",
+      "url": "https://poappidea-web.azurewebsites.net",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "info",
+          "issue": "Authentication not configured",
+          "field": "auth",
+          "value": false
+        }
+      ]
+    }
+  ],
+  "storageInventory": [
+    {
+      "name": "stpoappidea",
+      "resourceGroup": "PoAppIdea",
+      "sku": "Standard_LRS",
+      "location": "eastus2",
+      "publicBlobAccess": true,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "high",
+          "issue": "⚠ Public blob access ENABLED — potential data exposure"
+        },
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "pofacedevsa",
+      "resourceGroup": "PoFace",
+      "sku": "Standard_LRS",
+      "location": "westus2",
+      "publicBlobAccess": true,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 2,
+      "issues": [
+        {
+          "severity": "high",
+          "issue": "⚠ Public blob access ENABLED — potential data exposure"
+        },
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stpocouplequizapp",
+      "resourceGroup": "PoCoupleQuiz",
+      "sku": "Standard_LRS",
+      "location": "eastus2",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stporepolinetracker",
+      "resourceGroup": "PoRepoLineTracker",
+      "sku": "Standard_LRS",
+      "location": "eastus2",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stposeereview",
+      "resourceGroup": "PoSeeReview",
+      "sku": "Standard_LRS",
+      "location": "eastus2",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stpojoker26",
+      "resourceGroup": "PoJoker",
+      "sku": "Standard_LRS",
+      "location": "westus2",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stporunnerjpuvwduj",
+      "resourceGroup": "PoRunner",
+      "sku": "Standard_LRS",
+      "location": "westus2",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stpominiapps26",
+      "resourceGroup": "PoMiniApps",
+      "sku": "Standard_LRS",
+      "location": "westus2",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stponovaweight",
+      "resourceGroup": "PoNovaWeight",
+      "sku": "Standard_LRS",
+      "location": "westus2",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stlzwajfaczgake",
+      "resourceGroup": "PoRobotStocks",
+      "sku": "Standard_LRS",
+      "location": "westus2",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stpofunquiz26",
+      "resourceGroup": "PoFunQuiz",
+      "sku": "Standard_LRS",
+      "location": "eastus",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stporedoimage26",
+      "resourceGroup": "PoRedoImage",
+      "sku": "Standard_LRS",
+      "location": "eastus",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    },
+    {
+      "name": "stpolinksdev01",
+      "resourceGroup": "PoLinks",
+      "sku": "Standard_LRS",
+      "location": "eastus",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 1,
+      "issues": [
+        {
+          "severity": "low",
+          "issue": "No blob lifecycle/delete retention policy"
+        }
+      ]
+    }
+  ],
+  "delta": {
+    "previousReportAge": "11 min ago",
+    "statusChanges": [
+      {
+        "name": "app-polinks",
+        "from": "broken",
+        "to": "unreachable",
+        "direction": "degraded"
+      },
+      {
+        "name": "app-5ln5hfdrvof5u",
+        "from": "broken",
+        "to": "unreachable",
+        "direction": "degraded"
+      },
+      {
+        "name": "app-pojoker",
+        "from": "broken",
+        "to": "unreachable",
+        "direction": "degraded"
+      }
+    ],
+    "newSites": [],
+    "removedSites": [],
+    "resourceCountDelta": 0,
+    "degradedSites": [
+      "app-polinks",
+      "app-5ln5hfdrvof5u",
+      "app-pojoker"
+    ],
+    "recoveredSites": []
+  }
+}

@@ -1,81 +1,8 @@
 {
   "apps": [
     {
-      "id": "apppohappytrump2jr7zldry26xa",
-      "name": "app-pohappytrump-2jr7zldry26xa",
-      "description": "AI-powered happytrump-2jr7zldry26xa application",
-      "category": "ai",
-      "status": "disabled",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net"
-    },
-    {
-      "id": "apppojoker",
-      "name": "app-pojoker",
-      "description": "Creative joker application",
-      "category": "creative",
-      "status": "disabled",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://app-pojoker.azurewebsites.net"
-    },
-    {
-      "id": "appporepolinetracker",
-      "name": "app-porepolinetracker",
-      "description": "repolinetracker productivity tool",
-      "category": "productivity",
-      "status": "disabled",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://app-porepolinetracker.azurewebsites.net"
-    },
-    {
-      "id": "appposeereview",
-      "name": "app-poseereview",
-      "description": "seereview productivity tool",
-      "category": "productivity",
-      "status": "broken",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://app-poseereview.azurewebsites.net"
-    },
-    {
-      "id": "poissues",
-      "name": "po-issues",
-      "description": "-issues productivity tool",
-      "category": "productivity",
-      "status": "disabled",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://po-issues.azurewebsites.net"
-    },
-    {
       "id": "poappidea",
       "name": "PoAppIdea",
-      "description": "AI-powered app idea generator and brainstorming tool",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "Blazor",
-        "Azure OpenAI"
-      ],
-      "url": "https://poappidea-web.azurewebsites.net"
-    },
-    {
-      "id": "poappideaweb",
-      "name": "poappidea-web",
       "description": "appidea productivity tool",
       "category": "productivity",
       "status": "active",
@@ -86,48 +13,11 @@
       "url": "https://poappidea-web.azurewebsites.net"
     },
     {
-      "id": "pobabytouch",
-      "name": "PoBabyTouch",
-      "description": "A game for kids to test reflexes and hand-eye coordination",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://proud-pebble-00337fb0f.2.azurestaticapps.net"
-    },
-    {
-      "id": "poconnectfive",
-      "name": "PoConnectFive",
-      "description": "Web-based implementation of the classic Connect Five game with multiplayer support",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://ashy-bay-0538a440f.2.azurestaticapps.net"
-    },
-    {
       "id": "pocouplequiz",
       "name": "PoCoupleQuiz",
-      "description": "Relationship compatibility quiz for couples to test their knowledge of each other",
+      "description": "Interactive couplequiz game",
       "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Container Apps",
-        "Blazor",
-        "Azure Storage"
-      ],
-      "url": "https://pocouplequiz-app.azurewebsites.net"
-    },
-    {
-      "id": "pocouplequizapp",
-      "name": "pocouplequiz-app",
-      "description": "Interactive couplequiz-app game application",
-      "category": "games",
-      "status": "disabled",
+      "status": "active",
       "technologies": [
         "Azure App Service",
         "Blazor"
@@ -135,33 +25,8 @@
       "url": "https://pocouplequiz-app.azurewebsites.net"
     },
     {
-      "id": "podebaterap",
-      "name": "PoDebateRap",
-      "description": "Generate AI-powered competitive rap battles on any topic with voice synthesis",
-      "category": "ai",
-      "status": "disabled",
-      "technologies": [
-        "Azure OpenAI GPT-4",
-        "Speech Services",
-        "Blazor"
-      ],
-      "url": "https://podebaterap.azurewebsites.net"
-    },
-    {
-      "id": "podropsquare",
-      "name": "PoDropSquare",
-      "description": "Puzzle game featuring falling squares with strategic gameplay mechanics",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Container Apps",
-        "Docker"
-      ],
-      "url": "https://ca-podropsquare-api.braveground-e6b1356c.eastus.azurecontainerapps.io"
-    },
-    {
-      "id": "pofacedevweb",
-      "name": "poface-dev-web",
+      "id": "poface-dev",
+      "name": "PoFace",
       "description": "face-dev productivity tool",
       "category": "productivity",
       "status": "active",
@@ -172,99 +37,34 @@
       "url": "https://poface-dev-web.azurewebsites.net"
     },
     {
-      "id": "pofasttype",
-      "name": "PoFastType",
-      "description": "Retro arcade-styled typing speed test and training game",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Radzen Blazor",
-        "Bootstrap 5",
-        "Retro CSS"
-      ],
-      "url": "https://pofasttype.azurewebsites.net/"
-    },
-    {
-      "id": "pofight",
-      "name": "PoFight",
-      "description": "Competitive fighting game with multiplayer support",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://gray-coast-079ec100f.2.azurestaticapps.net"
-    },
-    {
-      "id": "pofoxnews",
-      "name": "PoFoxNews",
-      "description": "News aggregator with AI-powered article summaries and text-to-speech playback",
-      "category": "productivity",
-      "status": "disabled",
-      "technologies": [
-        "Azure OpenAI",
-        "Speech Services",
-        "RSS Feed"
-      ],
-      "url": "https://pofoxnews.azurewebsites.net/"
-    },
-    {
-      "id": "pofunquiz",
-      "name": "PoFunQuiz",
-      "description": "Interactive trivia and quiz game platform for entertainment and learning",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure App Service",
-        "Blazor",
-        "Azure Storage"
-      ],
-      "url": "https://pofunquiz-web.azurewebsites.net"
-    },
-    {
-      "id": "pohappytrump",
-      "name": "PoHappyTrump",
-      "description": "Translates political messages into positive, constructive content using AI",
-      "category": "ai",
-      "status": "disabled",
-      "technologies": [
-        "RSS Feed",
-        "Azure OpenAI",
-        "Blazor"
-      ],
-      "url": "https://pohappytrump-web.azurewebsites.net"
-    },
-    {
       "id": "pojoker",
       "name": "PoJoker",
-      "description": "AI-powered joke generator with customizable humor styles",
+      "description": "Creative joker app",
       "category": "creative",
       "status": "disabled",
       "technologies": [
         "Azure App Service",
-        "Azure OpenAI",
         "Blazor"
       ],
       "url": "https://app-pojoker.azurewebsites.net"
     },
     {
-      "id": "pominiapps",
-      "name": "PoMiniApps",
-      "description": "Collection of small utility apps and mini tools",
+      "id": "polinks",
+      "name": "PoLinks",
+      "description": "links productivity tool",
       "category": "productivity",
       "status": "disabled",
       "technologies": [
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://pominiapps.azurewebsites.net"
+      "url": "https://app-polinks.azurewebsites.net"
     },
     {
-      "id": "pominigames",
+      "id": "5ln5hfdrvof5u",
       "name": "PoMiniGames",
-      "description": "Collection of fun mini browser games",
-      "category": "games",
+      "description": "stapp-5ln5hfdrvof5u productivity tool",
+      "category": "productivity",
       "status": "active",
       "technologies": [
         "Azure Static Web Apps",
@@ -275,19 +75,7 @@
     {
       "id": "ponovaweight",
       "name": "PoNovaWeight",
-      "description": "Weight tracking and fitness progress monitoring application",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure Container Apps",
-        "Docker"
-      ],
-      "url": "https://ponovaweight-app.azurewebsites.net"
-    },
-    {
-      "id": "ponovaweightapp",
-      "name": "ponovaweight-app",
-      "description": "novaweight-app productivity tool",
+      "description": "novaweight productivity tool",
       "category": "productivity",
       "status": "active",
       "technologies": [
@@ -309,84 +97,20 @@
       "url": "https://witty-smoke-014bc370f.2.azurestaticapps.net"
     },
     {
-      "id": "poraceragdoll",
-      "name": "PoRaceRagdoll",
-      "description": "Racing game with physics-based ragdoll mechanics",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://icy-moss-0136cfa0f.6.azurestaticapps.net"
-    },
-    {
-      "id": "poredoimage",
-      "name": "PoRedoImage",
-      "description": "AI-powered image translation and regeneration tool for visual content transformation",
-      "category": "creative",
-      "status": "disabled",
-      "technologies": [
-        "Azure OpenAI",
-        "Image Processing",
-        "Blazor"
-      ],
-      "url": "https://poredoimage-web.azurewebsites.net"
-    },
-    {
-      "id": "poreflex",
-      "name": "PoReflex",
-      "description": "Reflex and reaction time testing game",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://witty-desert-0679bc00f.2.azurestaticapps.net"
-    },
-    {
-      "id": "poremovebad",
-      "name": "PoRemoveBad",
-      "description": "Improve writing quality by automatically detecting and removing unwanted words, buzzwords, and filler text",
-      "category": "productivity",
-      "status": "disabled",
-      "technologies": [
-        "Text Processing",
-        "App Insights",
-        "Blazor"
-      ],
-      "url": "https://poremovebad.azurewebsites.net/"
-    },
-    {
       "id": "porepolinetracker",
       "name": "PoRepoLineTracker",
-      "description": "Automated GitHub repository analysis tracking code metrics, commit trends, and repository growth over time",
+      "description": "repolinetracker productivity tool",
       "category": "productivity",
-      "status": "disabled",
+      "status": "active",
       "technologies": [
-        "GitHub API",
-        "Azure Storage",
-        "Data Viz"
+        "Azure App Service",
+        "Blazor"
       ],
       "url": "https://app-porepolinetracker.azurewebsites.net"
     },
     {
-      "id": "porobotstocks",
+      "id": "porobotstocks-porobotstocks",
       "name": "PoRobotStocks",
-      "description": "AI-Powered analysis of robotics and automation sector stocks with sentiment analysis",
-      "category": "productivity",
-      "status": "disabled",
-      "technologies": [
-        "Azure OpenAI",
-        "Language Services",
-        "Financial APIs"
-      ],
-      "url": "https://porobotstocks-web.azurewebsites.net"
-    },
-    {
-      "id": "porobotstocksporobotstocksweb",
-      "name": "PoRobotStocks-PoRobotStocks-web",
       "description": "RobotStocks-PoRobotStocks productivity tool",
       "category": "productivity",
       "status": "active",
@@ -399,8 +123,8 @@
     {
       "id": "porunner",
       "name": "PoRunner",
-      "description": "Endless runner browser game with increasing difficulty",
-      "category": "games",
+      "description": "runner productivity tool",
+      "category": "productivity",
       "status": "active",
       "technologies": [
         "Azure Static Web Apps",
@@ -411,76 +135,14 @@
     {
       "id": "poseereview",
       "name": "PoSeeReview",
-      "description": "Location-based review platform with geolocation and social sharing capabilities",
+      "description": "seereview productivity tool",
       "category": "productivity",
-      "status": "disabled",
-      "technologies": [
-        "Geolocation API",
-        "Social Sharing",
-        "Blazor"
-      ],
-      "url": "https://app-poseereview.azurewebsites.net"
-    },
-    {
-      "id": "posnakegame",
-      "name": "PoSnakeGame",
-      "description": "Classic snake game with modern graphics and gameplay enhancements",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://purple-pebble-04f6a500f.2.azurestaticapps.net"
-    },
-    {
-      "id": "potictac",
-      "name": "PoTicTac",
-      "description": "Retro-styled 6x6 Tic Tac Toe game with 4-in-a-row victory condition and classic gaming aesthetics",
-      "category": "games",
-      "status": "disabled",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://yellow-wave-0f449240f.6.azurestaticapps.net"
-    },
-    {
-      "id": "povictranslate",
-      "name": "PoVicTranslate",
-      "description": "Transform modern text into authentic Victorian-era English with AI-powered translation and voice output",
-      "category": "ai",
-      "status": "disabled",
-      "technologies": [
-        "Azure OpenAI GPT-4",
-        "Speech Services",
-        "Blazor"
-      ],
-      "url": "https://povictranslate.azurewebsites.net/"
-    },
-    {
-      "id": "stapp5ln5hfdrvof5u",
-      "name": "stapp-5ln5hfdrvof5u",
-      "description": "stapp-5ln5hfdrvof5u productivity tool",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net"
-    },
-    {
-      "id": "waporunner",
-      "name": "wa-porunner",
-      "description": "wa-porunner productivity tool",
-      "category": "productivity",
-      "status": "disabled",
+      "status": "broken",
       "technologies": [
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://wa-porunner.azurewebsites.net"
+      "url": "https://app-poseereview.azurewebsites.net"
     }
   ]
 }

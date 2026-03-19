@@ -24,6 +24,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import https from 'https';
 import http from 'http';
+import tls from 'tls';
 import { writeFile, readFile, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import { URL } from 'url';
@@ -35,7 +36,7 @@ const execAsync = promisify(exec);
 // ─── Config ────────────────────────────────────────────────────────────────────
 
 const CONFIG = {
-    outputFile:    'azure-full-report.json',
+    outputFile:    './PoPunkouterSoftware/wwwroot/data/azure-full-report.json',
     appsJsonPath:  './PoPunkouterSoftware/wwwroot/data/apps.json',
     httpTimeout:   10_000,
     userAgent:     'PoPunkouterSoftware-Audit/2.0',
@@ -78,16 +79,30 @@ function inferTechnologies(resourceType, tags = {}) {
 
 function getCanonicalName(name) {
     return name
-        .replace(/^(swa-|app-|api-|ca-)/i, '')
+        .replace(/^(swa-|stapp-|wa-|app-|api-|ca-)/i, '')
         .replace(/(-api|-web|-server|-app|-prod)$/i, '')
+        .replace(/-([a-z0-9]{9,})$/i, (m, seg) =>
+            /\d/.test(seg) && /[a-z]/i.test(seg) ? '' : m)  // strip Azure random suffixes
         .toLowerCase();
 }
 
 function getFriendlyName(canonicalName) {
-    const clean = canonicalName.replace(/^po/, '');
-    if (!clean) return canonicalName;
+    const allParts = canonicalName.split('-').filter(Boolean);
+    // Deduplicate consecutive identical segments (e.g. porobotstocks-porobotstocks)
+    const deduped  = allParts.filter((p, i) => i === 0 || p !== allParts[i - 1]);
+    const joined   = deduped.join('-');
+    const clean    = joined.replace(/^po/, '');
+    if (!clean) return joined;
     const pascal = clean.split('-').filter(Boolean).map(p => p[0].toUpperCase() + p.slice(1)).join('');
     return 'Po' + pascal;
+}
+
+// Use resource group as friendly name when it follows the Po* convention
+function friendlyFromContext(rawName, resourceGroup) {
+    if (resourceGroup && /^Po[A-Z]/.test(resourceGroup) && resourceGroup !== 'PoShared') {
+        return resourceGroup;
+    }
+    return getFriendlyName(getCanonicalName(rawName));
 }
 
 // ─── Free-tier knowledge base ──────────────────────────────────────────────────
@@ -696,6 +711,248 @@ async function diffAppsJson(webServices) {
     };
 }
 
+// ─── Section A — Security Posture ─────────────────────────────────────────────
+// Queries Azure Security Center assessments and flags high/medium issues
+
+async function getSecurityPosture() {
+    const assessments = await az(
+        `rest --method GET --url "https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.Security/assessments?api-version=2021-06-01"`,
+        null
+    );
+    // Prefer advisor security category as it works without Defender for Cloud plan
+    const securityRecs = await az('advisor recommendation list --category Security --output json', []);
+    const findings = securityRecs.map(r => ({
+        title:         r.shortDescription?.problem || 'Unknown',
+        impact:        r.impact || 'Low',
+        resourceName:  r.resourceMetadata?.resourceId?.split('/').pop() ?? 'Subscription',
+        resourceId:    r.resourceMetadata?.resourceId ?? null,
+        category:      'Security',
+        remedy:        r.shortDescription?.solution ?? '',
+    })).sort((a, b) => {
+        const ord = { High:0, Medium:1, Low:2 };
+        return (ord[a.impact] ?? 3) - (ord[b.impact] ?? 3);
+    });
+    return {
+        total:    findings.length,
+        high:     findings.filter(f => f.impact === 'High').length,
+        medium:   findings.filter(f => f.impact === 'Medium').length,
+        low:      findings.filter(f => f.impact === 'Low').length,
+        findings,
+    };
+}
+
+// ─── Section B — 6-Month Cost Trend ───────────────────────────────────────────
+// Pulls monthly spend for the last 6 full calendar months
+
+async function getCostTrend6Months(subscriptionId) {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth() - 6, 1);
+    const fmt   = d => d.toISOString().split('T')[0];
+    const body  = {
+        type: 'Usage',
+        timeframe: 'Custom',
+        timePeriod: { from: fmt(start), to: fmt(today) },
+        dataset: {
+            granularity: 'Monthly',
+            aggregation: { totalCost: { name: 'PreTaxCost', function: 'Sum' } },
+        },
+    };
+    const tmpFile = join(tmpdir(), `az-cost-trend-${Date.now()}.json`);
+    let result = null;
+    try {
+        await writeFile(tmpFile, JSON.stringify(body));
+        result = await az(
+            `rest --method POST --url "https://management.azure.com/subscriptions/${subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01" --body "@${tmpFile}"`,
+            null
+        );
+    } finally {
+        await unlink(tmpFile).catch(() => {});
+    }
+    if (!result?.properties?.rows?.length) return { months: [] };
+    const cols    = (result.properties.columns || []).map(c => c.name.toLowerCase());
+    const costIdx = cols.findIndex(c => c.includes('pretax') || c.includes('cost'));
+    const dateIdx = cols.findIndex(c => c.includes('billing') || c.includes('date') || c.includes('usage'));
+    const months  = result.properties.rows.map(row => {
+        const rawDate = dateIdx >= 0 ? String(row[dateIdx]) : '';
+        const label   = rawDate.length >= 6
+            ? `${rawDate.slice(0,4)}-${rawDate.slice(4,6)}`
+            : rawDate;
+        return { month: label, cost: +(parseFloat(row[costIdx] ?? 0)).toFixed(2) };
+    }).sort((a, b) => a.month.localeCompare(b.month));
+    return { months };
+}
+
+// ─── Section C — SSL Certificate Expiry ───────────────────────────────────────
+// Checks TLS cert expiry for each web service URL using Node's TLS socket
+
+async function checkSslExpiry(services) {
+    const results = [];
+    for (const svc of services) {
+        if (!svc.url || !svc.url.startsWith('https://')) {
+            results.push({ name: svc.name, url: svc.url, error: 'Non-HTTPS', daysLeft: null, expiry: null, subject: null });
+            continue;
+        }
+        let urlObj;
+        try { urlObj = new URL(svc.url); } catch {
+            results.push({ name: svc.name, url: svc.url, error: 'Invalid URL', daysLeft: null, expiry: null, subject: null });
+            continue;
+        }
+        await new Promise(resolve => {
+            const sock = tls.connect(
+                { host: urlObj.hostname, port: 443, servername: urlObj.hostname, timeout: 8000 },
+                () => {
+                    try {
+                        const cert  = sock.getPeerCertificate();
+                        const valid = cert?.valid_to ? new Date(cert.valid_to) : null;
+                        const days  = valid ? Math.floor((valid - Date.now()) / 86400000) : null;
+                        results.push({
+                            name:     svc.name,
+                            url:      svc.url,
+                            expiry:   valid?.toISOString().split('T')[0] ?? null,
+                            daysLeft: days,
+                            subject:  cert?.subject?.CN ?? null,
+                            error:    null,
+                            warning:  days !== null && days < 30 ? `Expires in ${days} days!` : null,
+                        });
+                    } catch (e) {
+                        results.push({ name: svc.name, url: svc.url, error: e.message, daysLeft: null, expiry: null, subject: null });
+                    }
+                    sock.end();
+                    resolve();
+                }
+            );
+            sock.on('error', e => {
+                results.push({ name: svc.name, url: svc.url, error: e.message, daysLeft: null, expiry: null, subject: null });
+                resolve();
+            });
+            sock.on('timeout', () => {
+                results.push({ name: svc.name, url: svc.url, error: 'Timeout', daysLeft: null, expiry: null, subject: null });
+                sock.destroy();
+                resolve();
+            });
+        });
+    }
+    return results;
+}
+
+// ─── Section D — Configuration Drift ──────────────────────────────────────────
+// Checks each App Service for common misconfigurations
+
+async function getConfigDrift(services) {
+    const appServices = services.filter(s => s.resourceType === 'Microsoft.Web/sites');
+    if (!appServices.length) return [];
+    const results = [];
+    for (const svc of appServices) {
+        const [cfg, auth] = await Promise.all([
+            az(`webapp config show --name "${svc.name}" --resource-group "${svc.resourceGroup}" --output json`, null),
+            az(`webapp auth show    --name "${svc.name}" --resource-group "${svc.resourceGroup}" --output json`, null),
+        ]);
+        if (!cfg) continue;
+        const issues = [];
+        if (cfg.ftpsState && cfg.ftpsState !== 'Disabled' && cfg.ftpsState !== 'FtpsOnly')
+            issues.push({ severity: 'high',   issue: 'FTP is enabled (not FTPS-only)', field: 'ftpsState', value: cfg.ftpsState });
+        if (cfg.http20Enabled === false)
+            issues.push({ severity: 'low',    issue: 'HTTP/2 disabled', field: 'http20Enabled', value: false });
+        if (cfg.minTlsVersion && cfg.minTlsVersion < '1.2')
+            issues.push({ severity: 'high',   issue: `Min TLS ${cfg.minTlsVersion} (should be ≥1.2)`, field: 'minTlsVersion', value: cfg.minTlsVersion });
+        if (cfg.alwaysOn === false)
+            issues.push({ severity: 'low',    issue: 'Always-On disabled (cold starts)', field: 'alwaysOn', value: false });
+        if (cfg.cors?.allowedOrigins?.includes('*'))
+            issues.push({ severity: 'medium', issue: 'CORS open to * (all origins)', field: 'cors', value: '*' });
+        if (auth && auth.enabled === false)
+            issues.push({ severity: 'info',   issue: 'Authentication not configured', field: 'auth', value: false });
+        results.push({
+            name:          svc.name,
+            friendlyName:  svc.friendlyName ?? friendlyFromContext(svc.name, svc.resourceGroup),
+            resourceGroup: svc.resourceGroup,
+            url:           svc.url,
+            issueCount:    issues.length,
+            issues,
+        });
+    }
+    return results;
+}
+
+// ─── Section E — Storage Account Inventory ────────────────────────────────────
+// Enumerates storage accounts and flags public blob access
+
+async function getStorageInventory(allResources) {
+    const storageAccounts = allResources.filter(r =>
+        r.type?.toLowerCase() === 'microsoft.storage/storageaccounts'
+    );
+    if (!storageAccounts.length) return [];
+    const results = [];
+    for (const sa of storageAccounts) {
+        const detail = await az(
+            `storage account show --name "${sa.name}" --resource-group "${sa.resourceGroup}" --output json`,
+            null
+        );
+        const publicAccess = detail?.allowBlobPublicAccess ?? detail?.properties?.allowBlobPublicAccess ?? null;
+        const httpsOnly    = detail?.enableHttpsTrafficOnly ?? detail?.properties?.supportsHttpsTrafficOnly ?? null;
+        const tlsMin       = detail?.minimumTlsVersion ?? detail?.properties?.minimumTlsVersion ?? null;
+        const lifecycle    = detail?.properties?.deleteRetentionPolicy?.enabled ?? false;
+        const sku          = detail?.sku?.name ?? sa.sku?.name ?? 'unknown';
+        const issues = [];
+        if (publicAccess === true)
+            issues.push({ severity: 'high',   issue: '⚠ Public blob access ENABLED — potential data exposure' });
+        if (httpsOnly === false)
+            issues.push({ severity: 'high',   issue: 'HTTP traffic allowed (HTTPS-only is off)' });
+        if (tlsMin && tlsMin < 'TLS1_2')
+            issues.push({ severity: 'medium', issue: `Minimum TLS is ${tlsMin} — should be TLS1_2+` });
+        if (!lifecycle)
+            issues.push({ severity: 'low',    issue: 'No blob lifecycle/delete retention policy' });
+        results.push({
+            name:             sa.name,
+            resourceGroup:    sa.resourceGroup,
+            sku,
+            location:         sa.location,
+            publicBlobAccess: publicAccess,
+            httpsOnly,
+            minTls:           tlsMin,
+            issueCount:       issues.length,
+            issues,
+        });
+    }
+    // Sort: most issues first
+    return results.sort((a, b) => b.issueCount - a.issueCount);
+}
+
+// ─── apps.json fresh writer ────────────────────────────────────────────────────
+// Rebuilds apps.json completely from Azure-discovered services.
+// No existing file is read — always starts from zero.
+
+async function writeAppsJson(services) {
+    // Deduplicate by canonical name: SWA wins, then active wins, then first seen
+    const canonicalMap = new Map();
+    for (const svc of services) {
+        const canon = getCanonicalName(svc.name);
+        const cur   = canonicalMap.get(canon);
+        if (!cur
+            || svc.resourceType === 'Microsoft.Web/staticSites'
+            || (svc.httpStatus === 'active' && cur.httpStatus !== 'active')) {
+            canonicalMap.set(canon, svc);
+        }
+    }
+
+    const apps = [...canonicalMap.values()]
+        .map(svc => ({
+            id:           getCanonicalName(svc.name),
+            name:         friendlyFromContext(svc.name, svc.resourceGroup),
+            description:  svc.tags?.description || inferDescription(svc.name),
+            category:     svc.tags?.category    || inferCategory(svc.name),
+            status:       svc.httpStatus === 'active' ? 'active'
+                        : svc.httpStatus === 'broken' ? 'broken'
+                        : 'disabled',
+            technologies: inferTechnologies(svc.resourceType, svc.tags || {}),
+            url:          svc.url || '',
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    await writeFile(CONFIG.appsJsonPath, JSON.stringify({ apps }, null, 2) + '\n');
+    console.log(`  ✅  apps.json rebuilt from scratch: ${apps.length} apps → ${CONFIG.appsJsonPath}`);
+    return apps.length;
+}
+
 // ─── Console report printer ────────────────────────────────────────────────────
 
 // #9 — Shared resource dependency map (which apps share the same App Service Plan or SQL server)
@@ -1078,12 +1335,35 @@ async function main() {
     const dependencyMap   = buildDependencyMap(services, allResources);
     console.log(`  Free tier ok: ${freeTier.onFree.length}  can go free: ${freeTier.canGoFree.length}  unused flagged: ${unusedResources.length}`);
 
-    // 9. Cost + apps.json diff
-    console.log('\n[9/9] Cost data + apps.json diff...');
+    // 9. Cost + apps.json diff + new sections (parallel)
+    console.log('\n[9/14] Cost data + apps.json diff...');
     const [cost, appsJsonDiff] = await Promise.all([
         getCost30Days(sub.id),
         diffAppsJson(services),
     ]);
+
+    console.log('\n[10/14] Security posture...');
+    const securityPosture = await getSecurityPosture();
+    console.log(`  Security findings: ${securityPosture.total}  (High: ${securityPosture.high}  Medium: ${securityPosture.medium})`);
+
+    console.log('\n[11/14] 6-month cost trend...');
+    const costTrend = await getCostTrend6Months(sub.id);
+    console.log(`  Months returned: ${costTrend.months.length}`);
+
+    console.log('\n[12/14] SSL certificate expiry...');
+    const sslExpiry = await checkSslExpiry(services.filter(s => s.url));
+    const expiringSoon = sslExpiry.filter(c => c.daysLeft !== null && c.daysLeft < 30).length;
+    console.log(`  Certs checked: ${sslExpiry.length}  Expiring < 30 days: ${expiringSoon}`);
+
+    console.log('\n[13/14] Configuration drift...');
+    const configDrift = await getConfigDrift(services);
+    const totalDriftIssues = configDrift.reduce((s, a) => s + a.issueCount, 0);
+    console.log(`  App Services checked: ${configDrift.length}  Issues found: ${totalDriftIssues}`);
+
+    console.log('\n[14/14] Storage account inventory...');
+    const storageInventory = await getStorageInventory(allResources);
+    const storageIssues = storageInventory.reduce((s, a) => s + a.issueCount, 0);
+    console.log(`  Storage accounts: ${storageInventory.length}  Issues: ${storageIssues}`);
 
     // ─── Assemble report ───────────────────────────────────────────────────────
 
@@ -1108,7 +1388,7 @@ async function main() {
             byType:   { appService: appServiceCount, containerApp: containerCount, staticWebApp: staticCount },
             services: services.map(s => ({
                 name:           s.name,
-                friendlyName:   getFriendlyName(getCanonicalName(s.name)),
+                friendlyName:   friendlyFromContext(s.name, s.resourceGroup),
                 resourceGroup:  s.resourceGroup,
                 resourceType:   s.resourceType,
                 url:            s.url || null,
@@ -1137,6 +1417,11 @@ async function main() {
         appInsightsMetrics,
         cost,
         appsJsonDiff,
+        securityPosture,
+        costTrend,
+        sslExpiry,
+        configDrift,
+        storageInventory,
     };
 
     // Build delta against previous report
@@ -1146,6 +1431,10 @@ async function main() {
     // Print + save
     printReport(report);
     await writeFile(CONFIG.outputFile, JSON.stringify(report, null, 2));
+
+    // 10. Rebuild apps.json from scratch — no merge with existing data
+    console.log('\n[10] Rebuilding apps.json from scratch...');
+    await writeAppsJson(services);
 }
 
 main().catch(err => {

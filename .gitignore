@@ -4,11 +4,23 @@ test-results/
 .playwright-mcp/
 TESTRESULTS/
 
-# Azure discovery artifacts
-azure-apps-report.json
-azure-full-report.json
-azure-spend-detail-report.json
-azure-cost-audit-report.json
+# .NET build artifacts
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.DotSettings.user
+
+# Environment / secrets
+.env
+.env.*
+
+# Azure discovery artifacts (root-level only — wwwroot/data/ versions ARE tracked)
+/azure-apps-report.json
+/azure-full-report.json
+/azure-spend-detail-report.json
+/azure-cost-audit-report.json
 AZURE-REPORT.md
 AZURE-ARCHITECTURE.mmd
 AZURE-DEPENDENCIES.mmd
