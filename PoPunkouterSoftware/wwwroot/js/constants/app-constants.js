@@ -34,12 +34,6 @@ export const STATUS_DISPLAY = {
     [APP_STATUS.BROKEN]: { label: 'Broken', icon: '⚠' }
 };
 
-export const ANIMATION_TIMINGS = {
-    FADE_DURATION: 300,
-    STAGGER_DELAY: 50,
-    CARD_TRANSITION: 400
-};
-
 export const SELECTORS = {
     APP_CARD: 'app-card',
     APP_COUNT: 'app-count-text'

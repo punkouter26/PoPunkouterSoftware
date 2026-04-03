@@ -1,0 +1,94 @@
+name: Deploy to Azure App Service
+
+# Deploys Blazor Server (.NET 10) to App Service: app-popunkoutersoftware
+# Resource group: PoPunkouterSoftware | Plan: asp-poshared-linux (B1, PoShared)
+# URL: https://app-popunkoutersoftware.azurewebsites.net
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  APP_NAME: 'app-popunkoutersoftware'
+  PROJECT_PATH: 'PoPunkouterSoftware/PoPunkouterSoftware.csproj'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy .NET 10 Blazor Server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Bump SemVer tag ────────────────────────────────────────────────────
+      - name: Calculate SemVer
+        id: semver
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline 2>/dev/null || git log --oneline)
+          if echo "$COMMITS" | grep -qiE "^[a-f0-9]+ (feat|feature)(\(.+\))?!:|BREAKING CHANGE"; then
+            MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0
+          elif echo "$COMMITS" | grep -qiE "^[a-f0-9]+ (feat|feature)"; then
+            MINOR=$((MINOR+1)); PATCH=0
+          else
+            PATCH=$((PATCH+1))
+          fi
+          echo "version=v${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+
+      - name: Tag release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.semver.outputs.version }}
+          git push origin ${{ steps.semver.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Build ──────────────────────────────────────────────────────────────
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ./publish
+
+      # ── Deploy ─────────────────────────────────────────────────────────────
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
+
+      # ── Smoke test ─────────────────────────────────────────────────────────
+      - name: Health check
+        run: |
+          echo "Waiting 30s for app to warm up..."
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.APP_NAME }}.azurewebsites.net/health || echo "000")
+          if [ "$STATUS" = "200" ] || [ "$STATUS" = "404" ]; then
+            echo "✅ App is responding (HTTP $STATUS)"
+          else
+            echo "⚠️  Unexpected status: $STATUS — checking root..."
+            ROOT=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.APP_NAME }}.azurewebsites.net/)
+            echo "Root responded: HTTP $ROOT"
+          fi

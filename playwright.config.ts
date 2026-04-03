@@ -8,15 +8,19 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'html',
   use: {
-    baseURL: process.env.TEST_URL || 'http://127.0.0.1:3000',
+    baseURL: process.env.TEST_URL || 'http://localhost:5000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Headed in Dev (non-CI), headless in CI
+    headless: !!process.env.CI,
   },
   webServer: {
-    command: 'node server.js',
-    url: 'http://127.0.0.1:3000',
+    command: `dotnet run --project ${process.env.PROJECT_PATH || 'PoPunkouterSoftware/PoPunkouterSoftware.csproj'} --launch-profile http`,
+    url: 'http://localhost:5000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120000,
+    timeout: 120_000,
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
   projects: [
     {
@@ -24,5 +28,5 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  timeout: 30000,
+  timeout: 30_000,
 });

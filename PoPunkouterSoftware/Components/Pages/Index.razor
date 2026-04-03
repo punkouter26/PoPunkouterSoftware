@@ -1,0 +1,333 @@
+@page "/"
+@rendermode InteractiveServer
+@using System.Text.Json
+@using Radzen
+@using Radzen.Blazor
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment WebHostEnv
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>PoPunkouterSoftware — Home</PageTitle>
+
+<!-- ── Hero ── -->
+<RadzenCard class="rz-mb-6 rz-p-6" Style="background: var(--rz-secondary-dark); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="2rem" Wrap="FlexWrap.Wrap">
+        <div style="flex:1;min-width:260px">
+            <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="rz-mb-3"
+                        Style="background: linear-gradient(90deg, var(--rz-primary), var(--rz-info)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Punkouter Software
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-3">
+                A one-person indie software studio building AI-driven apps on Azure. Every project here is designed, built, 
+                and shipped solo — focused on real utility, clean UX, and modern tech.
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary">
+                Stack: C# · Blazor · Azure · .NET 10 · Static Web Apps · App Service
+            </RadzenText>
+        </div>
+        <div style="flex-shrink:0">
+            <RadzenCarousel Auto="true" AutoStyle="CarouselAutoStyle.Smooth"
+                            Style="height:260px;width:360px;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.4)">
+                <Items>
+                    <RadzenCarouselItem>
+                        <RadzenImage Path="images/1.png" Style="height:100%;width:100%;object-fit:cover" />
+                    </RadzenCarouselItem>
+                    <RadzenCarouselItem>
+                        <RadzenImage Path="images/2.png" Style="height:100%;width:100%;object-fit:cover" />
+                    </RadzenCarouselItem>
+                </Items>
+            </RadzenCarousel>
+        </div>
+    </RadzenStack>
+</RadzenCard>
+
+<!-- ── Apps Section ── -->
+<div id="apps" style="margin-bottom:3rem">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="8px" class="rz-mb-1">
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H2" class="rz-color-primary" Style="margin:0">
+            🚀 Web Apps
+        </RadzenText>
+        <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh Azure Status")" Icon="refresh"
+                      ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Disabled="@_refreshing"
+                      Click="RefreshAzureAsync" />
+    </RadzenStack>
+    <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary rz-mb-4">
+        A collection of AI-powered tools, productivity apps, and games — all live on Azure.
+    </RadzenText>
+    @if (_refreshing)
+    {
+        <RadzenProgressBar Value="100" Mode="ProgressBarMode.Indeterminate" class="rz-mb-3" />
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-3">Querying Azure services (~30–60s)…</RadzenText>
+    }
+
+    @if (apps == null)
+    {
+        <RadzenProgressBar Value="100" Mode="ProgressBarMode.Indeterminate" class="rz-my-3" />
+    }
+    else
+    {
+        <!-- App stats bar -->
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap" class="rz-mb-4">
+            @foreach (var s in new[] {
+                ($"{apps.Count()}", "Total Apps", "var(--rz-info)"),
+                ($"{apps.Count(a => a.Status?.ToLower() == "active")}", "Active", "var(--rz-success)"),
+                ($"{apps.Count(a => a.Status?.ToLower() != "active")}", "Disabled", "var(--rz-secondary)"),
+                ($"{apps.Select(a => a.Category).Where(c => c != null).Distinct().Count()}", "Categories", "var(--rz-warning)")
+            })
+            {
+                <RadzenCard Style="@($"text-align:center;border-top:3px solid {s.Item3};min-width:110px;padding:.7rem")">
+                    <div style="@($"font-size:1.6rem;font-weight:700;color:{s.Item3}")">@s.Item1</div>
+                    <div style="font-size:.72rem;color:var(--rz-text-secondary-color);text-transform:uppercase">@s.Item2</div>
+                </RadzenCard>
+            }
+        </RadzenStack>
+
+        <!-- Filters -->
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap" class="rz-mb-4">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
+                <RadzenLabel Text="Sort:" />
+                <RadzenDropDown @bind-Value="sortMode" Data="@sortOptions" TextProperty="Label" ValueProperty="Value"
+                                Change="ApplyFilters" Style="width:190px" />
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
+                <RadzenLabel Text="Category:" />
+                <RadzenDropDown @bind-Value="categoryFilter" Data="@categoryOptions" Change="ApplyFilters" Style="width:150px" />
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
+                <RadzenLabel Text="Status:" />
+                <RadzenDropDown @bind-Value="statusFilter" Data="@statusOptions" Change="ApplyFilters" Style="width:130px" />
+            </RadzenStack>
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary">@filteredApps.Count app(s)</RadzenText>
+        </RadzenStack>
+
+        <!-- App Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1.25rem">
+            @foreach (var app in filteredApps)
+            {
+                var isActive = app.Status?.ToLower() == "active";
+                <RadzenCard Style="@($"display:flex;flex-direction:column;gap:.75rem;border-left:4px solid {(isActive ? "var(--rz-success)" : "var(--rz-base-400)")}")">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
+                        <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-mb-0"><strong>@app.Name</strong></RadzenText>
+                        <RadzenBadge Text="@(app.Status ?? "unknown")" IsPill="true"
+                                     BadgeStyle="@(isActive ? BadgeStyle.Success : BadgeStyle.Light)" />
+                    </RadzenStack>
+                    @if (!string.IsNullOrEmpty(app.Category))
+                    {
+                        <RadzenBadge Text="@app.Category" BadgeStyle="BadgeStyle.Info" IsPill="true" Style="font-size:.7rem;width:fit-content" />
+                    }
+                    @{ var live = GetLiveStatus(app.Url); }
+                    @if (live is not null)
+                    {
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px" Style="font-size:.75rem">
+                            <RadzenBadge Text="@live.HttpStatus.ToUpper()" IsPill="true"
+                                         BadgeStyle="@(live.HttpStatus=="active" ? BadgeStyle.Success : live.HttpStatus=="broken" ? BadgeStyle.Danger : BadgeStyle.Warning)"
+                                         Style="font-size:.65rem" />
+                            @if (!string.IsNullOrEmpty(live.PlatformState))
+                            {
+                                <span style="color:var(--rz-text-secondary-color)">@live.PlatformState</span>
+                            }
+                            @if (live.ResponseTime > 0)
+                            {
+                                <span style="color:@(live.ResponseTime < 1000 ? "var(--rz-success-color)" : "var(--rz-warning-color)")">@live.ResponseTime ms</span>
+                            }
+                        </RadzenStack>
+                    }
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary" Style="flex:1">@app.Description</RadzenText>
+                    @if (app.Technologies?.Any() == true)
+                    {
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4px" Wrap="FlexWrap.Wrap">
+                            @foreach (var tech in app.Technologies)
+                            {
+                                <RadzenBadge Text="@tech" BadgeStyle="BadgeStyle.Light" Style="font-size:.66rem" />
+                            }
+                        </RadzenStack>
+                    }
+                    <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small"
+                                  ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined"
+                                  Disabled="@(string.IsNullOrEmpty(app.Url))"
+                                  Click="@(() => OpenApp(app.Url))" />
+                </RadzenCard>
+            }
+        </div>
+    }
+</div>
+
+<!-- ── About / Team ── -->
+<div id="about" style="margin-bottom:3rem">
+    <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H2" class="rz-color-primary rz-mb-3">👤 About</RadzenText>
+    <RadzenCard Style="background:var(--rz-secondary-dark);border-radius:12px">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="2rem" Wrap="FlexWrap.Wrap" Style="padding:1.5rem">
+            <RadzenImage Path="images/MATT2.png" Style="width:130px;height:130px;border-radius:50%;object-fit:cover;border:3px solid var(--rz-primary);flex-shrink:0" />
+            <div style="flex:1;min-width:220px">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-1"><strong>Matt</strong></RadzenText>
+                <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-primary rz-mb-3">Founder & Solo Developer</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-2">
+                    Full-stack developer building indie software apps on Azure. Passionate about AI, automation, 
+                    and shipping real products as a one-person studio.
+                </RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="4px" Wrap="FlexWrap.Wrap">
+                    @foreach (var skill in new[] { "C#", ".NET 10", "Blazor", "Azure", "AI / ML", "TypeScript", "Node.js" })
+                    {
+                        <RadzenBadge Text="@skill" BadgeStyle="BadgeStyle.Info" IsPill="true" Style="font-size:.7rem" />
+                    }
+                </RadzenStack>
+            </div>
+        </RadzenStack>
+    </RadzenCard>
+</div>
+
+@code {
+    // ── Apps ─────────────────────────────────────────────────────────
+    private IEnumerable<AppModel>? apps;
+    private List<AppModel> filteredApps = new();
+    private string sortMode = "status";
+    private string categoryFilter = "All";
+    private string statusFilter = "All";
+    private bool _refreshing;
+    private Dictionary<string, LiveServiceStatus> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
+    private List<SortOption> sortOptions = new()
+    {
+        new SortOption { Label = "Status (Active first)", Value = "status" },
+        new SortOption { Label = "Alphabetical (A-Z)", Value = "alphabetical" },
+    };
+    private List<string> categoryOptions = new() { "All" };
+    private List<string> statusOptions = new() { "All", "Active", "Disabled" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAppsAsync();
+        await LoadLiveStatusAsync();
+    }
+
+    private async Task ReloadAppsAsync()
+    {
+        try
+        {
+            var filePath = System.IO.Path.Combine(WebHostEnv.WebRootPath, "data", "apps.json");
+            var json = await System.IO.File.ReadAllTextAsync(filePath);
+            var wrapper = JsonSerializer.Deserialize<AppsWrapper>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            apps = wrapper?.Apps ?? new List<AppModel>();
+            var cats = apps.Select(a => a.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
+            categoryOptions = new List<string> { "All" };
+            categoryOptions.AddRange(cats!);
+            ApplyFilters(null);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            apps = new List<AppModel>();
+        }
+    }
+
+    private async Task LoadLiveStatusAsync()
+    {
+        try
+        {
+            var reportPath = System.IO.Path.Combine(WebHostEnv.WebRootPath, "data", "azure-full-report.json");
+            if (!System.IO.File.Exists(reportPath)) return;
+            var json = await System.IO.File.ReadAllTextAsync(reportPath);
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("webServices", out var ws)) return;
+            if (!ws.TryGetProperty("services", out var svcs)) return;
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var services = JsonSerializer.Deserialize<List<LiveServiceStatus>>(svcs.GetRawText(), opts) ?? new();
+            _liveByUrl = services
+                .Where(s => !string.IsNullOrEmpty(s.Url))
+                .ToDictionary(s => s.Url!, StringComparer.OrdinalIgnoreCase);
+        }
+        catch { /* non-fatal */ }
+    }
+
+    private async Task RefreshAzureAsync()
+    {
+        _refreshing = true;
+        StateHasChanged();
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            var resp = await client.PostAsync(NavigationManager.ToAbsoluteUri("/api/diag/refresh"), null);
+            if (resp.IsSuccessStatusCode)
+            {
+                _liveByUrl.Clear();
+                await LoadLiveStatusAsync();
+                await ReloadAppsAsync();
+                NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure status refreshed — app statuses updated.");
+            }
+            else
+            {
+                NotificationService.Notify(NotificationSeverity.Warning, "Refresh failed", await resp.Content.ReadAsStringAsync());
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
+        }
+        finally
+        {
+            _refreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    private LiveServiceStatus? GetLiveStatus(string? url)
+    {
+        if (string.IsNullOrEmpty(url) || _liveByUrl.Count == 0) return null;
+        if (_liveByUrl.TryGetValue(url, out var hit)) return hit;
+        // fuzzy: match by hostname
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            var host = uri.Host;
+            return _liveByUrl.Values.FirstOrDefault(s =>
+                Uri.TryCreate(s.Url, UriKind.Absolute, out var su) && su.Host.Equals(host, StringComparison.OrdinalIgnoreCase));
+        }
+        return null;
+    }
+
+    private void ApplyFilters(object? _)
+    {
+        if (apps == null) return;
+        var q = apps.AsEnumerable();
+        if (categoryFilter != "All")
+            q = q.Where(a => string.Equals(a.Category, categoryFilter, StringComparison.OrdinalIgnoreCase));
+        if (statusFilter == "Active")
+            q = q.Where(a => string.Equals(a.Status, "active", StringComparison.OrdinalIgnoreCase));
+        else if (statusFilter == "Disabled")
+            q = q.Where(a => !string.Equals(a.Status, "active", StringComparison.OrdinalIgnoreCase));
+        q = sortMode == "alphabetical"
+            ? q.OrderBy(a => a.Name)
+            : q.OrderBy(a => a.Status?.ToLower() == "active" ? 0 : 1).ThenBy(a => a.Name);
+        filteredApps = q.ToList();
+    }
+
+    private void OpenApp(string url)
+    {
+        if (!string.IsNullOrWhiteSpace(url))
+            NavigationManager.NavigateTo(url, forceLoad: true);
+    }
+
+    // ── Models ───────────────────────────────────────────────────────
+    private class AppsWrapper { public List<AppModel> Apps { get; set; } = new(); }
+    private class SortOption { public string Label { get; set; } = ""; public string Value { get; set; } = ""; }
+
+    public class AppModel
+    {
+        public string Name { get; set; } = "";
+        public string Status { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string? Category { get; set; }
+        public List<string>? Technologies { get; set; }
+    }
+
+    public class LiveServiceStatus
+    {
+        public string? Url { get; set; }
+        public string HttpStatus { get; set; } = "";
+        public string? PlatformState { get; set; }
+        public ConnectivityInfo? Connectivity { get; set; }
+        public int ResponseTime => Connectivity?.ResponseTime ?? 0;
+        public class ConnectivityInfo { public bool Success { get; set; } public int ResponseTime { get; set; } public string? Error { get; set; } }
+    }
+
+}

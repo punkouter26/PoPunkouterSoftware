@@ -1,30 +1,6 @@
 {
   "apps": [
     {
-      "id": "poappidea",
-      "name": "PoAppIdea",
-      "description": "appidea productivity tool",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://poappidea-web.azurewebsites.net"
-    },
-    {
-      "id": "pocouplequiz",
-      "name": "PoCoupleQuiz",
-      "description": "Interactive couplequiz game",
-      "category": "games",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://pocouplequiz-app.azurewebsites.net"
-    },
-    {
       "id": "poface-dev",
       "name": "PoFace",
       "description": "face-dev productivity tool",
@@ -37,28 +13,28 @@
       "url": "https://poface-dev-web.azurewebsites.net"
     },
     {
-      "id": "pojoker",
-      "name": "PoJoker",
-      "description": "Creative joker app",
-      "category": "creative",
-      "status": "disabled",
+      "id": "pohorserace",
+      "name": "PoHorseRace",
+      "description": "Interactive HorseRace game",
+      "category": "games",
+      "status": "active",
       "technologies": [
-        "Azure App Service",
-        "Blazor"
+        "Azure Static Web Apps",
+        "JavaScript"
       ],
-      "url": "https://app-pojoker.azurewebsites.net"
+      "url": "https://witty-bush-0a1d3390f.2.azurestaticapps.net"
     },
     {
-      "id": "polinks",
-      "name": "PoLinks",
-      "description": "links productivity tool",
+      "id": "pomarriedlifegoogle",
+      "name": "PoMarriedLifeGoogle",
+      "description": "marriedlifegoogle productivity tool",
       "category": "productivity",
-      "status": "disabled",
+      "status": "active",
       "technologies": [
-        "Azure App Service",
-        "Blazor"
+        "Azure Static Web Apps",
+        "JavaScript"
       ],
-      "url": "https://app-polinks.azurewebsites.net"
+      "url": "https://gentle-coast-0cb3e800f.2.azurestaticapps.net"
     },
     {
       "id": "5ln5hfdrvof5u",
@@ -73,18 +49,6 @@
       "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net"
     },
     {
-      "id": "ponovaweight",
-      "name": "PoNovaWeight",
-      "description": "novaweight productivity tool",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://ponovaweight-app.azurewebsites.net"
-    },
-    {
       "id": "popunkoutersoftware",
       "name": "PoPunkouterSoftware",
       "description": "PunkouterSoftware productivity tool",
@@ -95,18 +59,6 @@
         "JavaScript"
       ],
       "url": "https://witty-smoke-014bc370f.2.azurestaticapps.net"
-    },
-    {
-      "id": "porepolinetracker",
-      "name": "PoRepoLineTracker",
-      "description": "repolinetracker productivity tool",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://app-porepolinetracker.azurewebsites.net"
     },
     {
       "id": "porobotstocks-porobotstocks",
@@ -133,16 +85,175 @@
       "url": "https://victorious-ocean-06635bc1e.6.azurestaticapps.net"
     },
     {
+      "id": "poappidea",
+      "name": "PoAppIdea",
+      "description": "appidea productivity tool",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://poappidea-web.azurewebsites.net"
+    },
+    {
+      "id": "pocouplequiz",
+      "name": "PoCoupleQuiz",
+      "description": "Interactive couplequiz game",
+      "category": "games",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://pocouplequiz-app.azurewebsites.net"
+    },
+    {
+      "id": "pofunquiz-zizogpdhpyiwo",
+      "name": "PoFunQuiz",
+      "description": "Interactive funquiz-zizogpdhpyiwo game",
+      "category": "games",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-pofunquiz-zizogpdhpyiwo.azurewebsites.net"
+    },
+    {
+      "id": "pohappytrump",
+      "name": "PoHappyTrump",
+      "description": "AI-powered happytrump-2jr7zldry26xa app",
+      "category": "ai",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net"
+    },
+    {
+      "id": "pojoker",
+      "name": "PoJoker",
+      "description": "Creative joker app",
+      "category": "creative",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-pojoker.azurewebsites.net"
+    },
+    {
+      "id": "polinks",
+      "name": "PoLinks",
+      "description": "links productivity tool",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-polinks.azurewebsites.net"
+    },
+    {
+      "id": "pomarriedlifeshared7377",
+      "name": "PoMarriedLifeGoogle",
+      "description": "Pomarriedlifeshared7377 app",
+      "category": "health",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://pomarriedlifeshared7377.azurewebsites.net"
+    },
+    {
+      "id": "pominiapps",
+      "name": "PoMiniApps",
+      "description": "MiniApps productivity tool",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://pominiapps.azurewebsites.net"
+    },
+    {
+      "id": "app-5ln5hfdrvof5u",
+      "name": "PoMiniGames",
+      "description": "5ln5hfdrvof5u app",
+      "category": "productivity",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://app-5ln5hfdrvof5u.azurewebsites.net"
+    },
+    {
+      "id": "ponovaweight",
+      "name": "PoNovaWeight",
+      "description": "novaweight productivity tool",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://ponovaweight-app.azurewebsites.net"
+    },
+    {
+      "id": "porepolinetracker",
+      "name": "PoRepoLineTracker",
+      "description": "repolinetracker productivity tool",
+      "category": "productivity",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://app-porepolinetracker.azurewebsites.net"
+    },
+    {
+      "id": "wa-porunner",
+      "name": "PoRunner",
+      "description": "WaPorunner app",
+      "category": "health",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://wa-porunner.azurewebsites.net"
+    },
+    {
       "id": "poseereview",
       "name": "PoSeeReview",
       "description": "seereview productivity tool",
       "category": "productivity",
-      "status": "broken",
+      "status": "disabled",
       "technologies": [
         "Azure App Service",
         "Blazor"
       ],
       "url": "https://app-poseereview.azurewebsites.net"
+    },
+    {
+      "id": "potaggame",
+      "name": "PoTagGame",
+      "description": "Interactive TagGame game",
+      "category": "games",
+      "status": "disabled",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://potaggame-server.azurewebsites.net"
     }
   ]
 }

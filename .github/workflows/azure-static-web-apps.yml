@@ -1,17 +1,11 @@
-name: Deploy to Azure Static Web Apps
+name: Deploy to Azure Static Web Apps (DISABLED)
 
-# Deploys to Azure Static Web Apps in resource group: PoPunkouterSoftware
-# Account: punkouter26@outlook.com
+# DISABLED: App is now a Blazor Server (.NET 10) app — deployed via deploy-appservice.yml
+# The Static Web App (witty-smoke-014bc370f.2.azurestaticapps.net) is retained in Azure
+# but is no longer the active deployment target.
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - master
-  workflow_dispatch:
+  workflow_dispatch:  # manual only — effectively disabled from auto-running
 
 permissions:
   contents: write

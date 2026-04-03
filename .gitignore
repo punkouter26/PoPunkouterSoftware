@@ -4,10 +4,28 @@ test-results/
 .playwright-mcp/
 TESTRESULTS/
 
+# Publish output
+publish/
+
+# Log files
+logs/
+*.log
+
+# User secrets
+secrets.json
+
+# macOS
+.DS_Store
+
+# Rider/JetBrains
+.idea/
+*.sln.iml
+
 # .NET build artifacts
 bin/
 obj/
 .vs/
+.vscode/
 *.user
 *.suo
 *.DotSettings.user

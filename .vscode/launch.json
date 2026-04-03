@@ -2,6 +2,29 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "▶ Run PoPunkouterSoftware (.NET)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "kill-dotnet",
+            "program": "${workspaceFolder}/PoPunkouterSoftware/bin/Debug/net10.0/PoPunkouterSoftware.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/PoPunkouterSoftware",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "Now listening on: (https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "launchBrowser": {
+                "enabled": false
+            },
+            "sourceFileMap": {
+                "/Views/": "${workspaceFolder}/"
+            }
+        },
+        {
             "name": "🌐 Start Local Server & Open Website",
             "type": "node",
             "request": "launch",

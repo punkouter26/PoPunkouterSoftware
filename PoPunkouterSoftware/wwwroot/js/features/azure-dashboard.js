@@ -1,311 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azure Dashboard - Punkouter Software</title>
-    <link rel="stylesheet" href="css/main.css">
-    <script src="js/core/app-insights-init.js"></script>
-    <style>
-        /* ── layout ── */
-        .db-meta { font-size:.82rem; color:var(--text-secondary); margin-bottom:1.5rem; }
-        .db-meta strong { color:var(--accent-color); }
-
-        /* ── summary strip ── */
-        .summary-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.75rem; margin-bottom:1.75rem; }
-        .s-card { background:var(--dark-bg); border:1px solid rgba(0,198,255,.35); border-radius:8px; padding:.9rem .75rem; text-align:center; }
-        .s-card .num { font-size:1.9rem; font-weight:700; color:var(--accent-color); line-height:1; }
-        .s-card .lbl { font-size:.7rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.06em; margin-top:.3rem; }
-        .s-card.danger .num { color:#ff5050; }
-        .s-card.warn   .num { color:#ffd700; }
-        .s-card.ok     .num { color:#32ffa7; }
-
-        /* ── section head ── */
-        .sh { color:var(--primary-color); font-size:1.1rem; margin:2rem 0 .8rem; padding-bottom:5px; border-bottom:2px solid var(--primary-color); display:flex; align-items:center; gap:.5rem; }
-        .sh .cnt { background:var(--primary-color); color:#000; border-radius:12px; font-size:.7rem; padding:1px 7px; font-weight:700; }
-        .sh .cnt.red { background:#ff5050; color:#fff; }
-        .sh .cnt.gold { background:#ffd700; color:#000; }
-        .sh .cnt.green { background:#32ffa7; color:#000; }
-
-        /* ── tables ── */
-        table { width:100%; border-collapse:collapse; font-size:.83rem; margin-bottom:1.2rem; }
-        th { background:var(--dark-bg); color:var(--primary-color); padding:7px 9px; text-align:left; font-weight:600; border-bottom:1px solid var(--primary-color); white-space:nowrap; }
-        td { padding:6px 9px; border-bottom:1px solid rgba(255,255,255,.06); vertical-align:top; }
-        tr:hover td { background:rgba(0,198,255,.04); }
-
-        /* ── badges ── */
-        .b { display:inline-block; padding:1px 7px; border-radius:10px; font-size:.72rem; font-weight:600; white-space:nowrap; }
-        .b-ok     { background:rgba(50,255,167,.15); color:#32ffa7; border:1px solid #32ffa7; }
-        .b-bad    { background:rgba(255,80,80,.15);  color:#ff5050; border:1px solid #ff5050; }
-        .b-warn   { background:rgba(255,214,0,.15);  color:#ffd700; border:1px solid #ffd700; }
-        .b-info   { background:rgba(0,198,255,.15);  color:#00c6ff; border:1px solid #00c6ff; }
-        .b-dim    { background:rgba(180,180,180,.1); color:#b4b4b4; border:1px solid #b4b4b4; }
-        .b-purple { background:rgba(180,100,255,.15);color:#c87fff; border:1px solid #c87fff; }
-
-        /* ── impact colours ── */
-        .imp-high   { color:#ff5050; font-weight:700; }
-        .imp-medium { color:#ffd700; font-weight:600; }
-        .imp-low    { color:#b4b4b4; }
-
-        /* ── pre/cmd ── */
-        .cmd { display:block; background:var(--dark-bg); border-left:3px solid var(--accent-color); border-radius:4px; padding:6px 10px; font-family:'Courier New',monospace; font-size:.76rem; color:var(--accent-color); white-space:pre-wrap; word-break:break-all; margin:3px 0; cursor:pointer; position:relative; }
-        .cmd::after { content:'Copy'; position:absolute; right:6px; top:50%; transform:translateY(-50%); font-size:.65rem; background:rgba(50,255,167,.15); border:1px solid #32ffa7; color:#32ffa7; padding:1px 5px; border-radius:4px; opacity:.7; }
-        .cmd:hover::after { opacity:1; }
-
-        /* ── safe-to-remove panel ── */
-        .str-panel { border:1px solid #ff5050; border-radius:10px; overflow:hidden; margin-bottom:1.5rem; }
-        .str-hdr { background:#ff505022; padding:.7rem 1rem; display:flex; align-items:center; gap:.5rem; font-weight:700; color:#ff5050; font-size:.95rem; }
-        .str-body { padding:0; }
-        .str-row { display:grid; grid-template-columns:1fr auto; gap:.5rem; padding:.7rem 1rem; border-bottom:1px solid rgba(255,80,80,.12); }
-        .str-row:last-child { border-bottom:none; }
-        .str-row .conf { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:8px; white-space:nowrap; align-self:start; }
-        .conf-high   { background:rgba(255,80,80,.2);  color:#ff5050; border:1px solid #ff5050; }
-        .conf-medium { background:rgba(255,214,0,.2);  color:#ffd700; border:1px solid #ffd700; }
-        .conf-low    { background:rgba(0,198,255,.15); color:#00c6ff; border:1px solid #00c6ff; }
-        .str-name { font-weight:600; color:#fff; font-size:.87rem; }
-        .str-reason { font-size:.78rem; color:var(--text-secondary); margin-top:2px; }
-        .str-saving { font-size:.75rem; color:#32ffa7; margin-top:2px; }
-
-        /* ── bars (resource type count) ── */
-        .type-bar { display:flex; align-items:center; gap:.5rem; margin-bottom:4px; font-size:.8rem; }
-        .type-bar .bar-bg { flex:1; height:12px; background:rgba(255,255,255,.06); border-radius:6px; overflow:hidden; }
-        .type-bar .bar-fill { height:100%; background:linear-gradient(90deg,var(--primary-color),var(--accent-color)); border-radius:6px; min-width:3px; }
-        .type-bar .bar-label { width:42px; text-align:right; font-weight:600; color:var(--accent-color); }
-        .type-bar .bar-name { min-width:0; flex:2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-secondary); }
-
-        /* ── delta ── */
-        .delta-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.75rem; }
-        .delta-box { background:var(--dark-bg); border-radius:8px; padding:.8rem 1rem; }
-        .delta-box .dlabel { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-secondary); margin-bottom:.35rem; }
-        .delta-box ul { list-style:none; padding:0; margin:0; }
-        .delta-box li { font-size:.82rem; padding:2px 0; border-bottom:1px solid rgba(255,255,255,.04); }
-        .d-ok  { border-left:3px solid #32ffa7 !important; padding-left:6px; }
-        .d-bad { border-left:3px solid #ff5050 !important; padding-left:6px; }
-        .d-new { border-left:3px solid #00c6ff !important; padding-left:6px; }
-
-        /* ── tabs ── */
-        .tab-bar { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem; }
-        .tab { background:var(--dark-bg); border:1px solid rgba(0,198,255,.3); border-radius:6px; padding:4px 12px; font-size:.8rem; color:var(--text-secondary); cursor:pointer; transition:.2s; }
-        .tab:hover, .tab.active { background:var(--primary-color); color:#000; font-weight:600; border-color:var(--primary-color); }
-
-        /* ── misc ── */
-        .link-ext { color:var(--link-color); word-break:break-all; }
-        .link-ext:hover { color:var(--accent-color); }
-        .muted { color:var(--text-secondary); font-size:.78rem; }
-        .note-box { background:rgba(255,214,0,.08); border:1px solid rgba(255,214,0,.3); border-radius:6px; padding:.7rem 1rem; font-size:.83rem; color:#ffd700; margin:.5rem 0; }
-        .ok-box   { background:rgba(50,255,167,.08); border:1px solid rgba(50,255,167,.3); border-radius:6px; padding:.7rem 1rem; font-size:.83rem; color:#32ffa7; margin:.5rem 0; }
-        .err-box  { background:rgba(255,80,80,.08);  border:1px solid rgba(255,80,80,.3);  border-radius:6px; padding:.7rem 1rem; font-size:.83rem; color:#ff5050; margin:.5rem 0; }
-        .empty    { text-align:center; padding:1.5rem; color:var(--text-secondary); font-style:italic; }
-
-        #loading-state { text-align:center; padding:4rem; }
-        #loading-state .spin { font-size:3rem; display:block; animation:spin 2s linear infinite; }
-        @keyframes spin { to { transform:rotate(360deg); } }
-
-        @media(max-width:600px){
-            table { font-size:.74rem; }
-            th,td { padding:5px 6px; }
-        }
-    </style>
-</head>
-
-<body>
-    <!-- Header -->
-    <header>
-        <img src="images/logo.png" alt="Punkouter Software Logo" class="logo">
-        <nav aria-label="Main navigation">
-            <ul class="nav-list">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="OurTeam.html">Our Team</a></li>
-                <li><a href="OurWebApps.html">Web Apps</a></li>
-                <li><a href="OurPhoneApps.html">Phone Apps</a></li>
-                <li><a href="Contact.html">Contact</a></li>
-                <li><a href="AzureDashboard.html" aria-current="page">Azure</a></li>
-            </ul>
-        </nav>
-    </header>
-
-    <main>
-        <h1>Azure Dashboard</h1>
-
-        <div id="err-box"  class="err-box"  style="display:none"></div>
-        <div id="note-box" class="note-box" style="display:none"></div>
-
-        <div id="loading-state">
-            <span class="spin">&#9881;</span>
-            <p>Loading azure-full-report.json&hellip;</p>
-            <p class="muted">Run <code>npm run azure-report</code> locally or wait for the next CI run.</p>
-        </div>
-
-        <div id="content" style="display:none">
-
-            <!-- Meta -->
-            <p class="db-meta">
-                Generated: <strong id="m-date">—</strong> &nbsp;|&nbsp;
-                Subscription: <strong id="m-sub">—</strong> &nbsp;|&nbsp;
-                Tenant: <strong id="m-tenant">—</strong>
-                <span id="m-delta-age"></span>
-            </p>
-
-            <!-- Summary strip -->
-            <div class="summary-strip" id="summary-strip"></div>
-
-            <!-- DELTA -->
-            <div id="sec-delta" style="display:none">
-                <h2 class="sh">&#x21BB; Changes Since Last Run <span id="delta-age-badge" class="cnt"></span></h2>
-                <div class="delta-grid" id="delta-grid"></div>
-            </div>
-
-            <!-- SAFE TO REMOVE -->
-            <h2 class="sh">&#x1F9F9; Safe to Remove
-                <span id="str-cnt" class="cnt red">0</span>
-            </h2>
-            <p class="muted" style="margin-bottom:.75rem">
-                Resources identified as unused, zombie, or flagged by Azure Advisor as cost-waste.
-                All <code>az</code> commands are copy-ready. Confirm before running — verify no
-                dependencies exist first.
-            </p>
-            <div id="str-list"></div>
-
-            <!-- WEB SERVICES -->
-            <h2 class="sh">&#x1F310; Web Services <span id="ws-cnt" class="cnt">0</span></h2>
-            <div class="tab-bar" id="ws-tabs">
-                <span class="tab active" data-filter="all">All</span>
-                <span class="tab" data-filter="active">Active</span>
-                <span class="tab" data-filter="broken">Broken</span>
-                <span class="tab" data-filter="unreachable">Unreachable</span>
-            </div>
-            <div style="overflow-x:auto">
-            <table>
-                <thead><tr>
-                    <th>Name</th><th>Type</th><th>URL</th>
-                    <th>HTTP</th><th>Platform</th><th>Health</th>
-                    <th>7d Req</th><th>7d 5xx</th><th>RT ms</th>
-                    <th>Free Tier</th><th>SKU</th>
-                </tr></thead>
-                <tbody id="ws-tbody"></tbody>
-            </table>
-            </div>
-
-            <!-- APP INSIGHTS -->
-            <div id="sec-ai" style="display:none">
-                <h2 class="sh">&#x1F4CA; Application Insights <span id="ai-cnt" class="cnt">0</span></h2>
-                <div style="overflow-x:auto">
-                <table>
-                    <thead><tr>
-                        <th>Component</th><th>Resource Group</th>
-                        <th>7d Requests</th><th>7d Failed</th><th>7d Exceptions</th>
-                    </tr></thead>
-                    <tbody id="ai-tbody"></tbody>
-                </table>
-                </div>
-            </div>
-
-            <!-- ZOMBIE APPS -->
-            <div id="sec-zombie" style="display:none">
-                <h2 class="sh">&#x1F480; Zombie Apps — 0 Requests (7 days) <span id="zombie-cnt" class="cnt red">0</span></h2>
-                <table>
-                    <thead><tr><th>Name</th><th>Resource Group</th><th>HTTP Status</th><th>Platform State</th><th>Stop Command</th></tr></thead>
-                    <tbody id="zombie-tbody"></tbody>
-                </table>
-            </div>
-
-            <!-- FREE TIER -->
-            <h2 class="sh">&#x1F4B0; Free-Tier Analysis</h2>
-            <div id="ft-on"  style="margin-bottom:.5rem"></div>
-            <div id="ft-can" style="margin-bottom:.5rem"></div>
-            <div id="ft-no"  style="margin-bottom:.5rem"></div>
-
-            <!-- DEPENDENCY MAP -->
-            <div id="sec-dep" style="display:none">
-                <h2 class="sh">&#x1F517; Shared Resource Dependencies</h2>
-                <div id="dep-content"></div>
-            </div>
-
-            <!-- ALL RESOURCES -->
-            <h2 class="sh">&#x1F4E6; All Azure Resources <span id="res-cnt" class="cnt">0</span></h2>
-            <div id="res-bars"></div>
-
-            <!-- COST -->
-            <h2 class="sh">&#x1F4B3; Cost — Last 30 Days <span id="cost-source" class="cnt"></span></h2>
-            <div id="cost-note"></div>
-            <div style="overflow-x:auto">
-            <table>
-                <thead><tr><th>Service / Resource Group</th><th style="text-align:right">Cost (USD)</th></tr></thead>
-                <tbody id="cost-tbody"></tbody>
-                <tfoot><tr>
-                    <td style="font-weight:700;color:var(--primary-color)">TOTAL</td>
-                    <td style="text-align:right;font-weight:700;color:#ffd700" id="cost-total">—</td>
-                </tr></tfoot>
-            </table>
-            </div>
-
-            <!-- APPS.JSON DIFF -->
-            <h2 class="sh">&#x1F501; apps.json Sync</h2>
-            <div id="diff-content"></div>
-
-            <!-- SECURITY POSTURE -->
-            <div id="sec-security" style="display:none">
-                <h2 class="sh">&#x1F512; Security Posture <span id="sec-sec-cnt" class="cnt red">0</span></h2>
-                <p class="muted" style="margin-bottom:.75rem">Azure Advisor security recommendations. Address High-impact findings first.</p>
-                <div id="sec-security-content"></div>
-            </div>
-
-            <!-- COST TREND -->
-            <div id="sec-trend" style="display:none">
-                <h2 class="sh">&#x1F4C8; Cost Trend — Last 6 Months</h2>
-                <div id="trend-chart"></div>
-            </div>
-
-            <!-- SSL EXPIRY -->
-            <h2 class="sh">&#x1F310; SSL Certificate Expiry</h2>
-            <div style="overflow-x:auto">
-            <table>
-                <thead><tr><th>Service</th><th>URL</th><th>CN / Subject</th><th>Expiry Date</th><th>Days Left</th><th>Status</th></tr></thead>
-                <tbody id="ssl-tbody"></tbody>
-            </table>
-            </div>
-
-            <!-- CONFIG DRIFT -->
-            <div id="sec-drift" style="display:none">
-                <h2 class="sh">&#x2699;&#xFE0F; Configuration Drift <span id="drift-cnt" class="cnt">0</span></h2>
-                <p class="muted" style="margin-bottom:.75rem">App Service misconfigurations: FTP, TLS version, CORS, Auth, Always-On, HTTP/2.</p>
-                <div style="overflow-x:auto">
-                <table>
-                    <thead><tr><th>App Service</th><th>Issues</th><th>Details</th></tr></thead>
-                    <tbody id="drift-tbody"></tbody>
-                </table>
-                </div>
-            </div>
-
-            <!-- STORAGE INVENTORY -->
-            <div id="sec-storage" style="display:none">
-                <h2 class="sh">&#x1F4BE; Storage Account Inventory <span id="storage-cnt" class="cnt">0</span></h2>
-                <p class="muted" style="margin-bottom:.75rem">13 storage accounts — public access, HTTPS enforcement, TLS version, lifecycle policies.</p>
-                <div style="overflow-x:auto">
-                <table>
-                    <thead><tr><th>Account</th><th>SKU</th><th>Location</th><th>Public Blobs</th><th>HTTPS Only</th><th>Min TLS</th><th>Issues</th></tr></thead>
-                    <tbody id="storage-tbody"></tbody>
-                </table>
-                </div>
-            </div>
-
-            <!-- QUICK ACTIONS -->
-            <div id="sec-qa" style="display:none">
-                <h2 class="sh">&#x26A1; Quick Actions <span class="cnt" id="qa-cnt">0</span></h2>
-                <p class="muted" style="margin-bottom:.5rem">Copy-paste ready <code>az</code> commands to optimise or clean up your subscription.</p>
-                <div id="qa-list"></div>
-            </div>
-
-        </div><!-- #content -->
-    </main>
-
-    <!-- Footer -->
-    <footer>
-        <p>&copy; 2026 Punkouter Software. All rights reserved.</p>
-    </footer>
-
-    <script type="module">
 // ─── Utility ──────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -660,14 +352,45 @@ function renderCost(cost) {
     if (cost.note) {
         $('cost-note').innerHTML = `<div class="note-box">📝 ${esc(cost.note)}</div>`;
     }
-    const drivers = (cost.topCostDrivers ?? []).slice().sort((a,b) => (b.cost ?? 0) - (a.cost ?? 0));
-    $('cost-tbody').innerHTML = drivers.length
-        ? drivers.map(d => `<tr>
-            <td>${esc(d.name)}</td>
-            <td style="text-align:right;color:${(d.cost ?? 0) > 0 ? '#ffd700' : 'var(--text-secondary)'};font-weight:600">${fmtCost(d.cost)}</td>
-          </tr>`).join('')
-        : emptyRow('No cost breakdown available — credits subscription may show $0.');
-    $('cost-total').textContent = cost.totalFormatted ?? fmtCost(cost.totalCost30Days);
+
+    const allDrivers = (cost.topCostDrivers ?? []).slice().sort((a,b) => (b.cost ?? 0) - (a.cost ?? 0));
+
+    function showPeriod(days) {
+        const factor = days / 30;
+        const isEstimate = days < 30;
+        const drivers = allDrivers.map(d => ({ ...d, cost: (d.cost ?? 0) * factor }));
+        const total = drivers.reduce((s, d) => s + d.cost, 0);
+        const labels = { 1:'Last 24 Hours', 3:'Last 3 Days', 7:'Last 7 Days', 30:'Last 30 Days' };
+
+        $('cost-heading-period').textContent = `— ${labels[days] ?? `Last ${days} Days`}`;
+
+        const estNote = $('cost-estimate-note');
+        if (isEstimate) {
+            estNote.textContent = `⚡ Estimated from 30-day data (÷${30/days}). Actual usage may vary.`;
+            estNote.style.display = '';
+        } else {
+            estNote.style.display = 'none';
+        }
+
+        $('cost-tbody').innerHTML = drivers.length
+            ? drivers.map(d => `<tr>
+                <td>${esc(d.name)}</td>
+                <td style="text-align:right;color:${d.cost > 0 ? '#ffd700' : 'var(--text-secondary)'};font-weight:600">${fmtCost(d.cost)}</td>
+              </tr>`).join('')
+            : emptyRow('No cost breakdown available — credits subscription may show $0.');
+        $('cost-total').textContent = fmtCost(total);
+    }
+
+    // Wire up tabs
+    document.querySelectorAll('#cost-tabs .tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('#cost-tabs .tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            showPeriod(Number(tab.dataset.days));
+        });
+    });
+
+    showPeriod(30);
 }
 
 function renderDiff(diff) {
@@ -880,7 +603,3 @@ async function load() {
 }
 
 load();
-    </script>
-</body>
-
-</html>

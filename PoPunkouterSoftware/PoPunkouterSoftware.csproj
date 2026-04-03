@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- TargetFramework, Nullable, ImplicitUsings, TreatWarningsAsErrors inherited from Directory.Build.props -->
+    <RootNamespace>PoPunkouterSoftware</RootNamespace>
+    <AssemblyName>PoPunkouterSoftware</AssemblyName>
+    <UserSecretsId>popunkouter-software-api</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- UI -->
+    <PackageReference Include="Azure.Data.Tables" />
+    <PackageReference Include="Azure.Monitor.Query" />
+    <PackageReference Include="Azure.ResourceManager" />
+    <PackageReference Include="Azure.ResourceManager.AppContainers" />
+    <PackageReference Include="Azure.ResourceManager.AppService" />
+    <PackageReference Include="Azure.ResourceManager.Resources" />
+    <PackageReference Include="Radzen.Blazor" />
+
+    <!-- Structured logging -->
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Enrichers.CorrelationId" />
+    <PackageReference Include="Serilog.Enrichers.Environment" />
+    <PackageReference Include="Serilog.Enrichers.Thread" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" />
+
+    <!-- OpenTelemetry + Azure Monitor -->
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
+
+    <!-- OpenAPI / Scalar -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+
+    <!-- Azure Key Vault & Identity -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,745 @@
+using Azure.Core;
+using Azure.Identity;
+using Azure.Monitor.Query;
+using Azure.Monitor.Query.Models;
+using Azure.ResourceManager;
+using Azure.ResourceManager.AppService;
+using Azure.ResourceManager.AppService.Models;
+using Azure.ResourceManager.Resources;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
+
+namespace PoPunkouterSoftware.Features.Azure;
+
+/// <summary>
+/// Analyses an Azure subscription using the Azure SDK and DefaultAzureCredential.
+/// Works locally (via az login / VS login) and on Azure (via Managed Identity).
+/// Produces the same AzureReport structure consumed by AzureDashboard.razor.
+/// </summary>
+public class AzureReportService
+{
+    private readonly ILogger<AzureReportService> _logger;
+    private readonly IHttpClientFactory          _httpClientFactory;
+    private readonly IWebHostEnvironment         _env;
+
+    private readonly IConfiguration             _config;
+
+    public AzureReportService(
+        ILogger<AzureReportService> logger,
+        IHttpClientFactory httpClientFactory,
+        IWebHostEnvironment env,
+        IConfiguration config)
+    {
+        _logger            = logger;
+        _httpClientFactory = httpClientFactory;
+        _env               = env;
+        _config            = config;
+    }
+
+    // ── Public entry point ────────────────────────────────────────────────────
+
+    public async Task<AzureReport> RunAsync(CancellationToken ct = default)
+    {
+        _logger.LogInformation("AzureReportService: starting analysis");
+        var cred = new DefaultAzureCredential();
+        var arm  = new ArmClient(cred);
+
+        // Use configured subscription ID if set — avoids VS Code credential picking wrong account
+        var configuredSubId = _config["Azure:SubscriptionId"];
+        SubscriptionResource subscription;
+        if (!string.IsNullOrWhiteSpace(configuredSubId))
+        {
+            var subResource = arm.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{configuredSubId}"));
+            subscription = (await subResource.GetAsync(ct)).Value;
+        }
+        else
+        {
+            subscription = await arm.GetDefaultSubscriptionAsync(ct);
+        }
+        var subscriptionId = subscription.Data.SubscriptionId!;
+        _logger.LogInformation("Subscription: {Name} ({Id})", subscription.Data.DisplayName, subscriptionId);
+
+        var rawServices   = await DiscoverWebServicesAsync(subscription, ct);
+        _logger.LogInformation("Discovered {Count} web services", rawServices.Count);
+
+        var connectedSvcs = await TestConnectivityAsync(rawServices, ct);
+        var allResources  = await GetAllResourcesAsync(subscription, ct);
+        _logger.LogInformation("Found {Count} total resources", allResources.Count);
+
+        var metricsMap  = await GetMetricsAsync(connectedSvcs, cred, ct);
+        var costInfo    = await GetCostAsync(subscriptionId, cred, ct);
+        var sslExpiry   = await CheckSslAsync(connectedSvcs, ct);
+        var configDrift = await GetConfigDriftAsync(connectedSvcs, arm, ct);
+        var storageInv  = await GetStorageInventoryAsync(allResources, cred, ct);
+        var freeTier    = AnalyzeFreeTiers(allResources);
+        var zombies     = DetectZombies(connectedSvcs, metricsMap);
+        var appsDiff    = await DiffAppsJsonAsync(connectedSvcs, ct);
+
+        var servicesList = connectedSvcs.Select(s =>
+        {
+            metricsMap.TryGetValue(s.ResourceId ?? "", out var m);
+            return s with
+            {
+                Metrics7Days  = s.ResourceId is not null ? m : null,
+                FreeTierCheck = CheckFreeTierForService(s.ResourceTypeRaw, s.Sku),
+            };
+        }).ToList();
+
+        var active = servicesList.Count(s => s.HttpStatus == "active");
+        var broken = servicesList.Count(s => s.HttpStatus == "broken");
+        var other  = servicesList.Count(s => s.HttpStatus != "active" && s.HttpStatus != "broken");
+
+        var report = new AzureReport
+        {
+            GeneratedAt  = DateTime.UtcNow,
+            Subscription = new SubscriptionInfo { Name = subscription.Data.DisplayName ?? subscriptionId },
+            WebServices  = new WebServicesInfo
+            {
+                Total    = servicesList.Count,
+                ByStatus = new ByStatusInfo { Active = active, Broken = broken, Other = other },
+                Services = servicesList.Select(s => (WebService)s).ToList(),
+            },
+            Cost               = costInfo,
+            FreeTier           = freeTier,
+            AllResourceSummary = new AllResourceSummaryInfo
+            {
+                Total  = allResources.Count,
+                ByType = allResources
+                    .GroupBy(r => ShortType(r.ResourceType.ToString()))
+                    .ToDictionary(g => g.Key, g => g.Count()),
+            },
+            SslExpiry        = sslExpiry,
+            ConfigDrift      = configDrift,
+            StorageInventory = storageInv,
+            AppsJsonDiff     = appsDiff,
+            AppInsightsMetrics = new(),
+            ZombieApps       = zombies,
+        };
+
+        _logger.LogInformation("AzureReportService: analysis complete");
+        return report;
+    }
+
+    // ── Step 1: Discover web services ─────────────────────────────────────────
+
+    private async Task<List<RawService>> DiscoverWebServicesAsync(SubscriptionResource sub, CancellationToken ct)
+    {
+        var list = new List<RawService>();
+
+        // App Service web apps
+        await foreach (var site in sub.GetWebSitesAsync(cancellationToken: ct))
+        {
+            if (site.Data.Name.Contains('/')) continue; // skip slots
+            var url = site.Data.DefaultHostName is { } h ? $"https://{h}" : null;
+            var rg  = site.Data.Id?.ResourceGroupName ?? "";
+            list.Add(new RawService
+            {
+                Name            = site.Data.Name,
+                FriendlyName    = FriendlyFromContext(site.Data.Name, rg),
+                ResourceGroup   = rg,
+                ResourceTypeRaw = "Microsoft.Web/sites",
+                Url             = url,
+                Sku             = null, // SKU is on the App Service Plan, not the site
+                PlatformState   = site.Data.State,
+                ResourceId      = site.Data.Id?.ToString(),
+            });
+        }
+
+        // Static Web Apps
+        await foreach (var swa in sub.GetStaticSitesAsync(cancellationToken: ct))
+        {
+            var url = swa.Data.DefaultHostname is { } h ? $"https://{h}" : null;
+            var rg  = swa.Data.Id?.ResourceGroupName ?? "";
+            list.Add(new RawService
+            {
+                Name            = swa.Data.Name,
+                FriendlyName    = FriendlyFromContext(swa.Data.Name, rg),
+                ResourceGroup   = rg,
+                ResourceTypeRaw = "Microsoft.Web/staticSites",
+                Url             = url,
+                Sku             = swa.Data.Sku?.Name ?? "Free",
+                PlatformState   = "Running",
+                ResourceId      = swa.Data.Id?.ToString(),
+            });
+        }
+
+        // Container Apps (via generic ARM filter)
+        await foreach (var ca in sub.GetGenericResourcesAsync(
+            filter: "resourceType eq 'Microsoft.App/containerApps'",
+            cancellationToken: ct))
+        {
+            var rg = ca.Data.Id?.ResourceGroupName ?? "";
+            list.Add(new RawService
+            {
+                Name            = ca.Data.Name,
+                FriendlyName    = FriendlyFromContext(ca.Data.Name, rg),
+                ResourceGroup   = rg,
+                ResourceTypeRaw = "Microsoft.App/containerApps",
+                Url             = null,
+                Sku             = "Consumption",
+                PlatformState   = "Running",
+                ResourceId      = ca.Data.Id?.ToString(),
+            });
+        }
+
+        return list;
+    }
+
+    // ── Step 2: HTTP connectivity tests ───────────────────────────────────────
+
+    private async Task<List<RawService>> TestConnectivityAsync(List<RawService> services, CancellationToken ct)
+    {
+        var client = _httpClientFactory.CreateClient("azure-probe");
+        var tasks  = services.Select(async svc =>
+        {
+            if (string.IsNullOrEmpty(svc.Url))
+                return svc with { Connectivity = new ConnectivityInfo { Success = false, Error = "No URL" }, HttpStatus = "unknown" };
+            var conn   = await ProbeUrlAsync(client, svc.Url, ct);
+            var status = conn.Success ? "active" : conn.ResponseTime > 0 ? "broken" : "unreachable";
+            return svc with { Connectivity = conn, HttpStatus = status };
+        });
+        return (await Task.WhenAll(tasks)).ToList();
+    }
+
+    private static async Task<ConnectivityInfo> ProbeUrlAsync(HttpClient client, string url, CancellationToken ct)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            using var req  = new HttpRequestMessage(HttpMethod.Head, url);
+            using var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            sw.Stop();
+            var isAzureError = resp.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.BadGateway;
+            return new ConnectivityInfo
+            {
+                Success          = resp.IsSuccessStatusCode && !isAzureError,
+                ResponseTime     = (int)sw.ElapsedMilliseconds,
+                Error            = isAzureError ? "Azure error page" : null,
+                IsAzureErrorPage = isAzureError,
+            };
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            return new ConnectivityInfo { Success = false, ResponseTime = (int)sw.ElapsedMilliseconds, Error = ex.Message };
+        }
+    }
+
+    // ── Step 3: All ARM resources ──────────────────────────────────────────────
+
+    private static async Task<List<GenericResourceData>> GetAllResourcesAsync(SubscriptionResource sub, CancellationToken ct)
+    {
+        var list = new List<GenericResourceData>();
+        await foreach (var r in sub.GetGenericResourcesAsync(cancellationToken: ct))
+            list.Add(r.Data);
+        return list;
+    }
+
+    // ── Step 4: 7-day metrics ─────────────────────────────────────────────────
+
+    private async Task<Dictionary<string, MetricsInfo>> GetMetricsAsync(
+        List<RawService> services, DefaultAzureCredential cred, CancellationToken ct)
+    {
+        var result  = new Dictionary<string, MetricsInfo>(StringComparer.OrdinalIgnoreCase);
+        var appSvcs = services.Where(s => s.ResourceId is not null && s.ResourceTypeRaw == "Microsoft.Web/sites").ToList();
+        if (appSvcs.Count == 0) return result;
+
+        MetricsQueryClient metricsClient;
+        try { metricsClient = new MetricsQueryClient(cred); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "MetricsQueryClient could not be initialised — skipping metrics");
+            return result;
+        }
+
+        var end   = DateTimeOffset.UtcNow;
+        var start = end.AddDays(-7);
+
+        foreach (var svc in appSvcs)
+        {
+            try
+            {
+                var response = await metricsClient.QueryResourceAsync(
+                    svc.ResourceId!,
+                    new[] { "Requests", "Http5Xx", "AverageResponseTime" },
+                    new MetricsQueryOptions { TimeRange = new QueryTimeRange(start, end), Granularity = TimeSpan.FromDays(1) },
+                    ct);
+
+                int requests = 0, http5xx = 0;
+                double avgRt = 0;
+                foreach (var metric in response.Value.Metrics)
+                {
+                    var total = metric.TimeSeries.SelectMany(ts => ts.Values)
+                        .Sum(p => p.Total ?? p.Average ?? 0);
+                    if (metric.Name.Contains("Request", StringComparison.OrdinalIgnoreCase) && !metric.Name.Contains("5"))
+                        requests = (int)total;
+                    else if (metric.Name.Contains("5", StringComparison.OrdinalIgnoreCase))
+                        http5xx  = (int)total;
+                    else if (metric.Name.Contains("Response", StringComparison.OrdinalIgnoreCase))
+                        avgRt    = Math.Round(total, 1);
+                }
+
+                result[svc.ResourceId!] = new MetricsInfo
+                {
+                    Requests            = requests,
+                    Http5xx             = http5xx,
+                    AverageResponseTime = avgRt,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Metrics unavailable for {Name}", svc.Name);
+            }
+        }
+        return result;
+    }
+
+    // ── Step 5: 30-day cost via Cost Management REST ───────────────────────────
+
+    private async Task<CostInfo> GetCostAsync(string subscriptionId, DefaultAzureCredential cred, CancellationToken ct)
+    {
+        try
+        {
+            var token = await cred.GetTokenAsync(
+                new TokenRequestContext(["https://management.azure.com/.default"]), ct);
+
+            var today = DateTime.UtcNow.Date;
+            var start = today.AddDays(-30);
+            var body  = JsonSerializer.Serialize(new
+            {
+                type       = "Usage",
+                timeframe  = "Custom",
+                timePeriod = new { from = start.ToString("yyyy-MM-dd"), to = today.ToString("yyyy-MM-dd") },
+                dataset    = new
+                {
+                    granularity = "None",
+                    aggregation = new { totalCost = new { name = "PreTaxCost", function = "Sum" } },
+                    grouping    = new[]
+                    {
+                        new { type = "Dimension", name = "ServiceName" },
+                        new { type = "Dimension", name = "ResourceGroupName" },
+                    },
+                },
+            });
+
+            var client = _httpClientFactory.CreateClient();
+            using var req = new HttpRequestMessage(HttpMethod.Post,
+                $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01")
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            };
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+
+            using var resp = await client.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Cost Management returned {Status}", resp.StatusCode);
+                return new CostInfo { Note = $"Cost data unavailable ({resp.StatusCode})" };
+            }
+
+            var json  = await resp.Content.ReadAsStringAsync(ct);
+            var doc   = JsonDocument.Parse(json);
+            var props = doc.RootElement.GetProperty("properties");
+            var rows  = props.GetProperty("rows").EnumerateArray().ToList();
+            var cols  = props.GetProperty("columns").EnumerateArray()
+                .Select(c => c.GetProperty("name").GetString()!.ToLowerInvariant()).ToList();
+
+            int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
+            int svcIdx  = cols.FindIndex(c => c.Contains("service"));
+            int rgIdx   = cols.FindIndex(c => c.Contains("resourcegroup"));
+
+            double totalCost = 0;
+            var byKey = new Dictionary<string, double>();
+            foreach (var row in rows)
+            {
+                var arr  = row.EnumerateArray().ToArray();
+                var cost = costIdx >= 0 ? arr[costIdx].GetDouble() : 0;
+                var svc  = svcIdx  >= 0 ? arr[svcIdx].GetString() ?? "Unknown" : "Unknown";
+                var rg   = rgIdx   >= 0 ? arr[rgIdx].GetString() ?? "" : "";
+                var key  = string.IsNullOrEmpty(rg) ? svc : $"{svc} ({rg})";
+                byKey[key] = byKey.GetValueOrDefault(key) + cost;
+                totalCost += cost;
+            }
+
+            var drivers = byKey
+                .Where(kv => kv.Value > 0)
+                .OrderByDescending(kv => kv.Value)
+                .Take(20)
+                .Select(kv => new CostDriver { Name = kv.Key, Cost = Math.Round(kv.Value, 4) })
+                .ToList();
+
+            return new CostInfo
+            {
+                TotalCost30Days = Math.Round(totalCost, 4),
+                TotalFormatted  = $"${totalCost:F2}",
+                TopCostDrivers  = drivers,
+                Note = totalCost == 0 ? "All costs $0.00 — subscription may be covered by credits." : null,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cost analysis failed");
+            return new CostInfo { Note = $"Cost data unavailable: {ex.Message}" };
+        }
+    }
+
+    // ── Step 6: SSL cert expiry ────────────────────────────────────────────────
+
+    private async Task<List<SslEntry>> CheckSslAsync(List<RawService> services, CancellationToken ct)
+    {
+        var results = new List<SslEntry>();
+        foreach (var svc in services)
+        {
+            if (svc.Url is not { } url || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                results.Add(new SslEntry { Name = svc.Name, Url = svc.Url, Error = "Non-HTTPS" });
+                continue;
+            }
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                results.Add(new SslEntry { Name = svc.Name, Url = url, Error = "Invalid URL" });
+                continue;
+            }
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(8));
+                using var tcp = new TcpClient();
+                await tcp.ConnectAsync(uri.Host, 443, cts.Token);
+                using var ssl = new SslStream(tcp.GetStream(), false, (_, _, _, _) => true);
+                await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+                {
+                    TargetHost = uri.Host,
+                    RemoteCertificateValidationCallback = (_, _, _, _) => true,
+                }, cts.Token);
+
+                var cert = ssl.RemoteCertificate;
+                if (cert is null) { results.Add(new SslEntry { Name = svc.Name, Url = url, Error = "No cert" }); continue; }
+
+                var expiry   = DateTime.Parse(cert.GetExpirationDateString());
+                var daysLeft = (int)(expiry - DateTime.UtcNow).TotalDays;
+                results.Add(new SslEntry { Name = svc.Name, Url = url, Expiry = expiry.ToString("yyyy-MM-dd"), DaysLeft = daysLeft, Subject = cert.Subject });
+            }
+            catch (Exception ex)
+            {
+                results.Add(new SslEntry { Name = svc.Name, Url = url, Error = ex.Message });
+            }
+        }
+        return results;
+    }
+
+    // ── Step 7: Config drift ───────────────────────────────────────────────────
+
+    private async Task<List<ConfigDriftItem>> GetConfigDriftAsync(
+        List<RawService> services, ArmClient arm, CancellationToken ct)
+    {
+        var results = new List<ConfigDriftItem>();
+        foreach (var svc in services.Where(s => s.ResourceTypeRaw == "Microsoft.Web/sites" && s.ResourceId is not null))
+        {
+            try
+            {
+                // Get the site config child resource directly by resource ID (no RG traversal needed)
+                var siteRes    = arm.GetWebSiteResource(new ResourceIdentifier(svc.ResourceId!));
+                var configRes  = siteRes.GetWebSiteConfig();
+                var configResp = await configRes.GetAsync(cancellationToken: ct);
+                var cfg        = configResp.Value.Data;
+
+                var issues = new List<ConfigIssue>();
+                if (cfg.FtpsState is not null &&
+                    cfg.FtpsState != AppServiceFtpsState.Disabled &&
+                    cfg.FtpsState != AppServiceFtpsState.FtpsOnly)
+                    issues.Add(new ConfigIssue { Severity = "high",   Issue = $"FTP enabled ({cfg.FtpsState}) — use FTPS-only or Disabled" });
+                if (cfg.IsHttp20Enabled == false)
+                    issues.Add(new ConfigIssue { Severity = "low",    Issue = "HTTP/2 disabled" });
+                if (cfg.MinTlsVersion is not null &&
+                    string.Compare(cfg.MinTlsVersion.ToString(), "1.2", StringComparison.Ordinal) < 0)
+                    issues.Add(new ConfigIssue { Severity = "high",   Issue = $"Min TLS {cfg.MinTlsVersion} — must be ≥1.2" });
+                if (cfg.IsAlwaysOn == false)
+                    issues.Add(new ConfigIssue { Severity = "low",    Issue = "Always-On disabled (cold starts)" });
+                if (cfg.Cors?.AllowedOrigins?.Contains("*") == true)
+                    issues.Add(new ConfigIssue { Severity = "medium", Issue = "CORS * — all origins allowed" });
+
+                results.Add(new ConfigDriftItem
+                {
+                    Name          = svc.Name,
+                    FriendlyName  = svc.FriendlyName,
+                    ResourceGroup = svc.ResourceGroup,
+                    IssueCount    = issues.Count,
+                    Issues        = issues,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Config drift check failed for {Name}", svc.Name);
+            }
+        }
+        return results;
+    }
+
+    // ── Step 8: Storage inventory ─────────────────────────────────────────────
+
+    private async Task<List<StorageItem>> GetStorageInventoryAsync(
+        List<GenericResourceData> allResources, DefaultAzureCredential cred, CancellationToken ct)
+    {
+        var results  = new List<StorageItem>();
+        var storages = allResources
+            .Where(r => r.ResourceType.ToString().Equals(
+                "Microsoft.Storage/storageAccounts", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (storages.Count == 0) return results;
+
+        // Fetch each account via ARM REST to get security properties
+        var token  = (await cred.GetTokenAsync(
+            new TokenRequestContext(["https://management.azure.com/.default"]), ct)).Token;
+        var client  = _httpClientFactory.CreateClient();
+
+        foreach (var sa in storages)
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com{sa.Id}?api-version=2023-01-01");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                using var resp = await client.SendAsync(req, ct);
+
+                bool publicBlob = false;
+                bool httpsOnly  = true;
+                string? minTls  = null;
+
+                if (resp.IsSuccessStatusCode)
+                {
+                    var json = await resp.Content.ReadAsStringAsync(ct);
+                    var doc  = JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("properties", out var p))
+                    {
+                        if (p.TryGetProperty("allowBlobPublicAccess", out var pub))
+                            publicBlob = pub.GetBoolean();
+                        if (p.TryGetProperty("supportsHttpsTrafficOnly", out var https))
+                            httpsOnly  = https.GetBoolean();
+                        if (p.TryGetProperty("minimumTlsVersion", out var tls))
+                            minTls     = tls.GetString();
+                    }
+                }
+
+                var issues = new List<StorageIssue>();
+                if (publicBlob)
+                    issues.Add(new StorageIssue { Severity = "high",   Issue = "Public blob access enabled — potential data exposure" });
+                if (!httpsOnly)
+                    issues.Add(new StorageIssue { Severity = "high",   Issue = "HTTPS-only is off — HTTP traffic allowed" });
+                if (minTls is not null && string.Compare(minTls, "TLS1_2", StringComparison.Ordinal) < 0)
+                    issues.Add(new StorageIssue { Severity = "medium", Issue = $"Min TLS {minTls} — upgrade to TLS 1.2" });
+
+                results.Add(new StorageItem
+                {
+                    Name             = sa.Name,
+                    ResourceGroup    = sa.Id?.ResourceGroupName,
+                    Sku              = sa.Sku?.Name?.ToString(),
+                    PublicBlobAccess = publicBlob,
+                    HttpsOnly        = httpsOnly,
+                    MinTls           = minTls,
+                    IssueCount       = issues.Count,
+                    Issues           = issues,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Storage check failed for {Name}", sa.Name);
+            }
+        }
+        return results;
+    }
+
+    // ── Step 9: Free-tier analysis ────────────────────────────────────────────
+
+    private static FreeTierInfo AnalyzeFreeTiers(List<GenericResourceData> resources)
+    {
+        var onFree    = new List<FreeTierItem>();
+        var canGoFree = new List<FreeTierItem>();
+        var noFree    = new List<FreeTierItem>();
+
+        foreach (var r in resources)
+        {
+            var typeKey = r.ResourceType.ToString();
+            if (!FreeTierMap.TryGetValue(typeKey, out var info)) continue;
+
+            var currentSku  = r.Sku?.Name?.ToString() ?? r.Kind ?? "unknown";
+            var isOnFree    = info.FreeSku is not null &&
+                              string.Equals(currentSku, info.FreeSku, StringComparison.OrdinalIgnoreCase);
+            var canGoToFree = info.FreeSku is not null && !isOnFree;
+
+            var entry = new FreeTierItem
+            {
+                Name           = r.Name,
+                Label          = info.Label,
+                CurrentSku     = currentSku,
+                FreeSku        = info.FreeSku,
+                FreeSkuLabel   = info.FreeSkuLabel,
+                ResourceGroup  = r.Id?.ResourceGroupName,
+                Recommendation = info.Note,
+            };
+
+            if (isOnFree)         onFree.Add(entry);
+            else if (canGoToFree) canGoFree.Add(entry);
+            else                  noFree.Add(entry);
+        }
+
+        return new FreeTierInfo { OnFree = onFree, CanGoFree = canGoFree, NoFreeTier = noFree };
+    }
+
+    private static FreeTierCheckInfo? CheckFreeTierForService(string typeKey, string? sku)
+    {
+        if (!FreeTierMap.TryGetValue(typeKey, out var info)) return null;
+        var isOnFree = info.FreeSku is not null &&
+                       string.Equals(sku, info.FreeSku, StringComparison.OrdinalIgnoreCase);
+        return new FreeTierCheckInfo
+        {
+            IsOnFreeTier = isOnFree,
+            IsOnPaidTier = !isOnFree && info.PaidSkus.Any(p => string.Equals(sku, p, StringComparison.OrdinalIgnoreCase)),
+            CanGoFree    = info.FreeSku is not null && !isOnFree,
+        };
+    }
+
+    // ── Step 10: Zombie detection ─────────────────────────────────────────────
+
+    private static List<ZombieApp> DetectZombies(List<RawService> services, Dictionary<string, MetricsInfo> metricsMap)
+        => services
+            .Where(s => s.ResourceTypeRaw == "Microsoft.Web/sites" && s.ResourceId is not null)
+            .Where(s => metricsMap.TryGetValue(s.ResourceId!, out var m) && m.Requests == 0)
+            .Select(s => new ZombieApp
+            {
+                Name           = s.Name,
+                ResourceGroup  = s.ResourceGroup,
+                HttpStatus     = s.HttpStatus,
+                PlatformState  = s.PlatformState,
+                Recommendation = $"az webapp stop --name \"{s.Name}\" --resource-group \"{s.ResourceGroup}\"",
+            })
+            .ToList();
+
+    // ── Step 11: apps.json diff ───────────────────────────────────────────────
+
+    private async Task<AppsJsonDiffInfo?> DiffAppsJsonAsync(List<RawService> services, CancellationToken ct)
+    {
+        try
+        {
+            var path = Path.Combine(_env.WebRootPath, "data", "apps.json");
+            if (!File.Exists(path)) return null;
+
+            var json = await File.ReadAllTextAsync(path, ct);
+            var doc  = JsonDocument.Parse(json);
+            var existing = doc.RootElement.TryGetProperty("apps", out var appsEl)
+                ? appsEl.EnumerateArray()
+                    .Select(a => a.TryGetProperty("id", out var id) ? id.GetString() : null)
+                    .Where(id => id is not null)
+                    .ToHashSet()!
+                : new HashSet<string?>();
+
+            var discovered = services.Select(s => GetCanonicalName(s.Name)).ToHashSet();
+            return new AppsJsonDiffInfo
+            {
+                CurrentCount    = existing.Count,
+                DiscoveredCount = discovered.Count,
+                NewApps         = discovered.Except(existing).ToList()!,
+                RemovedApps     = existing.Except(discovered).ToList()!,
+                UpdatedApps     = discovered.Intersect(existing).ToList()!,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "apps.json diff failed");
+            return null;
+        }
+    }
+
+    // ── Name helpers ──────────────────────────────────────────────────────────
+
+    private static string GetCanonicalName(string name)
+    {
+        var r = System.Text.RegularExpressions.Regex.Replace(
+            name, @"^(swa-|stapp-|wa-|app-|api-|ca-)", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        r = System.Text.RegularExpressions.Regex.Replace(
+            r, @"(-api|-web|-server|-app|-prod)$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        r = System.Text.RegularExpressions.Regex.Replace(
+            r, @"-[a-z0-9]{9,}$",
+            m => m.Value.TrimStart('-') is { } seg && seg.Any(char.IsDigit) && seg.Any(char.IsLetter) ? "" : m.Value,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return r.ToLowerInvariant();
+    }
+
+    private static string FriendlyFromContext(string rawName, string? resourceGroup)
+    {
+        if (resourceGroup is { Length: > 2 } rg && char.IsUpper(rg[2]) && rg != "PoShared")
+            return rg;
+        var canonical = GetCanonicalName(rawName);
+        var parts     = canonical.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        var deduped   = parts.Where((p, i) => i == 0 || p != parts[i - 1]).ToArray();
+        var clean     = System.Text.RegularExpressions.Regex.Replace(
+            string.Join("-", deduped), "^po", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (string.IsNullOrEmpty(clean)) return rawName;
+        return "Po" + string.Concat(clean.Split('-', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => char.ToUpper(p[0]) + p[1..]));
+    }
+
+    private static string ShortType(string? t)
+        => t?.Split('/').LastOrDefault() ?? t ?? "Unknown";
+
+    // ── Free-tier knowledge base ──────────────────────────────────────────────
+
+    private record FreeTierEntry(string Label, string? FreeSku, string FreeSkuLabel, string[] PaidSkus, string Note);
+
+    private static readonly Dictionary<string, FreeTierEntry> FreeTierMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Microsoft.Web/sites"]                      = new("App Service",          "F1",   "Free (F1)",                      ["B1","B2","B3","S1","S2","S3","P1V2","P2V2","P3V2"], "F1 provides 60 CPU-min/day."),
+        ["Microsoft.Web/serverFarms"]                = new("App Service Plan",     "F1",   "Free (F1)",                      ["B1","B2","B3","S1","S2","S3"],                      "Downgrade to F1 if traffic is low."),
+        ["Microsoft.Web/staticSites"]                = new("Static Web App",       "Free", "Free",                           ["Standard"],                                         "Free tier: 100 GB bandwidth/month."),
+        ["Microsoft.App/containerApps"]              = new("Container App",        null,   "180k vCPU-s free/month",         ["Consumption"],                                      "Set min-replicas=0 to stay in free quota."),
+        ["Microsoft.ContainerRegistry/registries"]   = new("Container Registry",   null,   "No free tier",                   ["Basic","Standard","Premium"],                       "Basic ~$5/mo. Consider ghcr.io for free private images."),
+        ["Microsoft.DocumentDB/databaseAccounts"]    = new("Cosmos DB",            "Free", "Free tier (1000 RU/s + 25 GB)", ["Standard"],                                         "One free Cosmos DB per subscription."),
+        ["Microsoft.Sql/servers/databases"]          = new("Azure SQL",            "Free", "Free offer (32 GB serverless)", ["Basic","Standard","Premium"],                       "One free Azure SQL per subscription."),
+        ["Microsoft.Storage/storageAccounts"]        = new("Storage Account",      null,   "5 GB Blob free/month (12 mo)",  ["Standard_LRS","Standard_GRS"],                      "Use LRS for lowest cost."),
+        ["Microsoft.CognitiveServices/accounts"]     = new("Azure AI / Cognitive", "F0",   "Free (F0)",                      ["S0","S1"],                                          "F0 sufficient for dev/hobby use."),
+        ["Microsoft.Search/searchServices"]          = new("Azure AI Search",      "free", "Free (1 svc, 3 indexes, 50 MB)",["basic","standard"],                                 "One free search service per subscription."),
+        ["microsoft.insights/components"]            = new("Application Insights",  null,  "5 GB/month free ingestion",      ["pergb2018"],                                        "Enable adaptive sampling to stay under 5 GB/month."),
+        ["Microsoft.OperationalInsights/workspaces"] = new("Log Analytics",        "Free", "Free (500 MB/day)",              ["PerGB2018","Standard"],                             "Set a data cap on paid SKUs."),
+        ["Microsoft.KeyVault/vaults"]                = new("Key Vault",            null,   "~$0.03 per 10k ops",             ["standard","premium"],                               "Consolidate vaults when possible."),
+        ["Microsoft.Network/publicIPAddresses"]      = new("Public IP",            null,   "First 5 Basic static IPs free",  ["Standard"],                                         "Delete IPs not attached to any resource."),
+        ["Microsoft.ServiceBus/namespaces"]          = new("Service Bus",          null,   "No free tier — Basic ~$0.05/M ops", ["Basic","Standard","Premium"],                   "Use Basic if only simple queues needed."),
+        ["Microsoft.SignalRService/SignalR"]         = new("SignalR",              "Free", "Free (20 connections)",          ["Standard"],                                         "Free tier: 20 concurrent connections."),
+    };
+
+    // ── Internal intermediary ─────────────────────────────────────────────────
+
+    private record RawService
+    {
+        public string  Name             { get; init; } = "";
+        public string  FriendlyName     { get; init; } = "";
+        public string  ResourceGroup    { get; init; } = "";
+        public string  ResourceTypeRaw  { get; init; } = "";
+        public string? Url              { get; init; }
+        public string? Sku              { get; init; }
+        public string? PlatformState    { get; init; }
+        public string? ResourceId       { get; init; }
+        public ConnectivityInfo?  Connectivity  { get; init; }
+        public MetricsInfo?       Metrics7Days  { get; init; }
+        public FreeTierCheckInfo? FreeTierCheck { get; init; }
+        public string  HttpStatus       { get; init; } = "unknown";
+
+        public static explicit operator WebService(RawService s) => new()
+        {
+            Name          = s.Name,
+            FriendlyName  = s.FriendlyName,
+            ResourceGroup = s.ResourceGroup,
+            ResourceType  = s.ResourceTypeRaw,
+            Url           = s.Url ?? "",
+            HttpStatus    = s.HttpStatus,
+            PlatformState = s.PlatformState,
+            Connectivity  = s.Connectivity,
+            Metrics7Days  = s.Metrics7Days,
+            FreeTierCheck = s.FreeTierCheck,
+        };
+    }
+}

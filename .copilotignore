@@ -3,6 +3,11 @@
 # Git
 .git/
 
+# Build outputs
+bin/
+obj/
+node_modules/
+
 # IDE/Editor
 .vscode/
 .vs/

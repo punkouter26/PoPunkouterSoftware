@@ -1,8 +1,9 @@
-import { 
-    APP_STATUS, 
-    CATEGORY_LABELS, 
+import {
+    APP_STATUS,
+    APP_CATEGORIES,
+    CATEGORY_LABELS,
     STATUS_DISPLAY,
-    SELECTORS 
+    SELECTORS
 } from '../constants/app-constants.js';
 
 class AppCardRenderer {
@@ -60,26 +61,32 @@ class AppCardRenderer {
     }
 
     createCard(app) {
-        const { label, icon } = STATUS_DISPLAY[app.status] || { label: 'Unknown', icon: '?' };
-        const isActive = app.status === APP_STATUS.ACTIVE;
+        // Validate against allow-lists before injecting into CSS class names
+        const validStatuses    = Object.values(APP_STATUS);
+        const validCategories  = Object.values(APP_CATEGORIES);
+        const safeStatus   = validStatuses.includes(app.status)   ? app.status   : APP_STATUS.DISABLED;
+        const safeCategory = validCategories.includes(app.category) ? app.category : APP_CATEGORIES.PRODUCTIVITY;
+
+        const { label, icon } = STATUS_DISPLAY[safeStatus] || { label: 'Unknown', icon: '?' };
+        const isActive = safeStatus === APP_STATUS.ACTIVE;
         const safeUrl = isActive && /^https?:\/\//i.test(app.url) ? app.url : '#';
         const techsHtml = (app.technologies || []).map(t => `<span class="tech-badge">${this.escapeHtml(t)}</span>`).join('');
-        const categoryLabel = CATEGORY_LABELS[app.category] || app.category;
+        const categoryLabel = CATEGORY_LABELS[safeCategory] || safeCategory;
         const linkHtml = isActive
             ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="app-link"><span>Visit Site</span><span class="link-icon">→</span></a>`
             : `<button type="button" class="app-link disabled" disabled aria-disabled="true"><span>Visit Site</span><span class="link-icon">→</span></button>`;
 
         const card = document.createElement('div');
         card.className = SELECTORS.APP_CARD;
-        card.dataset.status = app.status;
-        card.dataset.category = app.category;
-        card.dataset.name = app.name;
+        card.dataset.status   = safeStatus;
+        card.dataset.category = safeCategory;
+        card.dataset.name     = app.name;
         card.innerHTML = `
             <div class="card-header">
                 <h3 class="app-name">${this.escapeHtml(app.name)}</h3>
-                <span class="status-badge status-${app.status}"><span class="status-icon">${icon}</span><span class="status-text">${label}</span></span>
+                <span class="status-badge status-${safeStatus}"><span class="status-icon">${icon}</span><span class="status-text">${label}</span></span>
             </div>
-            <div class="category-tag tag-${app.category}">${categoryLabel}</div>
+            <div class="category-tag tag-${safeCategory}">${categoryLabel}</div>
             <p class="app-description">${this.escapeHtml(app.description)}</p>
             <div class="tech-stack">${techsHtml}</div>
             ${linkHtml}
