@@ -5,9 +5,7 @@ name: Azure Audit & Dashboard Update
 # AzureDashboard.html page on the SWA always shows fresh data.
 
 on:
-  schedule:
-    - cron: '0 6 * * *'   # daily at 06:00 UTC
-  workflow_dispatch:       # manual trigger from the Actions tab
+  workflow_dispatch:       # manual trigger only — disabled schedule
 
 permissions:
   contents: write          # needed to commit the updated JSON
