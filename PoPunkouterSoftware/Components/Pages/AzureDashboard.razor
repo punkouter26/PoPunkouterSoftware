@@ -23,9 +23,15 @@
 }
 else
 {
-    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-4">
+    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-2">
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="8px">
-            <span>Subscription: <strong>@report.Subscription?.Name</strong> &nbsp;|&nbsp; Generated: <strong>@(report.GeneratedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—")</strong></span>
+            <span>Subscription: <strong>@report.Subscription?.Name</strong> &nbsp;|&nbsp; Generated: <strong>@(report.GeneratedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—")</strong>
+            @if (report.GeneratedAt.HasValue && (DateTime.UtcNow - report.GeneratedAt.Value).TotalHours > 24)
+            {
+                <RadzenBadge Text="@($"Data is {(int)(DateTime.UtcNow - report.GeneratedAt.Value).TotalHours}h old — refresh recommended")"
+                             BadgeStyle="BadgeStyle.Warning" IsPill="true" Style="margin-left:.5rem;font-size:.7rem" />
+            }
+            </span>
             <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh from Azure")" Icon="refresh"
                           ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
                           Disabled="@_refreshing" Click="RefreshAsync" />
@@ -38,10 +44,10 @@ else
     }
 
     <!-- ── Summary Strip ── -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1.75rem">
+    <div style="display:grid;grid-template-columns:repeat(8,minmax(100px,1fr));gap:.75rem;margin-bottom:1.75rem">
         @SummaryCard(report.WebServices?.Total.ToString() ?? "0", "Web Services", "var(--rz-info)")
         @SummaryCard(report.WebServices?.ByStatus?.Active.ToString() ?? "0", "Active", "var(--rz-success)")
-        @SummaryCard(report.WebServices?.ByStatus?.Broken.ToString() ?? "0", "Broken", report.WebServices?.ByStatus?.Broken > 0 ? "var(--rz-danger)" : "var(--rz-secondary)")
+        @SummaryCardLink(report.WebServices?.ByStatus?.Broken.ToString() ?? "0", "Broken ↗", report.WebServices?.ByStatus?.Broken > 0 ? "var(--rz-danger)" : "var(--rz-secondary)", () => _selectedTabIndex = 0)
         @SummaryCard(report.AllResourceSummary?.Total.ToString() ?? "0", "Azure Resources", "var(--rz-info)")
         @SummaryCard(report.FreeTier?.OnFree?.Count.ToString() ?? "0", "On Free Tier", "var(--rz-success)")
         @SummaryCard(report.FreeTier?.CanGoFree?.Count.ToString() ?? "0", "Can Go Free", report.FreeTier?.CanGoFree?.Count > 0 ? "var(--rz-warning)" : "var(--rz-secondary)")
@@ -49,17 +55,13 @@ else
         @SummaryCard(safeToRemove.Count.ToString(), "Safe to Remove", safeToRemove.Count > 0 ? "var(--rz-danger)" : "var(--rz-success)")
     </div>
 
-    <RadzenTabs>
+    <RadzenTabs @bind-SelectedIndex="_selectedTabIndex">
         <Tabs>
 
             <!-- ── Tab 1: Web Services ── -->
             <RadzenTabsItem Text="@($"🌐 Web Services ({report.WebServices?.Total ?? 0})")"> 
-                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px" class="rz-mb-3 rz-mt-2">
-                    <RadzenLabel Text="Filter:" />
-                    <RadzenDropDown @bind-Value="wsFilter" Data="@_wsFilterOptions" TextProperty="Label" ValueProperty="Value" Style="width:160px" />
-                </RadzenStack>
                 <div style="overflow-x:auto">
-                <RadzenDataGrid Data="@FilteredServices" TItem="WebService" AllowFiltering="true" AllowSorting="true"
+                <RadzenDataGrid Data="@SortedServices" TItem="WebService" AllowFiltering="true" AllowSorting="true"
                                 AllowPaging="true" PageSize="15" ShowPagingSummary="true" AllowColumnResize="true" FilterMode="FilterMode.Simple">
                     <Columns>
                         <RadzenDataGridColumn TItem="WebService" Property="FriendlyName" Title="Name" Width="160px">
@@ -117,7 +119,11 @@ else
                                 {
                                     <span style="color:@(s.Connectivity.ResponseTime < 1000 ? "var(--rz-success-color)" : "var(--rz-warning-color)")">@s.Connectivity.ResponseTime</span>
                                 }
-                                else { <span style="color:var(--rz-danger-color)">@(s.Connectivity?.Error ?? "—")</span> }
+                                else if (s.Connectivity?.Error != null && (s.Connectivity.Error.Contains("canceled") || s.Connectivity.Error.Contains("Timeout") || s.Connectivity.Error.Contains("timed out")))
+                                { <RadzenBadge Text="Timeout" BadgeStyle="BadgeStyle.Danger" IsPill="true" Style="font-size:.7rem" /> }
+                                else if (s.Connectivity?.Error != null)
+                                { <span style="color:var(--rz-danger-color);font-size:.75rem" title="@s.Connectivity.Error">Err ⚠</span> }
+                                else { <span style="color:var(--rz-text-secondary-color)">—</span> }
                             </Template>
                         </RadzenDataGridColumn>
                         <RadzenDataGridColumn TItem="WebService" Title="Free Tier" Width="120px">
@@ -185,42 +191,7 @@ else
                 </div>
             </RadzenTabsItem>
 
-            <!-- ── Tab 3: Free Tier ── -->
-            <RadzenTabsItem Text="💰 Free Tier">
-                <div class="rz-mt-2">
-                @if (report.FreeTier?.OnFree?.Any() == true)
-                {
-                    <RadzenText TextStyle="TextStyle.H6" class="rz-color-success rz-mb-2">✅ On Free Tier (@report.FreeTier.OnFree.Count)</RadzenText>
-                    <RadzenDataGrid Data="@report.FreeTier.OnFree" TItem="FreeTierItem" AllowSorting="true" PageSize="10" AllowPaging="true" class="rz-mb-4">
-                        <Columns>
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="Name" Title="Name" Width="200px" />
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="Label" Title="Type" />
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="CurrentSku" Title="SKU" Width="100px">
-                                <Template Context="r"><RadzenBadge Text="@r.CurrentSku" BadgeStyle="BadgeStyle.Success" IsPill="true" /></Template>
-                            </RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="ResourceGroup" Title="Resource Group" />
-                        </Columns>
-                    </RadzenDataGrid>
-                }
-                @if (report.FreeTier?.CanGoFree?.Any() == true)
-                {
-                    <RadzenText TextStyle="TextStyle.H6" class="rz-color-warning rz-mb-2">🔧 Can Move to Free Tier (@report.FreeTier.CanGoFree.Count)</RadzenText>
-                    <RadzenDataGrid Data="@report.FreeTier.CanGoFree" TItem="FreeTierItem" AllowSorting="true" PageSize="20" AllowPaging="true" class="rz-mb-4">
-                        <Columns>
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="Name" Title="Name" Width="200px" />
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="Label" Title="Type" />
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="CurrentSku" Title="Current SKU" Width="110px">
-                                <Template Context="r"><RadzenBadge Text="@r.CurrentSku" BadgeStyle="BadgeStyle.Warning" IsPill="true" /></Template>
-                            </RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="FreeSku" Title="Free SKU" Width="100px">
-                                <Template Context="r"><RadzenBadge Text="@(r.FreeSku ?? r.FreeSkuLabel ?? "—")" BadgeStyle="BadgeStyle.Success" IsPill="true" /></Template>
-                            </RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="FreeTierItem" Property="Recommendation" Title="Recommendation" />
-                        </Columns>
-                    </RadzenDataGrid>
-                }
-                </div>
-            </RadzenTabsItem>
+
 
             <!-- ── Tab 4: Cost ── -->
             <RadzenTabsItem Text="@($"💳 Cost ({report.Cost?.TotalFormatted ?? "$0"})")">
@@ -230,6 +201,40 @@ else
                     <div style="background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.3);border-radius:6px;padding:.7rem 1rem;color:#ffd700;margin-bottom:1rem">
                         📝 @report.Cost.Note
                     </div>
+                }
+                @if (report.BurnRate?.DailyCosts.Count > 0)
+                {
+                    <RadzenRow class="rz-mb-4">
+                        <RadzenColumn SizeXS="12" SizeMD="7">
+                            <RadzenText TextStyle="TextStyle.H6" class="rz-mb-1">
+                                Monthly Burn Rate
+                                <RadzenBadge Text="@($"Projected: {report.BurnRate.ProjectedFormatted}")" BadgeStyle="BadgeStyle.Warning" IsPill="true" Style="font-size:.75rem;margin-left:.5rem" />
+                            </RadzenText>
+                            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-1">Based on daily spend this calendar month only — not rolling 30d</RadzenText>
+                            <RadzenChart Style="height:260px">
+                                <RadzenLineSeries TItem="DailyCostChartPoint" Data="@BurnRateChartData" CategoryProperty="Date" ValueProperty="Cost" Title="Daily ($)" Smooth="true">
+                                    <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" />
+                                </RadzenLineSeries>
+                                <RadzenCategoryAxis />
+                                <RadzenValueAxis FormatString="${0:F2}">
+                                    <RadzenGridLines Visible="true" />
+                                </RadzenValueAxis>
+                                <RadzenLegend Visible="false" />
+                            </RadzenChart>
+                        </RadzenColumn>
+                        <RadzenColumn SizeXS="12" SizeMD="5">
+                            <RadzenText TextStyle="TextStyle.H6" class="rz-mb-1">Cost by Resource Group (30d)</RadzenText>
+                            <RadzenChart Style="height:260px">
+                                <RadzenBarSeries TItem="ChartPoint" Data="@CostByRgData" CategoryProperty="Label" ValueProperty="Value" Title="Cost ($)">
+                                    <RadzenSeriesDataLabels Visible="false" />
+                                </RadzenBarSeries>
+                                <RadzenValueAxis FormatString="${0:F2}">
+                                    <RadzenGridLines Visible="true" />
+                                </RadzenValueAxis>
+                                <RadzenLegend Visible="false" />
+                            </RadzenChart>
+                        </RadzenColumn>
+                    </RadzenRow>
                 }
                 <RadzenDataGrid Data="@report.Cost?.TopCostDrivers" TItem="CostDriver" AllowSorting="true" PageSize="30" AllowPaging="false">
                     <Columns>
@@ -249,69 +254,76 @@ else
                 </div>
             </RadzenTabsItem>
 
-            <!-- ── Tab 5: SSL Expiry ── -->
-            <RadzenTabsItem Text="@($"🔒 SSL ({report.SslExpiry?.Count ?? 0})")"> 
+
+
+
+
+            <!-- ── SSL Expiry Tab (#1) ── -->
+            <RadzenTabsItem Text="@($"🔒 SSL ({report.SslExpiry?.Count ?? 0})")">
                 <div class="rz-mt-2">
-                <RadzenDataGrid Data="@report.SslExpiry" TItem="SslEntry" AllowFiltering="true" AllowSorting="true" PageSize="20" AllowPaging="true" FilterMode="FilterMode.Simple">
+                @{
+                    var sslCritical  = report.SslExpiry?.Count(x => x.DaysLeft is { } d && d < 14) ?? 0;
+                    var sslWarning   = report.SslExpiry?.Count(x => x.DaysLeft is { } d && d is >= 14 and < 60) ?? 0;
+                    var sslErrored   = report.SslExpiry?.Count(x => x.Error != null && x.DaysLeft == null) ?? 0;
+                    var sslOk        = report.SslExpiry?.Count(x => x.DaysLeft != null) ?? 0;
+                }
+                @if (sslErrored > 0 && sslOk == 0)
+                {
+                    <div style="background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.3);border-radius:6px;padding:.7rem 1rem;color:#ffd700;margin-bottom:1rem">
+                        ⚠️ SSL checks ran but all <strong>@sslErrored</strong> entries returned errors. Hit <strong>Refresh from Azure</strong> to re-check with the fix applied — this was caused by a duplicate SSL callback bug (now fixed).
+                    </div>
+                }
+                else if (sslCritical > 0)
+                {
+                    <div style="background:rgba(255,50,50,.1);border:1px solid rgba(255,50,50,.4);border-radius:6px;padding:.7rem 1rem;color:var(--rz-danger-color);margin-bottom:1rem">
+                        ⚠️ <strong>@sslCritical certificate(s)</strong> expire in fewer than 14 days — renew immediately!
+                    </div>
+                }
+                else if (sslWarning > 0)
+                {
+                    <div style="background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.3);border-radius:6px;padding:.7rem 1rem;color:#ffd700;margin-bottom:1rem">
+                        🟡 @sslWarning certificate(s) expire within 60 days — schedule renewal soon.
+                    </div>
+                }
+                <RadzenDataGrid Data="@report.SslExpiry" TItem="SslEntry" AllowSorting="true" AllowFiltering="true"
+                                FilterMode="FilterMode.Simple" AllowPaging="true" PageSize="20">
                     <Columns>
-                        <RadzenDataGridColumn TItem="SslEntry" Property="Name" Title="Service" Width="200px" />
-                        <RadzenDataGridColumn TItem="SslEntry" Property="Subject" Title="CN / Subject" Width="200px" />
-                        <RadzenDataGridColumn TItem="SslEntry" Property="Expiry" Title="Expiry Date" Width="120px">
-                            <Template Context="s"><small>@s.Expiry</small></Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="SslEntry" Property="DaysLeft" Title="Days Left" Width="100px">
+                        <RadzenDataGridColumn TItem="SslEntry" Property="Name" Title="Service" Width="180px" />
+                        <RadzenDataGridColumn TItem="SslEntry" Property="Url" Title="URL" Width="230px">
                             <Template Context="s">
-                                <span style="color:@(s.DaysLeft < 30 ? "var(--rz-danger-color)" : s.DaysLeft < 90 ? "var(--rz-warning-color)" : "var(--rz-success-color)")">
-                                    @(s.DaysLeft.HasValue ? s.DaysLeft.ToString() : "—")
-                                </span>
+                                @if (!string.IsNullOrEmpty(s.Url))
+                                { <a href="@s.Url" target="_blank" rel="noopener noreferrer" style="font-size:.8rem;word-break:break-all;color:var(--rz-link-color)">@s.Url</a> }
+                                else { <span style="color:var(--rz-text-secondary-color)">—</span> }
                             </Template>
                         </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="SslEntry" Title="Status" Width="110px">
+                        <RadzenDataGridColumn TItem="SslEntry" Property="DaysLeft" Title="Days Left" Width="110px">
+                            <Template Context="s">
+                                @if (s.DaysLeft is { } d)
+                                {
+                                    <RadzenBadge Text="@($"{d}d")" IsPill="true"
+                                                 BadgeStyle="@(d < 14 ? BadgeStyle.Danger : d < 60 ? BadgeStyle.Warning : BadgeStyle.Success)" />
+                                }
+                                else if (!string.IsNullOrEmpty(s.Error))
+                                { <RadzenBadge Text="Error" BadgeStyle="BadgeStyle.Warning" IsPill="true" Style="font-size:.7rem" /> }
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="SslEntry" Property="Error" Title="Error" Width="160px">
                             <Template Context="s">
                                 @if (!string.IsNullOrEmpty(s.Error))
-                                { <RadzenBadge Text="Error" BadgeStyle="BadgeStyle.Danger" IsPill="true" /> }
-                                else if (s.DaysLeft < 30)
-                                { <RadzenBadge Text="Expiring!" BadgeStyle="BadgeStyle.Danger" IsPill="true" /> }
-                                else if (s.DaysLeft < 90)
-                                { <RadzenBadge Text="Soon" BadgeStyle="BadgeStyle.Warning" IsPill="true" /> }
-                                else
-                                { <RadzenBadge Text="OK" BadgeStyle="BadgeStyle.Success" IsPill="true" /> }
+                                { <span style="color:var(--rz-warning-color);font-size:.78rem" title="@s.Error">@(s.Error.Length > 40 ? s.Error.Substring(0, 40) + "…" : s.Error)</span> }
+                                else { <span style="color:var(--rz-text-secondary-color)">—</span> }
                             </Template>
                         </RadzenDataGridColumn>
-                    </Columns>
-                </RadzenDataGrid>
-                </div>
-            </RadzenTabsItem>
-
-            <!-- ── Tab 6: Config Drift ── -->
-            <RadzenTabsItem Text="@($"⚙ Config Drift ({report.ConfigDrift?.Count ?? 0})")"> 
-                <div class="rz-mt-2">
-                <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-3">
-                    App Service misconfigurations: FTP, TLS version, CORS, Auth, Always-On, HTTP/2.
-                </RadzenText>
-                <RadzenDataGrid Data="@report.ConfigDrift" TItem="ConfigDriftItem" AllowSorting="true" AllowPaging="true" PageSize="15">
-                    <Columns>
-                        <RadzenDataGridColumn TItem="ConfigDriftItem" Property="FriendlyName" Title="App" Width="160px">
-                            <Template Context="c"><strong>@(c.FriendlyName ?? c.Name)</strong></Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="ConfigDriftItem" Property="IssueCount" Title="Issues" Width="80px">
-                            <Template Context="c">
-                                <RadzenBadge Text="@c.IssueCount.ToString()" IsPill="true"
-                                             BadgeStyle="@(c.IssueCount > 2 ? BadgeStyle.Danger : c.IssueCount > 0 ? BadgeStyle.Warning : BadgeStyle.Success)" />
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="ConfigDriftItem" Title="Issues Detail">
-                            <Template Context="c">
-                                @if (c.Issues?.Any() == true)
+                        <RadzenDataGridColumn TItem="SslEntry" Property="Expiry" Title="Expires" Width="115px" />
+                        <RadzenDataGridColumn TItem="SslEntry" Property="Subject" Title="Subject">
+                            <Template Context="s">
+                                @if (s.Subject?.Contains("*.azurewebsites.net") == true || s.Subject?.Contains("*.azurefd.net") == true || s.Subject?.Contains("*.trafficmanager.net") == true)
                                 {
-                                    @foreach (var issue in c.Issues)
-                                    {
-                                        <div style="font-size:.8rem;margin-bottom:2px">
-                                            <RadzenBadge Text="@issue.Severity" IsPill="true" Style="font-size:.65rem;margin-right:4px"
-                                                         BadgeStyle="@(issue.Severity=="high" ? BadgeStyle.Danger : issue.Severity=="medium" ? BadgeStyle.Warning : BadgeStyle.Light)" />
-                                            @issue.Issue
-                                        </div>
-                                    }
+                                    <RadzenBadge Text="Azure Managed" BadgeStyle="BadgeStyle.Light" IsPill="true" Style="font-size:.65rem;opacity:.6" />
+                                }
+                                else
+                                {
+                                    <span style="font-size:.78rem">@(s.Subject ?? "—")</span>
                                 }
                             </Template>
                         </RadzenDataGridColumn>
@@ -320,7 +332,163 @@ else
                 </div>
             </RadzenTabsItem>
 
-            <!-- ── Tab 7: Storage ── -->
+            <!-- ── App Insights Tab (#3) ── -->
+            <RadzenTabsItem Text="@($"📊 App Insights ({report.AppInsightsMetrics?.Count ?? 0})")">
+                <div class="rz-mt-2">
+                @if (report.AppInsightsMetrics?.Any() != true)
+                {
+                    <div style="background:rgba(100,180,255,.07);border:1px solid rgba(100,180,255,.25);border-radius:6px;padding:.75rem 1rem;color:var(--rz-text-secondary-color)">
+                        ℹ️ No Application Insights components found, or metrics could not be retrieved. Ensure <strong>Log Analytics Reader</strong> role is assigned and hit <strong>Refresh from Azure</strong>.
+                    </div>
+                }
+                else
+                {
+                    <RadzenDataGrid Data="@report.AppInsightsMetrics" TItem="AppInsightsMetric"
+                                    AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                    AllowPaging="true" PageSize="20">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="AppInsightsMetric" Property="Name" Title="Component" Width="210px" />
+                            <RadzenDataGridColumn TItem="AppInsightsMetric" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                            <RadzenDataGridColumn TItem="AppInsightsMetric" Property="Requests7Days" Title="7d Requests" Width="120px" TextAlign="TextAlign.Right">
+                                <Template Context="m">
+                                    @if (m.Requests7Days == 0)
+                                    { <span style="color:var(--rz-warning-color)">0 ⚠</span> }
+                                    else { <span>@(m.Requests7Days?.ToString() ?? "—")</span> }
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="AppInsightsMetric" Property="FailedRequests7Days" Title="7d Failed" Width="105px" TextAlign="TextAlign.Right">
+                                <Template Context="m">
+                                    @if (m.FailedRequests7Days > 0)
+                                    { <span style="color:var(--rz-danger-color);font-weight:700">@m.FailedRequests7Days</span> }
+                                    else { <span style="color:var(--rz-success-color)">@(m.FailedRequests7Days?.ToString() ?? "—")</span> }
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="AppInsightsMetric" Property="Exceptions7Days" Title="7d Exceptions" Width="125px" TextAlign="TextAlign.Right">
+                                <Template Context="m">
+                                    @if (m.Exceptions7Days > 0)
+                                    { <span style="color:var(--rz-warning-color)">⚠ @m.Exceptions7Days</span> }
+                                    else { <span>@(m.Exceptions7Days?.ToString() ?? "—")</span> }
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+                </div>
+            </RadzenTabsItem>
+
+            <!-- ── Resource Breakdown Tab (#6) ── -->
+            <RadzenTabsItem Text="@($"📦 Resources ({report.AllResourceSummary?.Total ?? 0})")">
+                <div class="rz-mt-2">
+                <RadzenRow>
+                    <RadzenColumn SizeXS="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-mb-2">Top 10 Resource Types <small style="font-size:.75rem;color:var(--rz-text-secondary-color)">(click a row to drill in)</small></RadzenText>
+                        <RadzenChart Style="height:340px">
+                            <RadzenDonutSeries TItem="ChartPoint" Data="@ResourceTypeChartData" CategoryProperty="Label" ValueProperty="Value" InnerRadius="70" />
+                            <RadzenLegend Position="LegendPosition.Bottom" />
+                        </RadzenChart>
+                    </RadzenColumn>
+                    <RadzenColumn SizeXS="12" SizeMD="6">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-mb-2">All Resource Types</RadzenText>
+                        <div style="max-height:360px;overflow-y:auto">
+                        <RadzenDataGrid Data="@ResourceTypeTableData" TItem="ChartPoint" AllowSorting="true" PageSize="50" AllowPaging="false" RowClick="@(args => SelectResourceType(args.Data?.Label ?? ""))">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="ChartPoint" Property="Label" Title="Type">
+                                    <Template Context="p">
+                                        <span style="cursor:pointer;color:@(_selectedResourceType == p.Label ? "var(--rz-primary-color)" : "inherit");font-weight:@(_selectedResourceType == p.Label ? "700" : "normal")">
+                                            @p.Label
+                                        </span>
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="ChartPoint" Property="Value" Title="Count" Width="90px" TextAlign="TextAlign.Right">
+                                    <Template Context="p"><strong>@((int)p.Value)</strong></Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                        </div>
+                    </RadzenColumn>
+                </RadzenRow>
+
+                @if (_selectedResourceType is not null && _selectedResourceDetails is not null)
+                {
+                    <div style="margin-top:1.5rem;border-top:1px solid var(--rz-border-disabled-color);padding-top:1rem">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="12px" class="rz-mb-2">
+                            <RadzenText TextStyle="TextStyle.H6" Style="margin:0">
+                                🔍 <strong>@_selectedResourceType</strong>
+                                <RadzenBadge Text="@_selectedResourceDetails.Count.ToString()" BadgeStyle="BadgeStyle.Info" IsPill="true" Style="margin-left:.5rem;font-size:.75rem" />
+                            </RadzenText>
+                            <RadzenButton Text="Clear" Icon="close" Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                          Click="@(() => { _selectedResourceType = null; _selectedResourceDetails = null; })" />
+                        </RadzenStack>
+                        <RadzenDataGrid Data="@_selectedResourceDetails" TItem="ResourceDetail"
+                                        AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                        AllowPaging="true" PageSize="15">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="ResourceDetail" Property="Name" Title="Name" Width="230px" />
+                                <RadzenDataGridColumn TItem="ResourceDetail" Property="ResourceGroup" Title="Resource Group" Width="180px" />
+                                <RadzenDataGridColumn TItem="ResourceDetail" Property="Location" Title="Location" Width="130px" />
+                                <RadzenDataGridColumn TItem="ResourceDetail" Property="Sku" Title="SKU" Width="110px">
+                                    <Template Context="r">
+                                        @if (!string.IsNullOrEmpty(r.Sku))
+                                        { <RadzenBadge Text="@r.Sku" BadgeStyle="BadgeStyle.Light" IsPill="true" Style="font-size:.7rem" /> }
+                                        else { <span style="color:var(--rz-text-secondary-color)">—</span> }
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    </div>
+                }
+                </div>
+            </RadzenTabsItem>
+
+            <!-- ── Orphaned Resources Tab (#8) ── -->
+            <RadzenTabsItem Text="@($"🧟 Orphaned ({report.OrphanedResources?.Count ?? 0})")">
+                <div class="rz-mt-2">
+                @if (report.OrphanedResources?.Any() != true)
+                {
+                    <div style="background:rgba(50,255,167,.08);border:1px solid rgba(50,255,167,.3);border-radius:6px;padding:.7rem 1rem;color:var(--rz-success-color)">
+                        ✅ No orphaned resources — no unattached disks, idle public IPs, or empty App Service Plans.
+                    </div>
+                }
+                else
+                {
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-3">
+                        Resources consuming cost with no active workload. Verify before deleting.
+                    </RadzenText>
+                    <RadzenDataGrid Data="@report.OrphanedResources" TItem="OrphanedResource"
+                                    AllowSorting="true" AllowPaging="true" PageSize="15">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="OrphanedResource" Property="Name" Title="Resource" Width="200px" />
+                            <RadzenDataGridColumn TItem="OrphanedResource" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                            <RadzenDataGridColumn TItem="OrphanedResource" Property="Type" Title="Type" Width="150px">
+                                <Template Context="o">
+                                    <RadzenBadge Text="@o.Type" BadgeStyle="BadgeStyle.Info" IsPill="true" Style="font-size:.7rem" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="OrphanedResource" Property="Reason" Title="Reason" />
+                            <RadzenDataGridColumn TItem="OrphanedResource" Property="EstimatedMonthlyCost" Title="Est. Cost/mo" Width="130px">
+                                <Template Context="o">
+                                    @if (!string.IsNullOrEmpty(o.EstimatedMonthlyCost))
+                                    { <span style="color:var(--rz-warning-color)">💰 @o.EstimatedMonthlyCost</span> }
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="OrphanedResource" Property="Command" Title="CLI Command" Sortable="false">
+                                <Template Context="o">
+                                    @if (!string.IsNullOrEmpty(o.Command))
+                                    {
+                                        <RadzenButton Text="Copy" Icon="content_copy" Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                                      Click="@(() => CopyToClipboard(o.Command!))" />
+                                        <br /><small style="font-family:monospace;font-size:.7rem;color:var(--rz-info-color)">@o.Command[..Math.Min(60, o.Command.Length)]@(o.Command.Length > 60 ? "…" : "")</small>
+                                    }
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+                </div>
+            </RadzenTabsItem>
+
+            <!-- ── Storage ── -->
+
             <RadzenTabsItem Text="@($"💾 Storage ({report.StorageInventory?.Count ?? 0})")"> 
                 <div class="rz-mt-2">
                 <RadzenDataGrid Data="@report.StorageInventory" TItem="StorageItem" AllowFiltering="true" AllowSorting="true" PageSize="15" AllowPaging="true" FilterMode="FilterMode.Simple">
@@ -371,25 +539,21 @@ else
     private AzureReport? report;
     private List<WebService> services = new();
     private List<SafeToRemoveItem> safeToRemove = new();
-    private string wsFilter = "all";
-    private record WsFilterOption(string Label, string Value);
-    private readonly List<WsFilterOption> _wsFilterOptions =
-    [
-        new("All", "all"), new("Active", "active"), new("Broken", "broken"), new("Unreachable", "unreachable")
-    ];
-
-    private IEnumerable<WebService> FilteredServices =>
-        wsFilter switch
-        {
-            "active"      => services.Where(s => s.HttpStatus == "active"),
-            "broken"      => services.Where(s => s.HttpStatus == "broken"),
-            "unreachable" => services.Where(s => s.HttpStatus != "active" && s.HttpStatus != "broken"),
-            _             => services,
-        };
+    private int _selectedTabIndex = 0;
+    private IEnumerable<WebService> SortedServices =>
+        services.OrderBy(s => s.HttpStatus == "active" ? 0 : 1).ThenBy(s => s.FriendlyName ?? s.Name);
 
     private RenderFragment SummaryCard(string num, string label, string color) => __builder =>
     {
         <RadzenCard Style="@($"text-align:center;border-top:4px solid {color}")">
+            <RadzenText TextStyle="TextStyle.H5" Style="@($"color:{color};margin:0")" ><strong>@num</strong></RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-text-uppercase">@label</RadzenText>
+        </RadzenCard>
+    };
+
+    private RenderFragment SummaryCardLink(string num, string label, string color, Action onClick) => __builder =>
+    {
+        <RadzenCard Style="@($"text-align:center;border-top:4px solid {color};cursor:pointer")" @onclick="@(() => onClick())">
             <RadzenText TextStyle="TextStyle.H5" Style="@($"color:{color};margin:0")" ><strong>@num</strong></RadzenText>
             <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-text-uppercase">@label</RadzenText>
         </RadzenCard>
@@ -521,11 +685,71 @@ else
         NotificationService.Notify(new NotificationMessage
         {
             Severity = NotificationSeverity.Success,
-            Summary = "Copied",
-            Detail = "Command copied to clipboard",
+            Summary  = "Copied",
+            Detail   = "Command copied to clipboard",
             Duration = 2500
         });
     }
+
+    // ── Chart helpers ─────────────────────────────────────────────────────────
+
+    private string? _selectedResourceType;
+    private List<ResourceDetail>? _selectedResourceDetails;
+
+    private void SelectResourceType(string typeLabel)
+    {
+        if (_selectedResourceType == typeLabel)
+        {
+            _selectedResourceType    = null;
+            _selectedResourceDetails = null;
+            return;
+        }
+        _selectedResourceType = typeLabel;
+        _selectedResourceDetails = report?.AllResourceSummary?.ResourcesByType
+            .GetValueOrDefault(typeLabel);
+    }
+
+    private void OnChartClick(object point) { }
+
+    private record ChartPoint(string Label, double Value);
+    private record DailyCostChartPoint(string Date, double Cost);
+
+    private List<ChartPoint> ResourceTypeChartData =>
+        report?.AllResourceSummary?.ByType
+            .OrderByDescending(kv => kv.Value)
+            .Take(10)
+            .Select(kv => new ChartPoint(kv.Key, kv.Value))
+            .ToList() ?? new();
+
+    private List<ChartPoint> ResourceTypeTableData =>
+        report?.AllResourceSummary?.ByType
+            .OrderByDescending(kv => kv.Value)
+            .Select(kv => new ChartPoint(kv.Key, kv.Value))
+            .ToList() ?? new();
+
+    private List<ChartPoint> CostByRgData
+    {
+        get
+        {
+            if (report?.Cost?.TopCostDrivers is null) return new();
+            var byRg = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var d in report.Cost.TopCostDrivers)
+            {
+                var m  = System.Text.RegularExpressions.Regex.Match(d.Name, @"\(([^)]+)\)$");
+                var rg = m.Success ? m.Groups[1].Value : "Other";
+                byRg[rg] = byRg.GetValueOrDefault(rg) + d.Cost;
+            }
+            return byRg.OrderByDescending(kv => kv.Value)
+                .Take(12)
+                .Select(kv => new ChartPoint(kv.Key, Math.Round(kv.Value, 2)))
+                .ToList();
+        }
+    }
+
+    private List<DailyCostChartPoint> BurnRateChartData =>
+        report?.BurnRate?.DailyCosts
+            .Select(d => new DailyCostChartPoint(d.Date, d.Cost))
+            .ToList() ?? new();
 
     // Models are defined in Features/Azure/AzureModels.cs
 }

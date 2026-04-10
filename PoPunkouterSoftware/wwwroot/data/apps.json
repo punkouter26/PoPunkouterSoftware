@@ -3,7 +3,7 @@
     {
       "id": "poface-dev",
       "name": "PoFace",
-      "description": "face-dev productivity tool",
+      "description": "PoFace app",
       "category": "productivity",
       "status": "active",
       "technologies": [
@@ -27,7 +27,7 @@
     {
       "id": "pomarriedlifegoogle",
       "name": "PoMarriedLifeGoogle",
-      "description": "marriedlifegoogle productivity tool",
+      "description": "PoMarriedLifeGoogle app",
       "category": "productivity",
       "status": "active",
       "technologies": [
@@ -39,7 +39,7 @@
     {
       "id": "5ln5hfdrvof5u",
       "name": "PoMiniGames",
-      "description": "stapp-5ln5hfdrvof5u productivity tool",
+      "description": "PoMiniGames app",
       "category": "productivity",
       "status": "active",
       "technologies": [
@@ -51,7 +51,7 @@
     {
       "id": "popunkoutersoftware",
       "name": "PoPunkouterSoftware",
-      "description": "PunkouterSoftware productivity tool",
+      "description": "Punkouter Software portfolio app",
       "category": "productivity",
       "status": "active",
       "technologies": [
@@ -63,7 +63,7 @@
     {
       "id": "porobotstocks-porobotstocks",
       "name": "PoRobotStocks",
-      "description": "RobotStocks-PoRobotStocks productivity tool",
+      "description": "AI-powered stock analysis tool",
       "category": "productivity",
       "status": "active",
       "technologies": [
@@ -75,7 +75,7 @@
     {
       "id": "porunner",
       "name": "PoRunner",
-      "description": "runner productivity tool",
+      "description": "Running and fitness tracking app",
       "category": "productivity",
       "status": "active",
       "technologies": [
@@ -87,7 +87,7 @@
     {
       "id": "poappidea",
       "name": "PoAppIdea",
-      "description": "appidea productivity tool",
+      "description": "App idea brainstorming tool",
       "category": "productivity",
       "status": "disabled",
       "technologies": [
@@ -111,7 +111,7 @@
     {
       "id": "pofunquiz-zizogpdhpyiwo",
       "name": "PoFunQuiz",
-      "description": "Interactive funquiz-zizogpdhpyiwo game",
+      "description": "Interactive fun quiz game",
       "category": "games",
       "status": "disabled",
       "technologies": [
@@ -123,7 +123,7 @@
     {
       "id": "pohappytrump",
       "name": "PoHappyTrump",
-      "description": "AI-powered happytrump-2jr7zldry26xa app",
+      "description": "AI-powered satire app",
       "category": "ai",
       "status": "disabled",
       "technologies": [
@@ -147,7 +147,7 @@
     {
       "id": "polinks",
       "name": "PoLinks",
-      "description": "links productivity tool",
+      "description": "Link management and bookmarks app",
       "category": "productivity",
       "status": "disabled",
       "technologies": [
@@ -159,7 +159,7 @@
     {
       "id": "pomarriedlifeshared7377",
       "name": "PoMarriedLifeGoogle",
-      "description": "Pomarriedlifeshared7377 app",
+      "description": "Married life productivity app",
       "category": "health",
       "status": "inactive",
       "technologies": [
@@ -172,7 +172,7 @@
     {
       "id": "pominiapps",
       "name": "PoMiniApps",
-      "description": "MiniApps productivity tool",
+      "description": "Collection of mini productivity apps",
       "category": "productivity",
       "status": "disabled",
       "technologies": [
@@ -184,7 +184,7 @@
     {
       "id": "app-5ln5hfdrvof5u",
       "name": "PoMiniGames",
-      "description": "5ln5hfdrvof5u app",
+      "description": "PoMiniGames app",
       "category": "productivity",
       "status": "inactive",
       "technologies": [
@@ -197,7 +197,7 @@
     {
       "id": "ponovaweight",
       "name": "PoNovaWeight",
-      "description": "novaweight productivity tool",
+      "description": "Weight tracking and fitness app",
       "category": "productivity",
       "status": "disabled",
       "technologies": [
@@ -207,9 +207,35 @@
       "url": "https://ponovaweight-app.azurewebsites.net"
     },
     {
+      "id": "app-popunkoutersoftware",
+      "name": "PoPunkouterSoftware",
+      "description": "PoPunkouterSoftware dashboard app",
+      "category": "productivity",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://app-popunkoutersoftware.azurewebsites.net"
+    },
+    {
+      "id": "poredoimage-web",
+      "name": "PoRedoImage",
+      "description": "Image editing and transformation app",
+      "category": "productivity",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://poredoimage-web.azurewebsites.net"
+    },
+    {
       "id": "porepolinetracker",
       "name": "PoRepoLineTracker",
-      "description": "repolinetracker productivity tool",
+      "description": "Repository line count tracking tool",
       "category": "productivity",
       "status": "disabled",
       "technologies": [
@@ -221,7 +247,7 @@
     {
       "id": "wa-porunner",
       "name": "PoRunner",
-      "description": "WaPorunner app",
+      "description": "PoRunner fitness tracking app",
       "category": "health",
       "status": "inactive",
       "technologies": [
@@ -234,7 +260,7 @@
     {
       "id": "poseereview",
       "name": "PoSeeReview",
-      "description": "seereview productivity tool",
+      "description": "Review and feedback productivity tool",
       "category": "productivity",
       "status": "disabled",
       "technologies": [
@@ -254,6 +280,19 @@
         "Blazor"
       ],
       "url": "https://potaggame-server.azurewebsites.net"
+    },
+    {
+      "id": "potraffic-api",
+      "name": "PoTraffic",
+      "description": "PoTraffic monitoring API app",
+      "category": "productivity",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://potraffic-api.azurewebsites.net"
     }
   ]
 }

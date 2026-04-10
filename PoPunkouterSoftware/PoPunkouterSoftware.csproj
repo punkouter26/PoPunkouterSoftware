@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="PoPunkouterSoftware.Tests.Unit" />
+    <InternalsVisibleTo Include="PoPunkouterSoftware.Tests.Integration" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- UI -->
     <PackageReference Include="Azure.Data.Tables" />
     <PackageReference Include="Azure.Monitor.Query" />

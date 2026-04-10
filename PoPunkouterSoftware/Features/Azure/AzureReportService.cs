@@ -77,7 +77,10 @@ public class AzureReportService
         var storageInv  = await GetStorageInventoryAsync(allResources, cred, ct);
         var freeTier    = AnalyzeFreeTiers(allResources);
         var zombies     = DetectZombies(connectedSvcs, metricsMap);
-        var appsDiff    = await DiffAppsJsonAsync(connectedSvcs, ct);
+        var appsDiff     = await DiffAppsJsonAsync(connectedSvcs, ct);
+        var burnRate     = await GetBurnRateAsync(subscriptionId, cred, ct);
+        var orphaned     = await GetOrphanedResourcesAsync(allResources, cred, ct);
+        var appInsights  = await GetAppInsightsMetricsAsync(allResources, cred, ct);
 
         var servicesList = connectedSvcs.Select(s =>
         {
@@ -111,13 +114,26 @@ public class AzureReportService
                 ByType = allResources
                     .GroupBy(r => ShortType(r.ResourceType.ToString()))
                     .ToDictionary(g => g.Key, g => g.Count()),
+                ResourcesByType = allResources
+                    .GroupBy(r => ShortType(r.ResourceType.ToString()))
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(r => new ResourceDetail
+                        {
+                            Name          = r.Name,
+                            ResourceGroup = r.Id?.ResourceGroupName,
+                            Location      = r.Location.Name,
+                            Sku           = r.Sku?.Name?.ToString(),
+                        }).OrderBy(x => x.Name).ToList()),
             },
             SslExpiry        = sslExpiry,
             ConfigDrift      = configDrift,
             StorageInventory = storageInv,
-            AppsJsonDiff     = appsDiff,
-            AppInsightsMetrics = new(),
-            ZombieApps       = zombies,
+            AppsJsonDiff       = appsDiff,
+            AppInsightsMetrics = appInsights,
+            ZombieApps         = zombies,
+            OrphanedResources  = orphaned,
+            BurnRate           = burnRate,
         };
 
         _logger.LogInformation("AzureReportService: analysis complete");
@@ -252,7 +268,7 @@ public class AzureReportService
         try { metricsClient = new MetricsQueryClient(cred); }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "MetricsQueryClient could not be initialised — skipping metrics");
+            _logger.LogInformation(ex, "MetricsQueryClient could not be initialised — skipping metrics (expected in local dev without App Insights)");
             return result;
         }
 
@@ -414,7 +430,6 @@ public class AzureReportService
                 await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
                 {
                     TargetHost = uri.Host,
-                    RemoteCertificateValidationCallback = (_, _, _, _) => true,
                 }, cts.Token);
 
                 var cert = ssl.RemoteCertificate;
@@ -653,6 +668,284 @@ public class AzureReportService
             _logger.LogDebug(ex, "apps.json diff failed");
             return null;
         }
+    }
+
+    // ── New: Orphaned resources ───────────────────────────────────────────────
+
+    private async Task<List<OrphanedResource>> GetOrphanedResourcesAsync(
+        List<GenericResourceData> allResources, DefaultAzureCredential cred, CancellationToken ct)
+    {
+        var orphans = new List<OrphanedResource>();
+        string token;
+        try
+        {
+            token = (await cred.GetTokenAsync(
+                new TokenRequestContext(["https://management.azure.com/.default"]), ct)).Token;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not obtain token for orphaned-resource scan");
+            return orphans;
+        }
+
+        var client = _httpClientFactory.CreateClient();
+
+        // 1 — Unattached managed disks
+        foreach (var disk in allResources.Where(r =>
+            r.ResourceType.ToString().Equals("Microsoft.Compute/disks", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com{disk.Id}?api-version=2023-10-02");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                using var resp = await client.SendAsync(req, ct);
+                if (!resp.IsSuccessStatusCode) continue;
+
+                var json = await resp.Content.ReadAsStringAsync(ct);
+                var doc  = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("properties", out var props)) continue;
+                if (!props.TryGetProperty("diskState", out var state) || state.GetString() != "Unattached") continue;
+
+                var sizeGb = props.TryGetProperty("diskSizeGB", out var sz) ? sz.GetInt32() : 0;
+                var sku    = doc.RootElement.TryGetProperty("sku", out var skuEl) &&
+                             skuEl.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
+                orphans.Add(new OrphanedResource
+                {
+                    Name                 = disk.Name,
+                    ResourceGroup        = disk.Id?.ResourceGroupName,
+                    Type                 = "Managed Disk",
+                    Reason               = $"Unattached ({sizeGb} GB, {sku ?? "unknown SKU"})",
+                    EstimatedMonthlyCost = sizeGb > 0 ? $"~${sizeGb * 0.04:F2}/mo" : null,
+                    Command              = $"az disk delete --name \"{disk.Name}\" --resource-group \"{disk.Id?.ResourceGroupName}\" --yes",
+                });
+            }
+            catch (Exception ex) { _logger.LogDebug(ex, "Disk orphan check failed for {Name}", disk.Name); }
+        }
+
+        // 2 — Unattached public IPs
+        foreach (var ip in allResources.Where(r =>
+            r.ResourceType.ToString().Equals("Microsoft.Network/publicIPAddresses", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com{ip.Id}?api-version=2023-11-01");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                using var resp = await client.SendAsync(req, ct);
+                if (!resp.IsSuccessStatusCode) continue;
+
+                var json = await resp.Content.ReadAsStringAsync(ct);
+                var doc  = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("properties", out var props)) continue;
+
+                var hasIpConfig  = props.TryGetProperty("ipConfiguration", out _);
+                var hasNatGateway = props.TryGetProperty("natGateway", out _);
+                if (hasIpConfig || hasNatGateway) continue;
+
+                var sku = doc.RootElement.TryGetProperty("sku", out var skuEl) &&
+                          skuEl.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
+                orphans.Add(new OrphanedResource
+                {
+                    Name                 = ip.Name,
+                    ResourceGroup        = ip.Id?.ResourceGroupName,
+                    Type                 = "Public IP",
+                    Reason               = $"Not associated with any NIC or NAT gateway (SKU: {sku ?? "—"})",
+                    EstimatedMonthlyCost = sku == "Standard" ? "~$3.65/mo" : null,
+                    Command              = $"az network public-ip delete --name \"{ip.Name}\" --resource-group \"{ip.Id?.ResourceGroupName}\"",
+                });
+            }
+            catch (Exception ex) { _logger.LogDebug(ex, "Public IP orphan check failed for {Name}", ip.Name); }
+        }
+
+        // 3 — Empty App Service Plans
+        foreach (var farm in allResources.Where(r =>
+            r.ResourceType.ToString().Equals("Microsoft.Web/serverFarms", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com{farm.Id}/sites?api-version=2023-12-01");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                using var resp = await client.SendAsync(req, ct);
+                if (!resp.IsSuccessStatusCode) continue;
+
+                var json = await resp.Content.ReadAsStringAsync(ct);
+                var doc  = JsonDocument.Parse(json);
+                var siteCount = doc.RootElement.TryGetProperty("value", out var v) ? v.GetArrayLength() : 1;
+                if (siteCount > 0) continue;
+
+                var sku = farm.Sku?.Name?.ToString() ?? "unknown";
+                orphans.Add(new OrphanedResource
+                {
+                    Name                 = farm.Name,
+                    ResourceGroup        = farm.Id?.ResourceGroupName,
+                    Type                 = "App Service Plan",
+                    Reason               = $"No apps deployed (SKU: {sku})",
+                    EstimatedMonthlyCost = sku is "F1" or "FREE" ? "$0/mo (Free)" : "Paid tier — check portal",
+                    Command              = $"az appservice plan delete --name \"{farm.Name}\" --resource-group \"{farm.Id?.ResourceGroupName}\" --yes",
+                });
+            }
+            catch (Exception ex) { _logger.LogDebug(ex, "App Service Plan orphan check failed for {Name}", farm.Name); }
+        }
+
+        return orphans;
+    }
+
+    // ── New: Monthly burn rate (daily granularity) ────────────────────────────
+
+    private async Task<BurnRateInfo?> GetBurnRateAsync(
+        string subscriptionId, DefaultAzureCredential cred, CancellationToken ct)
+    {
+        try
+        {
+            var token = await cred.GetTokenAsync(
+                new TokenRequestContext(["https://management.azure.com/.default"]), ct);
+
+            var today        = DateTime.UtcNow.Date;
+            var startOfMonth = new DateTime(today.Year, today.Month, 1);
+            if (startOfMonth == today) startOfMonth = today.AddDays(-1); // avoid zero-range
+
+            var body = JsonSerializer.Serialize(new
+            {
+                type       = "Usage",
+                timeframe  = "Custom",
+                timePeriod = new { from = startOfMonth.ToString("yyyy-MM-dd"), to = today.ToString("yyyy-MM-dd") },
+                dataset    = new
+                {
+                    granularity = "Daily",
+                    aggregation = new { totalCost = new { name = "PreTaxCost", function = "Sum" } },
+                },
+            });
+
+            var client = _httpClientFactory.CreateClient();
+            using var req = new HttpRequestMessage(HttpMethod.Post,
+                $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01")
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            };
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+
+            using var resp = await client.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("Burn-rate query returned {Status}", resp.StatusCode);
+                return null;
+            }
+
+            var json  = await resp.Content.ReadAsStringAsync(ct);
+            var doc   = JsonDocument.Parse(json);
+            var props = doc.RootElement.GetProperty("properties");
+            var rows  = props.GetProperty("rows").EnumerateArray().ToList();
+            var cols  = props.GetProperty("columns").EnumerateArray()
+                .Select(c => c.GetProperty("name").GetString()!.ToLowerInvariant()).ToList();
+
+            int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
+            int dateIdx = cols.FindIndex(c => c.Contains("date") || c.Contains("usage"));
+
+            var daily = new List<DailyCostEntry>();
+            foreach (var row in rows)
+            {
+                var arr  = row.EnumerateArray().ToArray();
+                var cost = costIdx >= 0 ? arr[costIdx].GetDouble() : 0;
+                var raw  = dateIdx >= 0
+                    ? arr[dateIdx].ValueKind == JsonValueKind.Number
+                        ? arr[dateIdx].GetInt32().ToString()
+                        : arr[dateIdx].GetString() ?? ""
+                    : "";
+                // Convert 20260401 → "2026-04-01"
+                var dateStr = raw.Length == 8 && raw.All(char.IsDigit)
+                    ? $"{raw[..4]}-{raw[4..6]}-{raw[6..8]}"
+                    : raw;
+                daily.Add(new DailyCostEntry { Date = dateStr, Cost = Math.Round(cost, 4) });
+            }
+
+            daily = daily.OrderBy(d => d.Date).ToList();
+            var totalSoFar   = daily.Sum(d => d.Cost);
+            var daysInMonth  = DateTime.DaysInMonth(today.Year, today.Month);
+            var daysElapsed  = Math.Max(1, (today - startOfMonth).Days + 1);
+            var projected    = Math.Round(totalSoFar / daysElapsed * daysInMonth, 2);
+
+            return new BurnRateInfo
+            {
+                DailyCosts           = daily,
+                ProjectedMonthTotal  = projected,
+                ProjectedFormatted   = $"${projected:F2}",
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Burn rate query failed");
+            return null;
+        }
+    }
+
+    // ── New: App Insights component metrics ───────────────────────────────────
+
+    private async Task<List<AppInsightsMetric>> GetAppInsightsMetricsAsync(
+        List<GenericResourceData> allResources, DefaultAzureCredential cred, CancellationToken ct)
+    {
+        var results    = new List<AppInsightsMetric>();
+        var components = allResources
+            .Where(r => r.ResourceType.ToString().Equals(
+                "microsoft.insights/components", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (components.Count == 0) return results;
+
+        // App Insights telemetry (requests, exceptions) lives in Log Analytics —
+        // it cannot be queried via MetricsQueryClient. Use LogsQueryClient instead.
+        LogsQueryClient logsClient;
+        try { logsClient = new LogsQueryClient(cred); }
+        catch (Exception ex)
+        {
+            _logger.LogInformation(ex, "LogsQueryClient unavailable for App Insights — expected in local dev without connection string");
+            return results;
+        }
+
+        var timeRange = new QueryTimeRange(DateTimeOffset.UtcNow.AddDays(-7), DateTimeOffset.UtcNow);
+
+        foreach (var comp in components)
+        {
+            try
+            {
+                var resourceId = new ResourceIdentifier(comp.Id!.ToString());
+
+                int requests = 0, failed = 0, exceptions = 0;
+
+                // Requests + failures
+                var reqResp = await logsClient.QueryResourceAsync(
+                    resourceId,
+                    "requests | summarize totalCount=count(), failedCount=countif(success==false)",
+                    timeRange,
+                    cancellationToken: ct);
+                if (reqResp.Value?.Table?.Rows is { Count: > 0 } reqRows)
+                {
+                    requests = (int)(reqRows[0].GetInt64(0) ?? 0L);
+                    failed   = (int)(reqRows[0].GetInt64(1) ?? 0L);
+                }
+
+                // Exceptions
+                var excResp = await logsClient.QueryResourceAsync(
+                    resourceId,
+                    "exceptions | summarize exCount=count()",
+                    timeRange,
+                    cancellationToken: ct);
+                if (excResp.Value?.Table?.Rows is { Count: > 0 } excRows)
+                    exceptions = (int)(excRows[0].GetInt64(0) ?? 0L);
+
+                results.Add(new AppInsightsMetric
+                {
+                    Name                = comp.Name,
+                    ResourceGroup       = comp.Id?.ResourceGroupName,
+                    Requests7Days       = requests,
+                    FailedRequests7Days = failed,
+                    Exceptions7Days     = exceptions,
+                });
+            }
+            catch (Exception ex) { _logger.LogDebug(ex, "App Insights logs query failed for {Name}", comp.Name); }
+        }
+        return results;
     }
 
     // ── Name helpers ──────────────────────────────────────────────────────────

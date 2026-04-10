@@ -14,6 +14,8 @@ public record AzureReport
     public AppsJsonDiffInfo? AppsJsonDiff { get; init; }
     public List<AppInsightsMetric>? AppInsightsMetrics { get; init; }
     public List<ZombieApp>? ZombieApps { get; init; }
+    public List<OrphanedResource>? OrphanedResources { get; init; }
+    public BurnRateInfo? BurnRate { get; init; }
 }
 
 public record SubscriptionInfo { public string Name { get; init; } = ""; }
@@ -85,6 +87,15 @@ public record AllResourceSummaryInfo
 {
     public int Total { get; init; }
     public Dictionary<string, int> ByType { get; init; } = new();
+    public Dictionary<string, List<ResourceDetail>> ResourcesByType { get; init; } = new();
+}
+
+public record ResourceDetail
+{
+    public string Name { get; init; } = "";
+    public string? ResourceGroup { get; init; }
+    public string? Location { get; init; }
+    public string? Sku { get; init; }
 }
 
 public record SslEntry
@@ -157,4 +168,27 @@ public record SafeToRemoveItem
     public string Confidence { get; init; } = "";
     public string? Command { get; init; }
     public string? Saving { get; init; }
+}
+
+public record OrphanedResource
+{
+    public string Name { get; init; } = "";
+    public string? ResourceGroup { get; init; }
+    public string Type { get; init; } = "";
+    public string Reason { get; init; } = "";
+    public string? EstimatedMonthlyCost { get; init; }
+    public string? Command { get; init; }
+}
+
+public record DailyCostEntry
+{
+    public string Date { get; init; } = "";
+    public double Cost { get; init; }
+}
+
+public record BurnRateInfo
+{
+    public List<DailyCostEntry> DailyCosts { get; init; } = new();
+    public double ProjectedMonthTotal { get; init; }
+    public string? ProjectedFormatted { get; init; }
 }

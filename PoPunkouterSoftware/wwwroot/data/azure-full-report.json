@@ -1,16 +1,42 @@
 {
-  "GeneratedAt": "2026-04-03T21:12:10.7689994Z",
+  "GeneratedAt": "2026-04-10T17:30:00.9404095Z",
   "Subscription": {
     "Name": "Punkouter26"
   },
   "WebServices": {
-    "Total": 21,
+    "Total": 23,
     "ByStatus": {
-      "Active": 7,
-      "Broken": 14,
+      "Active": 6,
+      "Broken": 17,
       "Other": 0
     },
     "Services": [
+      {
+        "Name": "app-popunkoutersoftware",
+        "FriendlyName": "PoPunkouterSoftware",
+        "ResourceGroup": "PoPunkouterSoftware",
+        "ResourceType": "Microsoft.Web/sites",
+        "Url": "https://app-popunkoutersoftware.azurewebsites.net",
+        "HttpStatus": "broken",
+        "PlatformState": "Running",
+        "Description": null,
+        "Connectivity": {
+          "Success": false,
+          "ResponseTime": 2457,
+          "Error": null,
+          "IsAzureErrorPage": false
+        },
+        "Metrics7Days": {
+          "Requests": 161,
+          "Http5xx": 8,
+          "AverageResponseTime": 61.9
+        },
+        "FreeTierCheck": {
+          "IsOnFreeTier": false,
+          "IsOnPaidTier": false,
+          "CanGoFree": true
+        }
+      },
       {
         "Name": "PoRobotStocks-PoRobotStocks-web",
         "FriendlyName": "PoRobotStocks",
@@ -22,11 +48,15 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 288,
+          "ResponseTime": 636,
           "Error": null,
           "IsAzureErrorPage": false
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 194,
+          "Http5xx": 0,
+          "AverageResponseTime": 6.3
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -44,11 +74,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 2,
+          "Http5xx": 0,
+          "AverageResponseTime": 187.5
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -66,11 +100,15 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 322,
+          "ResponseTime": 2812,
           "Error": null,
           "IsAzureErrorPage": false
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 25,
+          "Http5xx": 0,
+          "AverageResponseTime": 30.1
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -88,11 +126,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 57,
+          "Http5xx": 7,
+          "AverageResponseTime": 70.4
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -110,11 +152,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 24,
+          "Http5xx": 0,
+          "AverageResponseTime": 75.2
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -132,11 +178,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 3,
+          "Http5xx": 0,
+          "AverageResponseTime": 3378.8
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -154,11 +204,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 5019,
+          "Http5xx": 18,
+          "AverageResponseTime": 995.2
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -176,11 +230,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15022,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 3,
+          "Http5xx": 0,
+          "AverageResponseTime": 254.1
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -198,11 +256,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 14450,
-          "Error": null,
-          "IsAzureErrorPage": false
+          "ResponseTime": 15035,
+          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 2075,
+          "Http5xx": 0,
+          "AverageResponseTime": 108
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -220,11 +282,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 2,
+          "Http5xx": 0,
+          "AverageResponseTime": 10.2
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -242,11 +308,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 2,
+          "Http5xx": 0,
+          "AverageResponseTime": 2210.6
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -264,11 +334,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 0,
+          "Http5xx": 0,
+          "AverageResponseTime": 0
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -286,11 +360,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 2578,
+          "Http5xx": 0,
+          "AverageResponseTime": 63.4
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -308,11 +386,41 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 0,
+          "Http5xx": 0,
+          "AverageResponseTime": 0
+        },
+        "FreeTierCheck": {
+          "IsOnFreeTier": false,
+          "IsOnPaidTier": false,
+          "CanGoFree": true
+        }
+      },
+      {
+        "Name": "potraffic-api",
+        "FriendlyName": "PoTraffic",
+        "ResourceGroup": "PoTraffic",
+        "ResourceType": "Microsoft.Web/sites",
+        "Url": "https://potraffic-api.azurewebsites.net",
+        "HttpStatus": "broken",
+        "PlatformState": "Running",
+        "Description": null,
+        "Connectivity": {
+          "Success": false,
+          "ResponseTime": 15035,
+          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "IsAzureErrorPage": null
+        },
+        "Metrics7Days": {
+          "Requests": 2708,
+          "Http5xx": 81,
+          "AverageResponseTime": 1420
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -330,11 +438,41 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 1899,
+          "Http5xx": 0,
+          "AverageResponseTime": 16.6
+        },
+        "FreeTierCheck": {
+          "IsOnFreeTier": false,
+          "IsOnPaidTier": false,
+          "CanGoFree": true
+        }
+      },
+      {
+        "Name": "poredoimage-web",
+        "FriendlyName": "PoRedoImage",
+        "ResourceGroup": "PoRedoImage",
+        "ResourceType": "Microsoft.Web/sites",
+        "Url": "https://poredoimage-web.azurewebsites.net",
+        "HttpStatus": "broken",
+        "PlatformState": "Running",
+        "Description": null,
+        "Connectivity": {
+          "Success": false,
+          "ResponseTime": 15035,
+          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "IsAzureErrorPage": null
+        },
+        "Metrics7Days": {
+          "Requests": 339,
+          "Http5xx": 4,
+          "AverageResponseTime": 12.8
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -352,11 +490,15 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15007,
+          "ResponseTime": 15035,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
-        "Metrics7Days": null,
+        "Metrics7Days": {
+          "Requests": 2063,
+          "Http5xx": 10,
+          "AverageResponseTime": 51.4
+        },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
@@ -374,7 +516,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 127,
+          "ResponseTime": 178,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -396,29 +538,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 99,
-          "Error": null,
-          "IsAzureErrorPage": false
-        },
-        "Metrics7Days": null,
-        "FreeTierCheck": {
-          "IsOnFreeTier": true,
-          "IsOnPaidTier": false,
-          "CanGoFree": false
-        }
-      },
-      {
-        "Name": "PoPunkouterSoftware",
-        "FriendlyName": "PoPunkouterSoftware",
-        "ResourceGroup": "PoPunkouterSoftware",
-        "ResourceType": "Microsoft.Web/staticSites",
-        "Url": "https://witty-smoke-014bc370f.2.azurestaticapps.net",
-        "HttpStatus": "active",
-        "PlatformState": "Running",
-        "Description": null,
-        "Connectivity": {
-          "Success": true,
-          "ResponseTime": 131,
+          "ResponseTime": 178,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -440,7 +560,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 132,
+          "ResponseTime": 160,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -462,7 +582,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 127,
+          "ResponseTime": 182,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -476,8 +596,8 @@
     ]
   },
   "Cost": {
-    "TotalCost30Days": 78.6967,
-    "TotalFormatted": "$78.70",
+    "TotalCost30Days": 77.9838,
+    "TotalFormatted": "$77.98",
     "Note": null,
     "TopCostDrivers": [
       {
@@ -486,23 +606,19 @@
       },
       {
         "Name": "Azure App Service (poshared)",
-        "Cost": 12.529
+        "Cost": 12.444
       },
       {
         "Name": "Container Registry (porepolinetracker)",
-        "Cost": 4.1602
+        "Cost": 4.6741
       },
       {
         "Name": "Foundry Models (poshared)",
-        "Cost": 1.2077
-      },
-      {
-        "Name": "Container Registry (poshared)",
-        "Cost": 0.4072
+        "Cost": 0.5237
       },
       {
         "Name": "Key Vault (poshared)",
-        "Cost": 0.3933
+        "Cost": 0.2658
       },
       {
         "Name": "Azure App Service (porobot-dev)",
@@ -510,7 +626,15 @@
       },
       {
         "Name": "Storage (polinks)",
-        "Cost": 0.0762
+        "Cost": 0.0955
+      },
+      {
+        "Name": "Storage (pomarriedlifegoogle)",
+        "Cost": 0.0479
+      },
+      {
+        "Name": "Azure App Service (popunkoutersoftware)",
+        "Cost": 0.0152
       },
       {
         "Name": "Azure App Service (poface)",
@@ -522,18 +646,10 @@
       },
       {
         "Name": "Bandwidth (polinks)",
-        "Cost": 0.0085
-      },
-      {
-        "Name": "Storage (pomarriedlifegoogle)",
-        "Cost": 0.0062
+        "Cost": 0.0092
       },
       {
         "Name": "Bandwidth (pofunquiz)",
-        "Cost": 0.0018
-      },
-      {
-        "Name": "Azure App Service (pominiapps)",
         "Cost": 0.0009
       },
       {
@@ -545,34 +661,29 @@
         "Cost": 0.0008
       },
       {
-        "Name": "Storage (porobotstocks)",
-        "Cost": 0.0003
-      },
-      {
         "Name": "Bandwidth (pomarriedlifegoogle)",
-        "Cost": 0.0002
-      },
-      {
-        "Name": "Storage (poface)",
-        "Cost": 0.0002
+        "Cost": 0.0008
       },
       {
         "Name": "Storage (porepolinetracker)",
+        "Cost": 0.0007
+      },
+      {
+        "Name": "Storage (porobotstocks)",
+        "Cost": 0.0006
+      },
+      {
+        "Name": "Bandwidth (porepolinetracker)",
+        "Cost": 0.0004
+      },
+      {
+        "Name": "Storage (poface)",
         "Cost": 0.0002
       }
     ]
   },
   "FreeTier": {
     "OnFree": [
-      {
-        "Name": "PoPunkouterSoftware",
-        "Label": "Static Web App",
-        "CurrentSku": "Free",
-        "FreeSku": "Free",
-        "FreeSkuLabel": "Free",
-        "ResourceGroup": "PoPunkouterSoftware",
-        "Recommendation": "Free tier: 100 GB bandwidth/month."
-      },
       {
         "Name": "cv-poshared-eastus",
         "Label": "Azure AI / Cognitive",
@@ -695,7 +806,7 @@
       {
         "Name": "app-porepolinetracker",
         "Label": "App Service",
-        "CurrentSku": "app,linux,container",
+        "CurrentSku": "app,linux",
         "FreeSku": "F1",
         "FreeSkuLabel": "Free (F1)",
         "ResourceGroup": "PoRepoLineTracker",
@@ -762,6 +873,15 @@
         "FreeSku": "F1",
         "FreeSkuLabel": "Free (F1)",
         "ResourceGroup": "PoMarriedLifeGoogle",
+        "Recommendation": "F1 provides 60 CPU-min/day."
+      },
+      {
+        "Name": "app-popunkoutersoftware",
+        "Label": "App Service",
+        "CurrentSku": "app,linux",
+        "FreeSku": "F1",
+        "FreeSkuLabel": "Free (F1)",
+        "ResourceGroup": "PoPunkouterSoftware",
         "Recommendation": "F1 provides 60 CPU-min/day."
       },
       {
@@ -862,6 +982,24 @@
         "FreeSkuLabel": "Free (F1)",
         "ResourceGroup": "PoTagGame",
         "Recommendation": "F1 provides 60 CPU-min/day."
+      },
+      {
+        "Name": "poredoimage-web",
+        "Label": "App Service",
+        "CurrentSku": "app,linux",
+        "FreeSku": "F1",
+        "FreeSkuLabel": "Free (F1)",
+        "ResourceGroup": "PoRedoImage",
+        "Recommendation": "F1 provides 60 CPU-min/day."
+      },
+      {
+        "Name": "potraffic-api",
+        "Label": "App Service",
+        "CurrentSku": "app,linux",
+        "FreeSku": "F1",
+        "FreeSkuLabel": "Free (F1)",
+        "ResourceGroup": "PoTraffic",
+        "Recommendation": "F1 provides 60 CPU-min/day."
       }
     ],
     "NoFreeTier": [
@@ -918,15 +1056,6 @@
         "FreeSkuLabel": "5 GB Blob free/month (12 mo)",
         "ResourceGroup": "PoSeeReview",
         "Recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "Name": "crporepofmtbyv47b6yo6",
-        "Label": "Container Registry",
-        "CurrentSku": "Basic",
-        "FreeSku": null,
-        "FreeSkuLabel": "No free tier",
-        "ResourceGroup": "PoRepoLineTracker",
-        "Recommendation": "Basic ~$5/mo. Consider ghcr.io for free private images."
       },
       {
         "Name": "pmlgoogle7377",
@@ -1026,198 +1155,608 @@
         "FreeSkuLabel": "5 GB Blob free/month (12 mo)",
         "ResourceGroup": "PoFunQuiz",
         "Recommendation": "Use LRS for lowest cost."
+      },
+      {
+        "Name": "potrafficstorage",
+        "Label": "Storage Account",
+        "CurrentSku": "Standard_LRS",
+        "FreeSku": null,
+        "FreeSkuLabel": "5 GB Blob free/month (12 mo)",
+        "ResourceGroup": "PoTraffic",
+        "Recommendation": "Use LRS for lowest cost."
       }
     ]
   },
   "AllResourceSummary": {
-    "Total": 56,
+    "Total": 58,
     "ByType": {
       "workspaces": 2,
       "vaults": 1,
       "components": 1,
       "accounts": 6,
       "actiongroups": 1,
-      "storageAccounts": 15,
+      "storageAccounts": 16,
       "userAssignedIdentities": 2,
       "serverFarms": 3,
-      "staticSites": 5,
-      "sites": 16,
+      "sites": 19,
       "servers": 1,
       "databases": 2,
-      "registries": 1
+      "staticSites": 4
+    },
+    "ResourcesByType": {
+      "workspaces": [
+        {
+          "Name": "DefaultWorkspace-bbb8dfbe-9169-432f-9b7a-fbf861b51037-EUS2",
+          "ResourceGroup": "DefaultResourceGroup-EUS2",
+          "Location": "eastus2",
+          "Sku": null
+        },
+        {
+          "Name": "PoShared-LogAnalytics",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus2",
+          "Sku": null
+        }
+      ],
+      "vaults": [
+        {
+          "Name": "kv-poshared",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus",
+          "Sku": null
+        }
+      ],
+      "components": [
+        {
+          "Name": "poappideinsights8f9c9a4e",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus2",
+          "Sku": null
+        }
+      ],
+      "accounts": [
+        {
+          "Name": "cv-poshared-eastus",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus",
+          "Sku": "F0"
+        },
+        {
+          "Name": "language-poshared-eastus",
+          "ResourceGroup": "poshared",
+          "Location": "eastus",
+          "Sku": "F0"
+        },
+        {
+          "Name": "maps-potraffic",
+          "ResourceGroup": "poshared",
+          "Location": "eastus",
+          "Sku": "G2"
+        },
+        {
+          "Name": "openai-poshared-eastus",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus",
+          "Sku": "S0"
+        },
+        {
+          "Name": "pofaceapi",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus",
+          "Sku": "F0"
+        },
+        {
+          "Name": "speech-poshared-eastus",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus",
+          "Sku": "F0"
+        }
+      ],
+      "actiongroups": [
+        {
+          "Name": "Application Insights Smart Detection",
+          "ResourceGroup": "PoShared",
+          "Location": "global",
+          "Sku": null
+        }
+      ],
+      "storageAccounts": [
+        {
+          "Name": "pmlgoogle7377",
+          "ResourceGroup": "PoMarriedLifeGoogle",
+          "Location": "eastus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "pofacedevsa",
+          "ResourceGroup": "PoFace",
+          "Location": "westus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "potrafficstorage",
+          "ResourceGroup": "PoTraffic",
+          "Location": "eastus",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stlzwajfaczgake",
+          "ResourceGroup": "PoRobotStocks",
+          "Location": "westus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "storagezizogpdhpyiwo",
+          "ResourceGroup": "PoFunQuiz",
+          "Location": "eastus",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stpoappidea",
+          "ResourceGroup": "PoAppIdea",
+          "Location": "eastus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stpocouplequizapp",
+          "ResourceGroup": "PoCoupleQuiz",
+          "Location": "eastus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stpofunquiz26",
+          "ResourceGroup": "PoFunQuiz",
+          "Location": "eastus",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stpojoker26",
+          "ResourceGroup": "PoJoker",
+          "Location": "westus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stpolinksdev01",
+          "ResourceGroup": "PoLinks",
+          "Location": "eastus",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stpominiapps26",
+          "ResourceGroup": "PoMiniApps",
+          "Location": "westus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stponovaweight",
+          "ResourceGroup": "PoNovaWeight",
+          "Location": "westus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stporedoimage26",
+          "ResourceGroup": "PoRedoImage",
+          "Location": "eastus",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stporepolinetracker",
+          "ResourceGroup": "PoRepoLineTracker",
+          "Location": "eastus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stporunnerjpuvwduj",
+          "ResourceGroup": "PoRunner",
+          "Location": "westus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stposeereview",
+          "ResourceGroup": "PoSeeReview",
+          "Location": "eastus2",
+          "Sku": "Standard_LRS"
+        }
+      ],
+      "userAssignedIdentities": [
+        {
+          "Name": "mi-pohappytrump-github",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus2",
+          "Sku": null
+        },
+        {
+          "Name": "mi-poshared-containerapps",
+          "ResourceGroup": "PoShared",
+          "Location": "eastus",
+          "Sku": null
+        }
+      ],
+      "serverFarms": [
+        {
+          "Name": "asp-poface-free",
+          "ResourceGroup": "PoShared",
+          "Location": "westus2",
+          "Sku": "F1"
+        },
+        {
+          "Name": "asp-pofunquiz-free",
+          "ResourceGroup": "PoShared",
+          "Location": "westus2",
+          "Sku": "F1"
+        },
+        {
+          "Name": "asp-poshared-linux",
+          "ResourceGroup": "PoShared",
+          "Location": "westus2",
+          "Sku": "B1"
+        }
+      ],
+      "sites": [
+        {
+          "Name": "app-5ln5hfdrvof5u",
+          "ResourceGroup": "PoMiniGames",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "app-pofunquiz-zizogpdhpyiwo",
+          "ResourceGroup": "PoFunQuiz",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "app-pohappytrump-2jr7zldry26xa",
+          "ResourceGroup": "PoHappyTrump",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "app-pojoker",
+          "ResourceGroup": "PoJoker",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "app-polinks",
+          "ResourceGroup": "PoLinks",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "app-popunkoutersoftware",
+          "ResourceGroup": "PoPunkouterSoftware",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "app-porepolinetracker",
+          "ResourceGroup": "PoRepoLineTracker",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "app-poseereview",
+          "ResourceGroup": "PoSeeReview",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "poappidea-web",
+          "ResourceGroup": "PoAppIdea",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "pocouplequiz-app",
+          "ResourceGroup": "PoCoupleQuiz",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "poface-dev-web",
+          "ResourceGroup": "PoFace",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "pomarriedlifeshared7377",
+          "ResourceGroup": "PoMarriedLifeGoogle",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "PoMiniApps",
+          "ResourceGroup": "PoMiniApps",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "ponovaweight-app",
+          "ResourceGroup": "PoNovaWeight",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "poredoimage-web",
+          "ResourceGroup": "PoRedoImage",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "PoRobotStocks-PoRobotStocks-web",
+          "ResourceGroup": "PoRobotStocks",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "PoTagGame-Server",
+          "ResourceGroup": "PoTagGame",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "potraffic-api",
+          "ResourceGroup": "PoTraffic",
+          "Location": "westus2",
+          "Sku": null
+        },
+        {
+          "Name": "wa-porunner",
+          "ResourceGroup": "PoRunner",
+          "Location": "westus2",
+          "Sku": null
+        }
+      ],
+      "servers": [
+        {
+          "Name": "potraffic-sql-shared-22602",
+          "ResourceGroup": "poshared",
+          "Location": "westus2",
+          "Sku": null
+        }
+      ],
+      "databases": [
+        {
+          "Name": "potraffic-sql-shared-22602/free-sql-db-6747937",
+          "ResourceGroup": "PoShared",
+          "Location": "westus2",
+          "Sku": "GP_S_Gen5"
+        },
+        {
+          "Name": "potraffic-sql-shared-22602/master",
+          "ResourceGroup": "PoShared",
+          "Location": "westus2",
+          "Sku": "GP_SYSTEM"
+        }
+      ],
+      "staticSites": [
+        {
+          "Name": "PoHorseRace",
+          "ResourceGroup": "PoHorseRace",
+          "Location": "eastus2",
+          "Sku": "Free"
+        },
+        {
+          "Name": "pomarriedlifegoogle",
+          "ResourceGroup": "PoMarriedLifeGoogle",
+          "Location": "eastus2",
+          "Sku": "Free"
+        },
+        {
+          "Name": "stapp-5ln5hfdrvof5u",
+          "ResourceGroup": "PoMiniGames",
+          "Location": "westus2",
+          "Sku": "Free"
+        },
+        {
+          "Name": "swa-porunner",
+          "ResourceGroup": "PoRunner",
+          "Location": "westus2",
+          "Sku": "Free"
+        }
+      ]
     }
   },
   "SslExpiry": [
     {
+      "Name": "app-popunkoutersoftware",
+      "Url": "https://app-popunkoutersoftware.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
       "Name": "PoRobotStocks-PoRobotStocks-web",
       "Url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "PoTagGame-Server",
       "Url": "https://potaggame-server.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "poface-dev-web",
       "Url": "https://poface-dev-web.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "wa-porunner",
       "Url": "https://wa-porunner.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "app-pohappytrump-2jr7zldry26xa",
       "Url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "PoMiniApps",
       "Url": "https://pominiapps.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "app-porepolinetracker",
       "Url": "https://app-porepolinetracker.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "pocouplequiz-app",
       "Url": "https://pocouplequiz-app.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "app-poseereview",
       "Url": "https://app-poseereview.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "app-pofunquiz-zizogpdhpyiwo",
       "Url": "https://app-pofunquiz-zizogpdhpyiwo.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "app-polinks",
       "Url": "https://app-polinks.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "app-5ln5hfdrvof5u",
       "Url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "ponovaweight-app",
       "Url": "https://ponovaweight-app.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "app-pojoker",
       "Url": "https://app-pojoker.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "potraffic-api",
+      "Url": "https://potraffic-api.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "poappidea-web",
       "Url": "https://poappidea-web.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "poredoimage-web",
+      "Url": "https://poredoimage-web.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "pomarriedlifeshared7377",
       "Url": "https://pomarriedlifeshared7377.azurewebsites.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "stapp-5ln5hfdrvof5u",
       "Url": "https://white-rock-0dc02af1e.1.azurestaticapps.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.1.azurestaticapps.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "swa-porunner",
       "Url": "https://victorious-ocean-06635bc1e.6.azurestaticapps.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
-    },
-    {
-      "Name": "PoPunkouterSoftware",
-      "Url": "https://witty-smoke-014bc370f.2.azurestaticapps.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.6.azurestaticapps.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "PoHorseRace",
       "Url": "https://witty-bush-0a1d3390f.2.azurestaticapps.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.2.azurestaticapps.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     },
     {
       "Name": "pomarriedlifegoogle",
       "Url": "https://gentle-coast-0cb3e800f.2.azurestaticapps.net",
-      "Expiry": null,
-      "DaysLeft": null,
-      "Subject": null,
-      "Error": "The \u0027RemoteCertificateValidationCallback\u0027 option was already set in the SslStream constructor."
+      "Expiry": "2026-08-25",
+      "DaysLeft": 137,
+      "Subject": "CN=*.2.azurestaticapps.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
     }
   ],
   "ConfigDrift": [
+    {
+      "Name": "app-popunkoutersoftware",
+      "FriendlyName": "PoPunkouterSoftware",
+      "ResourceGroup": "PoPunkouterSoftware",
+      "IssueCount": 1,
+      "Issues": [
+        {
+          "Severity": "low",
+          "Issue": "Always-On disabled (cold starts)"
+        }
+      ]
+    },
     {
       "Name": "PoRobotStocks-PoRobotStocks-web",
       "FriendlyName": "PoRobotStocks",
@@ -1394,11 +1933,35 @@
       ]
     },
     {
+      "Name": "potraffic-api",
+      "FriendlyName": "PoTraffic",
+      "ResourceGroup": "PoTraffic",
+      "IssueCount": 1,
+      "Issues": [
+        {
+          "Severity": "low",
+          "Issue": "Always-On disabled (cold starts)"
+        }
+      ]
+    },
+    {
       "Name": "poappidea-web",
       "FriendlyName": "PoAppIdea",
       "ResourceGroup": "PoAppIdea",
       "IssueCount": 0,
       "Issues": []
+    },
+    {
+      "Name": "poredoimage-web",
+      "FriendlyName": "PoRedoImage",
+      "ResourceGroup": "PoRedoImage",
+      "IssueCount": 1,
+      "Issues": [
+        {
+          "Severity": "low",
+          "Issue": "Always-On disabled (cold starts)"
+        }
+      ]
     },
     {
       "Name": "pomarriedlifeshared7377",
@@ -1573,16 +2136,39 @@
       "MinTls": "TLS1_2",
       "IssueCount": 0,
       "Issues": []
+    },
+    {
+      "Name": "potrafficstorage",
+      "ResourceGroup": "PoTraffic",
+      "Sku": "Standard_LRS",
+      "PublicBlobAccess": false,
+      "HttpsOnly": true,
+      "MinTls": "TLS1_0",
+      "IssueCount": 1,
+      "Issues": [
+        {
+          "Severity": "medium",
+          "Issue": "Min TLS TLS1_0 \u2014 upgrade to TLS 1.2"
+        }
+      ]
     }
   ],
   "AppsJsonDiff": {
-    "CurrentCount": 18,
-    "DiscoveredCount": 19,
+    "CurrentCount": 24,
+    "DiscoveredCount": 21,
     "NewApps": [
-      "pomarriedlifeshared7377"
+      "potraffic",
+      "poredoimage"
     ],
-    "RemovedApps": [],
+    "RemovedApps": [
+      "app-5ln5hfdrvof5u",
+      "app-popunkoutersoftware",
+      "poredoimage-web",
+      "wa-porunner",
+      "potraffic-api"
+    ],
     "UpdatedApps": [
+      "popunkoutersoftware",
       "porobotstocks-porobotstocks",
       "potaggame",
       "poface-dev",
@@ -1598,11 +2184,90 @@
       "ponovaweight",
       "pojoker",
       "poappidea",
-      "popunkoutersoftware",
+      "pomarriedlifeshared7377",
       "pohorserace",
       "pomarriedlifegoogle"
     ]
   },
-  "AppInsightsMetrics": [],
-  "ZombieApps": []
+  "AppInsightsMetrics": [
+    {
+      "Name": "poappideinsights8f9c9a4e",
+      "ResourceGroup": "PoShared",
+      "Requests7Days": 32933,
+      "FailedRequests7Days": 3265,
+      "Exceptions7Days": 438
+    }
+  ],
+  "ZombieApps": [
+    {
+      "Name": "app-5ln5hfdrvof5u",
+      "ResourceGroup": "PoMiniGames",
+      "HttpStatus": "broken",
+      "PlatformState": "Running",
+      "Recommendation": "az webapp stop --name \u0022app-5ln5hfdrvof5u\u0022 --resource-group \u0022PoMiniGames\u0022"
+    },
+    {
+      "Name": "app-pojoker",
+      "ResourceGroup": "PoJoker",
+      "HttpStatus": "broken",
+      "PlatformState": "Running",
+      "Recommendation": "az webapp stop --name \u0022app-pojoker\u0022 --resource-group \u0022PoJoker\u0022"
+    }
+  ],
+  "OrphanedResources": [
+    {
+      "Name": "asp-pofunquiz-free",
+      "ResourceGroup": "PoShared",
+      "Type": "App Service Plan",
+      "Reason": "No apps deployed (SKU: F1)",
+      "EstimatedMonthlyCost": "$0/mo (Free)",
+      "Command": "az appservice plan delete --name \u0022asp-pofunquiz-free\u0022 --resource-group \u0022PoShared\u0022 --yes"
+    }
+  ],
+  "BurnRate": {
+    "DailyCosts": [
+      {
+        "Date": "2026-04-01",
+        "Cost": 0.5942
+      },
+      {
+        "Date": "2026-04-02",
+        "Cost": 0.6127
+      },
+      {
+        "Date": "2026-04-03",
+        "Cost": 0.666
+      },
+      {
+        "Date": "2026-04-04",
+        "Cost": 0.5924
+      },
+      {
+        "Date": "2026-04-05",
+        "Cost": 0.5832
+      },
+      {
+        "Date": "2026-04-06",
+        "Cost": 0.597
+      },
+      {
+        "Date": "2026-04-07",
+        "Cost": 0.5945
+      },
+      {
+        "Date": "2026-04-08",
+        "Cost": 0.4399
+      },
+      {
+        "Date": "2026-04-09",
+        "Cost": 0.4281
+      },
+      {
+        "Date": "2026-04-10",
+        "Cost": 0.2159
+      }
+    ],
+    "ProjectedMonthTotal": 15.97,
+    "ProjectedFormatted": "$15.97"
+  }
 }

@@ -55,15 +55,17 @@ function Write-Step([string]$msg) { Write-Host "  → $msg" -ForegroundColor Cya
 function Write-Ok  ([string]$msg) { Write-Host "  ✓ $msg" -ForegroundColor Green }
 function Write-Warn([string]$msg) { Write-Host "  ⚠ $msg" -ForegroundColor Yellow }
 
-function Invoke-Az([string[]]$args) {
-    $result = az @args 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "az $($args -join ' ') failed: $result" }
-    return $result | ConvertFrom-Json
+function Invoke-Az([string[]]$azArgs) {
+    $result = az @azArgs 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "az $($azArgs -join ' ') failed: $result" }
+    $parsed = ($result -join "") | ConvertFrom-Json
+    if ($null -eq $parsed) { return , @() }
+    return $parsed
 }
 
-function Invoke-AzRaw([string[]]$args) {
-    $result = az @args 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "az $($args -join ' ') failed: $result" }
+function Invoke-AzRaw([string[]]$azArgs) {
+    $result = az @azArgs 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "az $($azArgs -join ' ') failed: $result" }
     return ($result -join "") | ConvertFrom-Json
 }
 
@@ -78,27 +80,12 @@ function Test-Url([string]$url) {
         catch [System.Net.WebException] { $code = [int]$_.Exception.Response.StatusCode }
         $sw.Stop()
         $success = $code -ge 200 -and $code -lt 400
-        return @{ success = $success; statusCode = $code; responseTime = $sw.ElapsedMilliseconds }
+        return @{ success = $success; statusCode = $code; responseTime = $sw.ElapsedMilliseconds; error = $null }
     } catch {
         return @{ success = $false; statusCode = 0; responseTime = 0; error = $_.Exception.Message }
     }
 }
 
-function Get-SslExpiry([string]$hostname) {
-    try {
-        $tcp = New-Object System.Net.Sockets.TcpClient($hostname, 443)
-        $ssl = New-Object System.Net.Security.SslStream($tcp.GetStream(), $false,
-            { param($s,$c,$ch,$e) $true })
-        $ssl.AuthenticateAsClient($hostname)
-        $cert    = $ssl.RemoteCertificate
-        $expiry  = [datetime]::Parse($cert.GetExpirationDateString())
-        $daysLeft = ($expiry - [datetime]::UtcNow).Days
-        $ssl.Close(); $tcp.Close()
-        return @{ expiry = $expiry.ToString("yyyy-MM-dd"); daysLeft = $daysLeft; subject = $cert.Subject }
-    } catch {
-        return @{ error = $_.Exception.Message }
-    }
-}
 
 # ── Free-tier knowledge base (mirrors AzureReportService.cs) ──────────────────
 
@@ -161,29 +148,15 @@ try {
 }
 Write-Ok   "  Found $($containerApps.Count) container apps"
 
-# ── HTTP connectivity + SSL tests ─────────────────────────────────────────────
+# ── HTTP connectivity tests ──────────────────────────────────────────────────
 
-Write-Step "Testing HTTP connectivity and SSL certificates..."
+Write-Step "Testing HTTP connectivity..."
 $services  = [System.Collections.Generic.List[psobject]]::new()
-$sslExpiry = [System.Collections.Generic.List[psobject]]::new()
 
 foreach ($app in $webApps) {
     $url  = if ($app.defaultHostName) { "https://$($app.defaultHostName)" } else { "" }
     $conn = if ($url) { Test-Url $url } else { @{ success = $false; error = "No URL" } }
     $status = if ($conn.success) { "active" } elseif ($conn.responseTime -gt 0) { "broken" } else { "unreachable" }
-
-    $ssl = @{}
-    if ($url) {
-        $ssl = Get-SslExpiry -hostname $app.defaultHostName
-        $sslExpiry.Add([pscustomobject]@{
-            name     = $app.name
-            url      = $url
-            expiry   = $ssl.expiry
-            daysLeft = $ssl.daysLeft
-            subject  = $ssl.subject
-            error    = $ssl.error
-        })
-    }
 
     $services.Add([pscustomobject]@{
         name          = $app.name
@@ -205,11 +178,6 @@ foreach ($app in $staticApps) {
     $url  = if ($app.defaultHostname) { "https://$($app.defaultHostname)" } else { "" }
     $conn = if ($url) { Test-Url $url } else { @{ success = $false; error = "No URL" } }
     $status = if ($conn.success) { "active" } elseif ($conn.responseTime -gt 0) { "broken" } else { "unreachable" }
-
-    if ($url) {
-        $ssl = Get-SslExpiry -hostname $app.defaultHostname
-        $sslExpiry.Add([pscustomobject]@{ name = $app.name; url = $url; expiry = $ssl.expiry; daysLeft = $ssl.daysLeft; subject = $ssl.subject; error = $ssl.error })
-    }
 
     $services.Add([pscustomobject]@{
         name          = $app.name
@@ -299,11 +267,13 @@ try {
         }
     } | ConvertTo-Json -Depth 10
 
-    $costResp = az rest --method POST `
+    $rawCostOutput = az rest --method POST `
         --url "https://management.azure.com/subscriptions/$subId/providers/Microsoft.CostManagement/query?api-version=2023-11-01" `
         --body $costBody `
         --headers "Content-Type=application/json" `
-        --output json 2>&1 | ConvertFrom-Json
+        --output json 2>&1
+    if ($LASTEXITCODE -ne 0) { throw ($rawCostOutput -join " ") }
+    $costResp = ($rawCostOutput -join "") | ConvertFrom-Json
 
     $cols      = $costResp.properties.columns | ForEach-Object { $_.name.ToLower() }
     $costIdx   = [array]::IndexOf($cols, ($cols | Where-Object { $_ -match "pretax|cost" } | Select-Object -First 1))
@@ -336,7 +306,7 @@ try {
     Write-Ok "Cost: $($costInfo.totalFormatted) over 30 days"
 } catch {
     Write-Warn "Cost data unavailable: $_"
-    $costInfo = [pscustomobject]@{ note = "Cost data unavailable: $_" }
+    $costInfo = [pscustomobject]@{ note = "Cost data unavailable: $_"; totalCost30Days = 0; totalFormatted = $null; topCostDrivers = $null }
 }
 
 # ── Config drift (App Services only) ─────────────────────────────────────────
@@ -428,7 +398,6 @@ $report = [pscustomobject]@{
     cost               = $costInfo
     freeTier           = [pscustomobject]@{ onFree = $onFree.ToArray(); canGoFree = $canGoFree.ToArray(); noFreeTier = $noFree.ToArray() }
     allResourceSummary = [pscustomobject]@{ total = $allResources.Count; byType = $byType }
-    sslExpiry          = $sslExpiry.ToArray()
     configDrift        = $configDrift.ToArray()
     storageInventory   = $storageItems.ToArray()
     appInsightsMetrics = @()
@@ -519,12 +488,6 @@ $serviceRows = ($services | ForEach-Object {
     "<tr><td>$($_.name)</td><td>$url</td><td>$badge</td><td>$($_.connectivity.responseTime) ms</td><td>$($_.resourceGroup)</td></tr>"
 }) -join "`n"
 
-$sslRows = ($sslExpiry | ForEach-Object {
-    $color = if ($_.daysLeft -lt 30) { "#ef4444" } elseif ($_.daysLeft -lt 60) { "#f97316" } else { "#22c55e" }
-    $days  = if ($null -ne $_.daysLeft) { "<span style='color:$color;font-weight:bold'>$($_.daysLeft)d</span>" } else { "<span style='color:#6b7280'>N/A</span>" }
-    "<tr><td>$($_.name)</td><td>$($_.expiry ?? '—')</td><td>$days</td><td>$($_.error ?? '')</td></tr>"
-}) -join "`n"
-
 $configRows = ($configDrift | Where-Object { $_.issueCount -gt 0 } | ForEach-Object {
     $issueHtml = ($_.issues | ForEach-Object { "<li style='color:$(Get-SeverityColor $_.severity)'>[$($_.severity.ToUpper())] $($_.issue)</li>" }) -join ""
     "<tr><td>$($_.name)</td><td>$($_.resourceGroup)</td><td>$($_.issueCount)</td><td><ul style='margin:0;padding-left:18px'>$issueHtml</ul></td></tr>"
@@ -567,7 +530,7 @@ $html = @"
 </head>
 <body>
 <h1>⚡ Azure Diagnostics Report</h1>
-<p class="meta">Subscription: <strong>$($account.name)</strong> &nbsp;|&nbsp; Generated: <strong>$($generatedAt.ToString('yyyy-MM-dd HH:mm')} UTC</strong></p>
+<p class="meta">Subscription: <strong>$($account.name)</strong> &nbsp;|&nbsp; Generated: <strong>$($generatedAt.ToString('yyyy-MM-dd HH:mm')) UTC</strong></p>
 
 <div class="cards">
   <div class="card"><div class="num">$($services.Count)</div><div class="lbl">Total Services</div></div>
@@ -582,12 +545,6 @@ $html = @"
 <table>
   <tr><th>Name</th><th>URL</th><th>Status</th><th>Response</th><th>Resource Group</th></tr>
   $serviceRows
-</table>
-
-<h2>🔒 SSL Certificates</h2>
-<table>
-  <tr><th>Service</th><th>Expires</th><th>Days Left</th><th>Error</th></tr>
-  $sslRows
 </table>
 
 <h2>💰 Cost (30 Days)</h2>

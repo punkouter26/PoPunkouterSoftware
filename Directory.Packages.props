@@ -5,7 +5,7 @@
   <ItemGroup>
     <!-- Blazor / UI -->
     <PackageVersion Include="Azure.Data.Tables" Version="12.11.0" />
-    <PackageVersion Include="Azure.Monitor.Query" Version="1.3.0" />
+    <PackageVersion Include="Azure.Monitor.Query" Version="1.7.1" />
     <PackageVersion Include="Azure.ResourceManager" Version="1.13.0" />
     <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.3.0" />
     <PackageVersion Include="Azure.ResourceManager.AppService" Version="1.2.0" />
@@ -27,6 +27,7 @@
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <!-- Testing -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="Testcontainers" Version="4.4.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="coverlet.collector" Version="6.0.3" />

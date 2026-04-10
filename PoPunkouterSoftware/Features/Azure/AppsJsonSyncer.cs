@@ -60,7 +60,7 @@ public static class AppsJsonSyncer
 
                 // Back-fill description from Azure if blank
                 if (string.IsNullOrWhiteSpace(existing.Description) && !string.IsNullOrWhiteSpace(svc.Description))
-                    existing.Description = svc.Description;
+                    existing.Description = SanitizeDescription(svc.Description, NiceName(svc.Name));
             }
             else
             {
@@ -69,7 +69,7 @@ public static class AppsJsonSyncer
                 {
                     Id           = Slugify(svc.Name),
                     Name         = NiceName(svc.FriendlyName.Length > 0 ? svc.FriendlyName : svc.Name),
-                    Description  = !string.IsNullOrWhiteSpace(svc.Description) ? svc.Description : $"{NiceName(svc.Name)} app",
+                    Description  = SanitizeDescription(svc.Description, NiceName(svc.Name)),
                     Status       = "inactive",
                     Url          = svc.Url,
                     Category     = InferCategory(svc.Name),
@@ -96,6 +96,23 @@ public static class AppsJsonSyncer
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    // Matches descriptions that are just an Azure internal resource name + generic suffix
+    // e.g. "stapp-5ln5hfdrvof5u productivity tool", "app-abc123 app", "func-xyz service"
+    private static readonly System.Text.RegularExpressions.Regex _azureInternalNamePattern =
+        new(@"^(app-|stapp-|func-|wa-|api-|swa-)[a-z0-9]+[a-z0-9-]* \w+(\s\w+)?$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>Returns description if it looks like a real description; otherwise falls back to a clean default.</summary>
+    private static string SanitizeDescription(string? description, string niceName)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return $"{niceName} app";
+        // Reject raw Azure resource names masquerading as descriptions
+        if (_azureInternalNamePattern.IsMatch(description.Trim()))
+            return $"{niceName} app";
+        return description;
+    }
 
     /// <summary>Returns true if the technology list is a generic placeholder that can be replaced.</summary>
     private static bool IsGenericTech(List<string> techs)

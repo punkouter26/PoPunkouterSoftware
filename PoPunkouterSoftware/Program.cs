@@ -119,6 +119,14 @@ try
 
     var app = builder.Build();
 
+    // ─── Startup configuration health-checks (non-fatal, informational) ──────
+    var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
+    if (string.IsNullOrWhiteSpace(builder.Configuration["AzureTableStorage:ConnectionString"]))
+        startupLog.LogWarning("AzureTableStorage:ConnectionString is not set — report will use local JSON fallback only. " +
+            "For local dev run: dotnet user-secrets set \"AzureTableStorage:ConnectionString\" \"UseDevelopmentStorage=true\"");
+    if (string.IsNullOrWhiteSpace(builder.Configuration["ApplicationInsights:ConnectionString"]))
+        startupLog.LogInformation("ApplicationInsights:ConnectionString is not set — metrics/logs SDK clients will be skipped. Expected in local dev.");
+
     app.UseSerilogRequestLogging(o =>
     {
         o.EnrichDiagnosticContext = (diag, ctx) =>

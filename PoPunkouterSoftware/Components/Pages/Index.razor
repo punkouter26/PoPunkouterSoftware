@@ -15,14 +15,14 @@
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="2rem" Wrap="FlexWrap.Wrap">
         <div style="flex:1;min-width:260px">
             <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="rz-mb-3"
-                        Style="background: linear-gradient(90deg, var(--rz-primary), var(--rz-info)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        Style="color: #ffffff; font-weight: 700;">
                 Punkouter Software
             </RadzenText>
-            <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-3">
+            <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-3" Style="color: rgba(255,255,255,0.92);">
                 A one-person indie software studio building AI-driven apps on Azure. Every project here is designed, built, 
                 and shipped solo — focused on real utility, clean UX, and modern tech.
             </RadzenText>
-            <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary">
+            <RadzenText TextStyle="TextStyle.Body2" Style="color: rgba(255,255,255,0.65);">
                 Stack: C# · Blazor · Azure · .NET 10 · Static Web Apps · App Service
             </RadzenText>
         </div>
@@ -44,14 +44,9 @@
 
 <!-- ── Apps Section ── -->
 <div id="apps" style="margin-bottom:3rem">
-    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="8px" class="rz-mb-1">
-        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H2" class="rz-color-primary" Style="margin:0">
-            🚀 Web Apps
-        </RadzenText>
-        <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh Azure Status")" Icon="refresh"
-                      ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Disabled="@_refreshing"
-                      Click="RefreshAzureAsync" />
-    </RadzenStack>
+    <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H2" class="rz-color-primary rz-mb-1" Style="margin:0">
+        🚀 Web Apps
+    </RadzenText>
     <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary rz-mb-4">
         A collection of AI-powered tools, productivity apps, and games — all live on Azure.
     </RadzenText>
@@ -67,32 +62,12 @@
     }
     else
     {
-        <!-- App stats bar -->
-        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap" class="rz-mb-4">
-            @foreach (var s in new[] {
-                ($"{apps.Count()}", "Total Apps", "var(--rz-info)"),
-                ($"{apps.Count(a => a.Status?.ToLower() == "active")}", "Active", "var(--rz-success)"),
-                ($"{apps.Count(a => a.Status?.ToLower() != "active")}", "Disabled", "var(--rz-secondary)"),
-                ($"{apps.Select(a => a.Category).Where(c => c != null).Distinct().Count()}", "Categories", "var(--rz-warning)")
-            })
-            {
-                <RadzenCard Style="@($"text-align:center;border-top:3px solid {s.Item3};min-width:110px;padding:.7rem")">
-                    <div style="@($"font-size:1.6rem;font-weight:700;color:{s.Item3}")">@s.Item1</div>
-                    <div style="font-size:.72rem;color:var(--rz-text-secondary-color);text-transform:uppercase">@s.Item2</div>
-                </RadzenCard>
-            }
-        </RadzenStack>
-
         <!-- Filters -->
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap" class="rz-mb-4">
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
                 <RadzenLabel Text="Sort:" />
                 <RadzenDropDown @bind-Value="sortMode" Data="@sortOptions" TextProperty="Label" ValueProperty="Value"
                                 Change="ApplyFilters" Style="width:190px" />
-            </RadzenStack>
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
-                <RadzenLabel Text="Category:" />
-                <RadzenDropDown @bind-Value="categoryFilter" Data="@categoryOptions" Change="ApplyFilters" Style="width:150px" />
             </RadzenStack>
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
                 <RadzenLabel Text="Status:" />
@@ -112,10 +87,6 @@
                         <RadzenBadge Text="@(app.Status ?? "unknown")" IsPill="true"
                                      BadgeStyle="@(isActive ? BadgeStyle.Success : BadgeStyle.Light)" />
                     </RadzenStack>
-                    @if (!string.IsNullOrEmpty(app.Category))
-                    {
-                        <RadzenBadge Text="@app.Category" BadgeStyle="BadgeStyle.Info" IsPill="true" Style="font-size:.7rem;width:fit-content" />
-                    }
                     @{ var live = GetLiveStatus(app.Url); }
                     @if (live is not null)
                     {
@@ -182,7 +153,6 @@
     private IEnumerable<AppModel>? apps;
     private List<AppModel> filteredApps = new();
     private string sortMode = "status";
-    private string categoryFilter = "All";
     private string statusFilter = "All";
     private bool _refreshing;
     private Dictionary<string, LiveServiceStatus> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
@@ -191,7 +161,6 @@
         new SortOption { Label = "Status (Active first)", Value = "status" },
         new SortOption { Label = "Alphabetical (A-Z)", Value = "alphabetical" },
     };
-    private List<string> categoryOptions = new() { "All" };
     private List<string> statusOptions = new() { "All", "Active", "Disabled" };
 
     protected override async Task OnInitializedAsync()
@@ -208,9 +177,6 @@
             var json = await System.IO.File.ReadAllTextAsync(filePath);
             var wrapper = JsonSerializer.Deserialize<AppsWrapper>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             apps = wrapper?.Apps ?? new List<AppModel>();
-            var cats = apps.Select(a => a.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
-            categoryOptions = new List<string> { "All" };
-            categoryOptions.AddRange(cats!);
             ApplyFilters(null);
         }
         catch (Exception ex)
@@ -288,8 +254,6 @@
     {
         if (apps == null) return;
         var q = apps.AsEnumerable();
-        if (categoryFilter != "All")
-            q = q.Where(a => string.Equals(a.Category, categoryFilter, StringComparison.OrdinalIgnoreCase));
         if (statusFilter == "Active")
             q = q.Where(a => string.Equals(a.Status, "active", StringComparison.OrdinalIgnoreCase));
         else if (statusFilter == "Disabled")
@@ -316,7 +280,6 @@
         public string Status { get; set; } = "";
         public string Description { get; set; } = "";
         public string Url { get; set; } = "";
-        public string? Category { get; set; }
         public List<string>? Technologies { get; set; }
     }
 
