@@ -10,19 +10,31 @@
 
 <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="rz-color-primary rz-mb-2">Azure Dashboard</RadzenText>
 
-@if (report == null)
+@if (_loading)
 {
     <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-4" />
     <RadzenText TextStyle="TextStyle.Body1">Loading Azure report...</RadzenText>
 }
+else if (!string.IsNullOrWhiteSpace(_loadError))
+{
+    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true" class="rz-my-4">
+        <div><strong>Azure dashboard load failed.</strong></div>
+        <div style="margin-top:.35rem">@_loadError</div>
+        <div style="margin-top:.75rem">
+            <RadzenButton Text="Retry" Icon="refresh" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(async () => await LoadReportAsync())" />
+        </div>
+    </RadzenAlert>
+}
 else
 {
+    var currentReport = report ?? new AzureReport();
+
     <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-2">
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="8px">
-            <span>Subscription: <strong>@report.Subscription?.Name</strong> &nbsp;|&nbsp; Generated: <strong>@(report.GeneratedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—")</strong>
-            @if (report.GeneratedAt.HasValue && (DateTime.UtcNow - report.GeneratedAt.Value).TotalHours > 24)
+            <span>Subscription: <strong>@currentReport.Subscription?.Name</strong> &nbsp;|&nbsp; Generated: <strong>@(currentReport.GeneratedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—")</strong>
+            @if (currentReport.GeneratedAt is DateTime generatedAt && (DateTime.UtcNow - generatedAt).TotalHours > 24)
             {
-                <RadzenBadge Text="@($"Data is {(int)(DateTime.UtcNow - report.GeneratedAt.Value).TotalHours}h old — refresh recommended")"
+                <RadzenBadge Text="@($"Data is {(int)(DateTime.UtcNow - generatedAt).TotalHours}h old — refresh recommended")"
                              BadgeStyle="BadgeStyle.Warning" IsPill="true" Style="margin-left:.5rem;font-size:.7rem" />
             }
             </span>
@@ -39,10 +51,10 @@ else
 
     <!-- ── Summary Strip ── -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1.75rem">
-        @SummaryCard(report.WebServices?.Total.ToString() ?? "0", "Services", "var(--rz-info)")
-        @SummaryCard(report.WebServices?.ByStatus?.Active.ToString() ?? "0", "Active", "var(--rz-success)")
-        @SummaryCardLink(report.WebServices?.ByStatus?.Broken.ToString() ?? "0", "Broken ↗", report.WebServices?.ByStatus?.Broken > 0 ? "var(--rz-danger)" : "var(--rz-secondary)", () => _selectedTabIndex = 0)
-        @SummaryCard(report.Cost?.TotalFormatted ?? "$0.00", "30-Day Cost", "var(--rz-warning)")
+        @SummaryCard(currentReport.WebServices?.Total.ToString() ?? "0", "Services", "var(--rz-info)")
+        @SummaryCard(currentReport.WebServices?.ByStatus?.Active.ToString() ?? "0", "Active", "var(--rz-success)")
+        @SummaryCardLink(currentReport.WebServices?.ByStatus?.Broken.ToString() ?? "0", "Broken ↗", currentReport.WebServices?.ByStatus?.Broken > 0 ? "var(--rz-danger)" : "var(--rz-secondary)", () => _selectedTabIndex = 0)
+        @SummaryCard(currentReport.Cost?.TotalFormatted ?? "$0.00", "30-Day Cost", "var(--rz-warning)")
         @SummaryCardLink(safeToRemove.Count.ToString(), "Safe to Remove ↗", safeToRemove.Count > 0 ? "var(--rz-danger)" : "var(--rz-success)", () => _selectedTabIndex = 1)
     </div>
 
@@ -50,7 +62,7 @@ else
         <Tabs>
 
             <!-- ── Tab 1: Web Services ── -->
-            <RadzenTabsItem Text="@($"🌐 Web Services ({report.WebServices?.Total ?? 0})")">
+            <RadzenTabsItem Text="@($"🌐 Web Services ({currentReport.WebServices?.Total ?? 0})")">
                 <div style="overflow-x:auto">
                 <RadzenDataGrid Data="@SortedServices" TItem="WebService" AllowFiltering="true" AllowSorting="true"
                                 AllowPaging="true" PageSize="15" ShowPagingSummary="true" AllowColumnResize="true" FilterMode="FilterMode.Simple">
@@ -188,21 +200,21 @@ else
             </RadzenTabsItem>
 
             <!-- ── Tab 3: Cost ── -->
-            <RadzenTabsItem Text="@($"💳 Cost ({report.Cost?.TotalFormatted ?? "$0"})")">
+            <RadzenTabsItem Text="@($"💳 Cost ({currentReport.Cost?.TotalFormatted ?? "$0"})")">
                 <div class="rz-mt-2">
-                @if (report.Cost?.Note != null)
+                @if (currentReport.Cost?.Note != null)
                 {
                     <div style="background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.3);border-radius:6px;padding:.7rem 1rem;color:#ffd700;margin-bottom:1rem">
-                        📝 @report.Cost.Note
+                        📝 @currentReport.Cost.Note
                     </div>
                 }
-                @if (report.BurnRate?.DailyCosts.Count > 0)
+                @if (currentReport.BurnRate?.DailyCosts.Count > 0)
                 {
                     <RadzenRow class="rz-mb-4">
                         <RadzenColumn SizeXS="12" SizeMD="7">
                             <RadzenText TextStyle="TextStyle.H6" class="rz-mb-1">
                                 Monthly Burn Rate
-                                <RadzenBadge Text="@($"Projected: {report.BurnRate.ProjectedFormatted}")" BadgeStyle="BadgeStyle.Warning" IsPill="true" Style="font-size:.75rem;margin-left:.5rem" />
+                                <RadzenBadge Text="@($"Projected: {currentReport.BurnRate?.ProjectedFormatted ?? "—"}")" BadgeStyle="BadgeStyle.Warning" IsPill="true" Style="font-size:.75rem;margin-left:.5rem" />
                             </RadzenText>
                             <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-1">Based on daily spend this calendar month only — not rolling 30d</RadzenText>
                             <RadzenChart Style="height:260px">
@@ -230,7 +242,7 @@ else
                         </RadzenColumn>
                     </RadzenRow>
                 }
-                <RadzenDataGrid Data="@report.Cost?.TopCostDrivers" TItem="CostDriver" AllowSorting="true" PageSize="30" AllowPaging="false">
+                <RadzenDataGrid Data="@currentReport.Cost?.TopCostDrivers" TItem="CostDriver" AllowSorting="true" PageSize="30" AllowPaging="false">
                     <Columns>
                         <RadzenDataGridColumn TItem="CostDriver" Property="Name" Title="Service / Resource Group" />
                         <RadzenDataGridColumn TItem="CostDriver" Property="Cost" Title="Cost (USD)" Width="130px" TextAlign="TextAlign.Right">
@@ -243,19 +255,19 @@ else
                     </Columns>
                 </RadzenDataGrid>
                 <RadzenCard class="rz-mt-3" Style="text-align:right">
-                    <RadzenText TextStyle="TextStyle.H6">Total: <span style="color:#ffd700">@(report.Cost?.TotalFormatted ?? "—")</span></RadzenText>
+                    <RadzenText TextStyle="TextStyle.H6">Total: <span style="color:#ffd700">@(currentReport.Cost?.TotalFormatted ?? "—")</span></RadzenText>
                 </RadzenCard>
                 </div>
             </RadzenTabsItem>
 
             <!-- ── SSL Expiry Tab ── -->
-            <RadzenTabsItem Text="@($"🔒 SSL ({report.SslExpiry?.Count ?? 0})")">
+            <RadzenTabsItem Text="@($"🔒 SSL ({currentReport.SslExpiry?.Count ?? 0})")">
                 <div class="rz-mt-2">
                 @{
-                    var sslCritical  = report.SslExpiry?.Count(x => x.DaysLeft is { } d && d < 14) ?? 0;
-                    var sslWarning   = report.SslExpiry?.Count(x => x.DaysLeft is { } d && d is >= 14 and < 60) ?? 0;
-                    var sslErrored   = report.SslExpiry?.Count(x => x.Error != null && x.DaysLeft == null) ?? 0;
-                    var sslOk        = report.SslExpiry?.Count(x => x.DaysLeft != null) ?? 0;
+                    var sslCritical  = currentReport.SslExpiry?.Count(x => x.DaysLeft is { } d && d < 14) ?? 0;
+                    var sslWarning   = currentReport.SslExpiry?.Count(x => x.DaysLeft is { } d && d is >= 14 and < 60) ?? 0;
+                    var sslErrored   = currentReport.SslExpiry?.Count(x => x.Error != null && x.DaysLeft == null) ?? 0;
+                    var sslOk        = currentReport.SslExpiry?.Count(x => x.DaysLeft != null) ?? 0;
                 }
                 @if (sslErrored > 0 && sslOk == 0)
                 {
@@ -275,7 +287,7 @@ else
                         🟡 @sslWarning certificate(s) expire within 60 days — schedule renewal soon.
                     </div>
                 }
-                <RadzenDataGrid Data="@report.SslExpiry" TItem="SslEntry" AllowSorting="true" AllowFiltering="true"
+                <RadzenDataGrid Data="@currentReport.SslExpiry" TItem="SslEntry" AllowSorting="true" AllowFiltering="true"
                                 FilterMode="FilterMode.Simple" AllowPaging="true" PageSize="20">
                     <Columns>
                         <RadzenDataGridColumn TItem="SslEntry" Property="Name" Title="Service" Width="180px" />
@@ -318,9 +330,9 @@ else
             </RadzenTabsItem>
 
             <!-- ── App Insights Tab ── -->
-            <RadzenTabsItem Text="@($"📊 App Insights ({report.AppInsightsMetrics?.Count ?? 0})")">
+            <RadzenTabsItem Text="@($"📊 App Insights ({currentReport.AppInsightsMetrics?.Count ?? 0})")">
                 <div class="rz-mt-2">
-                @if (report.AppInsightsMetrics?.Any() != true)
+                @if (currentReport.AppInsightsMetrics?.Any() != true)
                 {
                     <div style="background:rgba(100,180,255,.07);border:1px solid rgba(100,180,255,.25);border-radius:6px;padding:.75rem 1rem;color:var(--rz-text-secondary-color)">
                         ℹ️ No Application Insights components found, or metrics could not be retrieved.
@@ -328,7 +340,7 @@ else
                 }
                 else
                 {
-                    <RadzenDataGrid Data="@report.AppInsightsMetrics" TItem="AppInsightsMetric"
+                    <RadzenDataGrid Data="@currentReport.AppInsightsMetrics" TItem="AppInsightsMetric"
                                     AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
                                     AllowPaging="true" PageSize="20">
                         <Columns>
@@ -359,7 +371,7 @@ else
             </RadzenTabsItem>
 
             <!-- ── Resource Breakdown Tab ── -->
-            <RadzenTabsItem Text="@($"📦 Resources ({report.AllResourceSummary?.Total ?? 0})")">
+            <RadzenTabsItem Text="@($"📦 Resources ({currentReport.AllResourceSummary?.Total ?? 0})")">
                 <div class="rz-mt-2">
                 <RadzenRow>
                     <RadzenColumn SizeXS="12" SizeMD="6">
@@ -419,9 +431,9 @@ else
             </RadzenTabsItem>
 
             <!-- ── Orphaned Resources Tab ── -->
-            <RadzenTabsItem Text="@($"🧟 Orphaned ({report.OrphanedResources?.Count ?? 0})")">
+            <RadzenTabsItem Text="@($"🧟 Orphaned ({currentReport.OrphanedResources?.Count ?? 0})")">
                 <div class="rz-mt-2">
-                @if (report.OrphanedResources?.Any() != true)
+                @if (currentReport.OrphanedResources?.Any() != true)
                 {
                     <div style="background:rgba(50,255,167,.08);border:1px solid rgba(50,255,167,.3);border-radius:6px;padding:.7rem 1rem;color:var(--rz-success-color)">
                         ✅ No orphaned resources — no unattached disks, idle public IPs, or empty App Service Plans.
@@ -429,7 +441,7 @@ else
                 }
                 else
                 {
-                    <RadzenDataGrid Data="@report.OrphanedResources" TItem="OrphanedResource" AllowSorting="true" AllowPaging="true" PageSize="15">
+                    <RadzenDataGrid Data="@currentReport.OrphanedResources" TItem="OrphanedResource" AllowSorting="true" AllowPaging="true" PageSize="15">
                         <Columns>
                             <RadzenDataGridColumn TItem="OrphanedResource" Property="Name" Title="Resource" Width="200px" />
                             <RadzenDataGridColumn TItem="OrphanedResource" Property="ResourceGroup" Title="Resource Group" Width="160px" />
@@ -460,9 +472,9 @@ else
             </RadzenTabsItem>
 
             <!-- ── Storage Tab ── -->
-            <RadzenTabsItem Text="@($"💾 Storage ({report.StorageInventory?.Count ?? 0})")">
+            <RadzenTabsItem Text="@($"💾 Storage ({currentReport.StorageInventory?.Count ?? 0})")">
                 <div class="rz-mt-2">
-                <RadzenDataGrid Data="@report.StorageInventory" TItem="StorageItem" AllowFiltering="true" AllowSorting="true" PageSize="15" AllowPaging="true" FilterMode="FilterMode.Simple">
+                <RadzenDataGrid Data="@currentReport.StorageInventory" TItem="StorageItem" AllowFiltering="true" AllowSorting="true" PageSize="15" AllowPaging="true" FilterMode="FilterMode.Simple">
                     <Columns>
                         <RadzenDataGridColumn TItem="StorageItem" Property="Name" Title="Account" Width="180px" />
                         <RadzenDataGridColumn TItem="StorageItem" Property="ResourceGroup" Title="Resource Group" Width="160px" />
@@ -509,6 +521,8 @@ else
     private List<WebService> services = new();
     private List<SafeToRemoveItem> safeToRemove = new();
     private int _selectedTabIndex = 0;
+    private bool _loading = true;
+    private string? _loadError;
     private IEnumerable<WebService> SortedServices =>
         services.OrderBy(s => s.HttpStatus == "active" ? 0 : 1).ThenBy(s => s.FriendlyName ?? s.Name);
 
@@ -536,16 +550,36 @@ else
     // No file system access needed in WASM — all data comes via HTTP.
     private async Task LoadReportAsync()
     {
+        _loading = true;
+        _loadError = null;
+        StateHasChanged();
+
         try
         {
-            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var opts = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
             report = await Http.GetFromJsonAsync<AzureReport>("/api/diag/report", opts);
-            services = report?.WebServices?.Services ?? new List<WebService>();
+            if (report is null)
+                throw new InvalidOperationException("The Azure report endpoint returned no data.");
+
+            services = report.WebServices?.Services ?? new List<WebService>();
             safeToRemove = BuildSafeToRemove(report);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Azure dashboard load error: {ex.Message}");
+            report = null;
+            services = new List<WebService>();
+            safeToRemove = new List<SafeToRemoveItem>();
+            _loadError = ex.Message;
+            Console.Error.WriteLine($"Azure dashboard load error: {ex}");
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
         }
     }
 

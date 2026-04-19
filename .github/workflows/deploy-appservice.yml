@@ -35,17 +35,20 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure App Service
-        run: az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --src-path ./deploy.zip --type zip --clean true --async false
+        shell: bash
+        run: |
+          az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --src-path ./deploy.zip --type zip --clean true --async true
+          az webapp restart --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
 
       - name: Verify health endpoint
         shell: bash
         run: |
-          for i in {1..18}; do
+          for i in {1..24}; do
             if curl -fsS "https://${APP_NAME}.azurewebsites.net/health" > /dev/null; then
               echo "Health check passed"
               exit 0
             fi
-            echo "Waiting for app warm-up ($i/12)..."
+            echo "Waiting for app warm-up ($i/24)..."
             sleep 10
           done
           echo "Health check failed"
