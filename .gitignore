@@ -5,8 +5,8 @@ test-results/
 TESTRESULTS/
 
 # Publish output
-publish/
-publishcheck*/
+publish*/
+deploy*.zip
 
 # Azure deployment diagnostics
 appservice-logs/
