@@ -6,6 +6,11 @@ TESTRESULTS/
 
 # Publish output
 publish/
+publishcheck*/
+
+# Azure deployment diagnostics
+appservice-logs/
+appservice-logs.zip
 
 # Log files
 logs/
