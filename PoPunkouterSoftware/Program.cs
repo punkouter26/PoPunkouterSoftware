@@ -1,10 +1,12 @@
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Infrastructure;
 using Radzen;
 using Scalar.AspNetCore;
 using Serilog;
+using Serilog.Context;
 using Serilog.Events;
 
 // ─── Bootstrap Serilog early so startup errors are captured ──────────────────
@@ -46,9 +48,7 @@ try
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .Enrich.FromLogContext()
-            .Enrich.WithCorrelationId()
             .Enrich.WithEnvironmentName()
-            .Enrich.WithThreadId()
             .Enrich.WithProperty("Application", "PoPunkouterSoftware")
             .WriteTo.Console(outputTemplate:
                 "[{Timestamp:HH:mm:ss} {Level:u3}] {CorrelationId} {Message:lj}{NewLine}{Exception}")
@@ -71,8 +71,10 @@ try
     // ─── OpenAPI / Scalar ────────────────────────────────────────────────────
     builder.Services.AddOpenApi();
 
+    builder.WebHost.UseStaticWebAssets();
+
     builder.Services.AddRazorComponents()
-        .AddInteractiveServerComponents();
+        .AddInteractiveWebAssemblyComponents();
 
     builder.Services.AddRadzenComponents();
     builder.Services.AddScoped<DialogService>();
@@ -113,17 +115,17 @@ try
             c.DefaultRequestHeaders.UserAgent.ParseAdd("PoPunkouterSoftware-Audit/3.0");
         });
 
-    // ─── Azure report analysis + Table Storage persistence ────────────────────
-    builder.Services.AddSingleton<PoPunkouterSoftware.Features.Azure.AzureReportStore>();
-    builder.Services.AddTransient<PoPunkouterSoftware.Features.Azure.AzureReportService>();
+    // ─── Azure report analysis + Blob persistence ─────────────────────────────
+    builder.Services.AddSingleton<AzureReportStore>();
+    builder.Services.AddTransient<AzureReportService>();
 
     var app = builder.Build();
 
     // ─── Startup configuration health-checks (non-fatal, informational) ──────
     var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
-    if (string.IsNullOrWhiteSpace(builder.Configuration["AzureTableStorage:ConnectionString"]))
-        startupLog.LogWarning("AzureTableStorage:ConnectionString is not set — report will use local JSON fallback only. " +
-            "For local dev run: dotnet user-secrets set \"AzureTableStorage:ConnectionString\" \"UseDevelopmentStorage=true\"");
+    if (string.IsNullOrWhiteSpace(builder.Configuration["AzureBlobStorage:ConnectionString"]) &&
+        string.IsNullOrWhiteSpace(builder.Configuration["AzureTableStorage:ConnectionString"]))
+        startupLog.LogWarning("AzureBlobStorage:ConnectionString is not set — report will use local JSON fallback only.");
     if (string.IsNullOrWhiteSpace(builder.Configuration["ApplicationInsights:ConnectionString"]))
         startupLog.LogInformation("ApplicationInsights:ConnectionString is not set — metrics/logs SDK clients will be skipped. Expected in local dev.");
 
@@ -131,7 +133,8 @@ try
     {
         o.EnrichDiagnosticContext = (diag, ctx) =>
         {
-            diag.Set("UserId", ctx.User?.Identity?.Name ?? "anonymous");
+            diag.Set("UserId",     "anonymous");
+            diag.Set("SessionId",  ctx.TraceIdentifier);
             diag.Set("Environment", app.Environment.EnvironmentName);
         };
     });
@@ -140,8 +143,13 @@ try
     app.UseStaticFiles();
     app.UseAntiforgery();
 
+    // MapStaticAssets serves compressed + fingerprinted static web assets from the client WASM project.
+    // Must be called before MapRazorComponents per framework requirement.
+    app.MapStaticAssets();
+
     app.MapRazorComponents<PoPunkouterSoftware.App>()
-       .AddInteractiveServerRenderMode();
+       .AddInteractiveWebAssemblyRenderMode()
+       .AddAdditionalAssemblies(typeof(PoPunkouterSoftware.Client.Components.Layout.MainLayout).Assembly);
 
     // ─── OpenAPI / Scalar UI ─────────────────────────────────────────────────
     app.MapOpenApi();
@@ -152,7 +160,7 @@ try
     });
 
     // ─── Health — probes all external connections ─────────────────────────────
-    app.MapGet("/api/health", async (IHttpClientFactory httpClientFactory, IConfiguration config, IWebHostEnvironment env) =>
+    var healthHandler = async (IHttpClientFactory httpClientFactory, IConfiguration config, IWebHostEnvironment env) =>
     {
         var client = httpClientFactory.CreateClient("health");
         var checks = new Dictionary<string, object>();
@@ -190,7 +198,15 @@ try
                 ["ASPNETCORE_ENVIRONMENT"] = env.EnvironmentName,
             }
         });
-    }).WithName("GetHealth").WithTags("Health");
+    };
+
+    app.MapGet("/api/health", healthHandler)
+        .WithName("GetHealth")
+        .WithTags("Health");
+
+    app.MapGet("/health", healthHandler)
+        .WithName("GetHealthRoot")
+        .WithTags("Health");
 
     // ─── Config — lets the client discover the canonical API base URL ─────────
     app.MapGet("/api/config",

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using PoShared.Azure;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Infrastructure;
 using Azure.Security.KeyVault.Secrets;
@@ -14,7 +15,7 @@ public class AppKeyVaultSecretManagerTests
 
     [Theory]
     [InlineData("PoPunkouterSoftware--ApplicationInsights--ConnectionString", true)]
-    [InlineData("PoPunkouterSoftware--AzureTableStorage--ConnectionString",   true)]
+    [InlineData("PoPunkouterSoftware--AzureBlobStorage--ConnectionString",    true)]
     [InlineData("popunkouter software--foo",                                   false)]
     [InlineData("OtherApp--Secret",                                            false)]
     [InlineData("ApplicationInsights--ConnectionString",                       false)]
@@ -27,8 +28,8 @@ public class AppKeyVaultSecretManagerTests
     [Theory]
     [InlineData("PoPunkouterSoftware--ApplicationInsights--ConnectionString",
                 "ApplicationInsights:ConnectionString")]
-    [InlineData("PoPunkouterSoftware--AzureTableStorage--ConnectionString",
-                "AzureTableStorage:ConnectionString")]
+    [InlineData("PoPunkouterSoftware--AzureBlobStorage--ConnectionString",
+                "AzureBlobStorage:ConnectionString")]
     [InlineData("PoPunkouterSoftware--Foo",
                 "Foo")]
     public void GetKey_StripsPrefix_AndReplacesDoubleDashWithColon(string secretName, string expectedKey)
@@ -423,7 +424,7 @@ public class AppsJsonSyncerTests : IDisposable
     }
 }
 
-// ─── AzureReportStore — unit-level (no Table Storage, tests null-path behavior) ─
+// ─── AzureReportStore — unit-level (no Blob Storage, tests null-path behavior) ─
 
 public class AzureReportStoreTests
 {
@@ -432,7 +433,7 @@ public class AzureReportStoreTests
     {
         var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["AzureTableStorage:ConnectionString"] = ""
+                ["AzureBlobStorage:ConnectionString"] = ""
             })
             .Build();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AzureReportStore>.Instance;

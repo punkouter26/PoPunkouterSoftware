@@ -13,9 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Blazor WASM hosting -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
+
     <!-- UI -->
-    <PackageReference Include="Azure.Data.Tables" />
     <PackageReference Include="Azure.Monitor.Query" />
+    <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="Azure.ResourceManager" />
     <PackageReference Include="Azure.ResourceManager.AppContainers" />
     <PackageReference Include="Azure.ResourceManager.AppService" />
@@ -24,9 +27,7 @@
 
     <!-- Structured logging -->
     <PackageReference Include="Serilog.AspNetCore" />
-    <PackageReference Include="Serilog.Enrichers.CorrelationId" />
     <PackageReference Include="Serilog.Enrichers.Environment" />
-    <PackageReference Include="Serilog.Enrichers.Thread" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" />
 
     <!-- OpenTelemetry + Azure Monitor -->
@@ -39,6 +40,11 @@
     <!-- Azure Key Vault & Identity -->
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PoShared\PoShared.csproj" />
+    <ProjectReference Include="..\PoPunkouterSoftware.Client\PoPunkouterSoftware.Client.csproj" />
   </ItemGroup>
 
 </Project>

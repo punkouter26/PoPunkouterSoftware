@@ -100,6 +100,30 @@ test.describe('Azure Dashboard', () => {
     const bodyText = await page.locator('body').textContent();
     expect(bodyText?.trim().length).toBeGreaterThan(10);
   });
+
+  test('WASM hydrates and renders Web Services tab', async ({ page }) => {
+    // WASM must fully hydrate and fetch /api/diag/report before tabs appear.
+    // This test catches regressions in the WebRootPath fix and prerender:false setup.
+    await page.goto('/azure');
+    const tab = page.getByRole('tab', { name: /Web Services/ });
+    await expect(tab).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('all dashboard tabs are rendered', async ({ page }) => {
+    await page.goto('/azure');
+    await page.getByRole('tab', { name: /Web Services/ }).waitFor({ timeout: 20_000 });
+    const tabs = page.getByRole('tab');
+    const count = await tabs.count();
+    expect(count).toBeGreaterThanOrEqual(6);
+  });
+
+  test('clicking Cost tab shows cost data', async ({ page }) => {
+    await page.goto('/azure');
+    await page.getByRole('tab', { name: /Web Services/ }).waitFor({ timeout: 20_000 });
+    await page.getByRole('tab', { name: /Cost/ }).click();
+    const content = await page.locator('[role="tabpanel"]').innerText();
+    expect(content.length).toBeGreaterThan(5);
+  });
 });
 
 // ─── Diag page ────────────────────────────────────────────────────────────────
@@ -146,16 +170,18 @@ test.describe('Static assets', () => {
 // ─── API Diag endpoints ───────────────────────────────────────────────────────
 
 test.describe('Diag API endpoints', () => {
-  test('/api/diag/report returns 200 or 404', async ({ request }) => {
+  test('/api/diag/report returns 200', async ({ request }) => {
     const response = await request.get('/api/diag/report');
-    expect([200, 404]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
 
-  test('/api/diag/az-status returns 200 with loggedIn field', async ({ request }) => {
-    const response = await request.get('/api/diag/az-status');
+  test('/api/diag/report returns valid JSON with WebServices', async ({ request }) => {
+    const response = await request.get('/api/diag/report');
     expect(response.status()).toBe(200);
     const body = await response.json();
-    expect(typeof body.loggedIn).toBe('boolean');
+    expect(body.generatedAt).toBeTruthy();
+    expect(body.webServices).toBeTruthy();
+    expect(typeof body.webServices.total).toBe('number');
   });
 
   test('/api/diag/report content-type is json when 200', async ({ request }) => {
@@ -163,6 +189,13 @@ test.describe('Diag API endpoints', () => {
     if (response.status() === 200) {
       expect(response.headers()['content-type']).toContain('application/json');
     }
+  });
+
+  test('/api/diag/az-status returns 200 with loggedIn field', async ({ request }) => {
+    const response = await request.get('/api/diag/az-status');
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(typeof body.loggedIn).toBe('boolean');
   });
 });
 

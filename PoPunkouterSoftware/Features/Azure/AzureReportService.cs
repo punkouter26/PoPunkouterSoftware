@@ -6,6 +6,7 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.AppService;
 using Azure.ResourceManager.AppService.Models;
 using Azure.ResourceManager.Resources;
+using PoShared.Azure;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Security;
@@ -19,6 +20,8 @@ namespace PoPunkouterSoftware.Features.Azure;
 /// Analyses an Azure subscription using the Azure SDK and DefaultAzureCredential.
 /// Works locally (via az login / VS login) and on Azure (via Managed Identity).
 /// Produces the same AzureReport structure consumed by AzureDashboard.razor.
+/// SOLID: Single Responsibility — this class is solely responsible for building the Azure report.
+/// GoF:   Facade — orchestrates multiple Azure SDK sub-systems behind one RunAsync entry point.
 /// </summary>
 public class AzureReportService
 {

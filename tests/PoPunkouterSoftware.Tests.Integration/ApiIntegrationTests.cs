@@ -2,6 +2,7 @@ using DotNet.Testcontainers.Builders;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using PoShared.Azure;
 using PoPunkouterSoftware.Features.Azure;
 using Testcontainers.Azurite;
 using System.Net;
@@ -25,7 +26,7 @@ public class TestWebApp : WebApplicationFactory<Program>
             {
                 ["AzureKeyVaultUri"]                    = "",
                 ["ApplicationInsights:ConnectionString"] = "",
-                ["AzureTableStorage:ConnectionString"]   = "",
+                ["AzureBlobStorage:ConnectionString"]    = "",
             });
         });
     }
@@ -46,6 +47,13 @@ public class HealthEndpointTests
     public async Task GetHealth_Returns200()
     {
         var response = await _client.GetAsync("/api/health");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetHealthAlias_Returns200()
+    {
+        var response = await _client.GetAsync("/health");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -236,7 +244,7 @@ public class AzureReportStoreNoConnectionTests
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["AzureTableStorage:ConnectionString"] = ""
+                ["AzureBlobStorage:ConnectionString"] = ""
             })
             .Build();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AzureReportStore>.Instance;
@@ -246,7 +254,7 @@ public class AzureReportStoreNoConnectionTests
     }
 }
 
-// ─── Azurite Integration — AzureReportStore over real Table Storage ───────────
+// ─── Azurite Integration — AzureReportStore over real Blob Storage ───────────
 
 public class AzureReportStoreAzuriteTests : IAsyncLifetime
 {
@@ -262,7 +270,7 @@ public class AzureReportStoreAzuriteTests : IAsyncLifetime
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["AzureTableStorage:ConnectionString"] = _container.GetConnectionString()
+                ["AzureBlobStorage:ConnectionString"] = _container.GetConnectionString()
             })
             .Build();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AzureReportStore>.Instance;

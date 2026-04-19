@@ -1,12 +1,8 @@
 @page "/"
-@rendermode InteractiveServer
+@rendermode WasmRenderModes.Interactive
 @using System.Text.Json
-@using Radzen
-@using Radzen.Blazor
-@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment WebHostEnv
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
-@inject NotificationService NotificationService
-@inject IHttpClientFactory HttpClientFactory
 
 <PageTitle>PoPunkouterSoftware — Home</PageTitle>
 
@@ -27,17 +23,8 @@
             </RadzenText>
         </div>
         <div style="flex-shrink:0">
-            <RadzenCarousel Auto="true" AutoStyle="CarouselAutoStyle.Smooth"
-                            Style="height:260px;width:360px;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.4)">
-                <Items>
-                    <RadzenCarouselItem>
-                        <RadzenImage Path="images/1.png" Style="height:100%;width:100%;object-fit:cover" />
-                    </RadzenCarouselItem>
-                    <RadzenCarouselItem>
-                        <RadzenImage Path="images/2.png" Style="height:100%;width:100%;object-fit:cover" />
-                    </RadzenCarouselItem>
-                </Items>
-            </RadzenCarousel>
+            <RadzenImage Path="images/1.png"
+                         Style="height:260px;width:360px;object-fit:cover;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.4)" />
         </div>
     </RadzenStack>
 </RadzenCard>
@@ -50,31 +37,13 @@
     <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary rz-mb-4">
         A collection of AI-powered tools, productivity apps, and games — all live on Azure.
     </RadzenText>
-    @if (_refreshing)
-    {
-        <RadzenProgressBar Value="100" Mode="ProgressBarMode.Indeterminate" class="rz-mb-3" />
-        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-3">Querying Azure services (~30–60s)…</RadzenText>
-    }
-
     @if (apps == null)
     {
-        <RadzenProgressBar Value="100" Mode="ProgressBarMode.Indeterminate" class="rz-my-3" />
+        <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-3" />
     }
     else
     {
-        <!-- Filters -->
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap" class="rz-mb-4">
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
-                <RadzenLabel Text="Sort:" />
-                <RadzenDropDown @bind-Value="sortMode" Data="@sortOptions" TextProperty="Label" ValueProperty="Value"
-                                Change="ApplyFilters" Style="width:190px" />
-            </RadzenStack>
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
-                <RadzenLabel Text="Status:" />
-                <RadzenDropDown @bind-Value="statusFilter" Data="@statusOptions" Change="ApplyFilters" Style="width:130px" />
-            </RadzenStack>
-            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary">@filteredApps.Count app(s)</RadzenText>
-        </RadzenStack>
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-3">@filteredApps.Count app(s)</RadzenText>
 
         <!-- App Cards -->
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1.25rem">
@@ -98,9 +67,10 @@
                             {
                                 <span style="color:var(--rz-text-secondary-color)">@live.PlatformState</span>
                             }
-                            @if (live.ResponseTime > 0)
+                            @if ((live.Connectivity?.ResponseTime ?? 0) > 0)
                             {
-                                <span style="color:@(live.ResponseTime < 1000 ? "var(--rz-success-color)" : "var(--rz-warning-color)")">@live.ResponseTime ms</span>
+                                var rt = live.Connectivity!.ResponseTime;
+                                <span style="color:@(rt < 1000 ? "var(--rz-success-color)" : "var(--rz-warning-color)")">@rt ms</span>
                             }
                         </RadzenStack>
                     }
@@ -152,16 +122,8 @@
     // ── Apps ─────────────────────────────────────────────────────────
     private IEnumerable<AppModel>? apps;
     private List<AppModel> filteredApps = new();
-    private string sortMode = "status";
-    private string statusFilter = "All";
-    private bool _refreshing;
-    private Dictionary<string, LiveServiceStatus> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
-    private List<SortOption> sortOptions = new()
-    {
-        new SortOption { Label = "Status (Active first)", Value = "status" },
-        new SortOption { Label = "Alphabetical (A-Z)", Value = "alphabetical" },
-    };
-    private List<string> statusOptions = new() { "All", "Active", "Disabled" };
+    // GoF: Dictionary used as a simple cache (Flyweight-adjacent) for live status lookups by URL.
+    private Dictionary<string, WebService> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,99 +131,60 @@
         await LoadLiveStatusAsync();
     }
 
+    // Reads apps.json as a static file served from wwwroot — no server file system access needed in WASM.
     private async Task ReloadAppsAsync()
     {
         try
         {
-            var filePath = System.IO.Path.Combine(WebHostEnv.WebRootPath, "data", "apps.json");
-            var json = await System.IO.File.ReadAllTextAsync(filePath);
-            var wrapper = JsonSerializer.Deserialize<AppsWrapper>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var wrapper = await Http.GetFromJsonAsync<AppsWrapper>("data/apps.json", opts);
             apps = wrapper?.Apps ?? new List<AppModel>();
-            ApplyFilters(null);
+            ApplyDefaultSort();
         }
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
             apps = new List<AppModel>();
+            filteredApps.Clear();
         }
     }
 
+    // Reads the cached azure-full-report.json static file and builds a live-status lookup.
     private async Task LoadLiveStatusAsync()
     {
         try
         {
-            var reportPath = System.IO.Path.Combine(WebHostEnv.WebRootPath, "data", "azure-full-report.json");
-            if (!System.IO.File.Exists(reportPath)) return;
-            var json = await System.IO.File.ReadAllTextAsync(reportPath);
-            using var doc = JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("webServices", out var ws)) return;
-            if (!ws.TryGetProperty("services", out var svcs)) return;
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var services = JsonSerializer.Deserialize<List<LiveServiceStatus>>(svcs.GetRawText(), opts) ?? new();
+            var report = await Http.GetFromJsonAsync<AzureReport>("data/azure-full-report.json", opts);
+            var services = report?.WebServices?.Services ?? new List<WebService>();
             _liveByUrl = services
                 .Where(s => !string.IsNullOrEmpty(s.Url))
                 .ToDictionary(s => s.Url!, StringComparer.OrdinalIgnoreCase);
         }
-        catch { /* non-fatal */ }
+        catch { /* non-fatal — live status is optional */ }
     }
 
-    private async Task RefreshAzureAsync()
-    {
-        _refreshing = true;
-        StateHasChanged();
-        try
-        {
-            var client = HttpClientFactory.CreateClient();
-            var resp = await client.PostAsync(NavigationManager.ToAbsoluteUri("/api/diag/refresh"), null);
-            if (resp.IsSuccessStatusCode)
-            {
-                _liveByUrl.Clear();
-                await LoadLiveStatusAsync();
-                await ReloadAppsAsync();
-                NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure status refreshed — app statuses updated.");
-            }
-            else
-            {
-                NotificationService.Notify(NotificationSeverity.Warning, "Refresh failed", await resp.Content.ReadAsStringAsync());
-            }
-        }
-        catch (Exception ex)
-        {
-            NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
-        }
-        finally
-        {
-            _refreshing = false;
-            StateHasChanged();
-        }
-    }
-
-    private LiveServiceStatus? GetLiveStatus(string? url)
+    private WebService? GetLiveStatus(string? url)
     {
         if (string.IsNullOrEmpty(url) || _liveByUrl.Count == 0) return null;
         if (_liveByUrl.TryGetValue(url, out var hit)) return hit;
-        // fuzzy: match by hostname
+        // Fuzzy match by hostname when exact URL differs
         if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             var host = uri.Host;
             return _liveByUrl.Values.FirstOrDefault(s =>
-                Uri.TryCreate(s.Url, UriKind.Absolute, out var su) && su.Host.Equals(host, StringComparison.OrdinalIgnoreCase));
+                Uri.TryCreate(s.Url, UriKind.Absolute, out var su) &&
+                su.Host.Equals(host, StringComparison.OrdinalIgnoreCase));
         }
         return null;
     }
 
-    private void ApplyFilters(object? _)
+    private void ApplyDefaultSort()
     {
-        if (apps == null) return;
-        var q = apps.AsEnumerable();
-        if (statusFilter == "Active")
-            q = q.Where(a => string.Equals(a.Status, "active", StringComparison.OrdinalIgnoreCase));
-        else if (statusFilter == "Disabled")
-            q = q.Where(a => !string.Equals(a.Status, "active", StringComparison.OrdinalIgnoreCase));
-        q = sortMode == "alphabetical"
-            ? q.OrderBy(a => a.Name)
-            : q.OrderBy(a => a.Status?.ToLower() == "active" ? 0 : 1).ThenBy(a => a.Name);
-        filteredApps = q.ToList();
+        filteredApps = (apps ?? Enumerable.Empty<AppModel>())
+            .OrderBy(a => string.Equals(a.Status, "active", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(a => a.Name)
+            .ToList();
     }
 
     private void OpenApp(string url)
@@ -270,9 +193,8 @@
             NavigationManager.NavigateTo(url, forceLoad: true);
     }
 
-    // ── Models ───────────────────────────────────────────────────────
+    // ── Local models ─────────────────────────────────────────────────
     private class AppsWrapper { public List<AppModel> Apps { get; set; } = new(); }
-    private class SortOption { public string Label { get; set; } = ""; public string Value { get; set; } = ""; }
 
     public class AppModel
     {
@@ -282,15 +204,4 @@
         public string Url { get; set; } = "";
         public List<string>? Technologies { get; set; }
     }
-
-    public class LiveServiceStatus
-    {
-        public string? Url { get; set; }
-        public string HttpStatus { get; set; } = "";
-        public string? PlatformState { get; set; }
-        public ConnectivityInfo? Connectivity { get; set; }
-        public int ResponseTime => Connectivity?.ResponseTime ?? 0;
-        public class ConnectivityInfo { public bool Success { get; set; } public int ResponseTime { get; set; } public string? Error { get; set; } }
-    }
-
 }

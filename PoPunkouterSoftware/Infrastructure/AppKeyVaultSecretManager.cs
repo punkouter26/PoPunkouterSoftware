@@ -10,6 +10,11 @@ namespace PoPunkouterSoftware.Infrastructure;
 /// Example:
 ///   KV secret "PoPunkouterSoftware--ApplicationInsights--ConnectionString"
 ///   → config key "ApplicationInsights:ConnectionString"
+///
+/// SOLID: Single Responsibility — this class has one job: translate KV secret names.
+/// SOLID: Open/Closed — extend Key Vault filtering by subclassing, not editing this class.
+/// GoF:   Adapter — adapts Azure Key Vault's flat naming convention to .NET's
+///        hierarchical configuration key format.
 /// </summary>
 internal sealed class AppKeyVaultSecretManager : KeyVaultSecretManager
 {

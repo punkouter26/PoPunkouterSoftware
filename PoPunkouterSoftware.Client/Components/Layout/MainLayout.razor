@@ -1,6 +1,4 @@
 @inherits LayoutComponentBase
-@using Radzen
-@using Radzen.Blazor
 
 <RadzenComponents />
 
@@ -14,7 +12,9 @@
 
     <RadzenBody Style="overflow-y: auto">
         <div class="rz-p-4">
-            @Body
+            <DevErrorBoundary>
+                @Body
+            </DevErrorBoundary>
         </div>
     </RadzenBody>
 </RadzenLayout>

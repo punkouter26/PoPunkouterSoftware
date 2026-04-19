@@ -29,6 +29,7 @@ obj/
 *.user
 *.suo
 *.DotSettings.user
+*.lscache
 
 # Environment / secrets
 .env

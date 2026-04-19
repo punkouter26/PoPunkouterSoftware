@@ -1,0 +1,55 @@
+@* GoF: Template Method — dev vs prod error display is controlled by build configuration.
+   DevErrorBoundary intentionally avoids injecting IWebAssemblyHostEnvironment because it wraps
+   @Body (a ChildContent RenderFragment) and therefore cannot be made InteractiveWebAssembly —
+   passing a server-rendered RenderFragment into a WASM interactive component crosses the render
+   mode boundary. #if DEBUG is used instead for compile-time environment detection. *@
+
+<CascadingValue Value="this">
+    @ChildContent
+</CascadingValue>
+
+@if (_exception is not null)
+{
+    <div style="border:2px solid #e74c3c;border-radius:8px;padding:1.25rem;margin:1rem 0;background:#1a0000">
+        <RadzenText TextStyle="TextStyle.H5" Style="color:#e74c3c">
+            ⚠ Unhandled Error
+        </RadzenText>
+
+#if DEBUG
+            <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" class="rz-mb-2">
+                <strong>@_exception.GetType().FullName</strong>: @_exception.Message
+            </RadzenAlert>
+            <details open style="margin-top:.75rem">
+                <summary style="cursor:pointer;color:#aaa;font-size:.85rem">Stack trace (dev only)</summary>
+                <pre style="overflow-x:auto;font-size:.75rem;color:#ccc;white-space:pre-wrap;margin-top:.5rem">@_exception.ToString()</pre>
+            </details>
+#else
+            <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true">
+                Something went wrong. Please refresh the page or contact support.
+            </RadzenAlert>
+#endif
+
+        <RadzenButton Text="Retry" Icon="refresh" ButtonStyle="ButtonStyle.Light"
+                      Size="ButtonSize.Small" Click="Recover" class="rz-mt-3" />
+    </div>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private Exception? _exception;
+
+    protected override void OnParametersSet() => _exception = null;
+
+    public void HandleException(Exception ex)
+    {
+        _exception = ex;
+        StateHasChanged();
+    }
+
+    private void Recover()
+    {
+        _exception = null;
+        StateHasChanged();
+    }
+}

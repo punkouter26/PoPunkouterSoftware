@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <!-- TargetFramework, Nullable, ImplicitUsings, TreatWarningsAsErrors inherited from Directory.Build.props -->
+    <RootNamespace>PoPunkouterSoftware.Client</RootNamespace>
+    <AssemblyName>PoPunkouterSoftware.Client</AssemblyName>
+    <!-- Static assets from this project are served by the host server project at build time -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WASM runtime — provides WebAssemblyHostBuilder, IWebAssemblyHostEnvironment -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <!-- UI components -->
+    <PackageReference Include="Radzen.Blazor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared domain models (AzureReport, UserInfo, etc.) -->
+    <ProjectReference Include="..\PoShared\PoShared.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,69 @@
+### PoPunkouterSoftware — API Tests
+### Run these with the REST Client extension (Ctrl+Alt+R) or JetBrains HTTP Client
+### Server must be running on http://localhost:5000
+
+@baseUrl = http://localhost:5000
+
+# ─── Health ───────────────────────────────────────────────────────────────────
+
+### GET /api/health — probe all external connections
+GET {{baseUrl}}/api/health
+Accept: application/json
+
+###
+
+# ─── Config ───────────────────────────────────────────────────────────────────
+
+### GET /api/config — client uses this to discover API base URL
+GET {{baseUrl}}/api/config
+Accept: application/json
+
+###
+
+# ─── Azure Report ─────────────────────────────────────────────────────────────
+
+### GET /api/diag/report — load latest Azure report (Table Storage then file fallback)
+GET {{baseUrl}}/api/diag/report
+Accept: application/json
+
+###
+
+### POST /api/diag/refresh — trigger live Azure SDK refresh (takes 30–90 seconds)
+POST {{baseUrl}}/api/diag/refresh
+Content-Type: application/json
+
+{}
+
+###
+
+# ─── Auth (Dev only — ANON bypass) ───────────────────────────────────────────
+
+### GET /api/auth/anon/login — set anon_session cookie and redirect to /
+### Requires ASPNETCORE_ENVIRONMENT=Development
+GET {{baseUrl}}/api/auth/anon/login
+
+###
+
+### GET /api/auth/anon/status — check whether current request is ANON
+GET {{baseUrl}}/api/auth/anon/status
+Accept: application/json
+
+###
+
+### GET /api/auth/anon/logout — clear anon_session cookie
+GET {{baseUrl}}/api/auth/anon/logout
+
+###
+
+# ─── OpenAPI / Scalar ─────────────────────────────────────────────────────────
+
+### GET /openapi/v1.json — raw OpenAPI spec
+GET {{baseUrl}}/openapi/v1.json
+Accept: application/json
+
+###
+
+### Scalar UI (open in browser)
+# http://localhost:5000/scalar
+
+###

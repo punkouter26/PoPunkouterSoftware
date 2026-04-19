@@ -1,4 +1,8 @@
-namespace PoPunkouterSoftware.Features.Azure;
+namespace PoShared.Azure;
+
+// Shared Azure infrastructure domain models used by both the server (API/SDK)
+// and the client (Blazor WASM) for deserialising API responses.
+// GoF: Value Object — all records are immutable data carriers with no behaviour.
 
 public record AzureReport
 {

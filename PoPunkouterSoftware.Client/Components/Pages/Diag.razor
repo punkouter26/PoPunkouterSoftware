@@ -1,9 +1,7 @@
 @page "/diag"
-@rendermode InteractiveServer
+@rendermode WasmRenderModes.Interactive
 @using System.Text.Json
-@using Radzen
-@using Radzen.Blazor
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager Nav
 
 <PageTitle>PoPunkouterSoftware — Diagnostics</PageTitle>
@@ -82,8 +80,7 @@ else if (_error is not null)
 
         try
         {
-            var client = HttpClientFactory.CreateClient();
-            var response = await client.GetAsync(Nav.ToAbsoluteUri("/api/health").ToString());
+            var response = await Http.GetAsync("/api/health");
             response.EnsureSuccessStatusCode();
             _result = await response.Content.ReadFromJsonAsync<HealthResult>();
 
@@ -104,8 +101,6 @@ else if (_error is not null)
                     })
                     .ToList();
             }
-
-
         }
         catch (Exception ex)
         {

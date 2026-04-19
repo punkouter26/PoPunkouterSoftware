@@ -293,6 +293,19 @@
         "Blazor"
       ],
       "url": "https://potraffic-api.azurewebsites.net"
+    },
+    {
+      "id": "app-powatch",
+      "name": "PoWatch",
+      "description": "Powatch app",
+      "category": "productivity",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://app-powatch.azurewebsites.net"
     }
   ]
 }

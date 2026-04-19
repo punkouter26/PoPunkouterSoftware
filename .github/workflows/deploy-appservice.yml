@@ -5,9 +5,16 @@ on:
     branches: [master]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-popunkoutersoftware-master
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      APP_NAME: app-popunkoutersoftware
+      RESOURCE_GROUP: PoPunkouterSoftware
     steps:
       - uses: actions/checkout@v4
 
@@ -28,4 +35,18 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure App Service
-        run: az webapp deploy --name app-popunkoutersoftware --resource-group PoPunkouterSoftware --src-path ./deploy.zip --type zip --async true
+        run: az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --src-path ./deploy.zip --type zip --async false
+
+      - name: Verify health endpoint
+        shell: bash
+        run: |
+          for i in {1..12}; do
+            if curl -fsS "https://${APP_NAME}.azurewebsites.net/health" > /dev/null; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Waiting for app warm-up ($i/12)..."
+            sleep 10
+          done
+          echo "Health check failed"
+          exit 1

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using PoShared.Azure;
 
 namespace PoPunkouterSoftware.Features.Azure;
 

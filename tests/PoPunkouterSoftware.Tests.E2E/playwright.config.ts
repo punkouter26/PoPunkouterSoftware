@@ -1,17 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const isDev = process.env['ASPNETCORE_ENVIRONMENT'] !== 'Production';
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
   retries: 1,
   reporter: [['list'], ['json', { outputFile: '../../TESTRESULTS/playwright-results.json' }]],
   use: {
-    baseURL: 'http://localhost:5000',
-    headless: true,
+    baseURL: 'http://localhost:5200',
+    // Headed in Dev so failures are visually debuggable; headless in CI/Production
+    headless: !isDev,
     screenshot: 'only-on-failure',
     video: 'off',
     trace: 'off',
-    // Capture JS console errors
     javaScriptEnabled: true,
   },
   projects: [
