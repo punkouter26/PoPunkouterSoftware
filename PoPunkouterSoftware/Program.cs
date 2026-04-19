@@ -42,9 +42,17 @@ try
     var aiConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
     builder.Host.UseSerilog((ctx, services, cfg) =>
     {
+        try
+        {
+            cfg.ReadFrom.Configuration(ctx.Configuration)
+               .ReadFrom.Services(services);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Serilog configuration loading failed; falling back to code-based defaults only.");
+        }
+
         var sink = cfg
-            .ReadFrom.Configuration(ctx.Configuration)
-            .ReadFrom.Services(services)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .Enrich.FromLogContext()
