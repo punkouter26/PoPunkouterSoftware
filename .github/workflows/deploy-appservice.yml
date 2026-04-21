@@ -37,6 +37,12 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Ensure container startup timeout is sufficient
+        shell: bash
+        run: |
+          az webapp config appsettings set --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" \
+            --settings WEBSITE_CONTAINER_START_TIME_LIMIT=600 --output none
+
       - name: Stop app before deploy
         shell: bash
         run: |
