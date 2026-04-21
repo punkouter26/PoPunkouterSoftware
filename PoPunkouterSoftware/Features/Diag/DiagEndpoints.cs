@@ -34,51 +34,58 @@ internal static class DiagEndpoints
         });
 
         // ── Refresh via C# Azure SDK (works locally + on Azure with Managed Identity) ──
+        // Fire-and-forget: returns 202 immediately so Azure App Service's 230s request
+        // timeout never fires. The client polls /api/diag/refresh-progress until done.
         app.MapPost("/api/diag/refresh",
-            async (AzureReportService azureService, AzureReportStore store,
-                   IWebHostEnvironment env, ILogger<Program> logger,
-                   RefreshProgressService progressSvc, HttpContext ctx) =>
+            (IServiceScopeFactory scopeFactory, RefreshProgressService progressSvc,
+             IWebHostEnvironment env, ILogger<Program> logger) =>
         {
-            var sw = Stopwatch.StartNew();
-            // Use a separate CTS so browser disconnects don't cancel the long-running analysis.
-            // Timeout of 10 minutes is a hard ceiling; the analysis normally takes ~2 min.
-            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-            var ct = cts.Token;
+            if (progressSvc.IsRunning)
+                return Results.Conflict(new { error = "Refresh already in progress." });
+
             progressSvc.Start();
-            var progress = new Progress<(string Step, int Percent)>(p => progressSvc.Report(p.Step, p.Percent));
-            try
+
+            // Run in a background task — completely decoupled from the HTTP request lifetime.
+            _ = Task.Run(async () =>
             {
-                var report = await azureService.RunAsync(progress, ct);
-                progressSvc.Complete();
+                using var scope = scopeFactory.CreateScope();
+                var azureService = scope.ServiceProvider.GetRequiredService<AzureReportService>();
+                var store        = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
 
-                // Save to Blob Storage (if configured)
-                await store.SaveAsync(report, ct);
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                var ct = cts.Token;
+                var sw = Stopwatch.StartNew();
+                var progress = new Progress<(string Step, int Percent)>(p => progressSvc.Report(p.Step, p.Percent));
+                try
+                {
+                    var report = await azureService.RunAsync(progress, ct);
+                    progressSvc.Complete();
 
-                // Also update the local JSON file (for fallback + local dev)
-                var opts      = new JsonSerializerOptions { WriteIndented = true };
-                var json      = JsonSerializer.Serialize(report, opts);
-                var filePath  = Path.Combine(GetDataDir(env), "azure-full-report.json");
-                await File.WriteAllTextAsync(filePath, json, ct);
+                    await store.SaveAsync(report, ct);
 
-                // Sync live status + newly discovered apps back into apps.json
-                var appsJsonPath = Path.Combine(GetDataDir(env), "apps.json");
-                await AppsJsonSyncer.SyncAsync(report, appsJsonPath, ct);
+                    var opts      = new JsonSerializerOptions { WriteIndented = true };
+                    var json      = JsonSerializer.Serialize(report, opts);
+                    var filePath  = Path.Combine(GetDataDir(env), "azure-full-report.json");
+                    await File.WriteAllTextAsync(filePath, json, ct);
 
-                sw.Stop();
-                logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
-                return Results.Ok(new { success = true, durationMs = sw.ElapsedMilliseconds });
-            }
-            catch (OperationCanceledException)
-            {
-                progressSvc.Fail("Request cancelled or timed out.");
-                return Results.Problem(detail: "Request cancelled or timed out.", title: "Cancelled", statusCode: 499);
-            }
-            catch (Exception ex)
-            {
-                progressSvc.Fail(ex.Message);
-                logger.LogError(ex, "Azure report refresh failed");
-                return Results.Problem(ex.Message);
-            }
+                    var appsJsonPath = Path.Combine(GetDataDir(env), "apps.json");
+                    await AppsJsonSyncer.SyncAsync(report, appsJsonPath, ct);
+
+                    sw.Stop();
+                    logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
+                }
+                catch (OperationCanceledException)
+                {
+                    progressSvc.Fail("Request cancelled or timed out.");
+                }
+                catch (Exception ex)
+                {
+                    progressSvc.Fail(ex.Message);
+                    logger.LogError(ex, "Azure report refresh failed");
+                }
+            });
+
+            return Results.Accepted("/api/diag/refresh-progress", new { started = true });
         });
 
         // ── Refresh progress (polled by the UI during a running refresh) ──────

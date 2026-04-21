@@ -607,35 +607,37 @@ else
         report           = null;
         StateHasChanged();
 
-        // Start polling progress in the background while the POST runs
-        using var pollCts = new System.Threading.CancellationTokenSource();
-        var pollTask = PollProgressAsync(pollCts.Token);
-
         try
         {
+            // POST is fire-and-forget on the server (returns 202 immediately).
+            // We poll /api/diag/refresh-progress until IsRunning=false.
             var resp = await Http.PostAsync("/api/diag/refresh", null);
-            // Stop polling
-            pollCts.Cancel();
-            try { await pollTask; } catch { /* cancelled */ }
+            if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                NotificationService.Notify(NotificationSeverity.Warning, "Already running", "A refresh is already in progress.");
+                return;
+            }
 
-            // Do one final poll to capture the completed/failed state
+            // Poll until the background job finishes (no 230s timeout risk).
+            while (true)
+            {
+                await Task.Delay(1500);
+                await FetchProgressAsync();
+
+                var snap = await Http.GetFromJsonAsync<ProgressSnapshot>("/api/diag/refresh-progress");
+                if (snap is null || !snap.IsRunning)
+                    break;
+            }
+
+            // One final progress read to show completed/failed state in the log.
             await FetchProgressAsync();
 
-            if (resp.IsSuccessStatusCode)
-            {
-                await LoadReportAsync();
-                NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure report refreshed successfully.");
-            }
-            else
-            {
-                var body = await resp.Content.ReadAsStringAsync();
-                NotificationService.Notify(NotificationSeverity.Warning, "Refresh failed", body);
-            }
+            // Reload the report data.
+            await LoadReportAsync();
+            NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure report refreshed successfully.");
         }
         catch (Exception ex)
         {
-            pollCts.Cancel();
-            try { await pollTask; } catch { /* cancelled */ }
             await FetchProgressAsync();
             NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
         }
