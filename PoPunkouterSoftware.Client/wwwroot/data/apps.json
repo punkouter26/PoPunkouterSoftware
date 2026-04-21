@@ -133,6 +133,19 @@
       "url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net"
     },
     {
+      "id": "po-issues",
+      "name": "PoIssues",
+      "description": "PoIssues app",
+      "category": "productivity",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://po-issues.azurewebsites.net"
+    },
+    {
       "id": "pojoker",
       "name": "PoJoker",
       "description": "Creative joker app",

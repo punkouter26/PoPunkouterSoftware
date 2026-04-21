@@ -39,22 +39,26 @@ internal static class DiagEndpoints
                    IWebHostEnvironment env, ILogger<Program> logger, HttpContext ctx) =>
         {
             var sw = Stopwatch.StartNew();
+            // Use a separate CTS so browser disconnects don't cancel the long-running analysis.
+            // Timeout of 10 minutes is a hard ceiling; the analysis normally takes ~2 min.
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+            var ct = cts.Token;
             try
             {
-                var report = await azureService.RunAsync(ctx.RequestAborted);
+                var report = await azureService.RunAsync(ct);
 
                 // Save to Blob Storage (if configured)
-                await store.SaveAsync(report, ctx.RequestAborted);
+                await store.SaveAsync(report, ct);
 
                 // Also update the local JSON file (for fallback + local dev)
                 var opts      = new JsonSerializerOptions { WriteIndented = true };
                 var json      = JsonSerializer.Serialize(report, opts);
                 var filePath  = Path.Combine(GetDataDir(env), "azure-full-report.json");
-                await File.WriteAllTextAsync(filePath, json, ctx.RequestAborted);
+                await File.WriteAllTextAsync(filePath, json, ct);
 
                 // Sync live status + newly discovered apps back into apps.json
                 var appsJsonPath = Path.Combine(GetDataDir(env), "apps.json");
-                await AppsJsonSyncer.SyncAsync(report, appsJsonPath, ctx.RequestAborted);
+                await AppsJsonSyncer.SyncAsync(report, appsJsonPath, ct);
 
                 sw.Stop();
                 logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
@@ -62,7 +66,7 @@ internal static class DiagEndpoints
             }
             catch (OperationCanceledException)
             {
-                return Results.Problem(detail: "Request cancelled by client.", title: "Cancelled", statusCode: 499);
+                return Results.Problem(detail: "Request cancelled or timed out.", title: "Cancelled", statusCode: 499);
             }
             catch (Exception ex)
             {

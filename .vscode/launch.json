@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "▶ Run PoPunkouterSoftware (.NET)",
+            "name": "▶ Run PoPunkouterSoftware (.NET) — Edge",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "kill-dotnet",
@@ -10,46 +10,19 @@
             "args": [],
             "cwd": "${workspaceFolder}/PoPunkouterSoftware",
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:5001;http://localhost:5000"
             },
             "serverReadyAction": {
                 "action": "openExternally",
                 "pattern": "Now listening on: (https?://\\S+)",
-                "uriFormat": "%s"
+                "uriFormat": "%s",
+                "usingMsBuildLaunch": false
             },
-            "launchBrowser": {
-                "enabled": false
-            },
+            "browser": "edge",
             "sourceFileMap": {
                 "/Views/": "${workspaceFolder}/"
             }
-        },
-        {
-            "name": "🌐 Start Local Server & Open Website",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/server.js",
-            "console": "integratedTerminal",
-            "serverReadyAction": {
-                "pattern": "Server running at (http://localhost:[0-9]+)",
-                "uriFormat": "%s",
-                "action": "openExternally"
-            }
-        },
-        {
-            "name": "📂 Open Website (File Protocol)",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/open-browser.js",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "🔧 Live Preview (if extension installed)",
-            "type": "pwa-chrome",
-            "request": "launch",
-            "url": "http://localhost:3000",
-            "webRoot": "${workspaceFolder}/PoPunkouterSoftware/wwwroot",
-            "preLaunchTask": "start-live-server"
         }
     ]
 }

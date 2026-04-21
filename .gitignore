@@ -4,6 +4,11 @@ test-results/
 .playwright-mcp/
 TESTRESULTS/
 
+# VS Code — ignore user-specific settings only; track shared launch/task configs
+.vscode/settings.json
+.vscode/extensions.json
+.vscode/*.code-snippets
+
 # Publish output
 publish*/
 deploy*.zip
@@ -56,3 +61,27 @@ AZURE-EXPORTS-INDEX.md
 *.backup
 *.old
 discovery-log.txt
+
+# Docker
+docker-compose.override.yml
+
+# Azure Functions local settings
+local.settings.json
+
+# Test coverage
+coverage/
+*.coverage
+*.coveragexml
+TestResults/
+
+# Rider / JetBrains
+*.sln.DotSettings
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Temporary files
+*.tmp
+*.temp
+~$*

@@ -1,5 +1,7 @@
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using PoPunkouterSoftware.Application.Azure;
+using PoPunkouterSoftware.Domain.Azure;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Infrastructure;
@@ -40,6 +42,8 @@ try
 
     // ─── Serilog — structured logging to Console, File, App Insights ─────────
     var aiConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+    // CorrelationId enricher requires IHttpContextAccessor
+    builder.Services.AddHttpContextAccessor();
     builder.Host.UseSerilog((ctx, services, cfg) =>
     {
         try
@@ -57,6 +61,7 @@ try
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .Enrich.FromLogContext()
             .Enrich.WithEnvironmentName()
+            .Enrich.WithCorrelationId()   // requires Serilog.Enrichers.CorrelationId + IHttpContextAccessor
             .Enrich.WithProperty("Application", "PoPunkouterSoftware")
             .WriteTo.Console(outputTemplate:
                 "[{Timestamp:HH:mm:ss} {Level:u3}] {CorrelationId} {Message:lj}{NewLine}{Exception}")
@@ -124,16 +129,20 @@ try
         });
 
     // ─── Azure report analysis + Blob persistence ─────────────────────────────
-    builder.Services.AddSingleton<AzureReportStore>();
-    builder.Services.AddTransient<AzureReportService>();
+    // SOLID: Dependency Inversion — register concrete classes against their domain/application interfaces.
+    builder.Services.AddSingleton<IAzureReportRepository, AzureReportStore>();
+    builder.Services.AddTransient<IAzureReportService, AzureReportService>();
+    // Also register concrete types for internal feature use (DiagEndpoints uses AzureReportStore/AzureReportService directly)
+    builder.Services.AddSingleton<AzureReportStore>(sp => (AzureReportStore)sp.GetRequiredService<IAzureReportRepository>());
+    builder.Services.AddTransient<AzureReportService>(sp => (AzureReportService)sp.GetRequiredService<IAzureReportService>());
 
     var app = builder.Build();
 
     // ─── Startup configuration health-checks (non-fatal, informational) ──────
     var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
-    if (string.IsNullOrWhiteSpace(builder.Configuration["AzureBlobStorage:ConnectionString"]) &&
-        string.IsNullOrWhiteSpace(builder.Configuration["AzureTableStorage:ConnectionString"]))
-        startupLog.LogWarning("AzureBlobStorage:ConnectionString is not set — report will use local JSON fallback only.");
+    if (string.IsNullOrWhiteSpace(builder.Configuration["AzureTableStorage:ConnectionString"]) &&
+        string.IsNullOrWhiteSpace(builder.Configuration["AzureTableStorage:Endpoint"]))
+        startupLog.LogWarning("AzureTableStorage is not configured — report will use local JSON fallback only.");
     if (string.IsNullOrWhiteSpace(builder.Configuration["ApplicationInsights:ConnectionString"]))
         startupLog.LogInformation("ApplicationInsights:ConnectionString is not set — metrics/logs SDK clients will be skipped. Expected in local dev.");
 
@@ -192,6 +201,32 @@ try
             checks["KeyVault"] = new { status = "unreachable", error = ex.Message };
         }
 
+        // Azure Table Storage reachability
+        var tableConnStr = config["AzureTableStorage:ConnectionString"];
+        var tableEndpoint = config["AzureTableStorage:Endpoint"];
+        if (!string.IsNullOrWhiteSpace(tableConnStr) || !string.IsNullOrWhiteSpace(tableEndpoint))
+        {
+            try
+            {
+                Azure.Data.Tables.TableServiceClient tableService = !string.IsNullOrWhiteSpace(tableConnStr)
+                    ? new Azure.Data.Tables.TableServiceClient(tableConnStr)
+                    : new Azure.Data.Tables.TableServiceClient(new Uri(tableEndpoint!), new DefaultAzureCredential());
+
+                using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await tableService.GetPropertiesAsync(cts2.Token);
+                checks["TableStorage"] = new { status = "reachable" };
+            }
+            catch (Exception ex)
+            {
+                allHealthy = false;
+                checks["TableStorage"] = new { status = "unreachable", error = ex.Message };
+            }
+        }
+        else
+        {
+            checks["TableStorage"] = new { status = "not-configured" };
+        }
+
         return Results.Ok(new
         {
             status = allHealthy ? "healthy" : "degraded",
@@ -201,9 +236,11 @@ try
             checks,
             config = new Dictionary<string, string>
             {
-                ["AzureKeyVaultUri"] = MaskValue(config["AzureKeyVaultUri"]),
-                ["ApplicationInsights:ConnectionString"] = MaskValue(config["ApplicationInsights:ConnectionString"]),
-                ["ASPNETCORE_ENVIRONMENT"] = env.EnvironmentName,
+                ["AzureKeyVaultUri"]                         = MaskValue(config["AzureKeyVaultUri"]),
+                ["AzureTableStorage:ConnectionString"]       = MaskValue(config["AzureTableStorage:ConnectionString"]),
+                ["AzureTableStorage:Endpoint"]               = MaskValue(config["AzureTableStorage:Endpoint"]),
+                ["ApplicationInsights:ConnectionString"]     = MaskValue(config["ApplicationInsights:ConnectionString"]),
+                ["ASPNETCORE_ENVIRONMENT"]                   = env.EnvironmentName,
             }
         });
     };

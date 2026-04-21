@@ -24,9 +24,9 @@ public class TestWebApp : WebApplicationFactory<Program>
         {
             cfg.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["AzureKeyVaultUri"]                    = "",
-                ["ApplicationInsights:ConnectionString"] = "",
-                ["AzureBlobStorage:ConnectionString"]    = "",
+                ["AzureKeyVaultUri"]                       = "",
+                ["ApplicationInsights:ConnectionString"]   = "",
+                ["AzureTableStorage:ConnectionString"]     = "",
             });
         });
     }
@@ -244,7 +244,8 @@ public class AzureReportStoreNoConnectionTests
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["AzureBlobStorage:ConnectionString"] = ""
+                ["AzureTableStorage:ConnectionString"] = "",
+                ["AzureTableStorage:Endpoint"]         = "",
             })
             .Build();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AzureReportStore>.Instance;
@@ -254,7 +255,7 @@ public class AzureReportStoreNoConnectionTests
     }
 }
 
-// ─── Azurite Integration — AzureReportStore over real Blob Storage ───────────
+// ─── Azurite Integration — AzureReportStore over real Table Storage ───────────
 
 public class AzureReportStoreAzuriteTests : IAsyncLifetime
 {
@@ -270,7 +271,7 @@ public class AzureReportStoreAzuriteTests : IAsyncLifetime
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["AzureBlobStorage:ConnectionString"] = _container.GetConnectionString()
+                ["AzureTableStorage:ConnectionString"] = _container.GetConnectionString()
             })
             .Build();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AzureReportStore>.Instance;

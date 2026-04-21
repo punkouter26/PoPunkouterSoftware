@@ -14,6 +14,9 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 
+using PoPunkouterSoftware.Application.Azure;
+using PoPunkouterSoftware.Domain.Azure;
+
 namespace PoPunkouterSoftware.Features.Azure;
 
 /// <summary>
@@ -21,32 +24,36 @@ namespace PoPunkouterSoftware.Features.Azure;
 /// Works locally (via az login / VS login) and on Azure (via Managed Identity).
 /// Produces the same AzureReport structure consumed by AzureDashboard.razor.
 /// SOLID: Single Responsibility — this class is solely responsible for building the Azure report.
+/// SOLID: Dependency Inversion — implements IAzureReportService; callers depend on the abstraction.
 /// GoF:   Facade — orchestrates multiple Azure SDK sub-systems behind one RunAsync entry point.
 /// </summary>
-public class AzureReportService
+public class AzureReportService : IAzureReportService
 {
     private readonly ILogger<AzureReportService> _logger;
     private readonly IHttpClientFactory          _httpClientFactory;
     private readonly IWebHostEnvironment         _env;
-
     private readonly IConfiguration             _config;
+    private readonly IAzureReportRepository      _repository;
 
     public AzureReportService(
         ILogger<AzureReportService> logger,
         IHttpClientFactory httpClientFactory,
         IWebHostEnvironment env,
-        IConfiguration config)
+        IConfiguration config,
+        IAzureReportRepository repository)
     {
         _logger            = logger;
         _httpClientFactory = httpClientFactory;
         _env               = env;
         _config            = config;
+        _repository        = repository;
     }
 
     // ── Public entry point ────────────────────────────────────────────────────
 
     public async Task<AzureReport> RunAsync(CancellationToken ct = default)
     {
+        var previousReport = await _repository.LoadPreviousAsync(ct);
         _logger.LogInformation("AzureReportService: starting analysis");
         var cred = new DefaultAzureCredential();
         var arm  = new ArmClient(cred);
@@ -74,16 +81,34 @@ public class AzureReportService
         _logger.LogInformation("Found {Count} total resources", allResources.Count);
 
         var metricsMap  = await GetMetricsAsync(connectedSvcs, cred, ct);
-        var costInfo    = await GetCostAsync(subscriptionId, cred, ct);
+
+        // Acquire one ARM token shared across all Cost Management calls to avoid extra roundtrips
+        string? armToken = null;
+        try
+        {
+            armToken = (await cred.GetTokenAsync(
+                new TokenRequestContext(["https://management.azure.com/.default"]), ct)).Token;
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Could not obtain ARM token — cost/burn-rate will be unavailable"); }
+
+        var costInfo    = await GetCostAsync(subscriptionId, armToken, ct);
         var sslExpiry   = await CheckSslAsync(connectedSvcs, ct);
         var configDrift = await GetConfigDriftAsync(connectedSvcs, arm, ct);
-        var storageInv  = await GetStorageInventoryAsync(allResources, cred, ct);
+        var storageInv  = await GetStorageInventoryAsync(allResources, armToken, ct);
         var freeTier    = AnalyzeFreeTiers(allResources);
         var zombies     = DetectZombies(connectedSvcs, metricsMap);
         var appsDiff     = await DiffAppsJsonAsync(connectedSvcs, ct);
-        var burnRate     = await GetBurnRateAsync(subscriptionId, cred, ct);
-        var orphaned     = await GetOrphanedResourcesAsync(allResources, cred, ct);
+        var burnRate     = await GetBurnRateAsync(subscriptionId, armToken, ct);
+        var orphaned     = await GetOrphanedResourcesAsync(allResources, armToken, ct);
         var appInsights  = await GetAppInsightsMetricsAsync(allResources, cred, ct);
+
+        // New audit steps
+        var alertsAudit  = await GetAlertRulesAuditAsync(connectedSvcs, armToken, subscriptionId, ct);
+        var autoScale    = await GetAutoScaleAuditAsync(connectedSvcs, armToken, subscriptionId, ct);
+        var backupAudit  = await GetBackupAuditAsync(connectedSvcs, armToken, ct);
+        var slots        = await GetDeploymentSlotsAsync(connectedSvcs, armToken, ct);
+        var diagCoverage = await GetDiagnosticCoverageAsync(allResources, armToken, ct);
+        var rbacAudit    = await GetRbacAuditAsync(subscriptionId, armToken, ct);
 
         var servicesList = connectedSvcs.Select(s =>
         {
@@ -129,15 +154,25 @@ public class AzureReportService
                             Sku           = r.Sku?.Name?.ToString(),
                         }).OrderBy(x => x.Name).ToList()),
             },
-            SslExpiry        = sslExpiry,
-            ConfigDrift      = configDrift,
-            StorageInventory = storageInv,
+            SslExpiry          = sslExpiry,
+            ConfigDrift        = configDrift,
+            StorageInventory   = storageInv,
             AppsJsonDiff       = appsDiff,
             AppInsightsMetrics = appInsights,
             ZombieApps         = zombies,
             OrphanedResources  = orphaned,
             BurnRate           = burnRate,
+            AlertsAudit        = alertsAudit,
+            AutoScaleAudit     = autoScale,
+            BackupAudit        = backupAudit,
+            DeploymentSlots    = slots,
+            DiagnosticCoverage = diagCoverage,
+            RbacAudit          = rbacAudit,
         };
+
+        var delta    = ComputeDelta(report, previousReport);
+        var findings = ComputeCriticalFindings(report);
+        report       = report with { Delta = delta, CriticalFindings = findings };
 
         _logger.LogInformation("AzureReportService: analysis complete");
         return report;
@@ -155,12 +190,14 @@ public class AzureReportService
             if (site.Data.Name.Contains('/')) continue; // skip slots
             var url = site.Data.DefaultHostName is { } h ? $"https://{h}" : null;
             var rg  = site.Data.Id?.ResourceGroupName ?? "";
+            var isFunctionApp = site.Data.Kind?.Contains("functionapp", StringComparison.OrdinalIgnoreCase) == true;
             list.Add(new RawService
             {
                 Name            = site.Data.Name,
                 FriendlyName    = FriendlyFromContext(site.Data.Name, rg),
                 ResourceGroup   = rg,
-                ResourceTypeRaw = "Microsoft.Web/sites",
+                ResourceTypeRaw = isFunctionApp ? "Microsoft.Web/sites/functions" : "Microsoft.Web/sites",
+                Kind            = site.Data.Kind,
                 Url             = url,
                 Sku             = null, // SKU is on the App Service Plan, not the site
                 PlatformState   = site.Data.State,
@@ -319,13 +356,12 @@ public class AzureReportService
 
     // ── Step 5: 30-day cost via Cost Management REST ───────────────────────────
 
-    private async Task<CostInfo> GetCostAsync(string subscriptionId, DefaultAzureCredential cred, CancellationToken ct)
+    private async Task<CostInfo> GetCostAsync(string subscriptionId, string? armToken, CancellationToken ct)
     {
+        if (armToken is null)
+            return new CostInfo { Note = "Cost data unavailable (no ARM token)" };
         try
         {
-            var token = await cred.GetTokenAsync(
-                new TokenRequestContext(["https://management.azure.com/.default"]), ct);
-
             var today = DateTime.UtcNow.Date;
             var start = today.AddDays(-30);
             var body  = JsonSerializer.Serialize(new
@@ -345,22 +381,11 @@ public class AzureReportService
                 },
             });
 
-            var client = _httpClientFactory.CreateClient();
-            using var req = new HttpRequestMessage(HttpMethod.Post,
-                $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json"),
-            };
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+            var url  = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
+            var json = await PostCostManagementWithRetryAsync(url, body, armToken, ct);
+            if (json is null)
+                return new CostInfo { Note = "Cost data unavailable (rate-limited or request failed)" };
 
-            using var resp = await client.SendAsync(req, ct);
-            if (!resp.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Cost Management returned {Status}", resp.StatusCode);
-                return new CostInfo { Note = $"Cost data unavailable ({resp.StatusCode})" };
-            }
-
-            var json  = await resp.Content.ReadAsStringAsync(ct);
             var doc   = JsonDocument.Parse(json);
             var props = doc.RootElement.GetProperty("properties");
             var rows  = props.GetProperty("rows").EnumerateArray().ToList();
@@ -501,9 +526,10 @@ public class AzureReportService
     // ── Step 8: Storage inventory ─────────────────────────────────────────────
 
     private async Task<List<StorageItem>> GetStorageInventoryAsync(
-        List<GenericResourceData> allResources, DefaultAzureCredential cred, CancellationToken ct)
+        List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
     {
         var results  = new List<StorageItem>();
+        if (armToken is null) return results;
         var storages = allResources
             .Where(r => r.ResourceType.ToString().Equals(
                 "Microsoft.Storage/storageAccounts", StringComparison.OrdinalIgnoreCase))
@@ -511,10 +537,7 @@ public class AzureReportService
 
         if (storages.Count == 0) return results;
 
-        // Fetch each account via ARM REST to get security properties
-        var token  = (await cred.GetTokenAsync(
-            new TokenRequestContext(["https://management.azure.com/.default"]), ct)).Token;
-        var client  = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient();
 
         foreach (var sa in storages)
         {
@@ -522,7 +545,7 @@ public class AzureReportService
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get,
                     $"https://management.azure.com{sa.Id}?api-version=2023-01-01");
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
                 using var resp = await client.SendAsync(req, ct);
 
                 bool publicBlob = false;
@@ -676,21 +699,10 @@ public class AzureReportService
     // ── New: Orphaned resources ───────────────────────────────────────────────
 
     private async Task<List<OrphanedResource>> GetOrphanedResourcesAsync(
-        List<GenericResourceData> allResources, DefaultAzureCredential cred, CancellationToken ct)
+        List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
     {
         var orphans = new List<OrphanedResource>();
-        string token;
-        try
-        {
-            token = (await cred.GetTokenAsync(
-                new TokenRequestContext(["https://management.azure.com/.default"]), ct)).Token;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not obtain token for orphaned-resource scan");
-            return orphans;
-        }
-
+        if (armToken is null) return orphans;
         var client = _httpClientFactory.CreateClient();
 
         // 1 — Unattached managed disks
@@ -701,7 +713,7 @@ public class AzureReportService
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get,
                     $"https://management.azure.com{disk.Id}?api-version=2023-10-02");
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
                 using var resp = await client.SendAsync(req, ct);
                 if (!resp.IsSuccessStatusCode) continue;
 
@@ -734,7 +746,7 @@ public class AzureReportService
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get,
                     $"https://management.azure.com{ip.Id}?api-version=2023-11-01");
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
                 using var resp = await client.SendAsync(req, ct);
                 if (!resp.IsSuccessStatusCode) continue;
 
@@ -769,7 +781,7 @@ public class AzureReportService
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get,
                     $"https://management.azure.com{farm.Id}/sites?api-version=2023-12-01");
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
                 using var resp = await client.SendAsync(req, ct);
                 if (!resp.IsSuccessStatusCode) continue;
 
@@ -798,16 +810,14 @@ public class AzureReportService
     // ── New: Monthly burn rate (daily granularity) ────────────────────────────
 
     private async Task<BurnRateInfo?> GetBurnRateAsync(
-        string subscriptionId, DefaultAzureCredential cred, CancellationToken ct)
+        string subscriptionId, string? armToken, CancellationToken ct)
     {
+        if (armToken is null) return null;
         try
         {
-            var token = await cred.GetTokenAsync(
-                new TokenRequestContext(["https://management.azure.com/.default"]), ct);
-
             var today        = DateTime.UtcNow.Date;
             var startOfMonth = new DateTime(today.Year, today.Month, 1);
-            if (startOfMonth == today) startOfMonth = today.AddDays(-1); // avoid zero-range
+            if (startOfMonth == today) startOfMonth = today.AddDays(-1);
 
             var body = JsonSerializer.Serialize(new
             {
@@ -821,22 +831,10 @@ public class AzureReportService
                 },
             });
 
-            var client = _httpClientFactory.CreateClient();
-            using var req = new HttpRequestMessage(HttpMethod.Post,
-                $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json"),
-            };
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+            var url  = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
+            var json = await PostCostManagementWithRetryAsync(url, body, armToken, ct);
+            if (json is null) return null;
 
-            using var resp = await client.SendAsync(req, ct);
-            if (!resp.IsSuccessStatusCode)
-            {
-                _logger.LogDebug("Burn-rate query returned {Status}", resp.StatusCode);
-                return null;
-            }
-
-            var json  = await resp.Content.ReadAsStringAsync(ct);
             var doc   = JsonDocument.Parse(json);
             var props = doc.RootElement.GetProperty("properties");
             var rows  = props.GetProperty("rows").EnumerateArray().ToList();
@@ -856,7 +854,6 @@ public class AzureReportService
                         ? arr[dateIdx].GetInt32().ToString()
                         : arr[dateIdx].GetString() ?? ""
                     : "";
-                // Convert 20260401 → "2026-04-01"
                 var dateStr = raw.Length == 8 && raw.All(char.IsDigit)
                     ? $"{raw[..4]}-{raw[4..6]}-{raw[6..8]}"
                     : raw;
@@ -871,9 +868,9 @@ public class AzureReportService
 
             return new BurnRateInfo
             {
-                DailyCosts           = daily,
-                ProjectedMonthTotal  = projected,
-                ProjectedFormatted   = $"${projected:F2}",
+                DailyCosts          = daily,
+                ProjectedMonthTotal = projected,
+                ProjectedFormatted  = $"${projected:F2}",
             };
         }
         catch (Exception ex)
@@ -881,6 +878,45 @@ public class AzureReportService
             _logger.LogDebug(ex, "Burn rate query failed");
             return null;
         }
+    }
+
+    // ── Shared: Cost Management HTTP helper with 429 retry ───────────────────
+
+    private async Task<string?> PostCostManagementWithRetryAsync(
+        string url, string body, string? armToken, CancellationToken ct)
+    {
+        if (armToken is null) return null;
+        var client = _httpClientFactory.CreateClient();
+        const int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, url);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
+            req.Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+            using var resp = await client.SendAsync(req, ct);
+
+            if (resp.IsSuccessStatusCode)
+                return await resp.Content.ReadAsStringAsync(ct);
+
+            if (resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxRetries - 1)
+            {
+                int delaySec = 30;
+                if (resp.Headers.RetryAfter?.Delta.HasValue == true)
+                    delaySec = (int)resp.Headers.RetryAfter.Delta!.Value.TotalSeconds;
+                else if (resp.Headers.RetryAfter?.Date.HasValue == true)
+                    delaySec = (int)(resp.Headers.RetryAfter.Date!.Value - DateTimeOffset.UtcNow).TotalSeconds;
+
+                delaySec = Math.Clamp(delaySec, 1, 65);
+                _logger.LogWarning("Cost Management returned TooManyRequests; retrying in {Delay}s (attempt {Attempt}/{Max})",
+                    delaySec, attempt + 1, maxRetries);
+                await Task.Delay(TimeSpan.FromSeconds(delaySec), ct);
+                continue;
+            }
+
+            _logger.LogWarning("Cost Management returned {Status}", resp.StatusCode);
+            return null;
+        }
+        return null;
     }
 
     // ── New: App Insights component metrics ───────────────────────────────────
@@ -949,6 +985,470 @@ public class AzureReportService
             catch (Exception ex) { _logger.LogDebug(ex, "App Insights logs query failed for {Name}", comp.Name); }
         }
         return results;
+    }
+
+    // ── Item 3: Alert Rules Audit ─────────────────────────────────────────────
+
+    private async Task<AlertsAuditInfo> GetAlertRulesAuditAsync(
+        List<RawService> services, string? armToken, string subscriptionId, CancellationToken ct)
+    {
+        var alertedResourceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (armToken is null)
+        {
+            return new AlertsAuditInfo
+            {
+                ServicesWithoutAlerts = services
+                    .Select(s => new ServiceAlertStatus { Name = s.Name, ResourceGroup = s.ResourceGroup, HasAlerts = false })
+                    .ToList(),
+            };
+        }
+
+        var client = _httpClientFactory.CreateClient();
+        try
+        {
+            foreach (var url in new[]
+            {
+                $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.Insights/metricAlerts?api-version=2018-03-01",
+                $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.Insights/scheduledQueryRules?api-version=2023-03-15-preview",
+            })
+            {
+                using var req  = new HttpRequestMessage(HttpMethod.Get, url);
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
+                using var resp = await client.SendAsync(req, ct);
+                if (!resp.IsSuccessStatusCode) continue;
+
+                var json = await resp.Content.ReadAsStringAsync(ct);
+                var doc  = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("value", out var rules)) continue;
+                foreach (var rule in rules.EnumerateArray())
+                {
+                    if (rule.TryGetProperty("properties", out var props) &&
+                        props.TryGetProperty("scopes", out var scopes))
+                    {
+                        foreach (var scope in scopes.EnumerateArray())
+                            alertedResourceIds.Add(scope.GetString() ?? "");
+                    }
+                }
+            }
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Alert rules query failed"); }
+
+        var statuses = services
+            .Where(s => s.ResourceId is not null)
+            .Select(s =>
+            {
+                var hasAlert = alertedResourceIds.Contains(s.ResourceId!);
+                return new ServiceAlertStatus
+                {
+                    Name          = s.Name,
+                    ResourceGroup = s.ResourceGroup,
+                    HasAlerts     = hasAlert,
+                    AlertCount    = hasAlert ? 1 : 0,
+                };
+            }).ToList();
+
+        return new AlertsAuditInfo
+        {
+            TotalAlertRules       = alertedResourceIds.Count,
+            ServicesWithoutAlerts = statuses.Where(s => !s.HasAlerts).ToList(),
+        };
+    }
+
+    // ── Item 4: Auto-Scale Audit ──────────────────────────────────────────────
+
+    private async Task<AutoScaleAuditInfo> GetAutoScaleAuditAsync(
+        List<RawService> services, string? armToken, string subscriptionId, CancellationToken ct)
+    {
+        var autoScaledIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (armToken is not null)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.Insights/autoscalesettings?api-version=2022-10-01");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
+                using var resp = await client.SendAsync(req, ct);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var json = await resp.Content.ReadAsStringAsync(ct);
+                    var doc  = JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("value", out var settings))
+                    {
+                        foreach (var s in settings.EnumerateArray())
+                        {
+                            if (s.TryGetProperty("properties", out var props) &&
+                                props.TryGetProperty("targetResourceUri", out var target))
+                                autoScaledIds.Add(target.GetString() ?? "");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Auto-scale settings query failed"); }
+        }
+
+        var freeTierSkus = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "F1", "FREE", "D1", "SHARED" };
+        var appSvcs = services
+            .Where(s => s.ResourceTypeRaw is "Microsoft.Web/sites" or "Microsoft.Web/sites/functions"
+                        && s.ResourceId is not null)
+            .ToList();
+
+        return new AutoScaleAuditInfo
+        {
+            WithAutoScale = appSvcs
+                .Where(s => autoScaledIds.Contains(s.ResourceId!))
+                .Select(s => new AutoScaleItem { Name = s.Name, ResourceGroup = s.ResourceGroup, Sku = s.Sku, HasAutoScale = true })
+                .ToList(),
+            WithoutAutoScale = appSvcs
+                .Where(s => !autoScaledIds.Contains(s.ResourceId!) && !freeTierSkus.Contains(s.Sku ?? ""))
+                .Select(s => new AutoScaleItem { Name = s.Name, ResourceGroup = s.ResourceGroup, Sku = s.Sku, HasAutoScale = false })
+                .ToList(),
+        };
+    }
+
+    // ── Item 5: Backup Audit ──────────────────────────────────────────────────
+
+    private async Task<BackupAuditInfo> GetBackupAuditAsync(
+        List<RawService> services, string? armToken, CancellationToken ct)
+    {
+        if (armToken is null) return new BackupAuditInfo();
+
+        var client        = _httpClientFactory.CreateClient();
+        var withBackup    = new List<BackupItem>();
+        var withoutBackup = new List<BackupItem>();
+
+        foreach (var svc in services.Where(s =>
+            s.ResourceTypeRaw == "Microsoft.Web/sites" && s.ResourceId is not null))
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com{svc.ResourceId}/config/backup?api-version=2023-12-01");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
+                using var resp = await client.SendAsync(req, ct);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    withoutBackup.Add(new BackupItem { Name = svc.Name, ResourceGroup = svc.ResourceGroup, HasBackup = false });
+                    continue;
+                }
+
+                var json     = await resp.Content.ReadAsStringAsync(ct);
+                var doc      = JsonDocument.Parse(json);
+                bool enabled = false;
+                string? freq = null, retention = null;
+
+                if (doc.RootElement.TryGetProperty("properties", out var props) &&
+                    props.TryGetProperty("backupSchedule", out var sched))
+                {
+                    if (sched.TryGetProperty("isEnabled", out var en)) enabled = en.GetBoolean();
+                    if (sched.TryGetProperty("frequencyUnit", out var fu) &&
+                        sched.TryGetProperty("frequencyInterval", out var fi))
+                        freq = $"Every {fi.GetInt32()} {fu.GetString()}";
+                    if (sched.TryGetProperty("retentionPeriodInDays", out var ret))
+                        retention = $"{ret.GetInt32()} days";
+                }
+
+                if (enabled)
+                    withBackup.Add(new BackupItem { Name = svc.Name, ResourceGroup = svc.ResourceGroup, HasBackup = true, BackupFrequency = freq, Retention = retention });
+                else
+                    withoutBackup.Add(new BackupItem { Name = svc.Name, ResourceGroup = svc.ResourceGroup, HasBackup = false });
+            }
+            catch (Exception ex) { _logger.LogDebug(ex, "Backup check failed for {Name}", svc.Name); }
+        }
+
+        return new BackupAuditInfo { WithBackup = withBackup, WithoutBackup = withoutBackup };
+    }
+
+    // ── Item 6: Deployment Slots ──────────────────────────────────────────────
+
+    private async Task<DeploymentSlotsInfo> GetDeploymentSlotsAsync(
+        List<RawService> services, string? armToken, CancellationToken ct)
+    {
+        if (armToken is null) return new DeploymentSlotsInfo();
+
+        var client   = _httpClientFactory.CreateClient();
+        var allSlots = new List<SlotEntry>();
+
+        foreach (var svc in services.Where(s =>
+            s.ResourceTypeRaw == "Microsoft.Web/sites" && s.ResourceId is not null))
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com{svc.ResourceId}/slots?api-version=2023-12-01");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
+                using var resp = await client.SendAsync(req, ct);
+                if (!resp.IsSuccessStatusCode) continue;
+
+                var json = await resp.Content.ReadAsStringAsync(ct);
+                var doc  = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("value", out var slots)) continue;
+
+                foreach (var slot in slots.EnumerateArray())
+                {
+                    var slotName = slot.TryGetProperty("name", out var nm) ? nm.GetString() ?? "" : "";
+                    string? state = null, url = null;
+
+                    if (slot.TryGetProperty("properties", out var props))
+                    {
+                        if (props.TryGetProperty("state", out var st)) state = st.GetString();
+                        if (props.TryGetProperty("defaultHostName", out var host))
+                            url = $"https://{host.GetString()}";
+                    }
+                    allSlots.Add(new SlotEntry
+                    {
+                        AppName       = svc.Name,
+                        SlotName      = slotName,
+                        ResourceGroup = svc.ResourceGroup,
+                        State         = state,
+                        Url           = url,
+                    });
+                }
+            }
+            catch (Exception ex) { _logger.LogDebug(ex, "Slot listing failed for {Name}", svc.Name); }
+        }
+
+        return new DeploymentSlotsInfo { TotalSlots = allSlots.Count, Slots = allSlots };
+    }
+
+    // ── Item 7: Diagnostic Settings Coverage ─────────────────────────────────
+
+    private async Task<DiagnosticCoverageInfo> GetDiagnosticCoverageAsync(
+        List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
+    {
+        if (armToken is null) return new DiagnosticCoverageInfo();
+
+        var client             = _httpClientFactory.CreateClient();
+        var withoutDiagnostics = new List<DiagnosticEntry>();
+        int total = 0, withDiag = 0;
+
+        var keyTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Microsoft.Web/sites",
+            "Microsoft.Storage/storageAccounts",
+            "Microsoft.KeyVault/vaults",
+            "microsoft.insights/components",
+        };
+
+        foreach (var r in allResources.Where(r => keyTypes.Contains(r.ResourceType.ToString())))
+        {
+            total++;
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com{r.Id}/providers/microsoft.insights/diagnosticSettings?api-version=2021-05-01-preview");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
+                using var resp = await client.SendAsync(req, ct);
+                if (!resp.IsSuccessStatusCode) continue;
+
+                var json  = await resp.Content.ReadAsStringAsync(ct);
+                var doc   = JsonDocument.Parse(json);
+                var count = doc.RootElement.TryGetProperty("value", out var val) ? val.GetArrayLength() : 0;
+
+                if (count > 0)
+                    withDiag++;
+                else
+                    withoutDiagnostics.Add(new DiagnosticEntry
+                    {
+                        Name          = r.Name,
+                        ResourceGroup = r.Id?.ResourceGroupName,
+                        Type          = ShortType(r.ResourceType.ToString()),
+                    });
+            }
+            catch (Exception ex) { _logger.LogDebug(ex, "Diagnostic settings check failed for {Name}", r.Name); }
+        }
+
+        return new DiagnosticCoverageInfo
+        {
+            TotalResources           = total,
+            ResourcesWithDiagnostics = withDiag,
+            WithoutDiagnostics       = withoutDiagnostics,
+        };
+    }
+
+    // ── Item 10: RBAC Over-Permission Audit ───────────────────────────────────
+
+    private async Task<RbacAuditInfo> GetRbacAuditAsync(
+        string subscriptionId, string? armToken, CancellationToken ct)
+    {
+        var broadRoles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["8e3af657-a8ff-443c-a75c-2fe8c4bcb635"] = "Owner",
+            ["b24988ac-6180-42a0-ab88-20f7382dd24c"] = "Contributor",
+        };
+
+        if (armToken is null) return new RbacAuditInfo();
+
+        var overprivileged = new List<RbacOverpermission>();
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
+            using var resp = await client.SendAsync(req, ct);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("RBAC role assignments returned {Status}", resp.StatusCode);
+                return new RbacAuditInfo();
+            }
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            var doc  = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("value", out var assignments))
+                return new RbacAuditInfo();
+
+            foreach (var a in assignments.EnumerateArray())
+            {
+                if (!a.TryGetProperty("properties", out var props)) continue;
+
+                var principalType = props.TryGetProperty("principalType", out var pt) ? pt.GetString() : null;
+                if (!string.Equals(principalType, "User", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var roleDefId = props.TryGetProperty("roleDefinitionId", out var rdId)
+                    ? rdId.GetString()?.Split('/').LastOrDefault() : null;
+                if (roleDefId is null || !broadRoles.TryGetValue(roleDefId, out var roleName)) continue;
+
+                var principalId = props.TryGetProperty("principalId", out var pid) ? pid.GetString() ?? "" : "";
+                var scope       = props.TryGetProperty("scope", out var sc) ? sc.GetString() ?? "" : "";
+
+                overprivileged.Add(new RbacOverpermission
+                {
+                    PrincipalId   = principalId,
+                    Role          = roleName,
+                    Scope         = scope,
+                    PrincipalType = principalType,
+                });
+            }
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "RBAC audit failed"); }
+
+        return new RbacAuditInfo { OverprivilegedAssignments = overprivileged };
+    }
+
+    // ── Item 1: Report Delta ──────────────────────────────────────────────────
+
+    private static ReportDelta? ComputeDelta(AzureReport current, AzureReport? previous)
+    {
+        if (previous is null) return null;
+
+        var currentBroken  = current.WebServices?.Services
+            .Where(s => s.HttpStatus == "broken").Select(s => s.Name).ToHashSet() ?? [];
+        var previousBroken = previous.WebServices?.Services
+            .Where(s => s.HttpStatus == "broken").Select(s => s.Name).ToHashSet() ?? [];
+
+        var currentOrphaned  = current.OrphanedResources?.Select(o => o.Name).ToHashSet() ?? [];
+        var previousOrphaned = previous.OrphanedResources?.Select(o => o.Name).ToHashSet() ?? [];
+
+        var costDelta = current.Cost is not null && previous.Cost is not null
+            ? Math.Round(current.Cost.TotalCost30Days - previous.Cost.TotalCost30Days, 4)
+            : (double?)null;
+
+        return new ReportDelta
+        {
+            PreviousGeneratedAt  = previous.GeneratedAt,
+            BrokenServicesDelta  = currentBroken.Count - previousBroken.Count,
+            CostDelta            = costDelta,
+            NewBrokenServices    = currentBroken.Except(previousBroken).ToList(),
+            RecoveredServices    = previousBroken.Except(currentBroken).ToList(),
+            NewOrphanedResources = currentOrphaned.Except(previousOrphaned).ToList(),
+        };
+    }
+
+    // ── Item 9: Critical Findings / Severity Score ────────────────────────────
+
+    private static CriticalFindingsInfo ComputeCriticalFindings(AzureReport report)
+    {
+        var findings = new List<CriticalFinding>();
+
+        // Broken services → high
+        foreach (var svc in report.WebServices?.Services.Where(s => s.HttpStatus == "broken") ?? [])
+            findings.Add(new CriticalFinding { Severity = "high", Category = "Availability", Message = "Service is broken/unreachable", Resource = svc.Name });
+
+        // SSL expiry
+        foreach (var ssl in report.SslExpiry ?? [])
+        {
+            if (ssl.DaysLeft < 14)
+                findings.Add(new CriticalFinding { Severity = "critical", Category = "SSL", Message = $"SSL expires in {ssl.DaysLeft} days", Resource = ssl.Name });
+            else if (ssl.DaysLeft < 30)
+                findings.Add(new CriticalFinding { Severity = "high", Category = "SSL", Message = $"SSL expires in {ssl.DaysLeft} days", Resource = ssl.Name });
+        }
+
+        // Public blob access → high
+        foreach (var s in report.StorageInventory?.Where(s => s.PublicBlobAccess) ?? [])
+            findings.Add(new CriticalFinding { Severity = "high", Category = "Security", Message = "Public blob access enabled", Resource = s.Name });
+
+        // Storage HTTPS off → high
+        foreach (var s in report.StorageInventory?.Where(s => !s.HttpsOnly) ?? [])
+            findings.Add(new CriticalFinding { Severity = "high", Category = "Security", Message = "HTTPS-only disabled on storage account", Resource = s.Name });
+
+        // Config drift — high issues
+        foreach (var drift in report.ConfigDrift ?? [])
+            foreach (var issue in drift.Issues?.Where(i => i.Severity == "high") ?? [])
+                findings.Add(new CriticalFinding { Severity = "high", Category = "Configuration", Message = issue.Issue, Resource = drift.Name });
+
+        // RBAC over-permissions → high
+        foreach (var rbac in report.RbacAudit?.OverprivilegedAssignments ?? [])
+            findings.Add(new CriticalFinding { Severity = "high", Category = "Security", Message = $"User has '{rbac.Role}' role at subscription scope", Resource = rbac.PrincipalId });
+
+        // Zombie apps → medium
+        foreach (var zombie in report.ZombieApps ?? [])
+            findings.Add(new CriticalFinding { Severity = "medium", Category = "Cost", Message = "Zero requests in 7 days — possible zombie app", Resource = zombie.Name });
+
+        // Orphaned resources → medium
+        foreach (var orphan in report.OrphanedResources ?? [])
+            findings.Add(new CriticalFinding { Severity = "medium", Category = "Cost", Message = $"Orphaned {orphan.Type}: {orphan.Reason}", Resource = orphan.Name });
+
+        // Config drift — medium issues
+        foreach (var drift in report.ConfigDrift ?? [])
+            foreach (var issue in drift.Issues?.Where(i => i.Severity == "medium") ?? [])
+                findings.Add(new CriticalFinding { Severity = "medium", Category = "Configuration", Message = issue.Issue, Resource = drift.Name });
+
+        // No alert rules → medium
+        foreach (var svc in report.AlertsAudit?.ServicesWithoutAlerts ?? [])
+            findings.Add(new CriticalFinding { Severity = "medium", Category = "Observability", Message = "No alert rules configured", Resource = svc.Name });
+
+        // No diagnostics → low
+        foreach (var diag in report.DiagnosticCoverage?.WithoutDiagnostics ?? [])
+            findings.Add(new CriticalFinding { Severity = "low", Category = "Observability", Message = "No diagnostic settings configured", Resource = diag.Name });
+
+        // No auto-scale on paid tier → low
+        foreach (var item in report.AutoScaleAudit?.WithoutAutoScale ?? [])
+            findings.Add(new CriticalFinding { Severity = "low", Category = "Scalability", Message = $"No auto-scale configured (SKU: {item.Sku ?? "unknown"})", Resource = item.Name });
+
+        // Config drift — low issues
+        foreach (var drift in report.ConfigDrift ?? [])
+            foreach (var issue in drift.Issues?.Where(i => i.Severity == "low") ?? [])
+                findings.Add(new CriticalFinding { Severity = "low", Category = "Configuration", Message = issue.Issue, Resource = drift.Name });
+
+        var score = findings.Sum(f => f.Severity switch
+        {
+            "critical" => 10,
+            "high"     => 5,
+            "medium"   => 2,
+            "low"      => 1,
+            _          => 0,
+        });
+
+        var label = score switch
+        {
+            0      => "Healthy",
+            <= 5   => "Good",
+            <= 15  => "Warning",
+            <= 30  => "Degraded",
+            _      => "Critical",
+        };
+
+        return new CriticalFindingsInfo
+        {
+            SeverityScore = score,
+            SeverityLabel = label,
+            Findings      = findings
+                .OrderByDescending(f => f.Severity switch { "critical" => 4, "high" => 3, "medium" => 2, _ => 1 })
+                .ToList(),
+        };
     }
 
     // ── Name helpers ──────────────────────────────────────────────────────────
@@ -1023,6 +1523,7 @@ public class AzureReportService
         public MetricsInfo?       Metrics7Days  { get; init; }
         public FreeTierCheckInfo? FreeTierCheck { get; init; }
         public string  HttpStatus       { get; init; } = "unknown";
+        public string? Kind              { get; init; }
 
         public static explicit operator WebService(RawService s) => new()
         {
@@ -1030,6 +1531,7 @@ public class AzureReportService
             FriendlyName  = s.FriendlyName,
             ResourceGroup = s.ResourceGroup,
             ResourceType  = s.ResourceTypeRaw,
+            Kind          = s.Kind,
             Url           = s.Url ?? "",
             HttpStatus    = s.HttpStatus,
             PlatformState = s.PlatformState,

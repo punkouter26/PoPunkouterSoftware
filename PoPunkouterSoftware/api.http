@@ -36,25 +36,6 @@ Content-Type: application/json
 
 ###
 
-# ─── Auth (Dev only — ANON bypass) ───────────────────────────────────────────
-
-### GET /api/auth/anon/login — set anon_session cookie and redirect to /
-### Requires ASPNETCORE_ENVIRONMENT=Development
-GET {{baseUrl}}/api/auth/anon/login
-
-###
-
-### GET /api/auth/anon/status — check whether current request is ANON
-GET {{baseUrl}}/api/auth/anon/status
-Accept: application/json
-
-###
-
-### GET /api/auth/anon/logout — clear anon_session cookie
-GET {{baseUrl}}/api/auth/anon/logout
-
-###
-
 # ─── OpenAPI / Scalar ─────────────────────────────────────────────────────────
 
 ### GET /openapi/v1.json — raw OpenAPI spec
