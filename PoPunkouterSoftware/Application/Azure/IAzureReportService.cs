@@ -10,5 +10,5 @@ namespace PoPunkouterSoftware.Application.Azure;
 /// </summary>
 public interface IAzureReportService
 {
-    Task<AzureReport> RunAsync(CancellationToken ct = default);
+    Task<AzureReport> RunAsync(IProgress<(string Step, int Percent)>? progress = null, CancellationToken ct = default);
 }

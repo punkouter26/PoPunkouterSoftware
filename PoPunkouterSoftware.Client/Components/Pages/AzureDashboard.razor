@@ -45,8 +45,20 @@ else
     </RadzenText>
     @if (_refreshing)
     {
-        <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-mb-2" />
-        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-4">Running azure-full-report.js — querying all Azure services (~30–60s)…</RadzenText>
+        <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" class="rz-mb-1" Style="height:22px" />
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px" class="rz-mb-2">
+            <RadzenIcon Icon="sync" Style="font-size:1rem;animation:spin 1.4s linear infinite" />
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary">@_progressStep</RadzenText>
+        </RadzenStack>
+        @if (_progressLog.Count > 0)
+        {
+            <div style="max-height:140px;overflow-y:auto;background:rgba(0,0,0,.35);border-radius:6px;padding:.5rem .75rem;font-family:monospace;font-size:.72rem;line-height:1.6;color:var(--rz-text-secondary-color);margin-bottom:1rem">
+                @foreach (var line in _progressLog)
+                {
+                    <div>@line</div>
+                }
+            </div>
+        }
     }
 
     <!-- ── Summary Strip ── -->
@@ -543,6 +555,9 @@ else
     };
 
     private bool _refreshing;
+    private int    _progressPercent;
+    private string _progressStep = "";
+    private List<string> _progressLog = new();
 
     protected override async Task OnInitializedAsync() => await LoadReportAsync();
 
@@ -585,12 +600,27 @@ else
 
     private async Task RefreshAsync()
     {
-        _refreshing = true;
-        report = null;
+        _refreshing      = true;
+        _progressPercent = 0;
+        _progressStep    = "Starting…";
+        _progressLog     = new();
+        report           = null;
         StateHasChanged();
+
+        // Start polling progress in the background while the POST runs
+        using var pollCts = new System.Threading.CancellationTokenSource();
+        var pollTask = PollProgressAsync(pollCts.Token);
+
         try
         {
             var resp = await Http.PostAsync("/api/diag/refresh", null);
+            // Stop polling
+            pollCts.Cancel();
+            try { await pollTask; } catch { /* cancelled */ }
+
+            // Do one final poll to capture the completed/failed state
+            await FetchProgressAsync();
+
             if (resp.IsSuccessStatusCode)
             {
                 await LoadReportAsync();
@@ -604,6 +634,9 @@ else
         }
         catch (Exception ex)
         {
+            pollCts.Cancel();
+            try { await pollTask; } catch { /* cancelled */ }
+            await FetchProgressAsync();
             NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
         }
         finally
@@ -612,6 +645,33 @@ else
             StateHasChanged();
         }
     }
+
+    private async Task PollProgressAsync(System.Threading.CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            await FetchProgressAsync();
+            try { await Task.Delay(1200, ct); } catch (TaskCanceledException) { break; }
+        }
+    }
+
+    private async Task FetchProgressAsync()
+    {
+        try
+        {
+            var snap = await Http.GetFromJsonAsync<ProgressSnapshot>("/api/diag/refresh-progress");
+            if (snap is not null)
+            {
+                _progressPercent = snap.Percent;
+                _progressStep    = snap.Step;
+                _progressLog     = snap.Log?.ToList() ?? new();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch { /* ignore transient errors */ }
+    }
+
+    private record ProgressSnapshot(bool IsRunning, string Step, int Percent, string[]? Log);
 
     private static List<SafeToRemoveItem> BuildSafeToRemove(AzureReport? r)
     {

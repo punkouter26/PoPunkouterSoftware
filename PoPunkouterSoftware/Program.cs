@@ -135,6 +135,7 @@ try
     // Also register concrete types for internal feature use (DiagEndpoints uses AzureReportStore/AzureReportService directly)
     builder.Services.AddSingleton<AzureReportStore>(sp => (AzureReportStore)sp.GetRequiredService<IAzureReportRepository>());
     builder.Services.AddTransient<AzureReportService>(sp => (AzureReportService)sp.GetRequiredService<IAzureReportService>());
+    builder.Services.AddSingleton<RefreshProgressService>();
 
     var app = builder.Build();
 
@@ -208,13 +209,28 @@ try
         {
             try
             {
-                Azure.Data.Tables.TableServiceClient tableService = !string.IsNullOrWhiteSpace(tableConnStr)
-                    ? new Azure.Data.Tables.TableServiceClient(tableConnStr)
-                    : new Azure.Data.Tables.TableServiceClient(new Uri(tableEndpoint!), new DefaultAzureCredential());
+                // Derive the probe URL: prefer explicit endpoint, otherwise parse it from the connection string
+                string? probeUrl = tableEndpoint;
+                if (string.IsNullOrWhiteSpace(probeUrl) && !string.IsNullOrWhiteSpace(tableConnStr))
+                {
+                    // Connection string contains TableEndpoint=https://... or we can build it from AccountName
+                    var parts = tableConnStr.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(p => p.Split('=', 2))
+                        .Where(p => p.Length == 2)
+                        .ToDictionary(p => p[0], p => p[1], StringComparer.OrdinalIgnoreCase);
+                    if (parts.TryGetValue("TableEndpoint", out var te))
+                        probeUrl = te;
+                    else if (parts.TryGetValue("AccountName", out var acct))
+                        probeUrl = $"https://{acct}.table.core.windows.net/";
+                }
 
                 using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                await tableService.GetPropertiesAsync(cts2.Token);
-                checks["TableStorage"] = new { status = "reachable" };
+                var tsResp = await client.GetAsync(probeUrl, cts2.Token);
+                // 400/401/403 from Table Storage means the service is up; auth errors are expected for an anonymous ping
+                var tsStatus = tsResp.StatusCode is >= System.Net.HttpStatusCode.OK and <= System.Net.HttpStatusCode.InternalServerError
+                    ? "reachable" : "unreachable";
+                if (tsStatus != "reachable") allHealthy = false;
+                checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode };
             }
             catch (Exception ex)
             {

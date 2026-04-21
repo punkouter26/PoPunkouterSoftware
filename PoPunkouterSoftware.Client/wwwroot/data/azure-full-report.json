@@ -1,5 +1,5 @@
 {
-  "GeneratedAt": "2026-04-21T04:05:23.3212648Z",
+  "GeneratedAt": "2026-04-21T13:48:52.619076Z",
   "Subscription": {
     "Name": "Punkouter26"
   },
@@ -23,14 +23,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15014,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
+          "ResponseTime": 8953,
+          "Error": null,
+          "IsAzureErrorPage": false
         },
         "Metrics7Days": {
-          "Requests": 444,
+          "Requests": 640,
           "Http5xx": 26,
-          "AverageResponseTime": 27
+          "AverageResponseTime": 26.7
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -50,12 +50,12 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 333,
+          "ResponseTime": 1933,
           "Error": null,
           "IsAzureErrorPage": false
         },
         "Metrics7Days": {
-          "Requests": 95,
+          "Requests": 97,
           "Http5xx": 0,
           "AverageResponseTime": 2
         },
@@ -77,7 +77,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15009,
+          "ResponseTime": 15012,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -104,14 +104,14 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 383,
+          "ResponseTime": 1958,
           "Error": null,
           "IsAzureErrorPage": false
         },
         "Metrics7Days": {
-          "Requests": 101,
+          "Requests": 104,
           "Http5xx": 0,
-          "AverageResponseTime": 1.6
+          "AverageResponseTime": 2.5
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -131,14 +131,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15012,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 2,
+          "Requests": 5,
           "Http5xx": 0,
-          "AverageResponseTime": 354.7
+          "AverageResponseTime": 321.2
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -158,7 +158,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15012,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -185,7 +185,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15012,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -212,14 +212,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15012,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
           "Requests": 468,
           "Http5xx": 202,
-          "AverageResponseTime": 2060.6
+          "AverageResponseTime": 2063.5
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -239,14 +239,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
+          "ResponseTime": 9001,
+          "Error": null,
+          "IsAzureErrorPage": false
         },
         "Metrics7Days": {
           "Requests": 2040,
           "Http5xx": 0,
-          "AverageResponseTime": 39
+          "AverageResponseTime": 39.4
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -266,7 +266,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15013,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -293,7 +293,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15013,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -320,9 +320,9 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
+          "ResponseTime": 5860,
+          "Error": "Azure error page",
+          "IsAzureErrorPage": true
         },
         "Metrics7Days": {
           "Requests": 63,
@@ -347,14 +347,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15011,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 2191,
-          "Http5xx": 0,
-          "AverageResponseTime": 36.9
+          "Requests": 2432,
+          "Http5xx": 13,
+          "AverageResponseTime": 34.7
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -374,7 +374,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15007,
+          "ResponseTime": 15009,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -401,7 +401,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15007,
+          "ResponseTime": 15009,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -428,7 +428,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15007,
+          "ResponseTime": 15006,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -455,7 +455,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15007,
+          "ResponseTime": 15008,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -482,9 +482,9 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15007,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
+          "ResponseTime": 6421,
+          "Error": "Azure error page",
+          "IsAzureErrorPage": true
         },
         "Metrics7Days": {
           "Requests": 2366,
@@ -509,7 +509,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15007,
+          "ResponseTime": 15006,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -528,7 +528,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 141,
+          "ResponseTime": 190,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -551,7 +551,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 153,
+          "ResponseTime": 189,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -574,7 +574,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 180,
+          "ResponseTime": 185,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -588,13 +588,13 @@
     ]
   },
   "Cost": {
-    "TotalCost30Days": 16.0196,
-    "TotalFormatted": "$16.02",
+    "TotalCost30Days": 16.3891,
+    "TotalFormatted": "$16.39",
     "Note": null,
     "TopCostDrivers": [
       {
         "Name": "Azure App Service (poshared)",
-        "Cost": 12.138
+        "Cost": 12.376
       },
       {
         "Name": "Container Registry (porepolinetracker)",
@@ -602,19 +602,23 @@
       },
       {
         "Name": "Foundry Models (poshared)",
-        "Cost": 0.4639
-      },
-      {
-        "Name": "Storage (pomarriedlifegoogle)",
-        "Cost": 0.2209
+        "Cost": 0.4739
       },
       {
         "Name": "Key Vault (poshared)",
-        "Cost": 0.2197
+        "Cost": 0.2912
+      },
+      {
+        "Name": "Storage (pomarriedlifegoogle)",
+        "Cost": 0.2294
       },
       {
         "Name": "Storage (polinks)",
-        "Cost": 0.1078
+        "Cost": 0.1092
+      },
+      {
+        "Name": "SQL Database (poshared)",
+        "Cost": 0.0402
       },
       {
         "Name": "Azure App Service (popunkoutersoftware)",
@@ -626,7 +630,7 @@
       },
       {
         "Name": "Bandwidth (pomarriedlifegoogle)",
-        "Cost": 0.0017
+        "Cost": 0.0018
       },
       {
         "Name": "Storage (porepolinetracker)",
@@ -666,10 +670,6 @@
       },
       {
         "Name": "Storage (pofunquiz)",
-        "Cost": 0
-      },
-      {
-        "Name": "Storage (ponovaweight)",
         "Cost": 0
       }
     ]
@@ -1041,6 +1041,15 @@
         "Recommendation": "Use LRS for lowest cost."
       },
       {
+        "Name": "stpopunkoutersoftware",
+        "Label": "Storage Account",
+        "CurrentSku": "Standard_LRS",
+        "FreeSku": null,
+        "FreeSkuLabel": "5 GB Blob free/month (12 mo)",
+        "ResourceGroup": "PoPunkouterSoftware",
+        "Recommendation": "Use LRS for lowest cost."
+      },
+      {
         "Name": "stpojoker26",
         "Label": "Storage Account",
         "CurrentSku": "Standard_LRS",
@@ -1160,14 +1169,14 @@
     ]
   },
   "AllResourceSummary": {
-    "Total": 58,
+    "Total": 59,
     "ByType": {
       "workspaces": 1,
       "vaults": 1,
       "components": 1,
       "accounts": 6,
       "actiongroups": 1,
-      "storageAccounts": 17,
+      "storageAccounts": 18,
       "userAssignedIdentities": 2,
       "serverFarms": 3,
       "sites": 19,
@@ -1316,6 +1325,12 @@
         {
           "Name": "stponovaweight",
           "ResourceGroup": "PoNovaWeight",
+          "Location": "westus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "stpopunkoutersoftware",
+          "ResourceGroup": "PoPunkouterSoftware",
           "Location": "westus2",
           "Sku": "Standard_LRS"
         },
@@ -2000,6 +2015,16 @@
       ]
     },
     {
+      "Name": "stpopunkoutersoftware",
+      "ResourceGroup": "PoPunkouterSoftware",
+      "Sku": "Standard_LRS",
+      "PublicBlobAccess": false,
+      "HttpsOnly": true,
+      "MinTls": "TLS1_2",
+      "IssueCount": 0,
+      "Issues": []
+    },
+    {
       "Name": "stpojoker26",
       "ResourceGroup": "PoJoker",
       "Sku": "Standard_LRS",
@@ -2145,9 +2170,9 @@
     {
       "Name": "poappideinsights8f9c9a4e",
       "ResourceGroup": "PoShared",
-      "Requests7Days": 10187,
-      "FailedRequests7Days": 2099,
-      "Exceptions7Days": 190
+      "Requests7Days": 10755,
+      "FailedRequests7Days": 2110,
+      "Exceptions7Days": 239
     }
   ],
   "ZombieApps": [
@@ -2263,13 +2288,24 @@
       },
       {
         "Date": "2026-04-20",
-        "Cost": 0.3234
+        "Cost": 0.4436
+      },
+      {
+        "Date": "2026-04-21",
+        "Cost": 0.2494
       }
     ],
-    "ProjectedMonthTotal": 13.98,
-    "ProjectedFormatted": "$13.98"
+    "ProjectedMonthTotal": 14.5,
+    "ProjectedFormatted": "$14.50"
   },
-  "Delta": null,
+  "Delta": {
+    "PreviousGeneratedAt": "2026-04-21T13:36:25.4213222Z",
+    "BrokenServicesDelta": 0,
+    "CostDelta": 0,
+    "NewBrokenServices": [],
+    "RecoveredServices": [],
+    "NewOrphanedResources": []
+  },
   "AlertsAudit": {
     "TotalAlertRules": 0,
     "ServicesWithoutAlerts": [
@@ -2662,7 +2698,7 @@
     "Slots": []
   },
   "DiagnosticCoverage": {
-    "TotalResources": 38,
+    "TotalResources": 39,
     "ResourcesWithDiagnostics": 2,
     "WithoutDiagnostics": [
       {
@@ -2724,6 +2760,11 @@
         "Name": "po-issues",
         "ResourceGroup": "PoIssues",
         "Type": "sites"
+      },
+      {
+        "Name": "stpopunkoutersoftware",
+        "ResourceGroup": "PoPunkouterSoftware",
+        "Type": "storageAccounts"
       },
       {
         "Name": "stpojoker26",
@@ -2848,7 +2889,7 @@
     ]
   },
   "CriticalFindings": {
-    "SeverityScore": 222,
+    "SeverityScore": 223,
     "SeverityLabel": "Critical",
     "Findings": [
       {
@@ -3192,6 +3233,12 @@
         "Category": "Observability",
         "Message": "No diagnostic settings configured",
         "Resource": "po-issues"
+      },
+      {
+        "Severity": "low",
+        "Category": "Observability",
+        "Message": "No diagnostic settings configured",
+        "Resource": "stpopunkoutersoftware"
       },
       {
         "Severity": "low",

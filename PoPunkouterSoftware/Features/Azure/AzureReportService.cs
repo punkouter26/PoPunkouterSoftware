@@ -51,13 +51,22 @@ public class AzureReportService : IAzureReportService
 
     // ── Public entry point ────────────────────────────────────────────────────
 
-    public async Task<AzureReport> RunAsync(CancellationToken ct = default)
+    public async Task<AzureReport> RunAsync(IProgress<(string Step, int Percent)>? progress = null, CancellationToken ct = default)
     {
+        void Report(string step, int pct, string? detail = null)
+        {
+            _logger.LogInformation("[{Pct}%] {Step}{Detail}", pct, step, detail is not null ? $" — {detail}" : "");
+            progress?.Report((step, pct));
+        }
+
         var previousReport = await _repository.LoadPreviousAsync(ct);
         _logger.LogInformation("AzureReportService: starting analysis");
+
+        Report("Authenticating with Azure…", 3);
         var cred = new DefaultAzureCredential();
         var arm  = new ArmClient(cred);
 
+        Report("Loading subscription…", 7);
         // Use configured subscription ID if set — avoids VS Code credential picking wrong account
         var configuredSubId = _config["Azure:SubscriptionId"];
         SubscriptionResource subscription;
@@ -73,13 +82,18 @@ public class AzureReportService : IAzureReportService
         var subscriptionId = subscription.Data.SubscriptionId!;
         _logger.LogInformation("Subscription: {Name} ({Id})", subscription.Data.DisplayName, subscriptionId);
 
+        Report("Discovering web services…", 15, subscription.Data.DisplayName);
         var rawServices   = await DiscoverWebServicesAsync(subscription, ct);
         _logger.LogInformation("Discovered {Count} web services", rawServices.Count);
 
+        Report("Testing connectivity…", 28, $"{rawServices.Count} services found");
         var connectedSvcs = await TestConnectivityAsync(rawServices, ct);
+
+        Report("Loading all resources…", 36);
         var allResources  = await GetAllResourcesAsync(subscription, ct);
         _logger.LogInformation("Found {Count} total resources", allResources.Count);
 
+        Report("Fetching metrics (7 days)…", 45, $"{allResources.Count} resources");
         var metricsMap  = await GetMetricsAsync(connectedSvcs, cred, ct);
 
         // Acquire one ARM token shared across all Cost Management calls to avoid extra roundtrips
@@ -91,23 +105,50 @@ public class AzureReportService : IAzureReportService
         }
         catch (Exception ex) { _logger.LogWarning(ex, "Could not obtain ARM token — cost/burn-rate will be unavailable"); }
 
+        Report("Fetching cost data…", 53);
         var costInfo    = await GetCostAsync(subscriptionId, armToken, ct);
+
+        Report("Checking SSL certificates…", 60);
         var sslExpiry   = await CheckSslAsync(connectedSvcs, ct);
+
+        Report("Checking configuration drift…", 65);
         var configDrift = await GetConfigDriftAsync(connectedSvcs, arm, ct);
+
+        Report("Scanning storage accounts…", 70);
         var storageInv  = await GetStorageInventoryAsync(allResources, armToken, ct);
+
+        Report("Analysing free tiers & zombies…", 74);
         var freeTier    = AnalyzeFreeTiers(allResources);
         var zombies     = DetectZombies(connectedSvcs, metricsMap);
+
+        Report("Diffing apps.json…", 77);
         var appsDiff     = await DiffAppsJsonAsync(connectedSvcs, ct);
+
+        Report("Calculating burn rate…", 80);
         var burnRate     = await GetBurnRateAsync(subscriptionId, armToken, ct);
+
+        Report("Scanning orphaned resources…", 83);
         var orphaned     = await GetOrphanedResourcesAsync(allResources, armToken, ct);
+
+        Report("Fetching App Insights metrics…", 86);
         var appInsights  = await GetAppInsightsMetricsAsync(allResources, cred, ct);
 
-        // New audit steps
+        Report("Auditing alert rules…", 89);
         var alertsAudit  = await GetAlertRulesAuditAsync(connectedSvcs, armToken, subscriptionId, ct);
+
+        Report("Auditing auto-scale settings…", 91);
         var autoScale    = await GetAutoScaleAuditAsync(connectedSvcs, armToken, subscriptionId, ct);
+
+        Report("Auditing backup policies…", 93);
         var backupAudit  = await GetBackupAuditAsync(connectedSvcs, armToken, ct);
+
+        Report("Checking deployment slots…", 95);
         var slots        = await GetDeploymentSlotsAsync(connectedSvcs, armToken, ct);
+
+        Report("Checking diagnostic coverage…", 97);
         var diagCoverage = await GetDiagnosticCoverageAsync(allResources, armToken, ct);
+
+        Report("Auditing RBAC…", 99);
         var rbacAudit    = await GetRbacAuditAsync(subscriptionId, armToken, ct);
 
         var servicesList = connectedSvcs.Select(s =>

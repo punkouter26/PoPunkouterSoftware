@@ -85,3 +85,16 @@ TestResults/
 *.tmp
 *.temp
 ~$*
+
+# Blazor / Wasm cache
+.blazor/
+
+# npm/yarn lock artifacts from CI tools
+package-lock.json.bak
+
+# Playwright Chromium binaries (kept in node_modules, not tracked)
+tests/PoPunkouterSoftware.Tests.E2E/.playwright/
+
+# macOS extended attributes
+*.AppleDouble
+*.LSOverride

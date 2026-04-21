@@ -36,16 +36,20 @@ internal static class DiagEndpoints
         // ── Refresh via C# Azure SDK (works locally + on Azure with Managed Identity) ──
         app.MapPost("/api/diag/refresh",
             async (AzureReportService azureService, AzureReportStore store,
-                   IWebHostEnvironment env, ILogger<Program> logger, HttpContext ctx) =>
+                   IWebHostEnvironment env, ILogger<Program> logger,
+                   RefreshProgressService progressSvc, HttpContext ctx) =>
         {
             var sw = Stopwatch.StartNew();
             // Use a separate CTS so browser disconnects don't cancel the long-running analysis.
             // Timeout of 10 minutes is a hard ceiling; the analysis normally takes ~2 min.
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             var ct = cts.Token;
+            progressSvc.Start();
+            var progress = new Progress<(string Step, int Percent)>(p => progressSvc.Report(p.Step, p.Percent));
             try
             {
-                var report = await azureService.RunAsync(ct);
+                var report = await azureService.RunAsync(progress, ct);
+                progressSvc.Complete();
 
                 // Save to Blob Storage (if configured)
                 await store.SaveAsync(report, ct);
@@ -66,13 +70,28 @@ internal static class DiagEndpoints
             }
             catch (OperationCanceledException)
             {
+                progressSvc.Fail("Request cancelled or timed out.");
                 return Results.Problem(detail: "Request cancelled or timed out.", title: "Cancelled", statusCode: 499);
             }
             catch (Exception ex)
             {
+                progressSvc.Fail(ex.Message);
                 logger.LogError(ex, "Azure report refresh failed");
                 return Results.Problem(ex.Message);
             }
+        });
+
+        // ── Refresh progress (polled by the UI during a running refresh) ──────
+        app.MapGet("/api/diag/refresh-progress", (RefreshProgressService progressSvc) =>
+        {
+            var snap = progressSvc.Snapshot();
+            return Results.Ok(new
+            {
+                isRunning = snap.IsRunning,
+                step      = snap.Step,
+                percent   = snap.Percent,
+                log       = snap.Log,
+            });
         });
 
         // ── Az CLI login status ──────────────────────────────────────────────
