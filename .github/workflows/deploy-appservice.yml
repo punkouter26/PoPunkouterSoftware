@@ -9,6 +9,9 @@ concurrency:
   group: deploy-popunkoutersoftware-master
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -22,6 +25,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+          cache: 'nuget'
 
       - name: Publish
         run: dotnet publish PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release -o ./publish
@@ -37,7 +41,7 @@ jobs:
       - name: Deploy to Azure App Service
         shell: bash
         run: |
-          az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --src-path ./deploy.zip --type zip --clean true --async true
+          az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --src-path ./deploy.zip --type zip --clean true
           az webapp restart --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
 
       - name: Verify health endpoint
