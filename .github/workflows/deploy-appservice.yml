@@ -37,22 +37,34 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Stop app before deploy
+        shell: bash
+        run: |
+          echo "Stopping app to clear any running background tasks..."
+          az webapp stop --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
+          sleep 5
+
       - name: Deploy to Azure App Service
         shell: bash
         run: |
           az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --src-path ./deploy.zip --type zip --clean true
-          az webapp restart --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
+
+      - name: Start app after deploy
+        shell: bash
+        run: |
+          az webapp start --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
 
       - name: Verify health endpoint
         shell: bash
         run: |
-          for i in {1..24}; do
-            if curl -fsS "https://${APP_NAME}.azurewebsites.net/health" > /dev/null; then
-              echo "Health check passed"
+          for i in {1..36}; do
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 "https://${APP_NAME}.azurewebsites.net/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed (attempt $i)"
               exit 0
             fi
-            echo "Waiting for app warm-up ($i/24)..."
+            echo "Waiting for app warm-up ($i/36, status=$STATUS)..."
             sleep 10
           done
-          echo "Health check failed"
+          echo "Health check failed after 6 minutes"
           exit 1
