@@ -7,8 +7,14 @@ using Radzen;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 // ─── HttpClient — base URL is the server that hosts this WASM app ─────────────
+// Timeout raised to 5 min: the Azure report JSON can be large, and the server may
+// be briefly busy after a full subscription scan (thread-pool catch-up).
 builder.Services.AddScoped(sp =>
-    new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+    new HttpClient
+    {
+        BaseAddress = new Uri(builder.HostEnvironment.BaseAddress),
+        Timeout     = TimeSpan.FromMinutes(5),
+    });
 
 // ─── Radzen UI services ───────────────────────────────────────────────────────
 builder.Services.AddRadzenComponents();
