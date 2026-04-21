@@ -22,7 +22,7 @@ public sealed class RefreshProgressService
             _log.Clear();
             Step    = "Starting…";
             Percent = 0;
-            _log.Add($"[{Ts()}] 🚀 Refresh started");
+            _log.Add($"[{Ts()}] Refresh started");
         }
     }
 
@@ -43,7 +43,7 @@ public sealed class RefreshProgressService
             IsRunning = false;
             Step      = "Complete";
             Percent   = 100;
-            _log.Add($"[{Ts()}] ✅ Refresh complete");
+            _log.Add($"[{Ts()}] Refresh complete");
         }
     }
 
@@ -53,7 +53,7 @@ public sealed class RefreshProgressService
         {
             IsRunning = false;
             Step      = "Failed";
-            _log.Add($"[{Ts()}] ❌ {error}");
+            _log.Add($"[{Ts()}] ERROR: {error}");
         }
     }
 
