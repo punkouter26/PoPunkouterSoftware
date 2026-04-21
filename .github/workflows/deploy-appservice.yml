@@ -53,7 +53,7 @@ jobs:
       - name: Deploy to Azure App Service
         shell: bash
         run: |
-          az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --src-path ./deploy.zip --type zip --clean true --async true
+          az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --src-path ./deploy.zip --type zip --clean true --async
 
       - name: Start app after deploy
         shell: bash
