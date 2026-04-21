@@ -217,11 +217,11 @@ else
                                 <RadzenBadge Text="@($"Projected: {currentReport.BurnRate?.ProjectedFormatted ?? "—"}")" BadgeStyle="BadgeStyle.Warning" IsPill="true" Style="font-size:.75rem;margin-left:.5rem" />
                             </RadzenText>
                             <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-1">Based on daily spend this calendar month only — not rolling 30d</RadzenText>
-                            <RadzenChart Style="height:260px">
+                            <RadzenChart Style="height:280px">
                                 <RadzenLineSeries TItem="DailyCostChartPoint" Data="@BurnRateChartData" CategoryProperty="Date" ValueProperty="Cost" Title="Daily ($)" Smooth="true">
                                     <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" />
                                 </RadzenLineSeries>
-                                <RadzenCategoryAxis />
+                                <RadzenCategoryAxis Step="@BurnRateLabelStep" />
                                 <RadzenValueAxis FormatString="${0:F2}">
                                     <RadzenGridLines Visible="true" />
                                 </RadzenValueAxis>
@@ -729,5 +729,12 @@ else
 
     private List<DailyCostChartPoint> BurnRateChartData =>
         report?.BurnRate?.DailyCosts
-            .Select(d => new DailyCostChartPoint(d.Date, d.Cost)).ToList() ?? new();
+            .Select(d => new DailyCostChartPoint(
+                DateTime.TryParse(d.Date, out var dt) ? dt.ToString("MMM d") : d.Date,
+                d.Cost)).ToList() ?? new();
+
+    // Show a label every ~5 days so the x-axis stays readable
+    private int BurnRateLabelStep =>
+        BurnRateChartData.Count > 20 ? 5 :
+        BurnRateChartData.Count > 10 ? 3 : 1;
 }
