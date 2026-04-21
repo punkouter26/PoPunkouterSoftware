@@ -580,14 +580,17 @@ public class AzureReportService : IAzureReportService
 
         var client = _httpClientFactory.CreateClient();
 
-        foreach (var sa in storages)
+        async Task<StorageItem?> CheckOneAsync(GenericResourceData sa)
         {
             try
             {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(15));
+
                 using var req = new HttpRequestMessage(HttpMethod.Get,
                     $"https://management.azure.com{sa.Id}?api-version=2023-01-01");
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
-                using var resp = await client.SendAsync(req, ct);
+                using var resp = await client.SendAsync(req, cts.Token);
 
                 bool publicBlob = false;
                 bool httpsOnly  = true;
@@ -595,7 +598,7 @@ public class AzureReportService : IAzureReportService
 
                 if (resp.IsSuccessStatusCode)
                 {
-                    var json = await resp.Content.ReadAsStringAsync(ct);
+                    var json = await resp.Content.ReadAsStringAsync(cts.Token);
                     var doc  = JsonDocument.Parse(json);
                     if (doc.RootElement.TryGetProperty("properties", out var p))
                     {
@@ -616,7 +619,7 @@ public class AzureReportService : IAzureReportService
                 if (minTls is not null && string.Compare(minTls, "TLS1_2", StringComparison.Ordinal) < 0)
                     issues.Add(new StorageIssue { Severity = "medium", Issue = $"Min TLS {minTls} — upgrade to TLS 1.2" });
 
-                results.Add(new StorageItem
+                return new StorageItem
                 {
                     Name             = sa.Name,
                     ResourceGroup    = sa.Id?.ResourceGroupName,
@@ -626,13 +629,17 @@ public class AzureReportService : IAzureReportService
                     MinTls           = minTls,
                     IssueCount       = issues.Count,
                     Issues           = issues,
-                });
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Storage check failed for {Name}", sa.Name);
+                return null;
             }
         }
+
+        var items = await Task.WhenAll(storages.Select(CheckOneAsync));
+        results.AddRange(items.OfType<StorageItem>());
         return results;
     }
 
