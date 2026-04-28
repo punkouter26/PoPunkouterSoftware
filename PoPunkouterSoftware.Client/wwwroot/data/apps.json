@@ -79,19 +79,6 @@
       "githubRepo": "punkouter5/PoRobotStocks"
     },
     {
-      "id": "poappidea",
-      "name": "PoAppIdea",
-      "description": "App idea brainstorming tool",
-      "category": "productivity",
-      "status": "disabled",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://poappidea-web.azurewebsites.net",
-      "githubRepo": null
-    },
-    {
       "id": "pocouplequiz",
       "name": "PoCoupleQuiz",
       "description": "Interactive couplequiz game",

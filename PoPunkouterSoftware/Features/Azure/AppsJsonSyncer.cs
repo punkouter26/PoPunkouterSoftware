@@ -49,6 +49,7 @@ public static class AppsJsonSyncer
 
         var services = report.WebServices?.Services ?? new List<WebService>();
         var discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var discoveredHosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // ── Process every service discovered in Azure ─────────────────────────
         foreach (var svc in services)
@@ -56,6 +57,8 @@ public static class AppsJsonSyncer
             if (string.IsNullOrWhiteSpace(svc.Url)) continue;
             var slug = Slugify(svc.Name);
             discoveredIds.Add(slug);
+            if (TryGetHost(svc.Url, out var discoveredHost))
+                discoveredHosts.Add(discoveredHost);
 
             var techs = InferTechnologies(svc.ResourceType);
 
@@ -103,19 +106,24 @@ public static class AppsJsonSyncer
             }
         }
 
-        // ── Apps in apps.json that no longer exist in Azure ───────────────────
-        // We deliberately do NOT auto-demote apps that aren't found — the user
-        // controls status. Mark removed apps with a warning annotation in the ID.
-        // (Deleted Azure resources stay visible until the user manually removes them.)
-        var skippedUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var app in apps)
+        // ── Prune Azure-hosted apps that were removed from Azure ───────────────
+        // Only prune when discovery returned at least one service to avoid wiping
+        // apps.json due to transient auth/config failures that produce empty data.
+        if (services.Count > 0)
         {
-            // If this app's URL matches a discovered URL, skip marking
-            if (!string.IsNullOrWhiteSpace(app.Url) && discoveredIds.Contains(app.Id)) continue;
-            // If this app's slug matches a discovered slug, skip
-            if (discoveredIds.Contains(app.Id)) continue;
-            // Otherwise it's a stale entry — we leave it in place but flag it
-            // (no auto-demotion as per intentional design)
+            apps = apps
+                .Where(app =>
+                {
+                    if (!IsAzureHostedUrl(app.Url))
+                        return true;
+
+                    var idMatched = !string.IsNullOrWhiteSpace(app.Id) && discoveredIds.Contains(app.Id);
+                    if (idMatched)
+                        return true;
+
+                    return TryGetHost(app.Url, out var appHost) && discoveredHosts.Contains(appHost);
+                })
+                .ToList();
         }
 
         // ── Sort and write back ───────────────────────────────────────────────
@@ -193,6 +201,27 @@ public static class AppsJsonSyncer
         var s = name.ToLowerInvariant();
         s = System.Text.RegularExpressions.Regex.Replace(s, @"[^a-z0-9]+", "-");
         return s.Trim('-');
+    }
+
+    private static bool TryGetHost(string? url, out string host)
+    {
+        host = string.Empty;
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || string.IsNullOrWhiteSpace(uri.Host))
+            return false;
+        host = uri.Host;
+        return true;
+    }
+
+    private static bool IsAzureHostedUrl(string? url)
+    {
+        if (!TryGetHost(url, out var host))
+            return false;
+
+        return host.EndsWith(".azurewebsites.net", StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith(".azurestaticapps.net", StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith(".azurecontainerapps.io", StringComparison.OrdinalIgnoreCase);
     }
 
     // ── Local model types (only used for apps.json serialisation) ─────────────

@@ -262,6 +262,31 @@ public class AppsJsonSyncerTests : IDisposable
     }
 
     [Fact]
+    public async Task SyncAsync_RemovedAzureHostedApp_IsPruned_WhenDiscoverySucceeds()
+    {
+        var path = TempPath("apps.json");
+        var initial =
+            "{" +
+            "\"apps\":[" +
+            "{\"id\":\"poappidea\",\"name\":\"PoAppIdea\",\"description\":\"desc\",\"status\":\"inactive\",\"url\":\"https://poappidea-web.azurewebsites.net\",\"technologies\":[\"Azure\"]}," +
+            "{\"id\":\"keep-app\",\"name\":\"KeepApp\",\"description\":\"desc\",\"status\":\"active\",\"url\":\"https://keep-app.azurewebsites.net\",\"technologies\":[\"Azure\"]}" +
+            "]}";
+        await File.WriteAllTextAsync(path, initial);
+
+        var report = BuildReport(("keep-app", "https://keep-app.azurewebsites.net", "microsoft.web/sites"));
+        await AppsJsonSyncer.SyncAsync(report, path);
+
+        var json = await File.ReadAllTextAsync(path);
+        var doc  = JsonDocument.Parse(json);
+        var ids = doc.RootElement.GetProperty("apps")
+            .EnumerateArray()
+            .Select(a => a.GetProperty("id").GetString())
+            .ToList();
+
+        ids.Should().ContainSingle().Which.Should().Be("keep-app");
+    }
+
+    [Fact]
     public async Task SyncAsync_MissingAppsJson_CreatesNewFile()
     {
         var path   = TempPath("missing-apps.json");
