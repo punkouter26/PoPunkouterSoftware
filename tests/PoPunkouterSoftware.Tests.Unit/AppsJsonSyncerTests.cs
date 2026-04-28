@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
-using PoShared.Azure;
+using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Infrastructure;
 using Azure.Security.KeyVault.Secrets;

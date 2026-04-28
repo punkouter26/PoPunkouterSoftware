@@ -1,4 +1,4 @@
-using PoShared.Azure;
+using PoPunkouterSoftware.Shared.Azure;
 
 namespace PoPunkouterSoftware.Application.Azure;
 

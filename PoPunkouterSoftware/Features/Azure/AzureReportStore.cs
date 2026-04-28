@@ -1,6 +1,6 @@
 using Azure.Data.Tables;
 using Azure.Identity;
-using PoShared.Azure;
+using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Domain.Azure;
 using System.IO.Compression;
 using System.Text;
@@ -99,6 +99,35 @@ public class AzureReportStore : IAzureReportRepository
         {
             _logger.LogError(ex, "Failed to save AzureReport to Table Storage");
         }
+    }
+
+    public async Task<List<AzureReport>> LoadHistoryAsync(int maxEntries = 90, CancellationToken ct = default)
+    {
+        var tableClient = await GetTableClientAsync(ct);
+        if (tableClient is null)
+            return new();
+
+        var results = new List<AzureReport>();
+        try
+        {
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>(
+                filter: $"PartitionKey eq '{HistoryPartitionKey}'",
+                maxPerPage: maxEntries,
+                cancellationToken: ct))
+            {
+                var json = DecompressEntity(entity);
+                if (string.IsNullOrWhiteSpace(json)) continue;
+                var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
+                if (report is not null)
+                    results.Add(report);
+                if (results.Count >= maxEntries) break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not load AzureReport history from Table Storage");
+        }
+        return results;
     }
 
     public async Task<AzureReport?> LoadPreviousAsync(CancellationToken ct = default)

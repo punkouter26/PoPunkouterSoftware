@@ -1,13 +1,13 @@
 {
-  "GeneratedAt": "2026-04-21T13:48:52.619076Z",
+  "GeneratedAt": "2026-04-28T14:34:46.2644351Z",
   "Subscription": {
     "Name": "Punkouter26"
   },
   "WebServices": {
-    "Total": 22,
+    "Total": 21,
     "ByStatus": {
-      "Active": 5,
-      "Broken": 17,
+      "Active": 6,
+      "Broken": 15,
       "Other": 0
     },
     "Services": [
@@ -23,14 +23,41 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 8953,
-          "Error": null,
-          "IsAzureErrorPage": false
+          "ResponseTime": 15724,
+          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 640,
-          "Http5xx": 26,
-          "AverageResponseTime": 26.7
+          "Requests": 1274,
+          "Http5xx": 0,
+          "AverageResponseTime": 12.4
+        },
+        "FreeTierCheck": {
+          "IsOnFreeTier": false,
+          "IsOnPaidTier": false,
+          "CanGoFree": true
+        }
+      },
+      {
+        "Name": "poredoimage-web",
+        "FriendlyName": "PoRedoImage",
+        "ResourceGroup": "PoRedoImage",
+        "ResourceType": "Microsoft.Web/sites",
+        "Kind": "app,linux",
+        "Url": "https://poredoimage-web.azurewebsites.net",
+        "HttpStatus": "broken",
+        "PlatformState": "Running",
+        "Description": null,
+        "Connectivity": {
+          "Success": false,
+          "ResponseTime": 15808,
+          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "IsAzureErrorPage": null
+        },
+        "Metrics7Days": {
+          "Requests": 98,
+          "Http5xx": 0,
+          "AverageResponseTime": 104.3
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -45,19 +72,19 @@
         "ResourceType": "Microsoft.Web/sites",
         "Kind": "app,linux",
         "Url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
-        "HttpStatus": "active",
+        "HttpStatus": "broken",
         "PlatformState": "Running",
         "Description": null,
         "Connectivity": {
-          "Success": true,
-          "ResponseTime": 1933,
-          "Error": null,
-          "IsAzureErrorPage": false
+          "Success": false,
+          "ResponseTime": 15774,
+          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 97,
+          "Requests": 4,
           "Http5xx": 0,
-          "AverageResponseTime": 2
+          "AverageResponseTime": 0.3
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -77,14 +104,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15012,
+          "ResponseTime": 15524,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 916,
+          "Requests": 0,
           "Http5xx": 0,
-          "AverageResponseTime": 2.8
+          "AverageResponseTime": 0
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -104,14 +131,14 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 1958,
+          "ResponseTime": 3846,
           "Error": null,
           "IsAzureErrorPage": false
         },
         "Metrics7Days": {
-          "Requests": 104,
+          "Requests": 10,
           "Http5xx": 0,
-          "AverageResponseTime": 2.5
+          "AverageResponseTime": 177.8
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -131,14 +158,41 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15012,
+          "ResponseTime": 15655,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
           "Requests": 5,
           "Http5xx": 0,
-          "AverageResponseTime": 321.2
+          "AverageResponseTime": 35.9
+        },
+        "FreeTierCheck": {
+          "IsOnFreeTier": false,
+          "IsOnPaidTier": false,
+          "CanGoFree": true
+        }
+      },
+      {
+        "Name": "pomarriedlife-api",
+        "FriendlyName": "PoMarriedLife",
+        "ResourceGroup": "PoMarriedLife",
+        "ResourceType": "Microsoft.Web/sites",
+        "Kind": "app,linux",
+        "Url": "https://pomarriedlife-api.azurewebsites.net",
+        "HttpStatus": "broken",
+        "PlatformState": "Running",
+        "Description": null,
+        "Connectivity": {
+          "Success": false,
+          "ResponseTime": 15587,
+          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "IsAzureErrorPage": null
+        },
+        "Metrics7Days": {
+          "Requests": 1007,
+          "Http5xx": 77,
+          "AverageResponseTime": 32.9
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -158,34 +212,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15012,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
-        },
-        "Metrics7Days": {
-          "Requests": 396,
-          "Http5xx": 0,
-          "AverageResponseTime": 1.2
-        },
-        "FreeTierCheck": {
-          "IsOnFreeTier": false,
-          "IsOnPaidTier": false,
-          "CanGoFree": true
-        }
-      },
-      {
-        "Name": "app-porepolinetracker",
-        "FriendlyName": "PoRepoLineTracker",
-        "ResourceGroup": "PoRepoLineTracker",
-        "ResourceType": "Microsoft.Web/sites",
-        "Kind": "app,linux",
-        "Url": "https://app-porepolinetracker.azurewebsites.net",
-        "HttpStatus": "broken",
-        "PlatformState": "Running",
-        "Description": null,
-        "Connectivity": {
-          "Success": false,
-          "ResponseTime": 15012,
+          "ResponseTime": 15491,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -212,14 +239,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15012,
+          "ResponseTime": 15422,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 468,
-          "Http5xx": 202,
-          "AverageResponseTime": 2063.5
+          "Requests": 3,
+          "Http5xx": 0,
+          "AverageResponseTime": 47.7
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -239,14 +266,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 9001,
+          "ResponseTime": 2689,
           "Error": null,
           "IsAzureErrorPage": false
         },
         "Metrics7Days": {
           "Requests": 2040,
           "Http5xx": 0,
-          "AverageResponseTime": 39.4
+          "AverageResponseTime": 19.2
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -266,14 +293,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15013,
+          "ResponseTime": 15724,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 220,
-          "Http5xx": 1,
-          "AverageResponseTime": 17
+          "Requests": 0,
+          "Http5xx": 0,
+          "AverageResponseTime": 0
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -293,14 +320,41 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15013,
+          "ResponseTime": 15145,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 35,
+          "Requests": 3,
           "Http5xx": 0,
-          "AverageResponseTime": 40.1
+          "AverageResponseTime": 53.3
+        },
+        "FreeTierCheck": {
+          "IsOnFreeTier": false,
+          "IsOnPaidTier": false,
+          "CanGoFree": true
+        }
+      },
+      {
+        "Name": "app-porepolinetracker",
+        "FriendlyName": "PoRepoLineTracker",
+        "ResourceGroup": "PoRepoLineTracker",
+        "ResourceType": "Microsoft.Web/sites",
+        "Kind": "app,linux",
+        "Url": "https://app-porepolinetracker.azurewebsites.net",
+        "HttpStatus": "broken",
+        "PlatformState": "Running",
+        "Description": null,
+        "Connectivity": {
+          "Success": false,
+          "ResponseTime": 15117,
+          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "IsAzureErrorPage": null
+        },
+        "Metrics7Days": {
+          "Requests": 868,
+          "Http5xx": 2,
+          "AverageResponseTime": 32.7
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -315,19 +369,19 @@
         "ResourceType": "Microsoft.Web/sites",
         "Kind": "app,linux",
         "Url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
-        "HttpStatus": "broken",
+        "HttpStatus": "active",
         "PlatformState": "Running",
         "Description": null,
         "Connectivity": {
-          "Success": false,
-          "ResponseTime": 5860,
-          "Error": "Azure error page",
-          "IsAzureErrorPage": true
+          "Success": true,
+          "ResponseTime": 3615,
+          "Error": null,
+          "IsAzureErrorPage": false
         },
         "Metrics7Days": {
-          "Requests": 63,
-          "Http5xx": 11,
-          "AverageResponseTime": 187.8
+          "Requests": 507,
+          "Http5xx": 4,
+          "AverageResponseTime": 8.5
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -342,19 +396,19 @@
         "ResourceType": "Microsoft.Web/sites",
         "Kind": "app,linux",
         "Url": "https://ponovaweight-app.azurewebsites.net",
-        "HttpStatus": "broken",
+        "HttpStatus": "active",
         "PlatformState": "Running",
         "Description": null,
         "Connectivity": {
-          "Success": false,
-          "ResponseTime": 15011,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
+          "Success": true,
+          "ResponseTime": 2814,
+          "Error": null,
+          "IsAzureErrorPage": false
         },
         "Metrics7Days": {
-          "Requests": 2432,
-          "Http5xx": 13,
-          "AverageResponseTime": 34.7
+          "Requests": 2129,
+          "Http5xx": 4,
+          "AverageResponseTime": 28.3
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -374,34 +428,7 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15009,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
-        },
-        "Metrics7Days": {
-          "Requests": 306,
-          "Http5xx": 0,
-          "AverageResponseTime": 3.2
-        },
-        "FreeTierCheck": {
-          "IsOnFreeTier": false,
-          "IsOnPaidTier": false,
-          "CanGoFree": true
-        }
-      },
-      {
-        "Name": "potraffic-api",
-        "FriendlyName": "PoTraffic",
-        "ResourceGroup": "PoTraffic",
-        "ResourceType": "Microsoft.Web/sites",
-        "Kind": "app,linux",
-        "Url": "https://potraffic-api.azurewebsites.net",
-        "HttpStatus": "broken",
-        "PlatformState": "Running",
-        "Description": null,
-        "Connectivity": {
-          "Success": false,
-          "ResponseTime": 15009,
+          "ResponseTime": 15364,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
@@ -428,14 +455,14 @@
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15006,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
+          "ResponseTime": 4349,
+          "Error": null,
+          "IsAzureErrorPage": false
         },
         "Metrics7Days": {
-          "Requests": 82,
+          "Requests": 1,
           "Http5xx": 0,
-          "AverageResponseTime": 6.4
+          "AverageResponseTime": 122.8
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -444,25 +471,25 @@
         }
       },
       {
-        "Name": "poredoimage-web",
-        "FriendlyName": "PoRedoImage",
-        "ResourceGroup": "PoRedoImage",
+        "Name": "potraffic-api",
+        "FriendlyName": "PoTraffic",
+        "ResourceGroup": "PoTraffic",
         "ResourceType": "Microsoft.Web/sites",
         "Kind": "app,linux",
-        "Url": "https://poredoimage-web.azurewebsites.net",
+        "Url": "https://potraffic-api.azurewebsites.net",
         "HttpStatus": "broken",
         "PlatformState": "Running",
         "Description": null,
         "Connectivity": {
           "Success": false,
-          "ResponseTime": 15008,
+          "ResponseTime": 15281,
           "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "IsAzureErrorPage": null
         },
         "Metrics7Days": {
-          "Requests": 0,
+          "Requests": 1870,
           "Http5xx": 0,
-          "AverageResponseTime": 0
+          "AverageResponseTime": 2.5
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
@@ -477,44 +504,25 @@
         "ResourceType": "Microsoft.Web/sites",
         "Kind": "app,linux",
         "Url": "https://app-powatch.azurewebsites.net",
-        "HttpStatus": "broken",
+        "HttpStatus": "active",
         "PlatformState": "Running",
         "Description": null,
         "Connectivity": {
-          "Success": false,
-          "ResponseTime": 6421,
-          "Error": "Azure error page",
-          "IsAzureErrorPage": true
+          "Success": true,
+          "ResponseTime": 4155,
+          "Error": null,
+          "IsAzureErrorPage": false
         },
         "Metrics7Days": {
-          "Requests": 2366,
-          "Http5xx": 56,
-          "AverageResponseTime": 251.5
+          "Requests": 683,
+          "Http5xx": 0,
+          "AverageResponseTime": 120.3
         },
         "FreeTierCheck": {
           "IsOnFreeTier": false,
           "IsOnPaidTier": false,
           "CanGoFree": true
         }
-      },
-      {
-        "Name": "pomarriedlifeshared7377",
-        "FriendlyName": "PoMarriedLifeGoogle",
-        "ResourceGroup": "PoMarriedLifeGoogle",
-        "ResourceType": "Microsoft.Web/sites/functions",
-        "Kind": "functionapp,linux",
-        "Url": "https://pomarriedlifeshared7377.azurewebsites.net",
-        "HttpStatus": "broken",
-        "PlatformState": "Running",
-        "Description": null,
-        "Connectivity": {
-          "Success": false,
-          "ResponseTime": 15006,
-          "Error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
-          "IsAzureErrorPage": null
-        },
-        "Metrics7Days": null,
-        "FreeTierCheck": null
       },
       {
         "Name": "stapp-5ln5hfdrvof5u",
@@ -528,7 +536,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 190,
+          "ResponseTime": 217,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -551,30 +559,7 @@
         "Description": null,
         "Connectivity": {
           "Success": true,
-          "ResponseTime": 189,
-          "Error": null,
-          "IsAzureErrorPage": false
-        },
-        "Metrics7Days": null,
-        "FreeTierCheck": {
-          "IsOnFreeTier": true,
-          "IsOnPaidTier": false,
-          "CanGoFree": false
-        }
-      },
-      {
-        "Name": "pomarriedlifegoogle",
-        "FriendlyName": "PoMarriedLifeGoogle",
-        "ResourceGroup": "PoMarriedLifeGoogle",
-        "ResourceType": "Microsoft.Web/staticSites",
-        "Kind": null,
-        "Url": "https://gentle-coast-0cb3e800f.2.azurestaticapps.net",
-        "HttpStatus": "active",
-        "PlatformState": "Running",
-        "Description": null,
-        "Connectivity": {
-          "Success": true,
-          "ResponseTime": 185,
+          "ResponseTime": 217,
           "Error": null,
           "IsAzureErrorPage": false
         },
@@ -588,37 +573,41 @@
     ]
   },
   "Cost": {
-    "TotalCost30Days": 16.3891,
-    "TotalFormatted": "$16.39",
+    "TotalCost30Days": 16.3364,
+    "TotalFormatted": "$16.34",
     "Note": null,
     "TopCostDrivers": [
       {
         "Name": "Azure App Service (poshared)",
-        "Cost": 12.376
+        "Cost": 12.41
       },
       {
         "Name": "Container Registry (porepolinetracker)",
-        "Cost": 2.8415
-      },
-      {
-        "Name": "Foundry Models (poshared)",
-        "Cost": 0.4739
-      },
-      {
-        "Name": "Key Vault (poshared)",
-        "Cost": 0.2912
-      },
-      {
-        "Name": "Storage (pomarriedlifegoogle)",
-        "Cost": 0.2294
-      },
-      {
-        "Name": "Storage (polinks)",
-        "Cost": 0.1092
+        "Cost": 1.6753
       },
       {
         "Name": "SQL Database (poshared)",
-        "Cost": 0.0402
+        "Cost": 1.1807
+      },
+      {
+        "Name": "Key Vault (poshared)",
+        "Cost": 0.3294
+      },
+      {
+        "Name": "Foundry Models (poshared)",
+        "Cost": 0.279
+      },
+      {
+        "Name": "Storage (pomarriedlifegoogle)",
+        "Cost": 0.2672
+      },
+      {
+        "Name": "Foundry Tools (poshared)",
+        "Cost": 0.0876
+      },
+      {
+        "Name": "Storage (polinks)",
+        "Cost": 0.0837
       },
       {
         "Name": "Azure App Service (popunkoutersoftware)",
@@ -626,31 +615,27 @@
       },
       {
         "Name": "Bandwidth (polinks)",
-        "Cost": 0.0079
+        "Cost": 0.003
       },
       {
         "Name": "Bandwidth (pomarriedlifegoogle)",
-        "Cost": 0.0018
+        "Cost": 0.002
       },
       {
         "Name": "Storage (porepolinetracker)",
-        "Cost": 0.0007
+        "Cost": 0.0009
       },
       {
         "Name": "Storage (porobotstocks)",
+        "Cost": 0.0007
+      },
+      {
+        "Name": "Bandwidth (porepolinetracker)",
         "Cost": 0.0005
       },
       {
         "Name": "Storage (poseereview)",
         "Cost": 0.0004
-      },
-      {
-        "Name": "Bandwidth (porepolinetracker)",
-        "Cost": 0.0004
-      },
-      {
-        "Name": "Storage (poappidea)",
-        "Cost": 0.0002
       },
       {
         "Name": "Storage (poface)",
@@ -661,48 +646,21 @@
         "Cost": 0.0002
       },
       {
-        "Name": "Bandwidth (poappidea)",
+        "Name": "Storage (poappidea)",
+        "Cost": 0.0002
+      },
+      {
+        "Name": "Storage (pomarriedlife)",
         "Cost": 0.0001
       },
       {
         "Name": "Bandwidth (poseereview)",
-        "Cost": 0
-      },
-      {
-        "Name": "Storage (pofunquiz)",
         "Cost": 0
       }
     ]
   },
   "FreeTier": {
     "OnFree": [
-      {
-        "Name": "cv-poshared-eastus",
-        "Label": "Azure AI / Cognitive",
-        "CurrentSku": "F0",
-        "FreeSku": "F0",
-        "FreeSkuLabel": "Free (F0)",
-        "ResourceGroup": "PoShared",
-        "Recommendation": "F0 sufficient for dev/hobby use."
-      },
-      {
-        "Name": "speech-poshared-eastus",
-        "Label": "Azure AI / Cognitive",
-        "CurrentSku": "F0",
-        "FreeSku": "F0",
-        "FreeSkuLabel": "Free (F0)",
-        "ResourceGroup": "PoShared",
-        "Recommendation": "F0 sufficient for dev/hobby use."
-      },
-      {
-        "Name": "pofaceapi",
-        "Label": "Azure AI / Cognitive",
-        "CurrentSku": "F0",
-        "FreeSku": "F0",
-        "FreeSkuLabel": "Free (F0)",
-        "ResourceGroup": "PoShared",
-        "Recommendation": "F0 sufficient for dev/hobby use."
-      },
       {
         "Name": "asp-poface-free",
         "Label": "App Service Plan",
@@ -711,33 +669,6 @@
         "FreeSkuLabel": "Free (F1)",
         "ResourceGroup": "PoShared",
         "Recommendation": "Downgrade to F1 if traffic is low."
-      },
-      {
-        "Name": "language-poshared-eastus",
-        "Label": "Azure AI / Cognitive",
-        "CurrentSku": "F0",
-        "FreeSku": "F0",
-        "FreeSkuLabel": "Free (F0)",
-        "ResourceGroup": "poshared",
-        "Recommendation": "F0 sufficient for dev/hobby use."
-      },
-      {
-        "Name": "asp-pofunquiz-free",
-        "Label": "App Service Plan",
-        "CurrentSku": "F1",
-        "FreeSku": "F1",
-        "FreeSkuLabel": "Free (F1)",
-        "ResourceGroup": "PoShared",
-        "Recommendation": "Downgrade to F1 if traffic is low."
-      },
-      {
-        "Name": "pomarriedlifegoogle",
-        "Label": "Static Web App",
-        "CurrentSku": "Free",
-        "FreeSku": "Free",
-        "FreeSkuLabel": "Free",
-        "ResourceGroup": "PoMarriedLifeGoogle",
-        "Recommendation": "Free tier: 100 GB bandwidth/month."
       },
       {
         "Name": "stapp-5ln5hfdrvof5u",
@@ -769,15 +700,6 @@
         "Recommendation": "Set a data cap on paid SKUs."
       },
       {
-        "Name": "openai-poshared-eastus",
-        "Label": "Azure AI / Cognitive",
-        "CurrentSku": "S0",
-        "FreeSku": "F0",
-        "FreeSkuLabel": "Free (F0)",
-        "ResourceGroup": "PoShared",
-        "Recommendation": "F0 sufficient for dev/hobby use."
-      },
-      {
         "Name": "asp-poshared-linux",
         "Label": "App Service Plan",
         "CurrentSku": "B1",
@@ -785,15 +707,6 @@
         "FreeSkuLabel": "Free (F1)",
         "ResourceGroup": "PoShared",
         "Recommendation": "Downgrade to F1 if traffic is low."
-      },
-      {
-        "Name": "app-porepolinetracker",
-        "Label": "App Service",
-        "CurrentSku": "app,linux",
-        "FreeSku": "F1",
-        "FreeSkuLabel": "Free (F1)",
-        "ResourceGroup": "PoRepoLineTracker",
-        "Recommendation": "F1 provides 60 CPU-min/day."
       },
       {
         "Name": "app-poseereview",
@@ -832,15 +745,6 @@
         "Recommendation": "One free Azure SQL per subscription."
       },
       {
-        "Name": "pomarriedlifeshared7377",
-        "Label": "App Service",
-        "CurrentSku": "functionapp,linux",
-        "FreeSku": "F1",
-        "FreeSkuLabel": "Free (F1)",
-        "ResourceGroup": "PoMarriedLifeGoogle",
-        "Recommendation": "F1 provides 60 CPU-min/day."
-      },
-      {
         "Name": "app-popunkoutersoftware",
         "Label": "App Service",
         "CurrentSku": "app,linux",
@@ -866,6 +770,24 @@
         "FreeSkuLabel": "Free offer (32 GB serverless)",
         "ResourceGroup": "PoShared",
         "Recommendation": "One free Azure SQL per subscription."
+      },
+      {
+        "Name": "pomarriedlife-api",
+        "Label": "App Service",
+        "CurrentSku": "app,linux",
+        "FreeSku": "F1",
+        "FreeSkuLabel": "Free (F1)",
+        "ResourceGroup": "PoMarriedLife",
+        "Recommendation": "F1 provides 60 CPU-min/day."
+      },
+      {
+        "Name": "app-porepolinetracker",
+        "Label": "App Service",
+        "CurrentSku": "app,linux",
+        "FreeSku": "F1",
+        "FreeSkuLabel": "Free (F1)",
+        "ResourceGroup": "PoRepoLineTracker",
+        "Recommendation": "F1 provides 60 CPU-min/day."
       },
       {
         "Name": "app-pojoker",
@@ -1032,21 +954,21 @@
         "Recommendation": "Use LRS for lowest cost."
       },
       {
-        "Name": "pmlgoogle7377",
-        "Label": "Storage Account",
-        "CurrentSku": "Standard_LRS",
-        "FreeSku": null,
-        "FreeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "ResourceGroup": "PoMarriedLifeGoogle",
-        "Recommendation": "Use LRS for lowest cost."
-      },
-      {
         "Name": "stpopunkoutersoftware",
         "Label": "Storage Account",
         "CurrentSku": "Standard_LRS",
         "FreeSku": null,
         "FreeSkuLabel": "5 GB Blob free/month (12 mo)",
         "ResourceGroup": "PoPunkouterSoftware",
+        "Recommendation": "Use LRS for lowest cost."
+      },
+      {
+        "Name": "pomarriedlifestorage",
+        "Label": "Storage Account",
+        "CurrentSku": "Standard_LRS",
+        "FreeSku": null,
+        "FreeSkuLabel": "5 GB Blob free/month (12 mo)",
+        "ResourceGroup": "PoMarriedLife",
         "Recommendation": "Use LRS for lowest cost."
       },
       {
@@ -1169,20 +1091,19 @@
     ]
   },
   "AllResourceSummary": {
-    "Total": 59,
+    "Total": 50,
     "ByType": {
       "workspaces": 1,
       "vaults": 1,
       "components": 1,
-      "accounts": 6,
       "actiongroups": 1,
       "storageAccounts": 18,
-      "userAssignedIdentities": 2,
-      "serverFarms": 3,
+      "userAssignedIdentities": 1,
+      "serverFarms": 2,
       "sites": 19,
       "servers": 1,
       "databases": 3,
-      "staticSites": 3
+      "staticSites": 2
     },
     "ResourcesByType": {
       "workspaces": [
@@ -1209,44 +1130,6 @@
           "Sku": null
         }
       ],
-      "accounts": [
-        {
-          "Name": "cv-poshared-eastus",
-          "ResourceGroup": "PoShared",
-          "Location": "eastus",
-          "Sku": "F0"
-        },
-        {
-          "Name": "language-poshared-eastus",
-          "ResourceGroup": "poshared",
-          "Location": "eastus",
-          "Sku": "F0"
-        },
-        {
-          "Name": "maps-potraffic",
-          "ResourceGroup": "poshared",
-          "Location": "eastus",
-          "Sku": "G2"
-        },
-        {
-          "Name": "openai-poshared-eastus",
-          "ResourceGroup": "PoShared",
-          "Location": "eastus",
-          "Sku": "S0"
-        },
-        {
-          "Name": "pofaceapi",
-          "ResourceGroup": "PoShared",
-          "Location": "eastus",
-          "Sku": "F0"
-        },
-        {
-          "Name": "speech-poshared-eastus",
-          "ResourceGroup": "PoShared",
-          "Location": "eastus",
-          "Sku": "F0"
-        }
-      ],
       "actiongroups": [
         {
           "Name": "Application Insights Smart Detection",
@@ -1257,15 +1140,15 @@
       ],
       "storageAccounts": [
         {
-          "Name": "pmlgoogle7377",
-          "ResourceGroup": "PoMarriedLifeGoogle",
-          "Location": "eastus2",
-          "Sku": "Standard_LRS"
-        },
-        {
           "Name": "pofacedevsa",
           "ResourceGroup": "PoFace",
           "Location": "westus2",
+          "Sku": "Standard_LRS"
+        },
+        {
+          "Name": "pomarriedlifestorage",
+          "ResourceGroup": "PoMarriedLife",
+          "Location": "eastus2",
           "Sku": "Standard_LRS"
         },
         {
@@ -1367,12 +1250,6 @@
       ],
       "userAssignedIdentities": [
         {
-          "Name": "mi-pohappytrump-github",
-          "ResourceGroup": "PoShared",
-          "Location": "eastus2",
-          "Sku": null
-        },
-        {
           "Name": "mi-poshared-containerapps",
           "ResourceGroup": "PoShared",
           "Location": "eastus",
@@ -1382,12 +1259,6 @@
       "serverFarms": [
         {
           "Name": "asp-poface-free",
-          "ResourceGroup": "PoShared",
-          "Location": "westus2",
-          "Sku": "F1"
-        },
-        {
-          "Name": "asp-pofunquiz-free",
           "ResourceGroup": "PoShared",
           "Location": "westus2",
           "Sku": "F1"
@@ -1473,8 +1344,8 @@
           "Sku": null
         },
         {
-          "Name": "pomarriedlifeshared7377",
-          "ResourceGroup": "PoMarriedLifeGoogle",
+          "Name": "pomarriedlife-api",
+          "ResourceGroup": "PoMarriedLife",
           "Location": "westus2",
           "Sku": null
         },
@@ -1545,12 +1416,6 @@
       ],
       "staticSites": [
         {
-          "Name": "pomarriedlifegoogle",
-          "ResourceGroup": "PoMarriedLifeGoogle",
-          "Location": "eastus2",
-          "Sku": "Free"
-        },
-        {
           "Name": "stapp-5ln5hfdrvof5u",
           "ResourceGroup": "PoMiniGames",
           "Location": "westus2",
@@ -1570,127 +1435,7 @@
       "Name": "app-popunkoutersoftware",
       "Url": "https://app-popunkoutersoftware.azurewebsites.net",
       "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "PoRobotStocks-PoRobotStocks-web",
-      "Url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "PoTagGame-Server",
-      "Url": "https://potaggame-server.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "poface-dev-web",
-      "Url": "https://poface-dev-web.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "wa-porunner",
-      "Url": "https://wa-porunner.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "app-pohappytrump-2jr7zldry26xa",
-      "Url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "app-porepolinetracker",
-      "Url": "https://app-porepolinetracker.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "pocouplequiz-app",
-      "Url": "https://pocouplequiz-app.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "app-poseereview",
-      "Url": "https://app-poseereview.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "app-pofunquiz-zizogpdhpyiwo",
-      "Url": "https://app-pofunquiz-zizogpdhpyiwo.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "app-polinks",
-      "Url": "https://app-polinks.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "app-5ln5hfdrvof5u",
-      "Url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "ponovaweight-app",
-      "Url": "https://ponovaweight-app.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "app-pojoker",
-      "Url": "https://app-pojoker.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "potraffic-api",
-      "Url": "https://potraffic-api.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "po-issues",
-      "Url": "https://po-issues.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
+      "DaysLeft": 119,
       "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "Error": null
     },
@@ -1698,7 +1443,135 @@
       "Name": "poredoimage-web",
       "Url": "https://poredoimage-web.azurewebsites.net",
       "Expiry": "2026-08-25",
-      "DaysLeft": 126,
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "PoRobotStocks-PoRobotStocks-web",
+      "Url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "PoTagGame-Server",
+      "Url": "https://potaggame-server.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "poface-dev-web",
+      "Url": "https://poface-dev-web.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "wa-porunner",
+      "Url": "https://wa-porunner.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "pomarriedlife-api",
+      "Url": "https://pomarriedlife-api.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "app-pohappytrump-2jr7zldry26xa",
+      "Url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "pocouplequiz-app",
+      "Url": "https://pocouplequiz-app.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "app-poseereview",
+      "Url": "https://app-poseereview.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "app-pofunquiz-zizogpdhpyiwo",
+      "Url": "https://app-pofunquiz-zizogpdhpyiwo.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "app-polinks",
+      "Url": "https://app-polinks.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "app-porepolinetracker",
+      "Url": "https://app-porepolinetracker.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "app-5ln5hfdrvof5u",
+      "Url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "ponovaweight-app",
+      "Url": "https://ponovaweight-app.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "app-pojoker",
+      "Url": "https://app-pojoker.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "po-issues",
+      "Url": "https://po-issues.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
+      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "Error": null
+    },
+    {
+      "Name": "potraffic-api",
+      "Url": "https://potraffic-api.azurewebsites.net",
+      "Expiry": "2026-08-25",
+      "DaysLeft": 119,
       "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "Error": null
     },
@@ -1706,15 +1579,7 @@
       "Name": "app-powatch",
       "Url": "https://app-powatch.azurewebsites.net",
       "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "pomarriedlifeshared7377",
-      "Url": "https://pomarriedlifeshared7377.azurewebsites.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
+      "DaysLeft": 119,
       "Subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "Error": null
     },
@@ -1722,7 +1587,7 @@
       "Name": "stapp-5ln5hfdrvof5u",
       "Url": "https://white-rock-0dc02af1e.1.azurestaticapps.net",
       "Expiry": "2026-08-25",
-      "DaysLeft": 126,
+      "DaysLeft": 119,
       "Subject": "CN=*.1.azurestaticapps.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "Error": null
     },
@@ -1730,16 +1595,8 @@
       "Name": "swa-porunner",
       "Url": "https://victorious-ocean-06635bc1e.6.azurestaticapps.net",
       "Expiry": "2026-08-25",
-      "DaysLeft": 126,
+      "DaysLeft": 119,
       "Subject": "CN=*.6.azurestaticapps.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
-      "Error": null
-    },
-    {
-      "Name": "pomarriedlifegoogle",
-      "Url": "https://gentle-coast-0cb3e800f.2.azurestaticapps.net",
-      "Expiry": "2026-08-25",
-      "DaysLeft": 126,
-      "Subject": "CN=*.2.azurestaticapps.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "Error": null
     }
   ],
@@ -1748,6 +1605,18 @@
       "Name": "app-popunkoutersoftware",
       "FriendlyName": "PoPunkouterSoftware",
       "ResourceGroup": "PoPunkouterSoftware",
+      "IssueCount": 1,
+      "Issues": [
+        {
+          "Severity": "low",
+          "Issue": "Always-On disabled (cold starts)"
+        }
+      ]
+    },
+    {
+      "Name": "poredoimage-web",
+      "FriendlyName": "PoRedoImage",
+      "ResourceGroup": "PoRedoImage",
       "IssueCount": 1,
       "Issues": [
         {
@@ -1809,6 +1678,18 @@
       ]
     },
     {
+      "Name": "pomarriedlife-api",
+      "FriendlyName": "PoMarriedLife",
+      "ResourceGroup": "PoMarriedLife",
+      "IssueCount": 1,
+      "Issues": [
+        {
+          "Severity": "low",
+          "Issue": "Always-On disabled (cold starts)"
+        }
+      ]
+    },
+    {
       "Name": "app-pohappytrump-2jr7zldry26xa",
       "FriendlyName": "PoHappyTrump",
       "ResourceGroup": "PoHappyTrump",
@@ -1818,18 +1699,6 @@
           "Severity": "low",
           "Issue": "HTTP/2 disabled"
         },
-        {
-          "Severity": "low",
-          "Issue": "Always-On disabled (cold starts)"
-        }
-      ]
-    },
-    {
-      "Name": "app-porepolinetracker",
-      "FriendlyName": "PoRepoLineTracker",
-      "ResourceGroup": "PoRepoLineTracker",
-      "IssueCount": 1,
-      "Issues": [
         {
           "Severity": "low",
           "Issue": "Always-On disabled (cold starts)"
@@ -1880,6 +1749,22 @@
       ]
     },
     {
+      "Name": "app-porepolinetracker",
+      "FriendlyName": "PoRepoLineTracker",
+      "ResourceGroup": "PoRepoLineTracker",
+      "IssueCount": 2,
+      "Issues": [
+        {
+          "Severity": "low",
+          "Issue": "HTTP/2 disabled"
+        },
+        {
+          "Severity": "low",
+          "Issue": "Always-On disabled (cold starts)"
+        }
+      ]
+    },
+    {
       "Name": "app-5ln5hfdrvof5u",
       "FriendlyName": "PoMiniGames",
       "ResourceGroup": "PoMiniGames",
@@ -1920,18 +1805,6 @@
       ]
     },
     {
-      "Name": "potraffic-api",
-      "FriendlyName": "PoTraffic",
-      "ResourceGroup": "PoTraffic",
-      "IssueCount": 1,
-      "Issues": [
-        {
-          "Severity": "low",
-          "Issue": "Always-On disabled (cold starts)"
-        }
-      ]
-    },
-    {
       "Name": "po-issues",
       "FriendlyName": "PoIssues",
       "ResourceGroup": "PoIssues",
@@ -1944,9 +1817,9 @@
       ]
     },
     {
-      "Name": "poredoimage-web",
-      "FriendlyName": "PoRedoImage",
-      "ResourceGroup": "PoRedoImage",
+      "Name": "potraffic-api",
+      "FriendlyName": "PoTraffic",
+      "ResourceGroup": "PoTraffic",
       "IssueCount": 1,
       "Issues": [
         {
@@ -2000,23 +1873,18 @@
       "Issues": []
     },
     {
-      "Name": "pmlgoogle7377",
-      "ResourceGroup": "PoMarriedLifeGoogle",
+      "Name": "stpopunkoutersoftware",
+      "ResourceGroup": "PoPunkouterSoftware",
       "Sku": "Standard_LRS",
       "PublicBlobAccess": false,
       "HttpsOnly": true,
-      "MinTls": "TLS1_0",
-      "IssueCount": 1,
-      "Issues": [
-        {
-          "Severity": "medium",
-          "Issue": "Min TLS TLS1_0 \u2014 upgrade to TLS 1.2"
-        }
-      ]
+      "MinTls": "TLS1_2",
+      "IssueCount": 0,
+      "Issues": []
     },
     {
-      "Name": "stpopunkoutersoftware",
-      "ResourceGroup": "PoPunkouterSoftware",
+      "Name": "pomarriedlifestorage",
+      "ResourceGroup": "PoMarriedLife",
       "Sku": "Standard_LRS",
       "PublicBlobAccess": false,
       "HttpsOnly": true,
@@ -2170,44 +2038,42 @@
     {
       "Name": "poappideinsights8f9c9a4e",
       "ResourceGroup": "PoShared",
-      "Requests7Days": 10755,
-      "FailedRequests7Days": 2110,
-      "Exceptions7Days": 239
+      "Requests7Days": 13262,
+      "FailedRequests7Days": 2210,
+      "Exceptions7Days": 329
     }
   ],
   "ZombieApps": [
     {
-      "Name": "app-porepolinetracker",
-      "ResourceGroup": "PoRepoLineTracker",
+      "Name": "PoTagGame-Server",
+      "ResourceGroup": "PoTagGame",
       "HttpStatus": "broken",
       "PlatformState": "Running",
-      "Recommendation": "az webapp stop --name \u0022app-porepolinetracker\u0022 --resource-group \u0022PoRepoLineTracker\u0022"
+      "Recommendation": "az webapp stop --name \u0022PoTagGame-Server\u0022 --resource-group \u0022PoTagGame\u0022"
     },
     {
-      "Name": "potraffic-api",
-      "ResourceGroup": "PoTraffic",
+      "Name": "app-pohappytrump-2jr7zldry26xa",
+      "ResourceGroup": "PoHappyTrump",
       "HttpStatus": "broken",
       "PlatformState": "Running",
-      "Recommendation": "az webapp stop --name \u0022potraffic-api\u0022 --resource-group \u0022PoTraffic\u0022"
+      "Recommendation": "az webapp stop --name \u0022app-pohappytrump-2jr7zldry26xa\u0022 --resource-group \u0022PoHappyTrump\u0022"
     },
     {
-      "Name": "poredoimage-web",
-      "ResourceGroup": "PoRedoImage",
+      "Name": "app-pofunquiz-zizogpdhpyiwo",
+      "ResourceGroup": "PoFunQuiz",
       "HttpStatus": "broken",
       "PlatformState": "Running",
-      "Recommendation": "az webapp stop --name \u0022poredoimage-web\u0022 --resource-group \u0022PoRedoImage\u0022"
-    }
-  ],
-  "OrphanedResources": [
+      "Recommendation": "az webapp stop --name \u0022app-pofunquiz-zizogpdhpyiwo\u0022 --resource-group \u0022PoFunQuiz\u0022"
+    },
     {
-      "Name": "asp-pofunquiz-free",
-      "ResourceGroup": "PoShared",
-      "Type": "App Service Plan",
-      "Reason": "No apps deployed (SKU: F1)",
-      "EstimatedMonthlyCost": "$0/mo (Free)",
-      "Command": "az appservice plan delete --name \u0022asp-pofunquiz-free\u0022 --resource-group \u0022PoShared\u0022 --yes"
+      "Name": "app-pojoker",
+      "ResourceGroup": "PoJoker",
+      "HttpStatus": "broken",
+      "PlatformState": "Running",
+      "Recommendation": "az webapp stop --name \u0022app-pojoker\u0022 --resource-group \u0022PoJoker\u0022"
     }
   ],
+  "OrphanedResources": [],
   "BurnRate": {
     "DailyCosts": [
       {
@@ -2292,26 +2158,53 @@
       },
       {
         "Date": "2026-04-21",
-        "Cost": 0.2494
+        "Cost": 0.6638
+      },
+      {
+        "Date": "2026-04-22",
+        "Cost": 0.7015
+      },
+      {
+        "Date": "2026-04-23",
+        "Cost": 0.5848
+      },
+      {
+        "Date": "2026-04-24",
+        "Cost": 0.5801
+      },
+      {
+        "Date": "2026-04-25",
+        "Cost": 0.5813
+      },
+      {
+        "Date": "2026-04-26",
+        "Cost": 0.5717
+      },
+      {
+        "Date": "2026-04-27",
+        "Cost": 0.5726
+      },
+      {
+        "Date": "2026-04-28",
+        "Cost": 0.2334
       }
     ],
-    "ProjectedMonthTotal": 14.5,
-    "ProjectedFormatted": "$14.50"
+    "ProjectedMonthTotal": 15.42,
+    "ProjectedFormatted": "$15.42"
   },
-  "Delta": {
-    "PreviousGeneratedAt": "2026-04-21T13:36:25.4213222Z",
-    "BrokenServicesDelta": 0,
-    "CostDelta": 0,
-    "NewBrokenServices": [],
-    "RecoveredServices": [],
-    "NewOrphanedResources": []
-  },
+  "Delta": null,
   "AlertsAudit": {
     "TotalAlertRules": 0,
     "ServicesWithoutAlerts": [
       {
         "Name": "app-popunkoutersoftware",
         "ResourceGroup": "PoPunkouterSoftware",
+        "HasAlerts": false,
+        "AlertCount": 0
+      },
+      {
+        "Name": "poredoimage-web",
+        "ResourceGroup": "PoRedoImage",
         "HasAlerts": false,
         "AlertCount": 0
       },
@@ -2340,14 +2233,14 @@
         "AlertCount": 0
       },
       {
-        "Name": "app-pohappytrump-2jr7zldry26xa",
-        "ResourceGroup": "PoHappyTrump",
+        "Name": "pomarriedlife-api",
+        "ResourceGroup": "PoMarriedLife",
         "HasAlerts": false,
         "AlertCount": 0
       },
       {
-        "Name": "app-porepolinetracker",
-        "ResourceGroup": "PoRepoLineTracker",
+        "Name": "app-pohappytrump-2jr7zldry26xa",
+        "ResourceGroup": "PoHappyTrump",
         "HasAlerts": false,
         "AlertCount": 0
       },
@@ -2376,6 +2269,12 @@
         "AlertCount": 0
       },
       {
+        "Name": "app-porepolinetracker",
+        "ResourceGroup": "PoRepoLineTracker",
+        "HasAlerts": false,
+        "AlertCount": 0
+      },
+      {
         "Name": "app-5ln5hfdrvof5u",
         "ResourceGroup": "PoMiniGames",
         "HasAlerts": false,
@@ -2394,32 +2293,20 @@
         "AlertCount": 0
       },
       {
-        "Name": "potraffic-api",
-        "ResourceGroup": "PoTraffic",
-        "HasAlerts": false,
-        "AlertCount": 0
-      },
-      {
         "Name": "po-issues",
         "ResourceGroup": "PoIssues",
         "HasAlerts": false,
         "AlertCount": 0
       },
       {
-        "Name": "poredoimage-web",
-        "ResourceGroup": "PoRedoImage",
+        "Name": "potraffic-api",
+        "ResourceGroup": "PoTraffic",
         "HasAlerts": false,
         "AlertCount": 0
       },
       {
         "Name": "app-powatch",
         "ResourceGroup": "PoWatch",
-        "HasAlerts": false,
-        "AlertCount": 0
-      },
-      {
-        "Name": "pomarriedlifeshared7377",
-        "ResourceGroup": "PoMarriedLifeGoogle",
         "HasAlerts": false,
         "AlertCount": 0
       },
@@ -2432,12 +2319,6 @@
       {
         "Name": "swa-porunner",
         "ResourceGroup": "PoRunner",
-        "HasAlerts": false,
-        "AlertCount": 0
-      },
-      {
-        "Name": "pomarriedlifegoogle",
-        "ResourceGroup": "PoMarriedLifeGoogle",
         "HasAlerts": false,
         "AlertCount": 0
       }
@@ -2453,6 +2334,12 @@
         "HasAutoScale": false
       },
       {
+        "Name": "poredoimage-web",
+        "ResourceGroup": "PoRedoImage",
+        "Sku": null,
+        "HasAutoScale": false
+      },
+      {
         "Name": "PoRobotStocks-PoRobotStocks-web",
         "ResourceGroup": "PoRobotStocks",
         "Sku": null,
@@ -2477,14 +2364,14 @@
         "HasAutoScale": false
       },
       {
-        "Name": "app-pohappytrump-2jr7zldry26xa",
-        "ResourceGroup": "PoHappyTrump",
+        "Name": "pomarriedlife-api",
+        "ResourceGroup": "PoMarriedLife",
         "Sku": null,
         "HasAutoScale": false
       },
       {
-        "Name": "app-porepolinetracker",
-        "ResourceGroup": "PoRepoLineTracker",
+        "Name": "app-pohappytrump-2jr7zldry26xa",
+        "ResourceGroup": "PoHappyTrump",
         "Sku": null,
         "HasAutoScale": false
       },
@@ -2513,6 +2400,12 @@
         "HasAutoScale": false
       },
       {
+        "Name": "app-porepolinetracker",
+        "ResourceGroup": "PoRepoLineTracker",
+        "Sku": null,
+        "HasAutoScale": false
+      },
+      {
         "Name": "app-5ln5hfdrvof5u",
         "ResourceGroup": "PoMiniGames",
         "Sku": null,
@@ -2531,32 +2424,20 @@
         "HasAutoScale": false
       },
       {
-        "Name": "potraffic-api",
-        "ResourceGroup": "PoTraffic",
-        "Sku": null,
-        "HasAutoScale": false
-      },
-      {
         "Name": "po-issues",
         "ResourceGroup": "PoIssues",
         "Sku": null,
         "HasAutoScale": false
       },
       {
-        "Name": "poredoimage-web",
-        "ResourceGroup": "PoRedoImage",
+        "Name": "potraffic-api",
+        "ResourceGroup": "PoTraffic",
         "Sku": null,
         "HasAutoScale": false
       },
       {
         "Name": "app-powatch",
         "ResourceGroup": "PoWatch",
-        "Sku": null,
-        "HasAutoScale": false
-      },
-      {
-        "Name": "pomarriedlifeshared7377",
-        "ResourceGroup": "PoMarriedLifeGoogle",
         "Sku": null,
         "HasAutoScale": false
       }
@@ -2573,6 +2454,13 @@
         "Retention": null
       },
       {
+        "Name": "poredoimage-web",
+        "ResourceGroup": "PoRedoImage",
+        "HasBackup": false,
+        "BackupFrequency": null,
+        "Retention": null
+      },
+      {
         "Name": "PoRobotStocks-PoRobotStocks-web",
         "ResourceGroup": "PoRobotStocks",
         "HasBackup": false,
@@ -2601,15 +2489,15 @@
         "Retention": null
       },
       {
-        "Name": "app-pohappytrump-2jr7zldry26xa",
-        "ResourceGroup": "PoHappyTrump",
+        "Name": "pomarriedlife-api",
+        "ResourceGroup": "PoMarriedLife",
         "HasBackup": false,
         "BackupFrequency": null,
         "Retention": null
       },
       {
-        "Name": "app-porepolinetracker",
-        "ResourceGroup": "PoRepoLineTracker",
+        "Name": "app-pohappytrump-2jr7zldry26xa",
+        "ResourceGroup": "PoHappyTrump",
         "HasBackup": false,
         "BackupFrequency": null,
         "Retention": null
@@ -2643,6 +2531,13 @@
         "Retention": null
       },
       {
+        "Name": "app-porepolinetracker",
+        "ResourceGroup": "PoRepoLineTracker",
+        "HasBackup": false,
+        "BackupFrequency": null,
+        "Retention": null
+      },
+      {
         "Name": "app-5ln5hfdrvof5u",
         "ResourceGroup": "PoMiniGames",
         "HasBackup": false,
@@ -2664,13 +2559,6 @@
         "Retention": null
       },
       {
-        "Name": "potraffic-api",
-        "ResourceGroup": "PoTraffic",
-        "HasBackup": false,
-        "BackupFrequency": null,
-        "Retention": null
-      },
-      {
         "Name": "po-issues",
         "ResourceGroup": "PoIssues",
         "HasBackup": false,
@@ -2678,8 +2566,8 @@
         "Retention": null
       },
       {
-        "Name": "poredoimage-web",
-        "ResourceGroup": "PoRedoImage",
+        "Name": "potraffic-api",
+        "ResourceGroup": "PoTraffic",
         "HasBackup": false,
         "BackupFrequency": null,
         "Retention": null
@@ -2722,11 +2610,6 @@
         "Type": "storageAccounts"
       },
       {
-        "Name": "app-porepolinetracker",
-        "ResourceGroup": "PoRepoLineTracker",
-        "Type": "sites"
-      },
-      {
         "Name": "stposeereview",
         "ResourceGroup": "PoSeeReview",
         "Type": "storageAccounts"
@@ -2739,16 +2622,6 @@
       {
         "Name": "pocouplequiz-app",
         "ResourceGroup": "PoCoupleQuiz",
-        "Type": "sites"
-      },
-      {
-        "Name": "pmlgoogle7377",
-        "ResourceGroup": "PoMarriedLifeGoogle",
-        "Type": "storageAccounts"
-      },
-      {
-        "Name": "pomarriedlifeshared7377",
-        "ResourceGroup": "PoMarriedLifeGoogle",
         "Type": "sites"
       },
       {
@@ -2765,6 +2638,21 @@
         "Name": "stpopunkoutersoftware",
         "ResourceGroup": "PoPunkouterSoftware",
         "Type": "storageAccounts"
+      },
+      {
+        "Name": "pomarriedlifestorage",
+        "ResourceGroup": "PoMarriedLife",
+        "Type": "storageAccounts"
+      },
+      {
+        "Name": "pomarriedlife-api",
+        "ResourceGroup": "PoMarriedLife",
+        "Type": "sites"
+      },
+      {
+        "Name": "app-porepolinetracker",
+        "ResourceGroup": "PoRepoLineTracker",
+        "Type": "sites"
       },
       {
         "Name": "stpojoker26",
@@ -2867,16 +2755,6 @@
         "Type": "sites"
       },
       {
-        "Name": "poredoimage-web",
-        "ResourceGroup": "PoRedoImage",
-        "Type": "sites"
-      },
-      {
-        "Name": "potraffic-api",
-        "ResourceGroup": "PoTraffic",
-        "Type": "sites"
-      },
-      {
         "Name": "potrafficstorage",
         "ResourceGroup": "PoTraffic",
         "Type": "storageAccounts"
@@ -2885,11 +2763,21 @@
         "Name": "stpotaggame26",
         "ResourceGroup": "PoTagGame",
         "Type": "storageAccounts"
+      },
+      {
+        "Name": "poredoimage-web",
+        "ResourceGroup": "PoRedoImage",
+        "Type": "sites"
+      },
+      {
+        "Name": "potraffic-api",
+        "ResourceGroup": "PoTraffic",
+        "Type": "sites"
       }
     ]
   },
   "CriticalFindings": {
-    "SeverityScore": 223,
+    "SeverityScore": 213,
     "SeverityLabel": "Critical",
     "Findings": [
       {
@@ -2897,6 +2785,18 @@
         "Category": "Availability",
         "Message": "Service is broken/unreachable",
         "Resource": "app-popunkoutersoftware"
+      },
+      {
+        "Severity": "high",
+        "Category": "Availability",
+        "Message": "Service is broken/unreachable",
+        "Resource": "poredoimage-web"
+      },
+      {
+        "Severity": "high",
+        "Category": "Availability",
+        "Message": "Service is broken/unreachable",
+        "Resource": "PoRobotStocks-PoRobotStocks-web"
       },
       {
         "Severity": "high",
@@ -2914,13 +2814,13 @@
         "Severity": "high",
         "Category": "Availability",
         "Message": "Service is broken/unreachable",
-        "Resource": "app-pohappytrump-2jr7zldry26xa"
+        "Resource": "pomarriedlife-api"
       },
       {
         "Severity": "high",
         "Category": "Availability",
         "Message": "Service is broken/unreachable",
-        "Resource": "app-porepolinetracker"
+        "Resource": "app-pohappytrump-2jr7zldry26xa"
       },
       {
         "Severity": "high",
@@ -2950,13 +2850,7 @@
         "Severity": "high",
         "Category": "Availability",
         "Message": "Service is broken/unreachable",
-        "Resource": "app-5ln5hfdrvof5u"
-      },
-      {
-        "Severity": "high",
-        "Category": "Availability",
-        "Message": "Service is broken/unreachable",
-        "Resource": "ponovaweight-app"
+        "Resource": "app-porepolinetracker"
       },
       {
         "Severity": "high",
@@ -2968,31 +2862,13 @@
         "Severity": "high",
         "Category": "Availability",
         "Message": "Service is broken/unreachable",
-        "Resource": "potraffic-api"
-      },
-      {
-        "Severity": "high",
-        "Category": "Availability",
-        "Message": "Service is broken/unreachable",
         "Resource": "po-issues"
       },
       {
         "Severity": "high",
         "Category": "Availability",
         "Message": "Service is broken/unreachable",
-        "Resource": "poredoimage-web"
-      },
-      {
-        "Severity": "high",
-        "Category": "Availability",
-        "Message": "Service is broken/unreachable",
-        "Resource": "app-powatch"
-      },
-      {
-        "Severity": "high",
-        "Category": "Availability",
-        "Message": "Service is broken/unreachable",
-        "Resource": "pomarriedlifeshared7377"
+        "Resource": "potraffic-api"
       },
       {
         "Severity": "high",
@@ -3010,31 +2886,37 @@
         "Severity": "medium",
         "Category": "Cost",
         "Message": "Zero requests in 7 days \u2014 possible zombie app",
-        "Resource": "app-porepolinetracker"
+        "Resource": "PoTagGame-Server"
       },
       {
         "Severity": "medium",
         "Category": "Cost",
         "Message": "Zero requests in 7 days \u2014 possible zombie app",
-        "Resource": "potraffic-api"
+        "Resource": "app-pohappytrump-2jr7zldry26xa"
       },
       {
         "Severity": "medium",
         "Category": "Cost",
         "Message": "Zero requests in 7 days \u2014 possible zombie app",
-        "Resource": "poredoimage-web"
+        "Resource": "app-pofunquiz-zizogpdhpyiwo"
       },
       {
         "Severity": "medium",
         "Category": "Cost",
-        "Message": "Orphaned App Service Plan: No apps deployed (SKU: F1)",
-        "Resource": "asp-pofunquiz-free"
+        "Message": "Zero requests in 7 days \u2014 possible zombie app",
+        "Resource": "app-pojoker"
       },
       {
         "Severity": "medium",
         "Category": "Observability",
         "Message": "No alert rules configured",
         "Resource": "app-popunkoutersoftware"
+      },
+      {
+        "Severity": "medium",
+        "Category": "Observability",
+        "Message": "No alert rules configured",
+        "Resource": "poredoimage-web"
       },
       {
         "Severity": "medium",
@@ -3064,13 +2946,13 @@
         "Severity": "medium",
         "Category": "Observability",
         "Message": "No alert rules configured",
-        "Resource": "app-pohappytrump-2jr7zldry26xa"
+        "Resource": "pomarriedlife-api"
       },
       {
         "Severity": "medium",
         "Category": "Observability",
         "Message": "No alert rules configured",
-        "Resource": "app-porepolinetracker"
+        "Resource": "app-pohappytrump-2jr7zldry26xa"
       },
       {
         "Severity": "medium",
@@ -3100,6 +2982,12 @@
         "Severity": "medium",
         "Category": "Observability",
         "Message": "No alert rules configured",
+        "Resource": "app-porepolinetracker"
+      },
+      {
+        "Severity": "medium",
+        "Category": "Observability",
+        "Message": "No alert rules configured",
         "Resource": "app-5ln5hfdrvof5u"
       },
       {
@@ -3118,31 +3006,19 @@
         "Severity": "medium",
         "Category": "Observability",
         "Message": "No alert rules configured",
-        "Resource": "potraffic-api"
-      },
-      {
-        "Severity": "medium",
-        "Category": "Observability",
-        "Message": "No alert rules configured",
         "Resource": "po-issues"
       },
       {
         "Severity": "medium",
         "Category": "Observability",
         "Message": "No alert rules configured",
-        "Resource": "poredoimage-web"
+        "Resource": "potraffic-api"
       },
       {
         "Severity": "medium",
         "Category": "Observability",
         "Message": "No alert rules configured",
         "Resource": "app-powatch"
-      },
-      {
-        "Severity": "medium",
-        "Category": "Observability",
-        "Message": "No alert rules configured",
-        "Resource": "pomarriedlifeshared7377"
       },
       {
         "Severity": "medium",
@@ -3155,12 +3031,6 @@
         "Category": "Observability",
         "Message": "No alert rules configured",
         "Resource": "swa-porunner"
-      },
-      {
-        "Severity": "medium",
-        "Category": "Observability",
-        "Message": "No alert rules configured",
-        "Resource": "pomarriedlifegoogle"
       },
       {
         "Severity": "low",
@@ -3190,12 +3060,6 @@
         "Severity": "low",
         "Category": "Observability",
         "Message": "No diagnostic settings configured",
-        "Resource": "app-porepolinetracker"
-      },
-      {
-        "Severity": "low",
-        "Category": "Observability",
-        "Message": "No diagnostic settings configured",
         "Resource": "stposeereview"
       },
       {
@@ -3214,18 +3078,6 @@
         "Severity": "low",
         "Category": "Observability",
         "Message": "No diagnostic settings configured",
-        "Resource": "pmlgoogle7377"
-      },
-      {
-        "Severity": "low",
-        "Category": "Observability",
-        "Message": "No diagnostic settings configured",
-        "Resource": "pomarriedlifeshared7377"
-      },
-      {
-        "Severity": "low",
-        "Category": "Observability",
-        "Message": "No diagnostic settings configured",
         "Resource": "app-popunkoutersoftware"
       },
       {
@@ -3239,6 +3091,24 @@
         "Category": "Observability",
         "Message": "No diagnostic settings configured",
         "Resource": "stpopunkoutersoftware"
+      },
+      {
+        "Severity": "low",
+        "Category": "Observability",
+        "Message": "No diagnostic settings configured",
+        "Resource": "pomarriedlifestorage"
+      },
+      {
+        "Severity": "low",
+        "Category": "Observability",
+        "Message": "No diagnostic settings configured",
+        "Resource": "pomarriedlife-api"
+      },
+      {
+        "Severity": "low",
+        "Category": "Observability",
+        "Message": "No diagnostic settings configured",
+        "Resource": "app-porepolinetracker"
       },
       {
         "Severity": "low",
@@ -3364,18 +3234,6 @@
         "Severity": "low",
         "Category": "Observability",
         "Message": "No diagnostic settings configured",
-        "Resource": "poredoimage-web"
-      },
-      {
-        "Severity": "low",
-        "Category": "Observability",
-        "Message": "No diagnostic settings configured",
-        "Resource": "potraffic-api"
-      },
-      {
-        "Severity": "low",
-        "Category": "Observability",
-        "Message": "No diagnostic settings configured",
         "Resource": "potrafficstorage"
       },
       {
@@ -3386,9 +3244,27 @@
       },
       {
         "Severity": "low",
+        "Category": "Observability",
+        "Message": "No diagnostic settings configured",
+        "Resource": "poredoimage-web"
+      },
+      {
+        "Severity": "low",
+        "Category": "Observability",
+        "Message": "No diagnostic settings configured",
+        "Resource": "potraffic-api"
+      },
+      {
+        "Severity": "low",
         "Category": "Scalability",
         "Message": "No auto-scale configured (SKU: unknown)",
         "Resource": "app-popunkoutersoftware"
+      },
+      {
+        "Severity": "low",
+        "Category": "Scalability",
+        "Message": "No auto-scale configured (SKU: unknown)",
+        "Resource": "poredoimage-web"
       },
       {
         "Severity": "low",
@@ -3418,13 +3294,13 @@
         "Severity": "low",
         "Category": "Scalability",
         "Message": "No auto-scale configured (SKU: unknown)",
-        "Resource": "app-pohappytrump-2jr7zldry26xa"
+        "Resource": "pomarriedlife-api"
       },
       {
         "Severity": "low",
         "Category": "Scalability",
         "Message": "No auto-scale configured (SKU: unknown)",
-        "Resource": "app-porepolinetracker"
+        "Resource": "app-pohappytrump-2jr7zldry26xa"
       },
       {
         "Severity": "low",
@@ -3454,6 +3330,12 @@
         "Severity": "low",
         "Category": "Scalability",
         "Message": "No auto-scale configured (SKU: unknown)",
+        "Resource": "app-porepolinetracker"
+      },
+      {
+        "Severity": "low",
+        "Category": "Scalability",
+        "Message": "No auto-scale configured (SKU: unknown)",
         "Resource": "app-5ln5hfdrvof5u"
       },
       {
@@ -3472,19 +3354,13 @@
         "Severity": "low",
         "Category": "Scalability",
         "Message": "No auto-scale configured (SKU: unknown)",
-        "Resource": "potraffic-api"
-      },
-      {
-        "Severity": "low",
-        "Category": "Scalability",
-        "Message": "No auto-scale configured (SKU: unknown)",
         "Resource": "po-issues"
       },
       {
         "Severity": "low",
         "Category": "Scalability",
         "Message": "No auto-scale configured (SKU: unknown)",
-        "Resource": "poredoimage-web"
+        "Resource": "potraffic-api"
       },
       {
         "Severity": "low",
@@ -3494,15 +3370,15 @@
       },
       {
         "Severity": "low",
-        "Category": "Scalability",
-        "Message": "No auto-scale configured (SKU: unknown)",
-        "Resource": "pomarriedlifeshared7377"
+        "Category": "Configuration",
+        "Message": "Always-On disabled (cold starts)",
+        "Resource": "app-popunkoutersoftware"
       },
       {
         "Severity": "low",
         "Category": "Configuration",
         "Message": "Always-On disabled (cold starts)",
-        "Resource": "app-popunkoutersoftware"
+        "Resource": "poredoimage-web"
       },
       {
         "Severity": "low",
@@ -3537,6 +3413,12 @@
       {
         "Severity": "low",
         "Category": "Configuration",
+        "Message": "Always-On disabled (cold starts)",
+        "Resource": "pomarriedlife-api"
+      },
+      {
+        "Severity": "low",
+        "Category": "Configuration",
         "Message": "HTTP/2 disabled",
         "Resource": "app-pohappytrump-2jr7zldry26xa"
       },
@@ -3545,12 +3427,6 @@
         "Category": "Configuration",
         "Message": "Always-On disabled (cold starts)",
         "Resource": "app-pohappytrump-2jr7zldry26xa"
-      },
-      {
-        "Severity": "low",
-        "Category": "Configuration",
-        "Message": "Always-On disabled (cold starts)",
-        "Resource": "app-porepolinetracker"
       },
       {
         "Severity": "low",
@@ -3569,6 +3445,18 @@
         "Category": "Configuration",
         "Message": "Always-On disabled (cold starts)",
         "Resource": "app-polinks"
+      },
+      {
+        "Severity": "low",
+        "Category": "Configuration",
+        "Message": "HTTP/2 disabled",
+        "Resource": "app-porepolinetracker"
+      },
+      {
+        "Severity": "low",
+        "Category": "Configuration",
+        "Message": "Always-On disabled (cold starts)",
+        "Resource": "app-porepolinetracker"
       },
       {
         "Severity": "low",
@@ -3598,19 +3486,13 @@
         "Severity": "low",
         "Category": "Configuration",
         "Message": "Always-On disabled (cold starts)",
-        "Resource": "potraffic-api"
-      },
-      {
-        "Severity": "low",
-        "Category": "Configuration",
-        "Message": "Always-On disabled (cold starts)",
         "Resource": "po-issues"
       },
       {
         "Severity": "low",
         "Category": "Configuration",
         "Message": "Always-On disabled (cold starts)",
-        "Resource": "poredoimage-web"
+        "Resource": "potraffic-api"
       },
       {
         "Severity": "low",

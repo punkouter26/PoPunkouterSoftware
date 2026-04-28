@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <!-- Shared domain models (AzureReport, UserInfo, etc.) -->
-    <ProjectReference Include="..\PoShared\PoShared.csproj" />
+    <ProjectReference Include="..\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
   </ItemGroup>
 
 </Project>

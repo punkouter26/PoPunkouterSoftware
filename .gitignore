@@ -73,6 +73,7 @@ coverage/
 *.coverage
 *.coveragexml
 TestResults/
+*.trx
 
 # Rider / JetBrains
 *.sln.DotSettings
@@ -85,6 +86,11 @@ TestResults/
 *.tmp
 *.temp
 ~$*
+.cache/
+artifacts/
+
+# Publish profile user settings
+*.pubxml.user
 
 # Blazor / Wasm cache
 .blazor/

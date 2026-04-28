@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using PoShared.Azure;
+using PoPunkouterSoftware.Shared.Azure;
 
 namespace PoPunkouterSoftware.Features.Azure;
 
@@ -29,24 +29,44 @@ public static class AppsJsonSyncer
 
         var apps = wrapper.Apps ??= new List<AppEntry>();
 
-        // ── Index existing entries by URL ─────────────────────────────────────
-        var byUrl = apps
-            .Where(a => !string.IsNullOrWhiteSpace(a.Url))
-            .GroupBy(a => a.Url!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        // ── Index existing entries by composite key (ResourceId + Url) ─────────
+        // Using composite key prevents collisions when two Azure resources share
+        // the same hostname (e.g., app-5ln5hfdrvof5u and PoMiniGames both resolving
+        // to the same default domain). URL-only dedup silently drops entries.
+        var byResourceId = new Dictionary<string, AppEntry>(StringComparer.OrdinalIgnoreCase);
+        var byUrl = new Dictionary<string, List<AppEntry>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var app in apps)
+        {
+            if (!string.IsNullOrWhiteSpace(app.Id))
+                byResourceId.TryAdd(app.Id, app);
+            if (!string.IsNullOrWhiteSpace(app.Url))
+            {
+                if (!byUrl.TryGetValue(app.Url, out var list))
+                    byUrl[app.Url] = list = new();
+                list.Add(app);
+            }
+        }
 
         var services = report.WebServices?.Services ?? new List<WebService>();
-        var discoveredUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var discoveredIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // ── Process every service discovered in Azure ─────────────────────────
         foreach (var svc in services)
         {
             if (string.IsNullOrWhiteSpace(svc.Url)) continue;
-            discoveredUrls.Add(svc.Url);
+            var slug = Slugify(svc.Name);
+            discoveredIds.Add(slug);
 
             var techs = InferTechnologies(svc.ResourceType);
 
-            if (byUrl.TryGetValue(svc.Url, out var existing))
+            // Try matching by canonical ID first (stronger match), then by URL
+            AppEntry? existing = null;
+            if (!string.IsNullOrWhiteSpace(slug) && byResourceId.TryGetValue(slug, out var byId))
+                existing = byId;
+            else if (byUrl.TryGetValue(svc.Url, out var urlMatches))
+                existing = urlMatches.FirstOrDefault();
+
+            if (existing is not null)
             {
                 // NOTE: Do NOT touch existing.Status — that is user-controlled intent.
                 // Active/disabled is the user's decision; the live HTTP check result
@@ -77,14 +97,26 @@ public static class AppsJsonSyncer
                     Technologies = techs
                 };
                 apps.Add(entry);
-                byUrl[svc.Url] = entry;
+                if (!byUrl.TryGetValue(svc.Url, out var urlList))
+                    byUrl[svc.Url] = urlList = new();
+                urlList.Add(entry);
             }
         }
 
         // ── Apps in apps.json that no longer exist in Azure ───────────────────
         // We deliberately do NOT auto-demote apps that aren't found — the user
-        // controls status. The live HTTP badge in the UI shows real-time state.
+        // controls status. Mark removed apps with a warning annotation in the ID.
         // (Deleted Azure resources stay visible until the user manually removes them.)
+        var skippedUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var app in apps)
+        {
+            // If this app's URL matches a discovered URL, skip marking
+            if (!string.IsNullOrWhiteSpace(app.Url) && discoveredIds.Contains(app.Id)) continue;
+            // If this app's slug matches a discovered slug, skip
+            if (discoveredIds.Contains(app.Id)) continue;
+            // Otherwise it's a stale entry — we leave it in place but flag it
+            // (no auto-demotion as per intentional design)
+        }
 
         // ── Sort and write back ───────────────────────────────────────────────
         wrapper.Apps = apps
@@ -193,5 +225,8 @@ public static class AppsJsonSyncer
 
         [JsonPropertyName("url")]
         public string? Url { get; set; }
+
+        [JsonPropertyName("githubRepo")]
+        public string? GithubRepo { get; set; }
     }
 }

@@ -1,0 +1,146 @@
+@page "/status"
+@rendermode WasmRenderModes.Interactive
+@using System.Text.Json
+@using PoPunkouterSoftware.Shared.Azure
+@inject HttpClient Http
+
+<PageTitle>PoPunkouterSoftware — Service Status</PageTitle>
+
+<RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="rz-color-primary rz-mb-1">Service Status</RadzenText>
+<RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary rz-mb-4">
+    Live health overview of all Punkouter Software services.
+</RadzenText>
+
+@if (_loading)
+{
+    <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-4" />
+}
+else if (_error is not null)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true" class="rz-my-4">
+        Could not load status data: @_error
+    </RadzenAlert>
+}
+else if (_report is not null)
+{
+    var allActive  = _report.Services.All(s => s.CurrentStatus == "active");
+    var anyBroken  = _report.Services.Any(s => s.CurrentStatus is "broken" or "unreachable");
+
+    <!-- ── Overall banner ── -->
+    <div style="@($"padding:.75rem 1.25rem;border-radius:8px;margin-bottom:1.5rem;border:1px solid {(allActive ? "rgba(50,255,167,.4)" : anyBroken ? "rgba(255,80,80,.4)" : "rgba(255,214,0,.4)")};background:{(allActive ? "rgba(50,255,167,.07)" : anyBroken ? "rgba(255,80,80,.07)" : "rgba(255,214,0,.07)")};display:flex;align-items:center;gap:.75rem")">
+        <span style="font-size:1.5rem">@(allActive ? "✅" : anyBroken ? "🔴" : "🟡")</span>
+        <div>
+            <strong style="color:@(allActive ? "var(--rz-success-color)" : anyBroken ? "var(--rz-danger-color)" : "var(--rz-warning-color)")">
+                @(allActive ? "All systems operational" : anyBroken ? "Some services are degraded" : "Partial degradation")
+            </strong>
+            <div style="font-size:.78rem;color:var(--rz-text-secondary-color);margin-top:.2rem">
+                Last updated: @_report.GeneratedAt.ToString("yyyy-MM-dd HH:mm UTC")
+                &nbsp;·&nbsp; @_report.Services.Count(s => s.CurrentStatus == "active") / @_report.Services.Count services operational
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Per-service rows ── -->
+    @foreach (var svc in _report.Services)
+    {
+        var isActive    = svc.CurrentStatus == "active";
+        var isBroken    = svc.CurrentStatus is "broken" or "unreachable";
+        var statusColor = isActive ? "var(--rz-success-color)" : isBroken ? "var(--rz-danger-color)" : "var(--rz-warning-color)";
+        var statusLabel = isActive ? "Operational" : isBroken ? "Degraded" : svc.CurrentStatus;
+        var uptimePct   = CalcUptime(svc.Samples);
+
+        <RadzenCard class="rz-mb-2" Style="@($"border-left:4px solid {statusColor};padding:.75rem 1rem")">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center"
+                         JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="8px">
+
+                <!-- Name + URL -->
+                <div style="min-width:200px">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:@statusColor;flex-shrink:0"></span>
+                        <strong>@(svc.FriendlyName ?? svc.Name)</strong>
+                    </RadzenStack>
+                    @if (!string.IsNullOrEmpty(svc.Url))
+                    {
+                        <a href="@svc.Url" target="_blank" rel="noopener noreferrer"
+                           style="font-size:.75rem;color:var(--rz-text-secondary-color);margin-left:18px">@svc.Url</a>
+                    }
+                </div>
+
+                <!-- Status badge + response time -->
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
+                    <RadzenBadge Text="@statusLabel" IsPill="true"
+                                 BadgeStyle="@(isActive ? BadgeStyle.Success : isBroken ? BadgeStyle.Danger : BadgeStyle.Warning)" />
+                    @if (svc.ResponseTimeMs.HasValue)
+                    {
+                        var rt = svc.ResponseTimeMs.Value;
+                        <span style="font-size:.78rem;color:@(rt < 1000 ? "var(--rz-success-color)" : rt < 3000 ? "var(--rz-warning-color)" : "var(--rz-danger-color)")">
+                            @rt ms
+                        </span>
+                    }
+                </RadzenStack>
+
+                <!-- Uptime % -->
+                <div style="text-align:right;min-width:90px">
+                    <div style="font-size:.78rem;color:var(--rz-text-secondary-color)">Uptime</div>
+                    <strong style="color:@(uptimePct >= 99 ? "var(--rz-success-color)" : uptimePct >= 90 ? "var(--rz-warning-color)" : "var(--rz-danger-color)")">
+                        @uptimePct.ToString("F1")%
+                    </strong>
+                </div>
+            </RadzenStack>
+
+            <!-- History bar: one block per sample, newest right -->
+            @if (svc.Samples.Count > 1)
+            {
+                <div style="margin-top:.5rem;display:flex;gap:2px;align-items:flex-end;height:18px" title="Report history — green=active, red=broken, grey=unknown (newest right)">
+                    @foreach (var sample in svc.Samples.AsEnumerable().Reverse().TakeLast(30))
+                    {
+                        var barColor = sample.Status == "active" ? "var(--rz-success-color)"
+                                     : sample.Status is "broken" or "unreachable" ? "var(--rz-danger-color)"
+                                     : "var(--rz-base-400)";
+                        <div style="@($"flex:1;max-width:14px;min-width:4px;height:14px;border-radius:2px;background:{barColor};cursor:default")"
+                             title="@sample.At.ToString("yyyy-MM-dd HH:mm") — @sample.Status"></div>
+                    }
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--rz-text-secondary-color);margin-top:2px">
+                    <span>Older</span>
+                    <span>@svc.Samples.Count report sample(s)</span>
+                    <span>Latest</span>
+                </div>
+            }
+        </RadzenCard>
+    }
+
+    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mt-4">
+        Data derived from periodic Azure health scans. Status may lag real-time by up to several hours.
+    </RadzenText>
+}
+
+@code {
+    private StatusPageReport? _report;
+    private bool   _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            _report  = await Http.GetFromJsonAsync<StatusPageReport>("/api/status", opts);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static double CalcUptime(List<StatusSample> samples)
+    {
+        if (samples.Count == 0) return 100.0;
+        var up = samples.Count(s => s.Status == "active");
+        return (double)up / samples.Count * 100.0;
+    }
+}

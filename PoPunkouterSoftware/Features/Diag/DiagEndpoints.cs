@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json;
 using PoPunkouterSoftware.Features.Azure;
-using PoShared.Azure;
+using PoPunkouterSoftware.Shared.Azure;
+using PoPunkouterSoftware.Domain.Azure;
 
 namespace PoPunkouterSoftware.Features.Diag;
 
@@ -148,6 +149,76 @@ internal static class DiagEndpoints
                 return Results.Ok(new { loggedIn = false, error = ex.Message });
             }
         });
+
+        // ── Public status page data ───────────────────────────────────────────
+        // No auth required — only exposes HTTP status and response time.
+        app.MapGet("/api/status", async (IAzureReportRepository repository, CancellationToken ct) =>
+        {
+            // Build status page from history (newest first) — up to 30 samples per service
+            var history = await repository.LoadHistoryAsync(maxEntries: 30, ct);
+
+            if (history.Count == 0)
+            {
+                // Fall back to latest report only
+                var latest = await repository.LoadAsync(ct);
+                if (latest is not null) history.Add(latest);
+            }
+
+            if (history.Count == 0)
+                return Results.Ok(new StatusPageReport { GeneratedAt = DateTime.UtcNow });
+
+            // Build per-service entries from history
+            var serviceMap = new Dictionary<string, ServiceStatusEntry>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var report in history)
+            {
+                var reportTime = report.GeneratedAt ?? DateTime.UtcNow;
+                foreach (var svc in report.WebServices?.Services ?? new())
+                {
+                    var sample = new StatusSample
+                    {
+                        At            = reportTime,
+                        Status        = svc.HttpStatus ?? "unknown",
+                        ResponseTimeMs = svc.Connectivity?.ResponseTime > 0 ? svc.Connectivity.ResponseTime : null,
+                    };
+
+                    if (serviceMap.TryGetValue(svc.Name, out var existing))
+                    {
+                        // Append sample — list is already ordered newest first since history is newest first
+                        serviceMap[svc.Name] = existing with
+                        {
+                            Samples = existing.Samples.Append(sample).ToList()
+                        };
+                    }
+                    else
+                    {
+                        // First occurrence = most recent report = current status
+                        serviceMap[svc.Name] = new ServiceStatusEntry
+                        {
+                            Name          = svc.Name,
+                            FriendlyName  = svc.FriendlyName,
+                            Url           = svc.Url,
+                            CurrentStatus = svc.HttpStatus ?? "unknown",
+                            ResponseTimeMs = svc.Connectivity?.ResponseTime > 0 ? svc.Connectivity.ResponseTime : null,
+                            Samples       = new List<StatusSample> { sample },
+                        };
+                    }
+                }
+            }
+
+            var statusReport = new StatusPageReport
+            {
+                GeneratedAt = history[0].GeneratedAt ?? DateTime.UtcNow,
+                Services    = serviceMap.Values
+                    .OrderByDescending(s => s.CurrentStatus == "active" ? 0 : 1)
+                    .ThenBy(s => s.FriendlyName ?? s.Name)
+                    .ToList(),
+            };
+
+            return Results.Ok(statusReport);
+        })
+        .WithName("GetStatusPage")
+        .WithTags("Status");
 
         return app;
     }

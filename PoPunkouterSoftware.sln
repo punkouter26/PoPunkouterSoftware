@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoPunkouterSoftware.Tests.U
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoPunkouterSoftware.Tests.Integration", "tests\PoPunkouterSoftware.Tests.Integration\PoPunkouterSoftware.Tests.Integration.csproj", "{85533C4E-3DF9-4DCC-85BE-CFCB65E7E8E1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoShared", "PoShared\PoShared.csproj", "{270A8E23-6B76-4F3F-82F5-5CF078077CBB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoPunkouterSoftware.Shared", "PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj", "{270A8E23-6B76-4F3F-82F5-5CF078077CBB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoPunkouterSoftware.Client", "PoPunkouterSoftware.Client\PoPunkouterSoftware.Client.csproj", "{8086F56B-410E-4F7D-AD3B-697A4D74BA69}"
 EndProject

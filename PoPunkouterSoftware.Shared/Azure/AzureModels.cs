@@ -1,4 +1,4 @@
-namespace PoShared.Azure;
+namespace PoPunkouterSoftware.Shared.Azure;
 
 // Shared Azure infrastructure domain models used by both the server (API/SDK)
 // and the client (Blazor WASM) for deserialising API responses.

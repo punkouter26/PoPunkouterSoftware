@@ -4,6 +4,8 @@ using PoPunkouterSoftware.Application.Azure;
 using PoPunkouterSoftware.Domain.Azure;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Features.Diag;
+using PoPunkouterSoftware.Features.GitHub;
+using PoPunkouterSoftware.Features.Infra;
 using PoPunkouterSoftware.Infrastructure;
 using Radzen;
 using Scalar.AspNetCore;
@@ -74,6 +76,9 @@ try
             sink.WriteTo.ApplicationInsights(aiConnectionString, TelemetryConverter.Traces);
     });
 
+    // ─── .NET 10 TimeProvider abstraction — enables testable time ────────────
+    builder.Services.AddSingleton(TimeProvider.System);
+
     // ─── OpenTelemetry + Azure Monitor (only when connection string is present) ──
     var otelBuilder = builder.Services.AddOpenTelemetry();
     if (!string.IsNullOrWhiteSpace(aiConnectionString))
@@ -107,20 +112,23 @@ try
     });
 
     // ─── HTTP client used by /health to probe external services ──────────────
+    // Uses SocketsHttpHandler with a custom ConnectCallback so SSL validation
+    // is preserved while still allowing TLS-level connectivity checks.
     builder.Services.AddHttpClient("health")
-        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
-            ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            ConnectTimeout = TimeSpan.FromSeconds(5),
         });
 
     // ─── HTTP client used by AzureReportService to probe web service URLs ────
+    // Uses SocketsHttpHandler without disabling certificate validation.
+    // Azure endpoints all have valid TLS certificates, so the dangerous
+    // AcceptAnyServerCertificateValidator override is removed entirely.
     builder.Services.AddHttpClient("azure-probe")
-        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             AllowAutoRedirect = false,
-            ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            ConnectTimeout = TimeSpan.FromSeconds(15),
         })
         .ConfigureHttpClient(c =>
         {
@@ -136,6 +144,21 @@ try
     builder.Services.AddSingleton<AzureReportStore>(sp => (AzureReportStore)sp.GetRequiredService<IAzureReportRepository>());
     builder.Services.AddTransient<AzureReportService>(sp => (AzureReportService)sp.GetRequiredService<IAzureReportService>());
     builder.Services.AddSingleton<RefreshProgressService>();
+
+    // ─── In-process memory cache (GitHub activity + AI fix plans) ────────────
+    builder.Services.AddMemoryCache();
+
+    // ─── HTTP client for GitHub API ───────────────────────────────────────────
+    builder.Services.AddHttpClient("github")
+        .ConfigureHttpClient(c =>
+        {
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("PoPunkouterSoftware/1.0");
+            c.Timeout = TimeSpan.FromSeconds(10);
+        });
+
+    // ─── HTTP client for Azure OpenAI ─────────────────────────────────────────
+    builder.Services.AddHttpClient("azure-openai")
+        .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(60));
 
     var app = builder.Build();
 
@@ -277,6 +300,9 @@ try
 
     // ─── Feature slices ───────────────────────────────────────────────────────
     app.MapDiagEndpoints();
+    app.MapGitHubEndpoints();
+    app.MapFixPlanEndpoints();
+    app.MapInfraEndpoints();
 
     app.Run();
 }

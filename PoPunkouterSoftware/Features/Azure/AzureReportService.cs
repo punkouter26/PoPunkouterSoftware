@@ -6,7 +6,7 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.AppService;
 using Azure.ResourceManager.AppService.Models;
 using Azure.ResourceManager.Resources;
-using PoShared.Azure;
+using PoPunkouterSoftware.Shared.Azure;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Security;
@@ -698,6 +698,15 @@ public class AzureReportService : IAzureReportService
     private static List<ZombieApp> DetectZombies(List<RawService> services, Dictionary<string, MetricsInfo> metricsMap)
         => services
             .Where(s => s.ResourceTypeRaw == "Microsoft.Web/sites" && s.ResourceId is not null)
+            // Exclude WebSocket-only, SignalR, and background worker services:
+            // - SignalR hubs (kind: "signalr") don't serve HTTP pages
+            // - WebJob/background services are not front-end web apps
+            // - Kind containing "functionapp" are Azure Functions, not web apps
+            .Where(s => !string.IsNullOrEmpty(s.Kind) &&
+                        !s.Kind.Contains("signalr", StringComparison.OrdinalIgnoreCase) &&
+                        !s.Kind.Contains("functionapp", StringComparison.OrdinalIgnoreCase) &&
+                        !s.Kind.Contains("workflowapp", StringComparison.OrdinalIgnoreCase) &&
+                        s.PlatformState != "Stopped")
             .Where(s => metricsMap.TryGetValue(s.ResourceId!, out var m) && m.Requests == 0)
             .Select(s => new ZombieApp
             {

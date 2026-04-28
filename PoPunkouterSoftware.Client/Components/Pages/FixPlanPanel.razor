@@ -1,0 +1,114 @@
+@using PoPunkouterSoftware.Shared.Azure
+@inject HttpClient Http
+@inject NotificationService NotificationService
+@inject IJSRuntime JS
+
+@if (_fixPlanService is not null)
+{
+    <div style="margin-top:1.5rem;border:1px solid var(--rz-warning-color);border-radius:8px;padding:1rem;background:rgba(255,170,0,.05)">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="rz-mb-2">
+            <RadzenText TextStyle="TextStyle.H6" Style="margin:0">
+                🔧 Fix Plan — <strong>@(_fixPlanService.FriendlyName ?? _fixPlanService.Name)</strong>
+            </RadzenText>
+            <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
+                          Click="@(() => _fixPlanService = null)" />
+        </RadzenStack>
+        @if (_fixPlanLoading)
+        {
+            <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="height:6px" />
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mt-1">Analysing with AI…</RadzenText>
+        }
+        else if (_fixPlanError is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true">@_fixPlanError</RadzenAlert>
+            <div class="rz-mt-2">
+                <RadzenButton Text="Retry" Size="ButtonSize.Small"
+                              Icon="refresh" Click="@(() => _ = RetryAsync())" />
+            </div>
+        }
+        else if (_fixPlanDisabledMessage is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" ShowIcon="true">@_fixPlanDisabledMessage</RadzenAlert>
+        }
+        else if (_fixPlanText is not null)
+        {
+            <div style="white-space:pre-wrap;font-size:.85rem;line-height:1.7;color:var(--rz-text-color)">@_fixPlanText</div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public WebService? Service { get; set; }
+    [Parameter] public EventCallback<WebService?> ServiceChanged { get; set; }
+
+    private string? _fixPlanText;
+    private string? _fixPlanError;
+    private string? _fixPlanDisabledMessage;
+    private bool _fixPlanLoading;
+
+    private WebService? _fixPlanService
+    {
+        get => Service;
+        set => ServiceChanged.InvokeAsync(value);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Service is not null)
+        {
+            _ = LoadFixPlanAsync(Service);
+        }
+    }
+
+    private async Task RetryAsync()
+    {
+        if (_fixPlanService is not null)
+            await LoadFixPlanAsync(_fixPlanService);
+    }
+
+    private async Task LoadFixPlanAsync(WebService svc)
+    {
+        _fixPlanLoading = true;
+        _fixPlanError = null;
+        _fixPlanDisabledMessage = null;
+        _fixPlanText = null;
+        StateHasChanged();
+
+        try
+        {
+            var resp = await Http.GetAsync($"/api/diag/fix-plan/{svc.Name}");
+            if (resp.IsSuccessStatusCode)
+            {
+                var result = await resp.Content.ReadFromJsonAsync<FixPlanResponse>();
+                if (result?.disabled == true)
+                {
+                    _fixPlanDisabledMessage = result.message;
+                }
+                else
+                {
+                    _fixPlanText = result?.plan;
+                }
+            }
+            else
+            {
+                _fixPlanError = $"Failed to load fix plan: {resp.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _fixPlanError = ex.Message;
+        }
+        finally
+        {
+            _fixPlanLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private class FixPlanResponse
+    {
+        public string? plan { get; set; }
+        public bool disabled { get; set; }
+        public string? message { get; set; }
+    }
+}

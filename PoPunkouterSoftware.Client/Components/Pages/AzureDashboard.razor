@@ -156,9 +156,57 @@ else
                                 { <RadzenBadge Text="Paid" BadgeStyle="BadgeStyle.Light" IsPill="true" Style="font-size:.7rem" /> }
                             </Template>
                         </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="WebService" Title="Fix Plan" Width="110px" Sortable="false" Filterable="false">
+                            <Template Context="s">
+                                @{
+                                    var isUnhealthy = s.HttpStatus is "broken" or "unreachable"
+                                        || s.Connectivity?.IsAzureErrorPage == true
+                                        || s.Metrics7Days?.Http5xx > 0;
+                                }
+                                @if (isUnhealthy)
+                                {
+                                    <RadzenButton Text="Fix Plan" Icon="healing" Size="ButtonSize.ExtraSmall"
+                                                  ButtonStyle="ButtonStyle.Warning" Variant="Variant.Outlined"
+                                                  Click="@(() => OpenFixPlan(s))" />
+                                }
+                                else
+                                { <span style="color:var(--rz-text-secondary-color);font-size:.75rem">—</span> }
+                            </Template>
+                        </RadzenDataGridColumn>
                     </Columns>
                 </RadzenDataGrid>
                 </div>
+
+                <!-- ── Fix Plan Panel ── -->
+                @if (_fixPlanService is not null)
+                {
+                    <div style="margin-top:1.5rem;border:1px solid var(--rz-warning-color);border-radius:8px;padding:1rem;background:rgba(255,170,0,.05)">
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="rz-mb-2">
+                            <RadzenText TextStyle="TextStyle.H6" Style="margin:0">
+                                🔧 Fix Plan — <strong>@(_fixPlanService.FriendlyName ?? _fixPlanService.Name)</strong>
+                            </RadzenText>
+                            <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
+                                          Click="@(() => { _fixPlanService = null; _fixPlanText = null; _fixPlanLoading = false; _fixPlanError = null; })" />
+                        </RadzenStack>
+                        @if (_fixPlanLoading)
+                        {
+                            <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="height:6px" />
+                            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mt-1">Analysing with AI…</RadzenText>
+                        }
+                        else if (_fixPlanError is not null)
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true">@_fixPlanError</RadzenAlert>
+                        }
+                        else if (_fixPlanDisabledMessage is not null)
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" ShowIcon="true">@_fixPlanDisabledMessage</RadzenAlert>
+                        }
+                        else if (_fixPlanText is not null)
+                        {
+                            <div style="white-space:pre-wrap;font-size:.85rem;line-height:1.7;color:var(--rz-text-color)">@_fixPlanText</div>
+                        }
+                    </div>
+                }
             </RadzenTabsItem>
 
             <!-- ── Tab 2: Safe to Remove ── -->
@@ -521,6 +569,283 @@ else
                 </div>
             </RadzenTabsItem>
 
+            <!-- ── Tab: CI/CD Review ── -->
+            <RadzenTabsItem Text="@($"🔧 CI/CD Review ({_infraReviews.Count})")">
+                <div class="rz-mt-2">
+
+                @if (_infraDisabledMessage is not null)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" ShowIcon="true" class="rz-mb-3">
+                        <strong>GitHub PAT not configured.</strong>
+                        <div style="margin-top:.35rem;font-size:.85rem">@_infraDisabledMessage</div>
+                        <div style="margin-top:.5rem;font-size:.8rem;color:var(--rz-text-secondary-color)">
+                            Key Vault secret name: <code>PoPunkouterSoftware--GitHub--PersonalAccessToken</code>
+                        </div>
+                    </RadzenAlert>
+                }
+
+                @if (_infraReviews.Count == 0 && _infraDisabledMessage is null)
+                {
+                    <div style="background:rgba(100,180,255,.06);border:1px solid rgba(100,180,255,.2);border-radius:8px;padding:1.25rem;text-align:center">
+                        <div style="font-size:1.75rem;margin-bottom:.5rem">🔍</div>
+                        <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-2">
+                            Scan all GitHub repositories under <strong>punkouter26</strong> for CI/CD workflows and
+                            infrastructure files (Bicep, ARM, Docker, Azure Developer CLI).
+                        </RadzenText>
+                        <RadzenButton Text="@(_infraLoading ? "Scanning repos…" : "Scan All Repos")"
+                                      Icon="@(_infraLoading ? "sync" : "search")"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Disabled="@_infraLoading"
+                                      Click="@LoadInfraReviewAsync" />
+                        @if (_infraLoading)
+                        {
+                            <div class="rz-mt-2">
+                                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="height:6px" />
+                                <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mt-1">
+                                    Fetching repo trees and file contents from GitHub API…
+                                </RadzenText>
+                            </div>
+                        }
+                        @if (_infraError is not null)
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" ShowIcon="true" class="rz-mt-3">
+                                @_infraError
+                            </RadzenAlert>
+                        }
+                    </div>
+                }
+                else if (_infraReviews.Count > 0)
+                {
+                    // ── Summary strip ────────────────────────────────────────
+                    var reposWithCicd   = _infraReviews.Count(r => r.CiCdFiles.Count > 0);
+                    var reposWithBicep  = _infraReviews.Count(r => r.InfraFiles.Any(f => f.FileType == "bicep"));
+                    var reposWithDocker = _infraReviews.Count(r => r.InfraFiles.Any(f => f.FileType is "docker" or "compose"));
+                    var reposWithErrors = _infraReviews.Count(r => r.Error is not null);
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1.25rem">
+                        @InfraSummaryCard(_infraReviews.Count.ToString(), "Repos Scanned", "var(--rz-info)")
+                        @InfraSummaryCard(reposWithCicd.ToString(), "With CI/CD", "var(--rz-primary)")
+                        @InfraSummaryCard(reposWithBicep.ToString(), "Using Bicep", "var(--rz-success)")
+                        @InfraSummaryCard(reposWithDocker.ToString(), "Docker", "var(--rz-warning)")
+                        @InfraSummaryCard(reposWithErrors.ToString(), "Scan Errors", reposWithErrors > 0 ? "var(--rz-danger)" : "var(--rz-secondary)")
+                    </div>
+
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="rz-mb-2" Wrap="FlexWrap.Wrap" Gap="8px">
+                        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary">
+                            Scanned at @(_infraReviews.FirstOrDefault()?.ScannedAt.ToString("yyyy-MM-dd HH:mm") ?? "—") UTC
+                            &nbsp;·&nbsp; Click a row to expand CI/CD + infra file details
+                        </RadzenText>
+                        <RadzenButton Text="Re-scan" Icon="refresh" Size="ButtonSize.Small"
+                                      ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                                      Disabled="@_infraLoading" Click="@RescanInfraAsync" />
+                    </RadzenStack>
+
+                    <!-- ── Comparison table ── -->
+                    <RadzenDataGrid Data="@_infraReviews" TItem="InfraReview"
+                                    AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                    AllowPaging="true" PageSize="20"
+                                    RowClick="@(args => { if (args.Data is not null) ToggleInfraDetail(args.Data); })"
+                                    Style="cursor:pointer">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="InfraReview" Property="RepoName" Title="Repository" Width="200px">
+                                <Template Context="r">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px">
+                                        @if (!string.IsNullOrEmpty(r.RepoUrl))
+                                        {
+                                            <a href="@r.RepoUrl" target="_blank" rel="noopener noreferrer"
+                                               style="color:var(--rz-link-color);font-weight:600;font-size:.85rem"
+                                               @onclick:stopPropagation="true">@r.RepoName</a>
+                                        }
+                                        else { <strong style="font-size:.85rem">@r.RepoName</strong> }
+                                        @if (r.IsPrivate)
+                                        { <RadzenBadge Text="private" BadgeStyle="BadgeStyle.Light" IsPill="true" Style="font-size:.62rem" /> }
+                                    </RadzenStack>
+                                    @if (r.AppName is not null)
+                                    { <div style="font-size:.72rem;color:var(--rz-text-secondary-color)">@r.AppName</div> }
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="InfraReview" Property="DeploymentTarget" Title="Hosting Target" Width="150px">
+                                <Template Context="r">
+                                    @if (r.Error is null)
+                                    {
+                                        <RadzenBadge Text="@r.DeploymentTarget" IsPill="true"
+                                                     BadgeStyle="@TargetBadge(r.DeploymentTarget)" />
+                                    }
+                                    else { <RadzenBadge Text="Scan Error" BadgeStyle="BadgeStyle.Danger" IsPill="true" Style="font-size:.7rem" /> }
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="InfraReview" Property="DeploymentMethod" Title="Deploy Method" Width="140px">
+                                <Template Context="r">
+                                    @if (r.Error is null)
+                                    {
+                                        <span style="font-size:.82rem">@r.DeploymentMethod</span>
+                                    }
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="InfraReview" Title="CI/CD Files" Width="100px" Sortable="false" Filterable="false">
+                                <Template Context="r">
+                                    @if (r.CiCdFiles.Count > 0)
+                                    {
+                                        <RadzenBadge Text="@r.CiCdFiles.Count.ToString()" BadgeStyle="BadgeStyle.Primary" IsPill="true" />
+                                        <span style="font-size:.72rem;color:var(--rz-text-secondary-color);margin-left:4px">workflows</span>
+                                    }
+                                    else { <span style="color:var(--rz-text-secondary-color);font-size:.8rem">none</span> }
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="InfraReview" Title="Triggers" Width="150px" Sortable="false" Filterable="false">
+                                <Template Context="r">
+                                    <div style="display:flex;flex-wrap:wrap;gap:3px">
+                                    @foreach (var t in r.CiCdFiles.SelectMany(c => c.Triggers).Distinct())
+                                    {
+                                        <RadzenBadge Text="@t" BadgeStyle="@TriggerBadge(t)" IsPill="true" Style="font-size:.62rem" />
+                                    }
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="InfraReview" Title="Infra Files" Width="130px" Sortable="false" Filterable="false">
+                                <Template Context="r">
+                                    <div style="display:flex;flex-wrap:wrap;gap:3px">
+                                    @foreach (var f in r.InfraFiles)
+                                    {
+                                        <RadzenBadge Text="@f.FileType.ToUpper()" BadgeStyle="@InfraFileBadge(f.FileType)" IsPill="true" Style="font-size:.62rem" title="@f.FileName" />
+                                    }
+                                    @if (!r.InfraFiles.Any())
+                                    { <span style="color:var(--rz-text-secondary-color);font-size:.8rem">none</span> }
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="InfraReview" Title="Bicep Resources" Sortable="false" Filterable="false">
+                                <Template Context="r">
+                                    @{
+                                        var types = r.InfraFiles
+                                            .Where(f => f.FileType == "bicep")
+                                            .SelectMany(f => f.ResourceTypes)
+                                            .Distinct()
+                                            .ToList();
+                                    }
+                                    @if (types.Any())
+                                    {
+                                        <div style="display:flex;flex-wrap:wrap;gap:3px">
+                                        @foreach (var rt in types)
+                                        {
+                                            var shortType = rt.Split('/').LastOrDefault() ?? rt;
+                                            <RadzenBadge Text="@shortType" BadgeStyle="BadgeStyle.Light" IsPill="true" Style="font-size:.62rem" title="@rt" />
+                                        }
+                                        </div>
+                                    }
+                                    else { <span style="color:var(--rz-text-secondary-color);font-size:.8rem">—</span> }
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+
+                    <!-- ── Expanded detail panel ── -->
+                    @if (_infraSelected is not null)
+                    {
+                        <div style="margin-top:1.25rem;border:1px solid var(--rz-border-disabled-color);border-radius:8px;padding:1rem;background:rgba(0,0,0,.15)">
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="rz-mb-3">
+                                <RadzenText TextStyle="TextStyle.H6" Style="margin:0">
+                                    📂 <strong>@_infraSelected.RepoName</strong>
+                                    <RadzenBadge Text="@_infraSelected.DefaultBranch" BadgeStyle="BadgeStyle.Light" IsPill="true" Style="font-size:.72rem;margin-left:.4rem" />
+                                </RadzenText>
+                                <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
+                                              Click="@(() => _infraSelected = null)" />
+                            </RadzenStack>
+
+                            @if (_infraSelected.Error is not null)
+                            {
+                                <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" ShowIcon="true">
+                                    Scan error: @_infraSelected.Error
+                                </RadzenAlert>
+                            }
+                            else
+                            {
+                                <RadzenRow>
+                                    <!-- CI/CD Workflows -->
+                                    <RadzenColumn SizeXS="12" SizeMD="6">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-2">
+                                            🚀 CI/CD Workflows (@_infraSelected.CiCdFiles.Count)
+                                        </RadzenText>
+                                        @if (!_infraSelected.CiCdFiles.Any())
+                                        {
+                                            <div style="color:var(--rz-text-secondary-color);font-size:.82rem">No workflow files found in .github/workflows/</div>
+                                        }
+                                        @foreach (var wf in _infraSelected.CiCdFiles)
+                                        {
+                                            <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:.65rem .85rem;margin-bottom:.6rem;font-size:.82rem">
+                                                <div style="font-weight:600;color:var(--rz-primary-color)">@wf.FileName</div>
+                                                <div style="color:var(--rz-text-secondary-color);font-size:.72rem;margin-bottom:.35rem">@wf.FilePath</div>
+                                                @if (wf.Triggers.Any())
+                                                {
+                                                    <div class="rz-mb-1">
+                                                        <span style="color:var(--rz-text-secondary-color)">Triggers: </span>
+                                                        @foreach (var t in wf.Triggers)
+                                                        { <RadzenBadge Text="@t" BadgeStyle="@TriggerBadge(t)" IsPill="true" Style="font-size:.65rem;margin-right:2px" /> }
+                                                    </div>
+                                                }
+                                                @if (wf.BranchFilters.Any())
+                                                {
+                                                    <div class="rz-mb-1">
+                                                        <span style="color:var(--rz-text-secondary-color)">Branches: </span>
+                                                        @foreach (var b in wf.BranchFilters)
+                                                        { <code style="font-size:.7rem;background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;margin-right:3px">@b</code> }
+                                                    </div>
+                                                }
+                                                @if (wf.DeployActions.Any())
+                                                {
+                                                    <div>
+                                                        <span style="color:var(--rz-text-secondary-color)">Deploy actions: </span>
+                                                        @foreach (var a in wf.DeployActions)
+                                                        { <code style="font-size:.7rem;background:rgba(0,120,255,.15);padding:1px 5px;border-radius:3px;margin-right:3px;color:var(--rz-info-color)">@a</code> }
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </RadzenColumn>
+
+                                    <!-- Infra files -->
+                                    <RadzenColumn SizeXS="12" SizeMD="6">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-2">
+                                            🏗 Infrastructure Files (@_infraSelected.InfraFiles.Count)
+                                        </RadzenText>
+                                        @if (!_infraSelected.InfraFiles.Any())
+                                        {
+                                            <div style="color:var(--rz-text-secondary-color);font-size:.82rem">No Bicep, ARM, Docker, or AZD files found.</div>
+                                        }
+                                        @foreach (var inf in _infraSelected.InfraFiles)
+                                        {
+                                            <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:.65rem .85rem;margin-bottom:.6rem;font-size:.82rem">
+                                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px" class="rz-mb-1">
+                                                    <RadzenBadge Text="@inf.FileType.ToUpper()" BadgeStyle="@InfraFileBadge(inf.FileType)" IsPill="true" Style="font-size:.65rem" />
+                                                    <strong style="color:var(--rz-primary-color)">@inf.FileName</strong>
+                                                </RadzenStack>
+                                                <div style="color:var(--rz-text-secondary-color);font-size:.72rem;margin-bottom:.35rem">@inf.FilePath</div>
+                                                @if (inf.ResourceTypes.Any())
+                                                {
+                                                    <div>
+                                                        <span style="color:var(--rz-text-secondary-color)">Resources: </span>
+                                                        @foreach (var rt in inf.ResourceTypes)
+                                                        {
+                                                            <div style="font-size:.72rem;font-family:monospace;color:var(--rz-info-color);margin-left:.5rem">@rt</div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </RadzenColumn>
+                                </RadzenRow>
+                            }
+                        </div>
+                    }
+                }
+                </div>
+            </RadzenTabsItem>
+
         </Tabs>
     </RadzenTabs>
 }
@@ -558,6 +883,20 @@ else
     private int    _progressPercent;
     private string _progressStep = "";
     private List<string> _progressLog = new();
+
+    // ── Fix Plan state ────────────────────────────────────────────────────────
+    private WebService? _fixPlanService;
+    private string?     _fixPlanText;
+    private string?     _fixPlanError;
+    private string?     _fixPlanDisabledMessage;
+    private bool        _fixPlanLoading;
+
+    // ── CI/CD Review state ────────────────────────────────────────────────────
+    private List<InfraReview>  _infraReviews          = new();
+    private bool               _infraLoading;
+    private string?            _infraError;
+    private string?            _infraDisabledMessage;
+    private InfraReview?       _infraSelected;
 
     protected override async Task OnInitializedAsync() => await LoadReportAsync();
 
@@ -729,6 +1068,50 @@ else
         _         => BadgeStyle.Warning,
     };
 
+    private async Task OpenFixPlan(WebService service)
+    {
+        _fixPlanService        = service;
+        _fixPlanText           = null;
+        _fixPlanError          = null;
+        _fixPlanDisabledMessage = null;
+        _fixPlanLoading        = true;
+        StateHasChanged();
+        _selectedTabIndex = 0; // stay on Web Services tab
+
+        try
+        {
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var resp = await Http.PostAsync($"/api/diag/fix-plan/{Uri.EscapeDataString(service.Name)}", null);
+            var json = await resp.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("disabled", out var dis) && dis.GetBoolean())
+            {
+                _fixPlanDisabledMessage = doc.RootElement.TryGetProperty("message", out var msg)
+                    ? msg.GetString() : "AI integration is disabled.";
+            }
+            else if (resp.IsSuccessStatusCode && doc.RootElement.TryGetProperty("plan", out var planEl))
+            {
+                _fixPlanText = planEl.GetString();
+            }
+            else
+            {
+                _fixPlanError = doc.RootElement.TryGetProperty("detail", out var det)
+                    ? det.GetString()
+                    : $"Request failed ({(int)resp.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _fixPlanError = ex.Message;
+        }
+        finally
+        {
+            _fixPlanLoading = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task CopyToClipboard(string text)
     {
         try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
@@ -799,4 +1182,94 @@ else
     private int BurnRateLabelStep =>
         BurnRateChartData.Count > 20 ? 5 :
         BurnRateChartData.Count > 10 ? 3 : 1;
+
+    // ── CI/CD Review helpers ──────────────────────────────────────────────────
+
+    private async Task LoadInfraReviewAsync()
+    {
+        _infraLoading = true;
+        _infraError   = null;
+        _infraDisabledMessage = null;
+        StateHasChanged();
+        try
+        {
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var resp = await Http.GetAsync("/api/infra/cicd-review");
+            var json = await resp.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("disabled", out var dis) && dis.GetBoolean())
+            {
+                _infraDisabledMessage = doc.RootElement.TryGetProperty("message", out var msg)
+                    ? msg.GetString() : "GitHub PAT is not configured.";
+                _infraReviews = new();
+            }
+            else if (doc.RootElement.TryGetProperty("reviews", out var rev))
+            {
+                _infraReviews = rev.Deserialize<List<InfraReview>>(opts) ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            _infraError = ex.Message;
+        }
+        finally
+        {
+            _infraLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RescanInfraAsync()
+    {
+        await Http.PostAsync("/api/infra/cicd-review/refresh", null);
+        _infraReviews  = new();
+        _infraSelected = null;
+        await LoadInfraReviewAsync();
+    }
+
+    private void ToggleInfraDetail(InfraReview review)
+    {
+        _infraSelected = _infraSelected?.RepoName == review.RepoName ? null : review;
+    }
+
+    private static BadgeStyle TargetBadge(string? target) => target switch
+    {
+        "Container Apps"   => BadgeStyle.Info,
+        "App Service"      => BadgeStyle.Primary,
+        "Static Web Apps"  => BadgeStyle.Success,
+        "Azure Functions"  => BadgeStyle.Warning,
+        "AKS"              => BadgeStyle.Danger,
+        "Container Instance" => BadgeStyle.Light,
+        "ARM/Bicep Deploy" => BadgeStyle.Secondary,
+        _                  => BadgeStyle.Light,
+    };
+
+    private static BadgeStyle TriggerBadge(string trigger) => trigger switch
+    {
+        "push"              => BadgeStyle.Primary,
+        "pull_request"      => BadgeStyle.Success,
+        "workflow_dispatch" => BadgeStyle.Warning,
+        "schedule"          => BadgeStyle.Info,
+        "release"           => BadgeStyle.Danger,
+        _                   => BadgeStyle.Light,
+    };
+
+    private static BadgeStyle InfraFileBadge(string fileType) => fileType switch
+    {
+        "bicep"   => BadgeStyle.Primary,
+        "arm"     => BadgeStyle.Info,
+        "azd"     => BadgeStyle.Success,
+        "docker"  => BadgeStyle.Warning,
+        "compose" => BadgeStyle.Warning,
+        _         => BadgeStyle.Light,
+    };
+
+    private RenderFragment InfraSummaryCard(string num, string label, string color) => __builder =>
+    {
+        <RadzenCard Style="@($"text-align:center;border-top:4px solid {color};padding:.65rem")">
+            <RadzenText TextStyle="TextStyle.H5" Style="@($"color:{color};margin:0")"><strong>@num</strong></RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-text-uppercase" Style="font-size:.65rem">@label</RadzenText>
+        </RadzenCard>
+    };
 }

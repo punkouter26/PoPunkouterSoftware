@@ -1,6 +1,7 @@
 @page "/"
 @rendermode WasmRenderModes.Interactive
 @using System.Text.Json
+@using System.Text.Json.Serialization
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
 
@@ -84,6 +85,38 @@
                             }
                         </RadzenStack>
                     }
+                    @if (!string.IsNullOrEmpty(app.GithubRepo) && _ghActivity.TryGetValue(app.GithubRepo, out var gh))
+                    {
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px" Style="font-size:.72rem;color:var(--rz-text-secondary-color)">
+                            <span title="GitHub repository">⑂</span>
+                            @if (gh.LastCommitDate.HasValue)
+                            {
+                                var daysAgo = (int)(DateTime.UtcNow - gh.LastCommitDate.Value).TotalDays;
+                                var label = daysAgo == 0 ? "today" : daysAgo == 1 ? "1d ago" : $"{daysAgo}d ago";
+                                var color = daysAgo < 14 ? "var(--rz-success-color)" : daysAgo < 90 ? "var(--rz-warning-color)" : "var(--rz-text-secondary-color)";
+                                <span style="color:@color" title="Last commit @gh.LastCommitDate.Value.ToString("yyyy-MM-dd")">Last commit: @label</span>
+                            }
+                            else
+                            {
+                                <span>No commits found</span>
+                            }
+                            @if (gh.WeeklyCommits?.Length > 0)
+                            {
+                                <svg width="56" height="16" viewBox="0 0 56 16" title="8-week commit activity">
+                                    @{ var max = gh.WeeklyCommits.Max(); }
+                                    @for (int wi = 0; wi < gh.WeeklyCommits.Length; wi++)
+                                    {
+                                        var h = max > 0 ? (int)(gh.WeeklyCommits[wi] * 14.0 / max) : 0;
+                                        var x = wi * 7;
+                                        var y = 14 - h;
+                                        <rect x="@x" y="@y" width="5" height="@(h + 1)"
+                                              fill="@(gh.WeeklyCommits[wi] > 0 ? "var(--rz-success-color)" : "var(--rz-base-400)")"
+                                              rx="1" />
+                                    }
+                                </svg>
+                            }
+                        </RadzenStack>
+                    }
                     <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small"
                                   ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined"
                                   Disabled="@(string.IsNullOrEmpty(app.Url))"
@@ -124,11 +157,12 @@
     private List<AppModel> filteredApps = new();
     // GoF: Dictionary used as a simple cache (Flyweight-adjacent) for live status lookups by URL.
     private Dictionary<string, WebService> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, GitHubActivity> _ghActivity = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
         await ReloadAppsAsync();
-        await LoadLiveStatusAsync();
+        await Task.WhenAll(LoadLiveStatusAsync(), LoadGitHubActivityAsync());
     }
 
     // Reads apps.json as a static file served from wwwroot — no server file system access needed in WASM.
@@ -162,6 +196,30 @@
                 .ToDictionary(s => s.Url!, StringComparer.OrdinalIgnoreCase);
         }
         catch { /* non-fatal — live status is optional */ }
+    }
+
+    // Fetches GitHub activity for apps that declare a githubRepo field.
+    private async Task LoadGitHubActivityAsync()
+    {
+        var repos = filteredApps
+            .Where(a => !string.IsNullOrEmpty(a.GithubRepo))
+            .Select(a => a.GithubRepo!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var repo in repos)
+        {
+            try
+            {
+                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var gh = await Http.GetFromJsonAsync<GitHubActivity>($"/api/github-activity?repo={Uri.EscapeDataString(repo)}", opts);
+                if (gh is not null)
+                    _ghActivity[repo] = gh;
+            }
+            catch { /* non-fatal */ }
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private WebService? GetLiveStatus(string? url)
@@ -203,5 +261,10 @@
         public string Description { get; set; } = "";
         public string Url { get; set; } = "";
         public List<string>? Technologies { get; set; }
+        public string? GithubRepo { get; set; }
     }
+
+    private record GitHubActivity(
+        [property: JsonPropertyName("lastCommitDate")] DateTime? LastCommitDate,
+        [property: JsonPropertyName("weeklyCommits")] int[]? WeeklyCommits);
 }

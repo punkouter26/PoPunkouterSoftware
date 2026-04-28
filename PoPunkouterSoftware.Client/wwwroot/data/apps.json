@@ -10,7 +10,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://poface-dev-web.azurewebsites.net"
+      "url": "https://poface-dev-web.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "pohorserace",
@@ -22,7 +23,8 @@
         "Azure Static Web Apps",
         "JavaScript"
       ],
-      "url": "https://witty-bush-0a1d3390f.2.azurestaticapps.net"
+      "url": "https://witty-bush-0a1d3390f.2.azurestaticapps.net",
+      "githubRepo": null
     },
     {
       "id": "pomarriedlifegoogle",
@@ -34,7 +36,8 @@
         "Azure Static Web Apps",
         "JavaScript"
       ],
-      "url": "https://gentle-coast-0cb3e800f.2.azurestaticapps.net"
+      "url": "https://gentle-coast-0cb3e800f.2.azurestaticapps.net",
+      "githubRepo": null
     },
     {
       "id": "5ln5hfdrvof5u",
@@ -46,7 +49,8 @@
         "Azure Static Web Apps",
         "JavaScript"
       ],
-      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net"
+      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net",
+      "githubRepo": null
     },
     {
       "id": "popunkoutersoftware",
@@ -58,7 +62,8 @@
         "Azure Static Web Apps",
         "JavaScript"
       ],
-      "url": "https://witty-smoke-014bc370f.2.azurestaticapps.net"
+      "url": "https://witty-smoke-014bc370f.2.azurestaticapps.net",
+      "githubRepo": "punkouter5/PoPunkouterSoftware"
     },
     {
       "id": "porobotstocks-porobotstocks",
@@ -70,19 +75,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net"
-    },
-    {
-      "id": "porunner",
-      "name": "PoRunner",
-      "description": "Running and fitness tracking app",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://victorious-ocean-06635bc1e.6.azurestaticapps.net"
+      "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
+      "githubRepo": "punkouter5/PoRobotStocks"
     },
     {
       "id": "poappidea",
@@ -94,7 +88,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://poappidea-web.azurewebsites.net"
+      "url": "https://poappidea-web.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "pocouplequiz",
@@ -106,7 +101,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://pocouplequiz-app.azurewebsites.net"
+      "url": "https://pocouplequiz-app.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "pofunquiz-zizogpdhpyiwo",
@@ -118,7 +114,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://app-pofunquiz-zizogpdhpyiwo.azurewebsites.net"
+      "url": "https://app-pofunquiz-zizogpdhpyiwo.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "pohappytrump",
@@ -130,7 +127,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net"
+      "url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "po-issues",
@@ -143,7 +141,8 @@
         "C#",
         "Blazor"
       ],
-      "url": "https://po-issues.azurewebsites.net"
+      "url": "https://po-issues.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "pojoker",
@@ -155,7 +154,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://app-pojoker.azurewebsites.net"
+      "url": "https://app-pojoker.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "polinks",
@@ -167,7 +167,22 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://app-polinks.azurewebsites.net"
+      "url": "https://app-polinks.azurewebsites.net",
+      "githubRepo": null
+    },
+    {
+      "id": "pomarriedlife-api",
+      "name": "PoMarriedLife",
+      "description": "PomarriedlifeApi app",
+      "category": "health",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://pomarriedlife-api.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "pomarriedlifeshared7377",
@@ -180,7 +195,8 @@
         "C#",
         "Blazor"
       ],
-      "url": "https://pomarriedlifeshared7377.azurewebsites.net"
+      "url": "https://pomarriedlifeshared7377.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "pominiapps",
@@ -192,7 +208,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://pominiapps.azurewebsites.net"
+      "url": "https://pominiapps.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "app-5ln5hfdrvof5u",
@@ -205,7 +222,8 @@
         "C#",
         "Blazor"
       ],
-      "url": "https://app-5ln5hfdrvof5u.azurewebsites.net"
+      "url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "ponovaweight",
@@ -217,7 +235,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://ponovaweight-app.azurewebsites.net"
+      "url": "https://ponovaweight-app.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "app-popunkoutersoftware",
@@ -230,7 +249,8 @@
         "C#",
         "Blazor"
       ],
-      "url": "https://app-popunkoutersoftware.azurewebsites.net"
+      "url": "https://app-popunkoutersoftware.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "poredoimage-web",
@@ -243,7 +263,8 @@
         "C#",
         "Blazor"
       ],
-      "url": "https://poredoimage-web.azurewebsites.net"
+      "url": "https://poredoimage-web.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "porepolinetracker",
@@ -255,20 +276,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://app-porepolinetracker.azurewebsites.net"
-    },
-    {
-      "id": "wa-porunner",
-      "name": "PoRunner",
-      "description": "PoRunner fitness tracking app",
-      "category": "health",
-      "status": "inactive",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://wa-porunner.azurewebsites.net"
+      "url": "https://app-porepolinetracker.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "poseereview",
@@ -280,7 +289,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://app-poseereview.azurewebsites.net"
+      "url": "https://app-poseereview.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "potaggame",
@@ -292,7 +302,8 @@
         "Azure App Service",
         "Blazor"
       ],
-      "url": "https://potaggame-server.azurewebsites.net"
+      "url": "https://potaggame-server.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "potraffic-api",
@@ -305,7 +316,8 @@
         "C#",
         "Blazor"
       ],
-      "url": "https://potraffic-api.azurewebsites.net"
+      "url": "https://potraffic-api.azurewebsites.net",
+      "githubRepo": null
     },
     {
       "id": "app-powatch",
@@ -318,7 +330,8 @@
         "C#",
         "Blazor"
       ],
-      "url": "https://app-powatch.azurewebsites.net"
+      "url": "https://app-powatch.azurewebsites.net",
+      "githubRepo": null
     }
   ]
 }

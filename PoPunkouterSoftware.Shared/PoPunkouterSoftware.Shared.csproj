@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- TargetFramework, Nullable, ImplicitUsings, TreatWarningsAsErrors inherited from Directory.Build.props -->
+    <RootNamespace>PoPunkouterSoftware.Shared</RootNamespace>
+    <AssemblyName>PoPunkouterSoftware.Shared</AssemblyName>
+    <!-- Classes in this project are shared between the server (API) and WASM client.
+         Keep this project free of server-only or browser-only dependencies. -->
+  </PropertyGroup>
+
+</Project>
