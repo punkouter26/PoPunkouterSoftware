@@ -1274,11 +1274,24 @@ public class AzureReportService : IAzureReportService
     private async Task<DiagnosticCoverageInfo> GetDiagnosticCoverageAsync(
         List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
     {
-        if (armToken is null) return new DiagnosticCoverageInfo();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        if (armToken is null)
+        {
+            _logger.LogWarning("Diagnostic coverage check skipped: no ARM token available");
+            return new DiagnosticCoverageInfo();
+        }
 
         var client             = _httpClientFactory.CreateClient();
+        
+        // Log HttpClient timeout settings to help diagnose hangs
+        if (client.Timeout != System.Threading.Timeout.InfiniteTimeSpan)
+            _logger.LogInformation("HttpClient timeout: {Timeout}s - individual requests will timeout after this period", client.Timeout.TotalSeconds);
+        else
+            _logger.LogInformation("HttpClient has no timeout (infinite) - requests may hang indefinitely");
+
         var withoutDiagnostics = new List<DiagnosticEntry>();
-        int total = 0, withDiag = 0;
+        int total = 0, withDiag = 0, failed = 0, timedOut = 0;
 
         var keyTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -1288,33 +1301,131 @@ public class AzureReportService : IAzureReportService
             "microsoft.insights/components",
         };
 
-        foreach (var r in allResources.Where(r => keyTypes.Contains(r.ResourceType.ToString())))
+        var targetResources = allResources
+            .Where(r => keyTypes.Contains(r.ResourceType.ToString()))
+            .ToList();
+
+        _logger.LogInformation("Diagnostic coverage check starting: {Count} resources to scan", targetResources.Count);
+        _logger.LogInformation("Will check diagnostic settings for: {Types}", string.Join(", ", keyTypes));
+
+        for (int i = 0; i < targetResources.Count; i++)
         {
+            var r = targetResources[i];
+            var resourceType = ShortType(r.ResourceType.ToString());
+            var resourceId = r.Id?.ToString() ?? "unknown";
+            var resourceName = r.Name;
+            var resourceGroup = r.Id?.ResourceGroupName ?? "unknown";
+
             total++;
+            
+            // Log progress every 5 resources or for first/last resource
+            if (i % 5 == 0 || i == targetResources.Count - 1)
+            {
+                _logger.LogInformation(
+                    "PROGRESS: Checked {Completed}/{Total} resources so far. With diag: {WithDiag}, Without: {WithoutDiag}, Failed: {Failed}, TimedOut: {TimedOut}",
+                    i, targetResources.Count, withDiag, withoutDiagnostics.Count, failed, timedOut);
+            }
+
+            _logger.LogInformation(
+                "[Diagnostic {Current}/{Total}] Checking {Type} '{Name}' in '{ResourceGroup}'...",
+                i + 1, targetResources.Count, resourceType, resourceName, resourceGroup);
+            _logger.LogDebug("Full resource ID: {ResourceId}", resourceId);
+
+            var resourceSw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
-                using var req = new HttpRequestMessage(HttpMethod.Get,
-                    $"https://management.azure.com{r.Id}/providers/microsoft.insights/diagnosticSettings?api-version=2021-05-01-preview");
+                var requestUrl = $"https://management.azure.com{r.Id}/providers/microsoft.insights/diagnosticSettings?api-version=2021-05-01-preview";
+                
+                _logger.LogDebug("Sending diagnostic settings request to: {Url}", requestUrl);
+                _logger.LogDebug("ARM token present: {HasToken}, Token length: {TokenLength}", 
+                    !string.IsNullOrEmpty(armToken), armToken?.Length ?? 0);
+
+                using var req = new HttpRequestMessage(HttpMethod.Get, requestUrl);
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
+
+                _logger.LogDebug("Sending HTTP request for {Name}...", resourceName);
                 using var resp = await client.SendAsync(req, ct);
-                if (!resp.IsSuccessStatusCode) continue;
+                
+                _logger.LogDebug("Response received for {Name}: {StatusCode} in {ElapsedMs}ms",
+                    resourceName, resp.StatusCode, resourceSw.ElapsedMilliseconds);
+
+                // Warn if request took a long time
+                if (resourceSw.ElapsedMilliseconds > 10000)
+                {
+                    _logger.LogWarning(
+                        "SLOW REQUEST: {Name} took {ElapsedMs}ms - this may cause progress bar to appear stuck at 97%",
+                        resourceName, resourceSw.ElapsedMilliseconds);
+                }
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    failed++;
+                    var errorBody = "";
+                    try { errorBody = await resp.Content.ReadAsStringAsync(ct); } catch { }
+                    _logger.LogWarning(
+                        "Diagnostic settings check failed for {Name} ({Type}): {StatusCode} - {Reason}. Response: {ErrorBody}",
+                        resourceName, resourceType, resp.StatusCode, resp.ReasonPhrase, errorBody.Substring(0, Math.Min(200, errorBody.Length)));
+                    continue;
+                }
 
                 var json  = await resp.Content.ReadAsStringAsync(ct);
                 var doc   = JsonDocument.Parse(json);
                 var count = doc.RootElement.TryGetProperty("value", out var val) ? val.GetArrayLength() : 0;
 
                 if (count > 0)
+                {
                     withDiag++;
+                    _logger.LogInformation(
+                        "  -> {Name} HAS diagnostic settings ({Count} settings) [{ElapsedMs}ms]",
+                        resourceName, count, resourceSw.ElapsedMilliseconds);
+                }
                 else
+                {
                     withoutDiagnostics.Add(new DiagnosticEntry
                     {
-                        Name          = r.Name,
-                        ResourceGroup = r.Id?.ResourceGroupName,
-                        Type          = ShortType(r.ResourceType.ToString()),
+                        Name          = resourceName,
+                        ResourceGroup = resourceGroup,
+                        Type          = resourceType,
                     });
+                    _logger.LogInformation(
+                        "  -> {Name} has NO diagnostic settings [{ElapsedMs}ms]",
+                        resourceName, resourceSw.ElapsedMilliseconds);
+                }
             }
-            catch (Exception ex) { _logger.LogDebug(ex, "Diagnostic settings check failed for {Name}", r.Name); }
+            catch (TaskCanceledException)
+            {
+                timedOut++;
+                failed++;
+                _logger.LogError(
+                    "TIMEOUT: Diagnostic settings check TIMED OUT for {Name} ({Type}) after {ElapsedMs}ms - PROGRESS BAR MAY BE STUCK AT 97%! " +
+                    "This usually means the HTTP request to Azure Management API hung. " +
+                    "Check network connectivity to management.azure.com.",
+                    resourceName, resourceType, resourceSw.ElapsedMilliseconds);
+                throw; // Re-throw to propagate cancellation
+            }
+            catch (HttpRequestException ex)
+            {
+                failed++;
+                _logger.LogError(ex,
+                    "HTTP ERROR: Diagnostic settings check FAILED for {Name} ({Type}) after {ElapsedMs}ms. " +
+                    "This may indicate network issues reaching management.azure.com",
+                    resourceName, resourceType, resourceSw.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                _logger.LogError(ex,
+                    "ERROR: Diagnostic settings check FAILED for {Name} ({Type}) after {ElapsedMs}ms",
+                    resourceName, resourceType, resourceSw.ElapsedMilliseconds);
+            }
         }
+
+        sw.Stop();
+        _logger.LogInformation(
+            "Diagnostic coverage check COMPLETE: {Total} total, {WithDiag} with diagnostics, {WithoutDiag} without, {Failed} failed, {TimedOut} timed out. Total duration: {ElapsedMs}ms",
+            total, withDiag, withoutDiagnostics.Count, failed, timedOut, sw.ElapsedMilliseconds);
+        _logger.LogInformation(
+            "If progress bar was stuck at 97%, the above diagnostics should show which resource caused the delay or timeout.");
 
         return new DiagnosticCoverageInfo
         {
