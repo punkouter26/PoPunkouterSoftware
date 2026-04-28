@@ -31,6 +31,10 @@ public class AzureReportStore : IAzureReportRepository
     private readonly ILogger<AzureReportStore> _logger;
     private readonly IConfiguration            _config;
 
+    // Cached after first successful init so CreateIfNotExistsAsync is not called on every request.
+    private TableClient? _cachedClient;
+    private readonly SemaphoreSlim _clientLock = new(1, 1);
+
     public AzureReportStore(ILogger<AzureReportStore> logger, IConfiguration config)
     {
         _logger = logger;
@@ -182,26 +186,46 @@ public class AzureReportStore : IAzureReportRepository
 
     private async Task<TableClient?> GetTableClientAsync(CancellationToken ct)
     {
-        var tableName        = _config["AzureTableStorage:TableName"] ?? DefaultTableName;
-        var connectionString = _config["AzureTableStorage:ConnectionString"];
+        if (_cachedClient is not null)
+            return _cachedClient;
 
-        TableServiceClient serviceClient;
-
-        if (!string.IsNullOrWhiteSpace(connectionString))
+        await _clientLock.WaitAsync(ct);
+        try
         {
-            serviceClient = new TableServiceClient(connectionString);
+            if (_cachedClient is not null)
+                return _cachedClient;
+
+            var tableName        = _config["AzureTableStorage:TableName"] ?? DefaultTableName;
+            var connectionString = _config["AzureTableStorage:ConnectionString"];
+
+            TableServiceClient serviceClient;
+
+            if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                serviceClient = new TableServiceClient(connectionString);
+            }
+            else
+            {
+                var endpoint = _config["AzureTableStorage:Endpoint"];
+                if (string.IsNullOrWhiteSpace(endpoint))
+                    return null;
+
+                serviceClient = new TableServiceClient(new Uri(endpoint), new DefaultAzureCredential());
+            }
+
+            var tableClient = serviceClient.GetTableClient(tableName);
+            await tableClient.CreateIfNotExistsAsync(ct);
+            _cachedClient = tableClient;
+            return _cachedClient;
         }
-        else
+        catch (Exception ex)
         {
-            var endpoint = _config["AzureTableStorage:Endpoint"];
-            if (string.IsNullOrWhiteSpace(endpoint))
-                return null;
-
-            serviceClient = new TableServiceClient(new Uri(endpoint), new DefaultAzureCredential());
+            _logger.LogWarning(ex, "Table Storage unavailable — report will fall back to file");
+            return null;
         }
-
-        var tableClient = serviceClient.GetTableClient(tableName);
-        await tableClient.CreateIfNotExistsAsync(ct);
-        return tableClient;
+        finally
+        {
+            _clientLock.Release();
+        }
     }
 }
