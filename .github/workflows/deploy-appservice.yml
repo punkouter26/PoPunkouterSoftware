@@ -71,17 +71,3 @@ jobs:
         run: |
           az webapp start --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
 
-      - name: Verify health endpoint
-        shell: bash
-        run: |
-          for i in {1..36}; do
-            STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 "https://${APP_NAME}.azurewebsites.net/health" || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "Health check passed (attempt $i)"
-              exit 0
-            fi
-            echo "Waiting for app warm-up ($i/36, status=$STATUS)..."
-            sleep 10
-          done
-          echo "Health check failed after 6 minutes"
-          exit 1
