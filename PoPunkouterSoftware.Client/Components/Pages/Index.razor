@@ -194,6 +194,9 @@
             _liveByUrl = services
                 .Where(s => !string.IsNullOrEmpty(s.Url))
                 .ToDictionary(s => s.Url!, StringComparer.OrdinalIgnoreCase);
+            // Re-filter now that we have live connectivity data
+            ApplyDefaultSort();
+            await InvokeAsync(StateHasChanged);
         }
         catch { /* non-fatal — live status is optional */ }
     }
@@ -239,8 +242,23 @@
 
     private void ApplyDefaultSort()
     {
+        var statusRank = (AppModel a) => a.Status?.ToLower() switch { "active" => 0, "inactive" => 1, _ => 2 };
+
         filteredApps = (apps ?? Enumerable.Empty<AppModel>())
-            .OrderBy(a => string.Equals(a.Status, "active", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .Where(a =>
+            {
+                // Before live data arrives show everything; once loaded, keep only working apps
+                if (_liveByUrl.Count == 0) return true;
+                var live = GetLiveStatus(a.Url);
+                if (live is null) return false;                               // not in Azure
+                if (live.HttpStatus != "active") return false;                // broken / stopped
+                if (live.Connectivity?.IsAzureErrorPage == true) return false; // Azure placeholder
+                return true;
+            })
+            // Deduplicate by name — keep the entry with the best status (active wins)
+            .GroupBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderBy(statusRank).First())
+            .OrderBy(a => statusRank(a))
             .ThenBy(a => a.Name)
             .ToList();
     }

@@ -221,13 +221,6 @@ public class StaticFilesTests
     public StaticFilesTests(TestWebApp factory) => _client = factory.CreateClient();
 
     [Fact]
-    public async Task GetMainCss_Returns200()
-    {
-        var response = await _client.GetAsync("/css/main.css");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Fact]
     public async Task GetAppsJson_Returns200()
     {
         var response = await _client.GetAsync("/data/apps.json");

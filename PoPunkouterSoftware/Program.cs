@@ -24,7 +24,7 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // ─── Azure Key Vault (PoShared) — always loaded when URI is configured ───
+    // ─── Azure Key Vault — always loaded when URI is configured ───
     var kvUriStr = builder.Configuration["AzureKeyVaultUri"];
     if (!string.IsNullOrWhiteSpace(kvUriStr))
     {
@@ -86,7 +86,7 @@ try
         otelBuilder.UseAzureMonitor(o => o.ConnectionString = aiConnectionString);
     }
 
-    // ─── OpenAPI / Scalar ────────────────────────────────────────────────────
+    // ─── OpenAPI / Scalar ────────────────────────────────────────────
     builder.Services.AddOpenApi();
 
     builder.WebHost.UseStaticWebAssets();
@@ -100,7 +100,7 @@ try
     builder.Services.AddScoped<TooltipService>();
     builder.Services.AddScoped<ContextMenuService>();
 
-    // ─── CORS — origins loaded from configuration ─────────────────────────────
+    // ─── CORS — origins loaded from configuration ─────────────────────
     var allowedOrigins = builder.Configuration
         .GetSection("AllowedOrigins")
         .Get<string[]>() ?? [];
@@ -111,19 +111,14 @@ try
             policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
     });
 
-    // ─── HTTP client used by /health to probe external services ──────────────
-    // Uses SocketsHttpHandler with a custom ConnectCallback so SSL validation
-    // is preserved while still allowing TLS-level connectivity checks.
+    // ─── HTTP clients for Azure services ────────────────────────────────────
+    // Centralized configuration via AzureClientFactory
     builder.Services.AddHttpClient("health")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             ConnectTimeout = TimeSpan.FromSeconds(5),
         });
 
-    // ─── HTTP client used by AzureReportService to probe web service URLs ────
-    // Uses SocketsHttpHandler without disabling certificate validation.
-    // Azure endpoints all have valid TLS certificates, so the dangerous
-    // AcceptAnyServerCertificateValidator override is removed entirely.
     builder.Services.AddHttpClient("azure-probe")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -135,6 +130,9 @@ try
             c.Timeout = TimeSpan.FromSeconds(15);
             c.DefaultRequestHeaders.UserAgent.ParseAdd("PoPunkouterSoftware-Audit/3.0");
         });
+
+    // Register Azure client factory
+    builder.Services.AddSingleton<IAzureClientFactory, AzureClientFactory>();
 
     // ─── Azure report analysis + Blob persistence ─────────────────────────────
     // SOLID: Dependency Inversion — register concrete classes against their domain/application interfaces.
@@ -148,7 +146,7 @@ try
     // ─── In-process memory cache (GitHub activity + AI fix plans) ────────────
     builder.Services.AddMemoryCache();
 
-    // ─── HTTP client for GitHub API ───────────────────────────────────────────
+    // ─── HTTP client for GitHub API ───────────────────────────────────
     builder.Services.AddHttpClient("github")
         .ConfigureHttpClient(c =>
         {
@@ -156,7 +154,7 @@ try
             c.Timeout = TimeSpan.FromSeconds(10);
         });
 
-    // ─── HTTP client for Azure OpenAI ─────────────────────────────────────────
+    // ─── HTTP client for Azure OpenAI ─────────────────────────────────
     builder.Services.AddHttpClient("azure-openai")
         .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(60));
 
@@ -192,7 +190,7 @@ try
        .AddInteractiveWebAssemblyRenderMode()
        .AddAdditionalAssemblies(typeof(PoPunkouterSoftware.Client.Components.Layout.MainLayout).Assembly);
 
-    // ─── OpenAPI / Scalar UI ─────────────────────────────────────────────────
+    // ─── OpenAPI / Scalar UI ─────────────────────────────────────────
     app.MapOpenApi();
     app.MapScalarApiReference(o =>
     {
@@ -201,9 +199,9 @@ try
     });
 
     // ─── Health — probes all external connections ─────────────────────────────
-    var healthHandler = async (IHttpClientFactory httpClientFactory, IConfiguration config, IWebHostEnvironment env) =>
+    var healthHandler = async (IAzureClientFactory azureClientFactory, IConfiguration config, IWebHostEnvironment env) =>
     {
-        var client = httpClientFactory.CreateClient("health");
+        var client = azureClientFactory.CreateHealthClient();
         var checks = new Dictionary<string, object>();
         var allHealthy = true;
 
@@ -298,7 +296,7 @@ try
             new { apiBase = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api" }))
         .WithName("GetConfig").WithTags("Config");
 
-    // ─── Feature slices ───────────────────────────────────────────────────────
+    // ─── Feature slices ───────────────────────────────────────────────
     app.MapDiagEndpoints();
     app.MapGitHubEndpoints();
     app.MapFixPlanEndpoints();

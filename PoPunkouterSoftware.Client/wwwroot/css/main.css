@@ -1,7 +1,0 @@
-body { font-family: var(--rz-text-font-family); margin: 0; padding: 0; overflow-x: hidden; } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .rz-card, .rz-data-grid { animation: fadeIn 0.4s ease-out; } a:hover { color: var(--rz-primary-dark); }
-
-/* #8 — Azure Dashboard tab bar scrolls horizontally on narrow viewports instead of wrapping */
-.rz-tabview-nav { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin; padding-bottom: 2px; }
-
-/* Rotate x-axis (category) tick labels so dates are readable */
-.rz-category-axis .rz-tick-text { transform: rotate(-45deg); transform-origin: top right; text-anchor: end !important; font-size: 0.7rem; }

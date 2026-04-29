@@ -5,34 +5,31 @@
 
 @if (_fixPlanService is not null)
 {
-    <div style="margin-top:1.5rem;border:1px solid var(--rz-warning-color);border-radius:8px;padding:1rem;background:rgba(255,170,0,.05)">
-        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="rz-mb-2">
+    <div style="margin-top:1rem;padding:1rem;border:1px solid #f0ad4e;border-radius:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
             <RadzenText TextStyle="TextStyle.H6" Style="margin:0">
                 🔧 Fix Plan — <strong>@(_fixPlanService.FriendlyName ?? _fixPlanService.Name)</strong>
             </RadzenText>
             <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall" Variant="Variant.Text"
                           Click="@(() => _fixPlanService = null)" />
-        </RadzenStack>
+        </div>
         @if (_fixPlanLoading)
         {
             <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="height:6px" />
-            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mt-1">Analysing with AI…</RadzenText>
+            <small style="display:block;margin-top:0.25rem;">Analysing…</small>
         }
         else if (_fixPlanError is not null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true">@_fixPlanError</RadzenAlert>
-            <div class="rz-mt-2">
-                <RadzenButton Text="Retry" Size="ButtonSize.Small"
-                              Icon="refresh" Click="@(() => _ = RetryAsync())" />
-            </div>
+            <RadzenAlert AlertStyle="AlertStyle.Warning" ShowIcon="true">@_fixPlanError</RadzenAlert>
+            <RadzenButton Text="Retry" Size="ButtonSize.Small" Icon="refresh" Click="@(() => _ = RetryAsync())" />
         }
         else if (_fixPlanDisabledMessage is not null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" ShowIcon="true">@_fixPlanDisabledMessage</RadzenAlert>
+            <RadzenAlert AlertStyle="AlertStyle.Info" ShowIcon="true">@_fixPlanDisabledMessage</RadzenAlert>
         }
         else if (_fixPlanText is not null)
         {
-            <div style="white-space:pre-wrap;font-size:.85rem;line-height:1.7;color:var(--rz-text-color)">@_fixPlanText</div>
+            <pre style="white-space:pre-wrap;font-size:.85rem;line-height:1.7;color:var(--rz-text-color);margin:0;">@_fixPlanText</pre>
         }
     </div>
 }

@@ -8,8 +8,7 @@ namespace PoPunkouterSoftware.Features.Diag;
 
 internal static class DiagEndpoints
 {
-
-// ─── Route registration ───────────────────────────────────────────────────
+    // ─── Route registration ───────────────────────────────────────────────────
     // SOLID: Single Responsibility — this method registers only /api/diag/* routes.
     // GoF:   Extension Method (Decorator variant) — decorates WebApplication without subclassing.
     internal static WebApplication MapDiagEndpoints(this WebApplication app)
@@ -17,21 +16,18 @@ internal static class DiagEndpoints
         // ── Cached azure-full-report.json (Blob Storage first, file fallback) ──
         app.MapGet("/api/diag/report", async (IWebHostEnvironment env, AzureReportStore store) =>
         {
-            // 1. Try Blob Storage
             var report = await store.LoadAsync();
             if (report is not null)
             {
-                var json = JsonSerializer.Serialize(report);
-                return Results.Content(json, "application/json");
+                return Results.Json(report);
             }
 
-            // 2. Fall back to baked-in JSON file
             var reportPath = Path.Combine(GetDataDir(env), "azure-full-report.json");
             if (!File.Exists(reportPath))
-                return Results.NotFound(new { error = "No report found. Click 'Refresh from Azure' to generate one." });
+                return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
 
-            var bytes = await File.ReadAllBytesAsync(reportPath);
-            return Results.Content(System.Text.Encoding.UTF8.GetString(bytes), "application/json");
+            var json = await File.ReadAllTextAsync(reportPath);
+            return Results.Content(json, "application/json");
         });
 
         // ── Refresh via C# Azure SDK (works locally + on Azure with Managed Identity) ──
@@ -42,7 +38,7 @@ internal static class DiagEndpoints
              IWebHostEnvironment env, ILogger<Program> logger) =>
         {
             if (progressSvc.IsRunning)
-                return Results.Conflict(new { error = "Refresh already in progress." });
+                return Results.Problem(detail: "Refresh already in progress.", statusCode: 409);
 
             progressSvc.Start();
 
@@ -51,7 +47,7 @@ internal static class DiagEndpoints
             {
                 using var scope = scopeFactory.CreateScope();
                 var azureService = scope.ServiceProvider.GetRequiredService<AzureReportService>();
-                var store        = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
+                var store = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
                 var ct = cts.Token;
@@ -64,13 +60,12 @@ internal static class DiagEndpoints
 
                     await store.SaveAsync(report, ct);
 
-                    var opts      = new JsonSerializerOptions { WriteIndented = true };
-                    var json      = JsonSerializer.Serialize(report, opts);
-                    var filePath  = Path.Combine(GetDataDir(env), "azure-full-report.json");
+                    var opts = new JsonSerializerOptions { WriteIndented = true };
+                    var json = JsonSerializer.Serialize(report, opts);
+                    var filePath = Path.Combine(GetDataDir(env), "azure-full-report.json");
                     await File.WriteAllTextAsync(filePath, json, ct);
 
-                    var appsJsonPath = Path.Combine(GetDataDir(env), "apps.json");
-                    await AppsJsonSyncer.SyncAsync(report, appsJsonPath, ct);
+                    // AppsJsonSyncer removed — apps.json sync no longer performed
 
                     sw.Stop();
                     logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
@@ -82,7 +77,7 @@ internal static class DiagEndpoints
                 catch (Exception ex)
                 {
                     progressSvc.Fail(ex.Message);
-                    logger.LogError(ex, "Azure report refresh failed");
+                    logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
                 }
             });
 
@@ -96,9 +91,9 @@ internal static class DiagEndpoints
             return Results.Ok(new
             {
                 isRunning = snap.IsRunning,
-                step      = snap.Step,
-                percent   = snap.Percent,
-                log       = snap.Log,
+                step = snap.Step,
+                percent = snap.Percent,
+                log = snap.Log,
             });
         });
 
@@ -112,9 +107,9 @@ internal static class DiagEndpoints
                 var psi = new ProcessStartInfo(azExe, "account show --output json")
                 {
                     RedirectStandardOutput = true,
-                    RedirectStandardError  = true,
-                    UseShellExecute        = false,
-                    CreateNoWindow         = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
                 };
 
                 using var process = Process.Start(psi)!;
@@ -127,18 +122,16 @@ internal static class DiagEndpoints
                 if (process.ExitCode != 0)
                     return Results.Ok(new { loggedIn = false, error = stderr.Trim() });
 
-                System.Text.Json.Nodes.JsonObject? accountData = null;
                 try
                 {
-                    accountData = System.Text.Json.JsonSerializer
+                    var accountData = System.Text.Json.JsonSerializer
                         .Deserialize<System.Text.Json.Nodes.JsonObject>(stdout);
+                    return Results.Ok(new { loggedIn = true, account = accountData });
                 }
-                catch
+                catch (JsonException)
                 {
                     return Results.Ok(new { loggedIn = false, error = "Unexpected az output format." });
                 }
-
-                return Results.Json(new { loggedIn = true, account = accountData });
             }
             catch (OperationCanceledException)
             {
@@ -177,8 +170,8 @@ internal static class DiagEndpoints
                 {
                     var sample = new StatusSample
                     {
-                        At            = reportTime,
-                        Status        = svc.HttpStatus ?? "unknown",
+                        At = reportTime,
+                        Status = svc.HttpStatus ?? "unknown",
                         ResponseTimeMs = svc.Connectivity?.ResponseTime > 0 ? svc.Connectivity.ResponseTime : null,
                     };
 
@@ -195,12 +188,12 @@ internal static class DiagEndpoints
                         // First occurrence = most recent report = current status
                         serviceMap[svc.Name] = new ServiceStatusEntry
                         {
-                            Name          = svc.Name,
-                            FriendlyName  = svc.FriendlyName,
-                            Url           = svc.Url,
+                            Name = svc.Name,
+                            FriendlyName = svc.FriendlyName,
+                            Url = svc.Url,
                             CurrentStatus = svc.HttpStatus ?? "unknown",
                             ResponseTimeMs = svc.Connectivity?.ResponseTime > 0 ? svc.Connectivity.ResponseTime : null,
-                            Samples       = new List<StatusSample> { sample },
+                            Samples = new List<StatusSample> { sample },
                         };
                     }
                 }
@@ -209,7 +202,7 @@ internal static class DiagEndpoints
             var statusReport = new StatusPageReport
             {
                 GeneratedAt = history[0].GeneratedAt ?? DateTime.UtcNow,
-                Services    = serviceMap.Values
+                Services = serviceMap.Values
                     .OrderByDescending(s => s.CurrentStatus == "active" ? 0 : 1)
                     .ThenBy(s => s.FriendlyName ?? s.Name)
                     .ToList(),
@@ -231,5 +224,4 @@ internal static class DiagEndpoints
         env.WebRootPath is not null
             ? Path.Combine(env.WebRootPath, "data")
             : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "data"));
-
 }

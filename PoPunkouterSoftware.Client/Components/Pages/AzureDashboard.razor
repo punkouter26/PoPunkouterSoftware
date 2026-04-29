@@ -28,6 +28,14 @@ else if (!string.IsNullOrWhiteSpace(_loadError))
 else
 {
     var currentReport = report ?? new AzureReport();
+    var consolidatedServices = ConsolidatedServices;
+    var priorityQueue = PriorityQueue;
+    var totalRequests7d = consolidatedServices.Sum(s => s.Requests7d);
+    var activeApps = consolidatedServices.Count(s => s.HttpStatus == "active");
+    var totalCost30d = currentReport.Cost?.TotalCost30Days ?? 0;
+    var costPer1kRequests = totalRequests7d > 0 ? (totalCost30d / totalRequests7d) * 1000 : 0;
+    var costPerActiveApp = activeApps > 0 ? totalCost30d / activeApps : 0;
+    var avgReliability = consolidatedServices.Count > 0 ? consolidatedServices.Average(s => s.ReliabilityScore) : 100;
 
     <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-2">
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="8px">
@@ -63,17 +71,129 @@ else
 
     <!-- ── Summary Strip ── -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1.75rem">
-        @SummaryCard(currentReport.WebServices?.Total.ToString() ?? "0", "Services", "var(--rz-info)")
+        @SummaryCard(consolidatedServices.Count.ToString(), "Consolidated Apps", "var(--rz-info)")
         @SummaryCard(currentReport.WebServices?.ByStatus?.Active.ToString() ?? "0", "Active", "var(--rz-success)")
-        @SummaryCardLink(currentReport.WebServices?.ByStatus?.Broken.ToString() ?? "0", "Broken ↗", currentReport.WebServices?.ByStatus?.Broken > 0 ? "var(--rz-danger)" : "var(--rz-secondary)", () => _selectedTabIndex = 0)
+        @SummaryCardLink(currentReport.WebServices?.ByStatus?.Broken.ToString() ?? "0", "Broken ↗", currentReport.WebServices?.ByStatus?.Broken > 0 ? "var(--rz-danger)" : "var(--rz-secondary)", () => _selectedTabIndex = 1)
         @SummaryCard(currentReport.Cost?.TotalFormatted ?? "$0.00", "30-Day Cost", "var(--rz-warning)")
         @SummaryCardLink(safeToRemove.Count.ToString(), "Safe to Remove ↗", safeToRemove.Count > 0 ? "var(--rz-danger)" : "var(--rz-success)", () => _selectedTabIndex = 1)
+        @SummaryCard($"${costPer1kRequests:F2}", "Cost / 1k req", "var(--rz-primary)")
+        @SummaryCard($"${costPerActiveApp:F2}", "Cost / active app", "var(--rz-secondary)")
+        @SummaryCard($"{avgReliability:F0}%", "Avg reliability", avgReliability < 70 ? "var(--rz-danger)" : avgReliability < 85 ? "var(--rz-warning)" : "var(--rz-success)")
     </div>
 
     <RadzenTabs @bind-SelectedIndex="_selectedTabIndex">
         <Tabs>
 
-            <!-- ── Tab 1: Web Services ── -->
+            <!-- ── Tab 1: Consolidated View ── -->
+            <RadzenTabsItem Text="@($"🧠 Consolidated ({consolidatedServices.Count})")">
+                <div class="rz-mt-2" style="overflow-x:auto">
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-2">
+                        One row per app with merged signals, actionability tier, owner/environment hints, and anomaly flags.
+                    </RadzenText>
+                    <RadzenDataGrid Data="@consolidatedServices" TItem="ConsolidatedService" AllowFiltering="true" AllowSorting="true"
+                                    AllowPaging="true" PageSize="15" ShowPagingSummary="true" FilterMode="FilterMode.Simple">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="DisplayName" Title="App" Width="180px" />
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="Owner" Title="Owner" Width="110px" />
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="Environment" Title="Env" Width="90px">
+                                <Template Context="c">
+                                    <RadzenBadge Text="@c.Environment" IsPill="true" BadgeStyle="@(c.Environment == "prod" ? BadgeStyle.Danger : c.Environment == "dev" ? BadgeStyle.Warning : BadgeStyle.Info)" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="ResourceTypeSummary" Title="Platform" Width="170px" />
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="HealthScore" Title="Health" Width="85px">
+                                <Template Context="c">
+                                    <RadzenBadge Text="@c.HealthScore.ToString()" IsPill="true" BadgeStyle="@(c.HealthScore < 50 ? BadgeStyle.Danger : c.HealthScore < 75 ? BadgeStyle.Warning : BadgeStyle.Success)" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="ReliabilityScore" Title="Reliability" Width="95px">
+                                <Template Context="c">
+                                    <span style="font-weight:700;color:@(c.ReliabilityScore < 70 ? "var(--rz-danger-color)" : c.ReliabilityScore < 85 ? "var(--rz-warning-color)" : "var(--rz-success-color)")">@c.ReliabilityScore%</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="Requests7d" Title="7d Req" Width="85px" />
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="Http5xx7d" Title="7d 5xx" Width="85px" />
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Property="Actionability" Title="Action" Width="110px">
+                                <Template Context="c">
+                                    <RadzenBadge Text="@c.Actionability" IsPill="true" BadgeStyle="@ActionabilityBadge(c.Actionability)" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ConsolidatedService" Title="Anomaly" Width="120px" Sortable="false" Filterable="false">
+                                <Template Context="c">
+                                    @if (c.HasAnomaly)
+                                    {
+                                        <RadzenBadge Text="Deviation" BadgeStyle="BadgeStyle.Warning" IsPill="true" />
+                                    }
+                                    else
+                                    {
+                                        <span style="color:var(--rz-text-secondary-color)">—</span>
+                                    }
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+
+                    <RadzenRow class="rz-mt-3">
+                        <RadzenColumn SizeXS="12" SizeMD="6">
+                            <RadzenText TextStyle="TextStyle.H6" class="rz-mb-1">Portfolio by Environment</RadzenText>
+                            <RadzenDataGrid Data="@PortfolioByEnvironment" TItem="PortfolioRollup" AllowPaging="false" AllowSorting="true">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="PortfolioRollup" Property="Dimension" Title="Environment" />
+                                    <RadzenDataGridColumn TItem="PortfolioRollup" Property="Apps" Title="Apps" Width="80px" />
+                                    <RadzenDataGridColumn TItem="PortfolioRollup" Property="Broken" Title="Broken" Width="80px" />
+                                    <RadzenDataGridColumn TItem="PortfolioRollup" Property="AvgHealth" Title="Avg Health" Width="110px" />
+                                </Columns>
+                            </RadzenDataGrid>
+                        </RadzenColumn>
+                        <RadzenColumn SizeXS="12" SizeMD="6">
+                            <RadzenText TextStyle="TextStyle.H6" class="rz-mb-1">Portfolio by Platform</RadzenText>
+                            <RadzenDataGrid Data="@PortfolioByPlatform" TItem="PortfolioRollup" AllowPaging="false" AllowSorting="true">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="PortfolioRollup" Property="Dimension" Title="Platform" />
+                                    <RadzenDataGridColumn TItem="PortfolioRollup" Property="Apps" Title="Apps" Width="80px" />
+                                    <RadzenDataGridColumn TItem="PortfolioRollup" Property="Broken" Title="Broken" Width="80px" />
+                                    <RadzenDataGridColumn TItem="PortfolioRollup" Property="AvgHealth" Title="Avg Health" Width="110px" />
+                                </Columns>
+                            </RadzenDataGrid>
+                        </RadzenColumn>
+                    </RadzenRow>
+                </div>
+            </RadzenTabsItem>
+
+            <!-- ── Tab 2: Priority Queue ── -->
+            <RadzenTabsItem Text="@($"🎯 Priority Queue ({priorityQueue.Count})")">
+                <div class="rz-mt-2">
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-2">
+                        Unified action queue across reliability, deletion candidates, SSL risk, and orphaned resources.
+                    </RadzenText>
+                    <RadzenDataGrid Data="@priorityQueue" TItem="PriorityQueueItem" AllowSorting="true" AllowFiltering="true"
+                                    AllowPaging="true" PageSize="20" FilterMode="FilterMode.Simple">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Property="Actionability" Title="Tier" Width="105px">
+                                <Template Context="p"><RadzenBadge Text="@p.Actionability" IsPill="true" BadgeStyle="@ActionabilityBadge(p.Actionability)" /></Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Property="Item" Title="Item" Width="220px" />
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Property="Source" Title="Source" Width="140px" />
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Property="ImpactScore" Title="Impact" Width="80px" />
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Property="Confidence" Title="Confidence" Width="95px" />
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Property="Reason" Title="Reason" />
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Property="Owner" Title="Owner" Width="110px" />
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Property="Environment" Title="Env" Width="90px" />
+                            <RadzenDataGridColumn TItem="PriorityQueueItem" Title="Command" Width="110px" Sortable="false" Filterable="false">
+                                <Template Context="p">
+                                    @if (!string.IsNullOrWhiteSpace(p.Command))
+                                    {
+                                        <RadzenButton Text="Copy" Icon="content_copy" Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                                      Click="@(() => CopyToClipboard(p.Command!))" />
+                                    }
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </div>
+            </RadzenTabsItem>
+
+            <!-- ── Tab 3: Web Services ── -->
             <RadzenTabsItem Text="@($"🌐 Web Services ({currentReport.WebServices?.Total ?? 0})")">
                 <div style="overflow-x:auto">
                 <RadzenDataGrid Data="@SortedServices" TItem="WebService" AllowFiltering="true" AllowSorting="true"
@@ -863,6 +983,24 @@ else
     private IEnumerable<WebService> SortedServices =>
         services.OrderBy(s => s.HttpStatus == "active" ? 0 : 1).ThenBy(s => s.FriendlyName ?? s.Name);
 
+    private List<ConsolidatedService> ConsolidatedServices => BuildConsolidatedServices(report);
+
+    private List<PortfolioRollup> PortfolioByEnvironment =>
+        ConsolidatedServices
+            .GroupBy(s => s.Environment)
+            .Select(g => new PortfolioRollup(g.Key, g.Count(), g.Count(x => x.HttpStatus != "active"), Math.Round(g.Average(x => x.HealthScore), 1)))
+            .OrderByDescending(r => r.Apps)
+            .ToList();
+
+    private List<PortfolioRollup> PortfolioByPlatform =>
+        ConsolidatedServices
+            .GroupBy(s => s.ResourceTypeSummary)
+            .Select(g => new PortfolioRollup(g.Key, g.Count(), g.Count(x => x.HttpStatus != "active"), Math.Round(g.Average(x => x.HealthScore), 1)))
+            .OrderByDescending(r => r.Apps)
+            .ToList();
+
+    private List<PriorityQueueItem> PriorityQueue => BuildPriorityQueue(report, ConsolidatedServices, safeToRemove);
+
     private RenderFragment SummaryCard(string num, string label, string color) => __builder =>
     {
         <RadzenCard Style="@($"text-align:center;border-top:4px solid {color}")">
@@ -1076,7 +1214,7 @@ else
         _fixPlanDisabledMessage = null;
         _fixPlanLoading        = true;
         StateHasChanged();
-        _selectedTabIndex = 0; // stay on Web Services tab
+        _selectedTabIndex = 2; // stay on Web Services tab
 
         try
         {
@@ -1272,4 +1410,236 @@ else
             <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-text-uppercase" Style="font-size:.65rem">@label</RadzenText>
         </RadzenCard>
     };
+
+    private static BadgeStyle ActionabilityBadge(string? tier) => tier switch
+    {
+        "Fix Now" => BadgeStyle.Danger,
+        "Fix Soon" => BadgeStyle.Warning,
+        "Remove Candidate" => BadgeStyle.Secondary,
+        _ => BadgeStyle.Info,
+    };
+
+    private static List<ConsolidatedService> BuildConsolidatedServices(AzureReport? r)
+    {
+        if (r is null) return new();
+        var sourceServices = r.WebServices?.Services ?? new List<WebService>();
+        if (sourceServices.Count == 0) return new();
+
+        var grouped = sourceServices
+            .GroupBy(s => CanonicalAppKey(s.FriendlyName, s.Name))
+            .ToList();
+
+        var raw = new List<ConsolidatedService>();
+        foreach (var group in grouped)
+        {
+            var entries = group.ToList();
+            var first = entries[0];
+            var requests7d = entries.Sum(x => x.Metrics7Days?.Requests ?? 0);
+            var http5xx7d = entries.Sum(x => x.Metrics7Days?.Http5xx ?? 0);
+            var hasBroken = entries.Any(x => x.HttpStatus is "broken" or "unreachable" || x.Connectivity?.IsAzureErrorPage == true || x.PlatformState == "Stopped");
+            var rtCandidates = entries.Where(x => x.Connectivity?.Success == true).Select(x => x.Connectivity!.ResponseTime).ToList();
+            var responseMs = rtCandidates.Count > 0 ? (int?)Math.Round(rtCandidates.Average()) : null;
+            var status = hasBroken ? "broken" : entries.Any(x => x.HttpStatus == "active") ? "active" : "other";
+
+            var reliability = 100;
+            reliability -= hasBroken ? 35 : 0;
+            reliability -= Math.Min(30, http5xx7d * 3);
+            reliability -= responseMs is > 3000 ? 20 : responseMs is > 1200 ? 10 : 0;
+            reliability -= requests7d == 0 ? 10 : 0;
+            reliability = Math.Clamp(reliability, 0, 100);
+
+            var health = reliability;
+            if (entries.Any(x => x.FreeTierCheck?.CanGoFree == true)) health -= 5;
+            health = Math.Clamp(health, 0, 100);
+
+            raw.Add(new ConsolidatedService(
+                Key: group.Key,
+                DisplayName: string.IsNullOrWhiteSpace(first.FriendlyName) ? first.Name : first.FriendlyName,
+                ResourceTypeSummary: string.Join(" + ", entries.Select(x => TypeLabel(x.ResourceType)).Distinct()),
+                HttpStatus: status,
+                Requests7d: requests7d,
+                Http5xx7d: http5xx7d,
+                ResponseTimeMs: responseMs,
+                HealthScore: health,
+                ReliabilityScore: reliability,
+                Actionability: ToActionability(status, http5xx7d, requests7d),
+                HasAnomaly: false,
+                Owner: InferOwner(first.ResourceGroup, first.Name),
+                Environment: InferEnvironment(first.ResourceGroup, first.Name),
+                Criticality: InferCriticality(first.ResourceGroup, first.Name),
+                ResourceGroup: first.ResourceGroup,
+                Command: first.ResourceType == "Microsoft.Web/sites" ? $"az webapp show --name \"{first.Name}\" --resource-group \"{first.ResourceGroup}\"" : null
+            ));
+        }
+
+        var medianReq = Median(raw.Select(x => x.Requests7d).ToList());
+        var medianRt = Median(raw.Where(x => x.ResponseTimeMs.HasValue).Select(x => (double)x.ResponseTimeMs!.Value).ToList());
+
+        return raw
+            .Select(x => x with { HasAnomaly = IsAnomalous(x, medianReq, medianRt) })
+            .OrderBy(x => x.HealthScore)
+            .ThenBy(x => x.DisplayName)
+            .ToList();
+    }
+
+    private static List<PriorityQueueItem> BuildPriorityQueue(AzureReport? r, List<ConsolidatedService> consolidated, List<SafeToRemoveItem> safe)
+    {
+        var items = new List<PriorityQueueItem>();
+
+        foreach (var c in consolidated.Where(x => x.Actionability is "Fix Now" or "Fix Soon"))
+        {
+            items.Add(new PriorityQueueItem(
+                Actionability: c.Actionability,
+                Item: c.DisplayName,
+                Source: "Reliability",
+                ImpactScore: 100 - c.HealthScore,
+                Confidence: c.HealthScore < 50 ? "high" : "medium",
+                Reason: $"Status={c.HttpStatus}; 7d 5xx={c.Http5xx7d}; Reliability={c.ReliabilityScore}%",
+                Owner: c.Owner,
+                Environment: c.Environment,
+                Command: c.Command
+            ));
+        }
+
+        foreach (var s in safe)
+        {
+            items.Add(new PriorityQueueItem(
+                Actionability: "Remove Candidate",
+                Item: s.Name,
+                Source: "SafeToRemove",
+                ImpactScore: s.Confidence == "high" ? 75 : 55,
+                Confidence: s.Confidence,
+                Reason: s.Reason,
+                Owner: "unassigned",
+                Environment: "unknown",
+                Command: s.Command
+            ));
+        }
+
+        foreach (var ssl in r?.SslExpiry?.Where(x => x.DaysLeft is < 60).Take(20) ?? Enumerable.Empty<SslEntry>())
+        {
+            var days = ssl.DaysLeft ?? 0;
+            items.Add(new PriorityQueueItem(
+                Actionability: days < 14 ? "Fix Now" : "Fix Soon",
+                Item: ssl.Name,
+                Source: "SSL",
+                ImpactScore: days < 14 ? 90 : 65,
+                Confidence: "high",
+                Reason: $"Certificate expires in {days} days",
+                Owner: "unassigned",
+                Environment: InferEnvironment(ssl.Name, ssl.Name),
+                Command: null
+            ));
+        }
+
+        foreach (var orphan in r?.OrphanedResources ?? new List<OrphanedResource>())
+        {
+            items.Add(new PriorityQueueItem(
+                Actionability: "Remove Candidate",
+                Item: orphan.Name,
+                Source: "Orphaned",
+                ImpactScore: 60,
+                Confidence: "medium",
+                Reason: orphan.Reason,
+                Owner: "unassigned",
+                Environment: InferEnvironment(orphan.ResourceGroup, orphan.Name),
+                Command: orphan.Command
+            ));
+        }
+
+        return items
+            .OrderByDescending(i => i.ImpactScore)
+            .ThenBy(i => i.Actionability)
+            .Take(150)
+            .ToList();
+    }
+
+    private static bool IsAnomalous(ConsolidatedService service, double medianReq, double medianRt)
+    {
+        var requestAnomaly = medianReq > 0 && service.Requests7d > medianReq * 3;
+        var responseAnomaly = service.ResponseTimeMs.HasValue && medianRt > 0 && service.ResponseTimeMs.Value > medianRt * 2;
+        var errorAnomaly = service.Http5xx7d > 5;
+        return requestAnomaly || responseAnomaly || errorAnomaly;
+    }
+
+    private static double Median(List<double> values)
+    {
+        if (values.Count == 0) return 0;
+        var ordered = values.OrderBy(v => v).ToList();
+        var mid = ordered.Count / 2;
+        return ordered.Count % 2 == 0 ? (ordered[mid - 1] + ordered[mid]) / 2 : ordered[mid];
+    }
+
+    private static double Median(List<int> values) => Median(values.Select(v => (double)v).ToList());
+
+    private static string CanonicalAppKey(string? friendly, string? name)
+    {
+        var source = string.IsNullOrWhiteSpace(friendly) ? (name ?? "unknown") : friendly;
+        return source.Trim().ToLowerInvariant();
+    }
+
+    private static string InferEnvironment(string? resourceGroup, string? name)
+    {
+        var text = $"{resourceGroup} {name}".ToLowerInvariant();
+        if (text.Contains("prod") || text.Contains("production")) return "prod";
+        if (text.Contains("dev") || text.Contains("test") || text.Contains("staging")) return "dev";
+        return "shared";
+    }
+
+    private static string InferOwner(string? resourceGroup, string? name)
+    {
+        var token = (resourceGroup ?? name ?? "")
+            .Split(new[] { '-', '_', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault();
+        return string.IsNullOrWhiteSpace(token) ? "unassigned" : token.ToLowerInvariant();
+    }
+
+    private static string InferCriticality(string? resourceGroup, string? name)
+    {
+        var text = $"{resourceGroup} {name}".ToLowerInvariant();
+        if (text.Contains("prod") || text.Contains("core") || text.Contains("api")) return "high";
+        if (text.Contains("dev") || text.Contains("test")) return "low";
+        return "medium";
+    }
+
+    private static string ToActionability(string status, int http5xx7d, int req7d)
+    {
+        if (status == "broken" || http5xx7d > 10) return "Fix Now";
+        if (http5xx7d > 0 || (status != "active" && req7d > 0)) return "Fix Soon";
+        if (status != "active" && req7d == 0) return "Remove Candidate";
+        return "Watch";
+    }
+
+    private record ConsolidatedService(
+        string Key,
+        string DisplayName,
+        string ResourceTypeSummary,
+        string HttpStatus,
+        int Requests7d,
+        int Http5xx7d,
+        int? ResponseTimeMs,
+        int HealthScore,
+        int ReliabilityScore,
+        string Actionability,
+        bool HasAnomaly,
+        string Owner,
+        string Environment,
+        string Criticality,
+        string? ResourceGroup,
+        string? Command
+    );
+
+    private record PriorityQueueItem(
+        string Actionability,
+        string Item,
+        string Source,
+        int ImpactScore,
+        string Confidence,
+        string Reason,
+        string Owner,
+        string Environment,
+        string? Command
+    );
+
+    private record PortfolioRollup(string Dimension, int Apps, int Broken, double AvgHealth);
 }
