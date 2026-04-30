@@ -1,22 +1,32 @@
 @inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
 
 <RadzenComponents />
 
 <RadzenLayout Style="grid-template-areas: 'rz-header' 'rz-body';">
-    <RadzenHeader>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="10px" class="rz-p-2">
-            <RadzenImage Path="images/logo.png" Style="height: 40px; margin-right: 15px;" />
-            <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">Punkouter Software</RadzenText>
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="4px" Style="margin-left:auto">
-                <RadzenLink Path="/" Text="Home" Style="font-size:.85rem;padding:.25rem .6rem" />
-                <RadzenLink Path="/azure" Text="Azure" Style="font-size:.85rem;padding:.25rem .6rem" />
-                <RadzenLink Path="/status" Text="Status" Style="font-size:.85rem;padding:.25rem .6rem" />
+    <RadzenHeader class="app-shell">
+        <div class="app-shell-bar">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="12px" Wrap="FlexWrap.Wrap">
+                <div class="app-shell-brand">
+                    <RadzenImage Path="images/logo.png" />
+                    <div>
+                        <div class="app-shell-brand-title">Punkouter Software</div>
+                        <div class="app-shell-brand-copy">Solo-built Azure apps, live ops, and portfolio telemetry.</div>
+                    </div>
+                </div>
+
+                <div class="app-shell-nav">
+                    <NavLink href="/" Match="NavLinkMatch.All" class="app-shell-link">Home</NavLink>
+                    <NavLink href="/azure" class="app-shell-link">Azure</NavLink>
+                    <NavLink href="/status" class="app-shell-link">Status</NavLink>
+                    <NavLink href="/diag" class="app-shell-link">Diag</NavLink>
+                </div>
             </RadzenStack>
-        </RadzenStack>
+        </div>
     </RadzenHeader>
 
     <RadzenBody Style="overflow-y: auto">
-        <div class="rz-p-4">
+        <div class="app-shell-body">
             <DevErrorBoundary>
                 @Body
             </DevErrorBoundary>

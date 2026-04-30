@@ -230,27 +230,40 @@ try
         {
             try
             {
-                // Derive the probe URL: prefer explicit endpoint, otherwise parse it from the connection string
-                string? probeUrl = tableEndpoint;
-                if (string.IsNullOrWhiteSpace(probeUrl) && !string.IsNullOrWhiteSpace(tableConnStr))
+                // Derive the probe URL: prefer explicit endpoint, otherwise parse it from the connection string.
+                // UseDevelopmentStorage=true is the Azurite shorthand — probe localhost:10002 directly.
+                string? probeUrl = string.IsNullOrWhiteSpace(tableEndpoint) ? null : tableEndpoint;
+                if (probeUrl is null && !string.IsNullOrWhiteSpace(tableConnStr))
                 {
-                    // Connection string contains TableEndpoint=https://... or we can build it from AccountName
-                    var parts = tableConnStr.Split(';', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(p => p.Split('=', 2))
-                        .Where(p => p.Length == 2)
-                        .ToDictionary(p => p[0], p => p[1], StringComparer.OrdinalIgnoreCase);
-                    if (parts.TryGetValue("TableEndpoint", out var te))
-                        probeUrl = te;
-                    else if (parts.TryGetValue("AccountName", out var acct))
-                        probeUrl = $"https://{acct}.table.core.windows.net/";
+                    if (tableConnStr.Equals("UseDevelopmentStorage=true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        probeUrl = "http://127.0.0.1:10002/devstoreaccount1";
+                    }
+                    else
+                    {
+                        // Connection string contains TableEndpoint=https://... or we can build it from AccountName
+                        var parts = tableConnStr.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(p => p.Split('=', 2))
+                            .Where(p => p.Length == 2)
+                            .ToDictionary(p => p[0], p => p[1], StringComparer.OrdinalIgnoreCase);
+                        if (parts.TryGetValue("TableEndpoint", out var te))
+                            probeUrl = te;
+                        else if (parts.TryGetValue("AccountName", out var acct))
+                            probeUrl = $"https://{acct}.table.core.windows.net/";
+                    }
                 }
 
                 using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 var tsResp = await client.GetAsync(probeUrl, cts2.Token);
-                // 400/401/403 from Table Storage means the service is up; auth errors are expected for an anonymous ping
-                var tsStatus = tsResp.StatusCode is >= System.Net.HttpStatusCode.OK and <= System.Net.HttpStatusCode.InternalServerError
-                    ? "reachable" : "unreachable";
-                if (tsStatus != "reachable") allHealthy = false;
+                // 2xx/3xx = healthy. 4xx = service is reachable but auth/config is wrong (degraded).
+                // 5xx or network error = unreachable.
+                var (tsStatus, tsHealthy) = (int)tsResp.StatusCode switch
+                {
+                    >= 200 and < 400 => ("reachable", true),
+                    >= 400 and < 500 => ("degraded",  false),
+                    _                => ("unreachable", false),
+                };
+                if (!tsHealthy) allHealthy = false;
                 checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode };
             }
             catch (Exception ex)

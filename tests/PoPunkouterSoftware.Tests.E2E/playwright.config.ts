@@ -8,7 +8,7 @@ export default defineConfig({
   retries: 1,
   reporter: [['list'], ['json', { outputFile: '../../TESTRESULTS/playwright-results.json' }]],
   use: {
-    baseURL: 'http://localhost:5200',
+    baseURL: process.env['BASE_URL'] ?? 'http://localhost:5000',
     // Headed in Dev so failures are visually debuggable; headless in CI/Production
     headless: !isDev,
     screenshot: 'only-on-failure',

@@ -7,148 +7,226 @@
 
 <PageTitle>PoPunkouterSoftware — Home</PageTitle>
 
-<!-- ── Hero ── -->
-<RadzenCard class="rz-mb-6 rz-p-6" Style="background: var(--rz-secondary-dark); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="2rem" Wrap="FlexWrap.Wrap">
-        <div style="flex:1;min-width:260px">
-            <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="rz-mb-3"
-                        Style="color: #ffffff; font-weight: 700;">
-                Punkouter Software
-            </RadzenText>
-            <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-3" Style="color: rgba(255,255,255,0.92);">
-                A one-person indie software studio building AI-driven apps on Azure. Every project here is designed, built, 
-                and shipped solo — focused on real utility, clean UX, and modern tech.
-            </RadzenText>
-            <RadzenText TextStyle="TextStyle.Body2" Style="color: rgba(255,255,255,0.65);">
-                Stack: C# · Blazor · Azure · .NET 10 · Static Web Apps · App Service
-            </RadzenText>
-        </div>
-        <div style="flex-shrink:0">
-            <RadzenImage Path="images/1.png"
-                         Style="height:260px;width:360px;object-fit:cover;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.4)" />
-        </div>
-    </RadzenStack>
-</RadzenCard>
+<div class="app-page">
+    <section class="app-section app-hero app-glow">
+        <div class="app-grid" style="align-content:start;gap:1rem;">
+            <span class="app-eyebrow">Modern indie software studio</span>
+            <h1 class="app-hero-title">Punkouter Software</h1>
+            <p class="app-hero-copy">
+                A one-person product studio shipping AI-driven apps on Azure with a stronger focus on live operations,
+                usable diagnostics, and portfolio quality instead of demo-only surfaces.
+            </p>
 
-<!-- ── Apps Section ── -->
-<div id="apps" style="margin-bottom:3rem">
-    <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H2" class="rz-color-primary rz-mb-1" Style="margin:0">
-        🚀 Web Apps
-    </RadzenText>
-    <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary rz-mb-4">
-        A collection of AI-powered tools, productivity apps, and games — all live on Azure.
-    </RadzenText>
-    @if (apps == null)
-    {
-        <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-3" />
-    }
-    else
-    {
-        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mb-3">@filteredApps.Count app(s)</RadzenText>
-
-        <!-- App Cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1.25rem">
-            @foreach (var app in filteredApps)
-            {
-                var isActive = app.Status?.ToLower() == "active";
-                <RadzenCard Style="@($"display:flex;flex-direction:column;gap:.75rem;border-left:4px solid {(isActive ? "var(--rz-success)" : "var(--rz-base-400)")}")">
-                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
-                        <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-mb-0"><strong>@app.Name</strong></RadzenText>
-                        <RadzenBadge Text="@(app.Status ?? "unknown")" IsPill="true"
-                                     BadgeStyle="@(isActive ? BadgeStyle.Success : BadgeStyle.Light)" />
-                    </RadzenStack>
-                    @{ var live = GetLiveStatus(app.Url); }
-                    @if (live is not null)
-                    {
-                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px" Style="font-size:.75rem">
-                            <RadzenBadge Text="@live.HttpStatus.ToUpper()" IsPill="true"
-                                         BadgeStyle="@(live.HttpStatus=="active" ? BadgeStyle.Success : live.HttpStatus=="broken" ? BadgeStyle.Danger : BadgeStyle.Warning)"
-                                         Style="font-size:.65rem" />
-                            @if (!string.IsNullOrEmpty(live.PlatformState))
-                            {
-                                <span style="color:var(--rz-text-secondary-color)">@live.PlatformState</span>
-                            }
-                            @if ((live.Connectivity?.ResponseTime ?? 0) > 0)
-                            {
-                                var rt = live.Connectivity!.ResponseTime;
-                                <span style="color:@(rt < 1000 ? "var(--rz-success-color)" : "var(--rz-warning-color)")">@rt ms</span>
-                            }
-                        </RadzenStack>
-                    }
-                    <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary" Style="flex:1">@app.Description</RadzenText>
-                    @if (app.Technologies?.Any() == true)
-                    {
-                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4px" Wrap="FlexWrap.Wrap">
-                            @foreach (var tech in app.Technologies)
-                            {
-                                <RadzenBadge Text="@tech" BadgeStyle="BadgeStyle.Light" Style="font-size:.66rem" />
-                            }
-                        </RadzenStack>
-                    }
-                    @if (!string.IsNullOrEmpty(app.GithubRepo) && _ghActivity.TryGetValue(app.GithubRepo, out var gh))
-                    {
-                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px" Style="font-size:.72rem;color:var(--rz-text-secondary-color)">
-                            <span title="GitHub repository">⑂</span>
-                            @if (gh.LastCommitDate.HasValue)
-                            {
-                                var daysAgo = (int)(DateTime.UtcNow - gh.LastCommitDate.Value).TotalDays;
-                                var label = daysAgo == 0 ? "today" : daysAgo == 1 ? "1d ago" : $"{daysAgo}d ago";
-                                var color = daysAgo < 14 ? "var(--rz-success-color)" : daysAgo < 90 ? "var(--rz-warning-color)" : "var(--rz-text-secondary-color)";
-                                <span style="color:@color" title="Last commit @gh.LastCommitDate.Value.ToString("yyyy-MM-dd")">Last commit: @label</span>
-                            }
-                            else
-                            {
-                                <span>No commits found</span>
-                            }
-                            @if (gh.WeeklyCommits?.Length > 0)
-                            {
-                                <svg width="56" height="16" viewBox="0 0 56 16" title="8-week commit activity">
-                                    @{ var max = gh.WeeklyCommits.Max(); }
-                                    @for (int wi = 0; wi < gh.WeeklyCommits.Length; wi++)
-                                    {
-                                        var h = max > 0 ? (int)(gh.WeeklyCommits[wi] * 14.0 / max) : 0;
-                                        var x = wi * 7;
-                                        var y = 14 - h;
-                                        <rect x="@x" y="@y" width="5" height="@(h + 1)"
-                                              fill="@(gh.WeeklyCommits[wi] > 0 ? "var(--rz-success-color)" : "var(--rz-base-400)")"
-                                              rx="1" />
-                                    }
-                                </svg>
-                            }
-                        </RadzenStack>
-                    }
-                    <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small"
-                                  ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined"
-                                  Disabled="@(string.IsNullOrEmpty(app.Url))"
-                                  Click="@(() => OpenApp(app.Url))" />
-                </RadzenCard>
-            }
-        </div>
-    }
-</div>
-
-<!-- ── About / Team ── -->
-<div id="about" style="margin-bottom:3rem">
-    <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H2" class="rz-color-primary rz-mb-3">👤 About</RadzenText>
-    <RadzenCard Style="background:var(--rz-secondary-dark);border-radius:12px">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="2rem" Wrap="FlexWrap.Wrap" Style="padding:1.5rem">
-            <RadzenImage Path="images/MATT2.png" Style="width:130px;height:130px;border-radius:50%;object-fit:cover;border:3px solid var(--rz-primary);flex-shrink:0" />
-            <div style="flex:1;min-width:220px">
-                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-1"><strong>Matt</strong></RadzenText>
-                <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-primary rz-mb-3">Founder & Solo Developer</RadzenText>
-                <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-2">
-                    Full-stack developer building indie software apps on Azure. Passionate about AI, automation, 
-                    and shipping real products as a one-person studio.
-                </RadzenText>
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="4px" Wrap="FlexWrap.Wrap">
-                    @foreach (var skill in new[] { "C#", ".NET 10", "Blazor", "Azure", "AI / ML", "TypeScript", "Node.js" })
-                    {
-                        <RadzenBadge Text="@skill" BadgeStyle="BadgeStyle.Info" IsPill="true" Style="font-size:.7rem" />
-                    }
-                </RadzenStack>
+            <div class="app-actions">
+                <RadzenButton Text="Open Azure Command Center" Icon="dashboard" ButtonStyle="ButtonStyle.Primary"
+                              Click="@(() => NavigationManager.NavigateTo("/azure"))" />
+                <RadzenButton Text="View Live Status" Icon="monitor_heart" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Click="@(() => NavigationManager.NavigateTo("/status"))" />
             </div>
-        </RadzenStack>
-    </RadzenCard>
+
+            <div class="app-grid metrics">
+                <div class="app-stat">
+                    <span class="app-stat-label">Live portfolio</span>
+                    <span class="app-stat-value">@filteredApps.Count</span>
+                </div>
+                <div class="app-stat">
+                    <span class="app-stat-label">Recently shipped</span>
+                    <span class="app-stat-value">@CountRecentRepos(30)</span>
+                </div>
+                <div class="app-stat">
+                    <span class="app-stat-label">Avg response time</span>
+                    <span class="app-stat-value">@AverageResponseLabel</span>
+                </div>
+            </div>
+
+            <div class="app-chip-row">
+                <RadzenBadge Text="C# / .NET 10" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
+                <RadzenBadge Text="Blazor + Radzen" BadgeStyle="BadgeStyle.Primary" Variant="Variant.Flat" IsPill="true" />
+                <RadzenBadge Text="Azure hosted" BadgeStyle="BadgeStyle.Success" Variant="Variant.Flat" IsPill="true" />
+                <RadzenBadge Text="Live diagnostics" BadgeStyle="BadgeStyle.Warning" Variant="Variant.Flat" IsPill="true" />
+            </div>
+        </div>
+
+        <div class="app-hero-meta">
+            <div class="app-hero-visual app-surface">
+                <RadzenImage Path="images/1.png" />
+            </div>
+
+            <div class="app-card">
+                <div class="app-kicker">Operational posture</div>
+                <h2 class="app-card-title">One portfolio, one live control surface.</h2>
+                <p class="app-card-copy rz-mb-0">
+                    The app catalog, Azure estate, health status, and diagnostics now sit on a single visual language so
+                    product discovery and operations feel like the same system.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section id="apps" class="app-section">
+        <div class="app-toolbar rz-mb-3">
+            <div>
+                <div class="app-kicker">Portfolio</div>
+                <h2 class="app-section-heading">Web Apps</h2>
+                <p class="app-section-copy rz-mb-0">
+                    AI-powered tools, productivity utilities, and experiments currently surfaced from the live Azure inventory.
+                </p>
+            </div>
+
+            <div class="app-grid metrics" style="min-width:min(100%, 520px);">
+                <div class="app-metric-card">
+                    <strong>@filteredApps.Count</strong>
+                    <span class="app-note">Apps currently shown</span>
+                </div>
+                <div class="app-metric-card">
+                    <strong>@CountAppsByStatus("active")</strong>
+                    <span class="app-note">Active portfolio items</span>
+                </div>
+                <div class="app-metric-card">
+                    <strong>@CountTrackedRepos()</strong>
+                    <span class="app-note">Repos with GitHub activity</span>
+                </div>
+            </div>
+        </div>
+
+        @if (apps == null)
+        {
+            <div class="app-card">
+                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-2" />
+                <p class="app-note rz-mb-0">Loading portfolio inventory and live telemetry…</p>
+            </div>
+        }
+        else if (filteredApps.Count == 0)
+        {
+            <div class="app-empty-state">No live apps matched the current inventory and health filters.</div>
+        }
+        else
+        {
+            <div class="app-grid cards">
+                @foreach (var app in filteredApps)
+                {
+                    var isActive = app.Status?.ToLower() == "active";
+                    var live = GetLiveStatus(app.Url);
+
+                    <RadzenCard class="app-card app-glow" Style="@($"display:flex;flex-direction:column;gap:1rem;border-left:4px solid {(isActive ? "var(--app-accent-strong)" : "var(--app-border-strong)")}")">
+                        <div class="app-status-row">
+                            <div>
+                                <div class="app-kicker">App</div>
+                                <h3 class="app-card-title">@app.Name</h3>
+                            </div>
+                            <RadzenBadge Text="@(app.Status ?? "unknown")" IsPill="true"
+                                         BadgeStyle="@(isActive ? BadgeStyle.Success : BadgeStyle.Light)" />
+                        </div>
+
+                        @if (live is not null)
+                        {
+                            <div class="app-chip-row">
+                                <RadzenBadge Text="@live.HttpStatus.ToUpper()" IsPill="true"
+                                             BadgeStyle="@(live.HttpStatus == "active" ? BadgeStyle.Success : live.HttpStatus == "broken" ? BadgeStyle.Danger : BadgeStyle.Warning)" />
+                                @if (!string.IsNullOrEmpty(live.PlatformState))
+                                {
+                                    <RadzenBadge Text="@live.PlatformState" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
+                                }
+                                @if ((live.Connectivity?.ResponseTime ?? 0) > 0)
+                                {
+                                    var rt = live.Connectivity!.ResponseTime;
+                                    <RadzenBadge Text="@($"{rt} ms")" BadgeStyle="@(rt < 1000 ? BadgeStyle.Success : BadgeStyle.Warning)" Variant="Variant.Flat" IsPill="true" />
+                                }
+                            </div>
+                        }
+
+                        <p class="app-card-copy rz-mb-0">@app.Description</p>
+
+                        @if (app.Technologies?.Any() == true)
+                        {
+                            <div class="app-chip-row">
+                                @foreach (var tech in app.Technologies)
+                                {
+                                    <RadzenBadge Text="@tech" BadgeStyle="BadgeStyle.Light" Variant="Variant.Flat" IsPill="true" />
+                                }
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(app.GithubRepo) && _ghActivity.TryGetValue(app.GithubRepo, out var gh))
+                        {
+                            <div class="app-card app-surface-soft" style="padding:.85rem;box-shadow:none;">
+                                <div class="app-kicker">GitHub activity</div>
+                                <div class="app-status-row">
+                                    <a class="app-inline-link" href="@($"https://github.com/{app.GithubRepo}")" target="_blank" rel="noopener noreferrer">
+                                        @app.GithubRepo
+                                    </a>
+                                    @if (gh.LastCommitDate.HasValue)
+                                    {
+                                        var daysAgo = (int)(DateTime.UtcNow - gh.LastCommitDate.Value).TotalDays;
+                                        var label = daysAgo == 0 ? "today" : daysAgo == 1 ? "1d ago" : $"{daysAgo}d ago";
+                                        <span class="app-note" title="Last commit @gh.LastCommitDate.Value.ToString("yyyy-MM-dd")">Last commit: @label</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="app-note">No commits found</span>
+                                    }
+                                </div>
+
+                                @if (gh.WeeklyCommits?.Length > 0)
+                                {
+                                    <svg class="app-mini-chart" width="56" height="16" viewBox="0 0 56 16" title="8-week commit activity">
+                                        @{ var max = gh.WeeklyCommits.Max(); }
+                                        @for (int wi = 0; wi < gh.WeeklyCommits.Length; wi++)
+                                        {
+                                            var h = max > 0 ? (int)(gh.WeeklyCommits[wi] * 14.0 / max) : 0;
+                                            var x = wi * 7;
+                                            var y = 14 - h;
+                                            <rect x="@x" y="@y" width="5" height="@(h + 1)"
+                                                  fill="@(gh.WeeklyCommits[wi] > 0 ? "var(--app-accent-strong)" : "rgba(255,255,255,0.16)")"
+                                                  rx="1" />
+                                        }
+                                    </svg>
+                                }
+                            </div>
+                        }
+
+                        <div class="app-actions">
+                            <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small"
+                                          ButtonStyle="ButtonStyle.Primary"
+                                          Disabled="@(string.IsNullOrEmpty(app.Url))"
+                                          Click="@(() => OpenApp(app.Url))" />
+                            <RadzenButton Text="Azure View" Icon="dashboard" Size="ButtonSize.Small"
+                                          ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                                          Click="@(() => NavigationManager.NavigateTo("/azure"))" />
+                        </div>
+                    </RadzenCard>
+                }
+            </div>
+        }
+    </section>
+
+    <section id="about" class="app-section">
+        <div class="app-kicker">Founder</div>
+        <h2 class="app-section-heading">About</h2>
+        <div class="app-card">
+            <div class="app-profile">
+                <RadzenImage Path="images/MATT2.png" />
+                <div class="app-grid" style="gap:.8rem;">
+                    <div>
+                        <h3 class="app-card-title rz-mb-1">Matt</h3>
+                        <div class="app-section-copy">Founder, solo developer, and operator of the portfolio.</div>
+                    </div>
+
+                    <p class="app-card-copy rz-mb-0">
+                        Full-stack developer building indie software apps on Azure with a bias toward clear UX,
+                        pragmatic telemetry, and productized internal tooling rather than one-off demos.
+                    </p>
+
+                    <div class="app-chip-row">
+                        @foreach (var skill in new[] { "C#", ".NET 10", "Blazor", "Azure", "AI / ML", "TypeScript", "Node.js" })
+                        {
+                            <RadzenBadge Text="@skill" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
 @code {
@@ -267,6 +345,32 @@
     {
         if (!string.IsNullOrWhiteSpace(url))
             NavigationManager.NavigateTo(url, forceLoad: true);
+    }
+
+    private int CountRecentRepos(int days) =>
+        _ghActivity.Values.Count(gh => gh.LastCommitDate is DateTime lastCommit && (DateTime.UtcNow - lastCommit).TotalDays <= days);
+
+    private int CountTrackedRepos() =>
+        filteredApps.Count(a => !string.IsNullOrWhiteSpace(a.GithubRepo) && _ghActivity.ContainsKey(a.GithubRepo));
+
+    private int CountAppsByStatus(string status) =>
+        filteredApps.Count(a => string.Equals(a.Status, status, StringComparison.OrdinalIgnoreCase));
+
+    private string AverageResponseLabel
+    {
+        get
+        {
+            var responseTimes = filteredApps
+                .Select(a => GetLiveStatus(a.Url)?.Connectivity?.ResponseTime)
+                .Where(rt => rt is > 0)
+                .Select(rt => rt!.Value)
+                .ToList();
+
+            if (responseTimes.Count == 0)
+                return "—";
+
+            return $"{responseTimes.Average():F0} ms";
+        }
     }
 
     // ── Local models ─────────────────────────────────────────────────

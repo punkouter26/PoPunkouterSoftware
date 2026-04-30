@@ -59,7 +59,10 @@ public class AzureReportService : IAzureReportService
             progress?.Report((step, pct));
         }
 
-        var previousReport = await _repository.LoadPreviousAsync(ct);
+        var previousReportResult = await _repository.LoadPreviousAsync(ct);
+        AzureReport? previousReport = null;
+        if (previousReportResult.IsSuccess)
+            previousReport = previousReportResult.Value;
         _logger.LogInformation("AzureReportService: starting analysis");
 
         Report("Authenticating with Azure…", 3);

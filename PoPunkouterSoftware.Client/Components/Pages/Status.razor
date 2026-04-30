@@ -6,114 +6,130 @@
 
 <PageTitle>PoPunkouterSoftware — Service Status</PageTitle>
 
-<RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1" class="rz-color-primary rz-mb-1">Service Status</RadzenText>
-<RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary rz-mb-4">
-    Live health overview of all Punkouter Software services.
-</RadzenText>
+<div class="app-page">
+    <section class="app-section app-ops-hero">
+        <div class="app-kicker">Live operations</div>
+        <h1 class="app-section-heading">Service Status</h1>
+        <p class="app-section-copy rz-mb-0">A clearer health snapshot of the public portfolio, with degraded services pushed forward first.</p>
+    </section>
 
-@if (_loading)
-{
-    <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-4" />
-}
-else if (_error is not null)
-{
-    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true" class="rz-my-4">
-        Could not load status data: @_error
-    </RadzenAlert>
-}
-else if (_report is not null)
-{
-    var allActive  = _report.Services.All(s => s.CurrentStatus == "active");
-    var anyBroken  = _report.Services.Any(s => s.CurrentStatus is "broken" or "unreachable");
-
-    <!-- ── Overall banner ── -->
-    <div style="@($"padding:.75rem 1.25rem;border-radius:8px;margin-bottom:1.5rem;border:1px solid {(allActive ? "rgba(50,255,167,.4)" : anyBroken ? "rgba(255,80,80,.4)" : "rgba(255,214,0,.4)")};background:{(allActive ? "rgba(50,255,167,.07)" : anyBroken ? "rgba(255,80,80,.07)" : "rgba(255,214,0,.07)")};display:flex;align-items:center;gap:.75rem")">
-        <span style="font-size:1.5rem">@(allActive ? "✅" : anyBroken ? "🔴" : "🟡")</span>
-        <div>
-            <strong style="color:@(allActive ? "var(--rz-success-color)" : anyBroken ? "var(--rz-danger-color)" : "var(--rz-warning-color)")">
-                @(allActive ? "All systems operational" : anyBroken ? "Some services are degraded" : "Partial degradation")
-            </strong>
-            <div style="font-size:.78rem;color:var(--rz-text-secondary-color);margin-top:.2rem">
-                Last updated: @_report.GeneratedAt.ToString("yyyy-MM-dd HH:mm UTC")
-                &nbsp;·&nbsp; @_report.Services.Count(s => s.CurrentStatus == "active") / @_report.Services.Count services operational
-            </div>
-        </div>
-    </div>
-
-    <!-- ── Per-service rows ── -->
-    @foreach (var svc in _report.Services)
+    @if (_loading)
     {
-        var isActive    = svc.CurrentStatus == "active";
-        var isBroken    = svc.CurrentStatus is "broken" or "unreachable";
-        var statusColor = isActive ? "var(--rz-success-color)" : isBroken ? "var(--rz-danger-color)" : "var(--rz-warning-color)";
-        var statusLabel = isActive ? "Operational" : isBroken ? "Degraded" : svc.CurrentStatus;
-        var uptimePct   = CalcUptime(svc.Samples);
-
-        <RadzenCard class="rz-mb-2" Style="@($"border-left:4px solid {statusColor};padding:.75rem 1rem")">
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center"
-                         JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="8px">
-
-                <!-- Name + URL -->
-                <div style="min-width:200px">
-                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:@statusColor;flex-shrink:0"></span>
-                        <strong>@(svc.FriendlyName ?? svc.Name)</strong>
-                    </RadzenStack>
-                    @if (!string.IsNullOrEmpty(svc.Url))
-                    {
-                        <a href="@svc.Url" target="_blank" rel="noopener noreferrer"
-                           style="font-size:.75rem;color:var(--rz-text-secondary-color);margin-left:18px">@svc.Url</a>
-                    }
-                </div>
-
-                <!-- Status badge + response time -->
-                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
-                    <RadzenBadge Text="@statusLabel" IsPill="true"
-                                 BadgeStyle="@(isActive ? BadgeStyle.Success : isBroken ? BadgeStyle.Danger : BadgeStyle.Warning)" />
-                    @if (svc.ResponseTimeMs.HasValue)
-                    {
-                        var rt = svc.ResponseTimeMs.Value;
-                        <span style="font-size:.78rem;color:@(rt < 1000 ? "var(--rz-success-color)" : rt < 3000 ? "var(--rz-warning-color)" : "var(--rz-danger-color)")">
-                            @rt ms
-                        </span>
-                    }
-                </RadzenStack>
-
-                <!-- Uptime % -->
-                <div style="text-align:right;min-width:90px">
-                    <div style="font-size:.78rem;color:var(--rz-text-secondary-color)">Uptime</div>
-                    <strong style="color:@(uptimePct >= 99 ? "var(--rz-success-color)" : uptimePct >= 90 ? "var(--rz-warning-color)" : "var(--rz-danger-color)")">
-                        @uptimePct.ToString("F1")%
-                    </strong>
-                </div>
-            </RadzenStack>
-
-            <!-- History bar: one block per sample, newest right -->
-            @if (svc.Samples.Count > 1)
-            {
-                <div style="margin-top:.5rem;display:flex;gap:2px;align-items:flex-end;height:18px" title="Report history — green=active, red=broken, grey=unknown (newest right)">
-                    @foreach (var sample in svc.Samples.AsEnumerable().Reverse().TakeLast(30))
-                    {
-                        var barColor = sample.Status == "active" ? "var(--rz-success-color)"
-                                     : sample.Status is "broken" or "unreachable" ? "var(--rz-danger-color)"
-                                     : "var(--rz-base-400)";
-                        <div style="@($"flex:1;max-width:14px;min-width:4px;height:14px;border-radius:2px;background:{barColor};cursor:default")"
-                             title="@sample.At.ToString("yyyy-MM-dd HH:mm") — @sample.Status"></div>
-                    }
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--rz-text-secondary-color);margin-top:2px">
-                    <span>Older</span>
-                    <span>@svc.Samples.Count report sample(s)</span>
-                    <span>Latest</span>
-                </div>
-            }
-        </RadzenCard>
+        <div class="app-card">
+            <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-2" />
+            <p class="app-note rz-mb-0">Refreshing current service health…</p>
+        </div>
     }
+    else if (_error is not null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true" class="rz-my-4">
+            Could not load status data: @_error
+        </RadzenAlert>
+    }
+    else if (_report is not null)
+    {
+        var allActive = _report.Services.All(s => s.CurrentStatus == "active");
+        var anyBroken = _report.Services.Any(s => s.CurrentStatus is "broken" or "unreachable");
+        var operationalCount = _report.Services.Count(s => s.CurrentStatus == "active");
+        var degradedCount = _report.Services.Count - operationalCount;
+        var avgUptime = _report.Services.Count == 0 ? 100 : _report.Services.Average(s => CalcUptime(s.Samples));
+        var bannerClass = allActive ? "healthy" : anyBroken ? "critical" : "degraded";
 
-    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-mt-4">
-        Data derived from periodic Azure health scans. Status may lag real-time by up to several hours.
-    </RadzenText>
-}
+        <section class="app-section">
+            <div class="app-banner @bannerClass">
+                <div class="app-toolbar">
+                    <div>
+                        <div class="app-kicker">Current state</div>
+                        <h2 class="app-card-title">@(allActive ? "All systems operational" : anyBroken ? "Some services are degraded" : "Partial degradation")</h2>
+                        <p class="app-note rz-mb-0">
+                            Last updated: @_report.GeneratedAt.ToString("yyyy-MM-dd HH:mm UTC")
+                            &nbsp;·&nbsp; @operationalCount / @_report.Services.Count services operational
+                        </p>
+                    </div>
+
+                    <div class="app-grid metrics" style="min-width:min(100%, 520px);">
+                        <div class="app-metric-card">
+                            <strong>@operationalCount</strong>
+                            <span class="app-note">Operational</span>
+                        </div>
+                        <div class="app-metric-card">
+                            <strong>@degradedCount</strong>
+                            <span class="app-note">Need attention</span>
+                        </div>
+                        <div class="app-metric-card">
+                            <strong>@avgUptime.ToString("F1")%</strong>
+                            <span class="app-note">Average uptime</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="app-section">
+            <div class="app-list">
+                @foreach (var svc in _report.Services.OrderBy(s => s.CurrentStatus == "active" ? 1 : 0).ThenBy(s => s.FriendlyName ?? s.Name))
+                {
+                    var isActive = svc.CurrentStatus == "active";
+                    var isBroken = svc.CurrentStatus is "broken" or "unreachable";
+                    var statusClass = isActive ? "healthy" : isBroken ? "critical" : "degraded";
+                    var statusColor = isActive ? "var(--app-accent-strong)" : isBroken ? "var(--app-danger-soft)" : "var(--app-accent-warm)";
+                    var statusLabel = isActive ? "Operational" : isBroken ? "Degraded" : svc.CurrentStatus;
+                    var uptimePct = CalcUptime(svc.Samples);
+
+                    <div class="app-service-card @statusClass">
+                        <div class="app-toolbar">
+                            <div>
+                                <div class="app-status-row">
+                                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:@statusColor"></span>
+                                    <h3 class="app-card-title">@(svc.FriendlyName ?? svc.Name)</h3>
+                                </div>
+                                @if (!string.IsNullOrEmpty(svc.Url))
+                                {
+                                    <a href="@svc.Url" target="_blank" rel="noopener noreferrer" class="app-inline-link">@svc.Url</a>
+                                }
+                            </div>
+
+                            <div class="app-chip-row">
+                                <RadzenBadge Text="@statusLabel" IsPill="true"
+                                             BadgeStyle="@(isActive ? BadgeStyle.Success : isBroken ? BadgeStyle.Danger : BadgeStyle.Warning)" />
+                                @if (svc.ResponseTimeMs.HasValue)
+                                {
+                                    var rt = svc.ResponseTimeMs.Value;
+                                    <RadzenBadge Text="@($"{rt} ms")" IsPill="true"
+                                                 BadgeStyle="@(rt < 1000 ? BadgeStyle.Success : rt < 3000 ? BadgeStyle.Warning : BadgeStyle.Danger)"
+                                                 Variant="Variant.Flat" />
+                                }
+                                <RadzenBadge Text="@($"Uptime {uptimePct:F1}%")" IsPill="true"
+                                             BadgeStyle="@(uptimePct >= 99 ? BadgeStyle.Success : uptimePct >= 90 ? BadgeStyle.Warning : BadgeStyle.Danger)"
+                                             Variant="Variant.Flat" />
+                            </div>
+                        </div>
+
+                        @if (svc.Samples.Count > 1)
+                        {
+                            <div class="app-history rz-mt-2" title="Report history — green=active, red=broken, grey=unknown (newest right)">
+                                @foreach (var sample in svc.Samples.AsEnumerable().Reverse().TakeLast(30))
+                                {
+                                    var barColor = sample.Status == "active" ? "var(--app-accent-strong)"
+                                                 : sample.Status is "broken" or "unreachable" ? "var(--app-danger-soft)"
+                                                 : "rgba(255,255,255,0.18)";
+                                    <div class="app-history-cell" style="background:@barColor" title="@sample.At.ToString("yyyy-MM-dd HH:mm") — @sample.Status"></div>
+                                }
+                            </div>
+                            <div class="app-note" style="display:flex;justify-content:space-between;margin-top:.35rem;">
+                                <span>Older</span>
+                                <span>@svc.Samples.Count report sample(s)</span>
+                                <span>Latest</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        <p class="app-note">Data derived from periodic Azure health scans. Status may lag real-time by up to several hours.</p>
+    }
+</div>
 
 @code {
     private StatusPageReport? _report;

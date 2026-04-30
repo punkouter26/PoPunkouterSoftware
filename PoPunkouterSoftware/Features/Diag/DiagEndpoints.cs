@@ -16,18 +16,27 @@ internal static class DiagEndpoints
         // ── Cached azure-full-report.json (Blob Storage first, file fallback) ──
         app.MapGet("/api/diag/report", async (IWebHostEnvironment env, AzureReportStore store) =>
         {
-            var report = await store.LoadAsync();
-            if (report is not null)
+            var reportResult = await store.LoadAsync();
+            if (reportResult.IsSuccess && reportResult.Value is not null)
             {
-                return Results.Json(report);
+                return Results.Json(reportResult.Value);
             }
 
             var reportPath = Path.Combine(GetDataDir(env), "azure-full-report.json");
-            if (!File.Exists(reportPath))
-                return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
+            if (File.Exists(reportPath))
+            {
+                var json = await File.ReadAllTextAsync(reportPath);
+                return Results.Content(json, "application/json");
+            }
 
-            var json = await File.ReadAllTextAsync(reportPath);
-            return Results.Content(json, "application/json");
+            if (!reportResult.IsSuccess)
+            {
+                return Results.Problem(
+                    detail: reportResult.Error ?? "Azure report storage is unavailable and no cached report file exists.",
+                    statusCode: 503);
+            }
+
+            return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
         });
 
         // ── Refresh via C# Azure SDK (works locally + on Azure with Managed Identity) ──
@@ -148,13 +157,14 @@ internal static class DiagEndpoints
         app.MapGet("/api/status", async (IAzureReportRepository repository, CancellationToken ct) =>
         {
             // Build status page from history (newest first) — up to 30 samples per service
-            var history = await repository.LoadHistoryAsync(maxEntries: 30, ct);
+            var historyResult = await repository.LoadHistoryAsync(maxEntries: 30, ct);
+            var history = historyResult.IsSuccess ? historyResult.Value ?? new() : new();
 
             if (history.Count == 0)
             {
                 // Fall back to latest report only
-                var latest = await repository.LoadAsync(ct);
-                if (latest is not null) history.Add(latest);
+                var latestResult = await repository.LoadAsync(ct);
+                if (latestResult.IsSuccess && latestResult.Value is not null) history.Add(latestResult.Value);
             }
 
             if (history.Count == 0)

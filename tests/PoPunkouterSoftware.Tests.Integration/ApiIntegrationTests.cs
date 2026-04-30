@@ -290,7 +290,9 @@ public class AzureReportStoreAzuriteTests : IAsyncLifetime
             }
         };
         await store.SaveAsync(original);
-        var loaded = await store.LoadAsync();
+        var result = await store.LoadAsync();
+        result.IsSuccess.Should().BeTrue();
+        var loaded = result.Value;
         loaded.Should().NotBeNull();
         loaded!.Subscription!.Name.Should().Be("Test-Sub");
         loaded.WebServices!.Services.Should().HaveCount(2);
@@ -302,15 +304,17 @@ public class AzureReportStoreAzuriteTests : IAsyncLifetime
         var store = BuildStore();
         await store.SaveAsync(new AzureReport { Subscription = new SubscriptionInfo { Name = "First" } });
         await store.SaveAsync(new AzureReport { Subscription = new SubscriptionInfo { Name = "Second" } });
-        var loaded = await store.LoadAsync();
-        loaded!.Subscription!.Name.Should().Be("Second");
+        var result = await store.LoadAsync();
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Subscription!.Name.Should().Be("Second");
     }
 
     [Fact]
     public async Task Load_EmptyTable_ReturnsNull()
     {
         var store = BuildStore();
-        var loaded = await store.LoadAsync();
-        loaded.Should().BeNull();
+        var result = await store.LoadAsync();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeNull();
     }
 }

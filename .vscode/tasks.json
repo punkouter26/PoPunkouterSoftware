@@ -88,17 +88,33 @@
 			}
 		},
 		{
+			"label": "start-azurite",
+			"type": "shell",
+			"command": "docker compose up azurite -d",
+			"options": { "cwd": "${workspaceFolder}" },
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"close": true
+			},
+			"problemMatcher": []
+		},
+		{
 			"label": "start-api-server",
 			"type": "shell",
 			"command": "dotnet run --project ${workspaceFolder}/PoPunkouterSoftware/PoPunkouterSoftware.csproj",
 			"group": "build",
 			"isBackground": true,
+			"dependsOn": "start-azurite",
 			"presentation": {
 				"echo": true,
 				"reveal": "always",
 				"focus": false,
 				"panel": "dedicated",
-				"label": "API Server (:5050)"
+				"label": "API Server (:5000)"
 			},
 			"problemMatcher": {
 				"pattern": {

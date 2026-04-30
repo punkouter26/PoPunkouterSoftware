@@ -10,9 +10,9 @@ namespace PoPunkouterSoftware.Domain.Azure;
 /// </summary>
 public interface IAzureReportRepository
 {
-    Task<AzureReport?> LoadAsync(CancellationToken ct = default);
-    Task<AzureReport?> LoadPreviousAsync(CancellationToken ct = default);
-    Task SaveAsync(AzureReport report, CancellationToken ct = default);
+    Task<Result<AzureReport?>> LoadAsync(CancellationToken ct = default);
+    Task<Result<AzureReport?>> LoadPreviousAsync(CancellationToken ct = default);
+    Task<Result<bool>> SaveAsync(AzureReport report, CancellationToken ct = default);
     /// <summary>Returns up to <paramref name="maxEntries"/> historical reports, newest first.</summary>
-    Task<List<AzureReport>> LoadHistoryAsync(int maxEntries = 90, CancellationToken ct = default);
+    Task<Result<List<AzureReport>>> LoadHistoryAsync(int maxEntries = 90, CancellationToken ct = default);
 }

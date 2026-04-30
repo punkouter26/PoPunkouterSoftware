@@ -17,7 +17,7 @@ namespace PoPunkouterSoftware.Features.Azure;
 /// </summary>
 public class AzureReportStore : IAzureReportRepository
 {
-    private const string DefaultTableName   = "AzureReport";
+    private const string DefaultTableName   = "PoPunkouterSoftwareReport";
     private const string PartitionKey       = "report";
     private const string RowKey             = "latest";
     private const string HistoryPartitionKey = "history";
@@ -41,38 +41,39 @@ public class AzureReportStore : IAzureReportRepository
         _config = config;
     }
 
-    public async Task<AzureReport?> LoadAsync(CancellationToken ct = default)
+    public async Task<Result<AzureReport?>> LoadAsync(CancellationToken ct = default)
     {
         var tableClient = await GetTableClientAsync(ct);
         if (tableClient is null)
-            return null;
+            return Result<AzureReport?>.Failure("Table client not available - check Azure Table Storage configuration.");
 
         try
         {
             var response = await tableClient.GetEntityIfExistsAsync<TableEntity>(PartitionKey, RowKey, cancellationToken: ct);
             if (!response.HasValue)
-                return null;
+                return Result<AzureReport?>.Success(null);
 
             var json = DecompressEntity(response.Value!);
             if (string.IsNullOrWhiteSpace(json))
-                return null;
+                return Result<AzureReport?>.Success(null);
 
-            return JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
+            var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
+            return Result<AzureReport?>.Success(report);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not load AzureReport from Table Storage");
-            return null;
+            return Result<AzureReport?>.Failure("Failed to load AzureReport from Table Storage", ex);
         }
     }
 
-    public async Task SaveAsync(AzureReport report, CancellationToken ct = default)
+    public async Task<Result<bool>> SaveAsync(AzureReport report, CancellationToken ct = default)
     {
         var tableClient = await GetTableClientAsync(ct);
         if (tableClient is null)
         {
             _logger.LogWarning("Table Storage not configured — report will not be persisted");
-            return;
+            return Result<bool>.Failure("Table Storage not configured");
         }
 
         try
@@ -98,18 +99,20 @@ public class AzureReportStore : IAzureReportRepository
             await tableClient.UpsertEntityAsync(historyEntity, TableUpdateMode.Replace, ct);
 
             _logger.LogInformation("AzureReport saved to Table Storage (including history)");
+            return Result<bool>.Success(true);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save AzureReport to Table Storage");
+            return Result<bool>.Failure("Failed to save AzureReport to Table Storage", ex);
         }
     }
 
-    public async Task<List<AzureReport>> LoadHistoryAsync(int maxEntries = 90, CancellationToken ct = default)
+    public async Task<Result<List<AzureReport>>> LoadHistoryAsync(int maxEntries = 90, CancellationToken ct = default)
     {
         var tableClient = await GetTableClientAsync(ct);
         if (tableClient is null)
-            return new();
+            return Result<List<AzureReport>>.Failure("Table client not available - check Azure Table Storage configuration.");
 
         var results = new List<AzureReport>();
         try
@@ -126,19 +129,20 @@ public class AzureReportStore : IAzureReportRepository
                     results.Add(report);
                 if (results.Count >= maxEntries) break;
             }
+            return Result<List<AzureReport>>.Success(results);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not load AzureReport history from Table Storage");
+            return Result<List<AzureReport>>.Failure("Failed to load AzureReport history from Table Storage", ex);
         }
-        return results;
     }
 
-    public async Task<AzureReport?> LoadPreviousAsync(CancellationToken ct = default)
+    public async Task<Result<AzureReport?>> LoadPreviousAsync(CancellationToken ct = default)
     {
         var tableClient = await GetTableClientAsync(ct);
         if (tableClient is null)
-            return null;
+            return Result<AzureReport?>.Failure("Table client not available - check Azure Table Storage configuration.");
 
         try
         {
@@ -149,15 +153,17 @@ public class AzureReportStore : IAzureReportRepository
                 cancellationToken: ct))
             {
                 var json = DecompressEntity(entity);
-                if (string.IsNullOrWhiteSpace(json)) return null;
-                return JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
+                if (string.IsNullOrWhiteSpace(json)) return Result<AzureReport?>.Success(null);
+                var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
+                return Result<AzureReport?>.Success(report);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not load previous AzureReport from history");
+            return Result<AzureReport?>.Failure("Failed to load previous AzureReport from history", ex);
         }
-        return null;
+        return Result<AzureReport?>.Success(null);
     }
 
     private static string CompressJson(string json)

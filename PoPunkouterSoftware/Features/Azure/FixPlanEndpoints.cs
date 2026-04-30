@@ -43,10 +43,11 @@ internal static class FixPlanEndpoints
                 return Results.Ok(new { plan = cached });
 
             // ── Load report & locate service ──────────────────────────────────
-            var report = await repository.LoadAsync(ct);
-            if (report is null)
-                return Results.NotFound(new { error = "No Azure report found. Run a refresh first." });
+            var reportResult = await repository.LoadAsync(ct);
+            if (!reportResult.IsSuccess || reportResult.Value is null)
+                return Results.NotFound(new { error = reportResult.Error ?? "No Azure report found. Run a refresh first." });
 
+            var report = reportResult.Value;
             var service = report.WebServices?.Services.FirstOrDefault(s =>
                 s.Name.Equals(serviceName, StringComparison.OrdinalIgnoreCase) ||
                 s.FriendlyName.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
@@ -68,7 +69,7 @@ internal static class FixPlanEndpoints
                 });
 
             // ── Build prompt from report data ─────────────────────────────────
-            var driftItems = report.ConfigDrift?
+            var driftItems = report?.ConfigDrift?
                 .Where(d => d.Name.Equals(serviceName, StringComparison.OrdinalIgnoreCase) ||
                             (d.FriendlyName?.Equals(serviceName, StringComparison.OrdinalIgnoreCase) == true))
                 .ToList() ?? new();
