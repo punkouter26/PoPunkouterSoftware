@@ -43,31 +43,9 @@ jobs:
           az webapp config appsettings set --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" \
             --settings WEBSITE_CONTAINER_START_TIME_LIMIT=600 --output none
 
-      - name: Stop app before deploy
-        shell: bash
-        run: |
-          echo "Stopping app to clear any running background tasks..."
-          az webapp stop --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
-          sleep 5
-
       - name: Deploy to Azure App Service
         shell: bash
         run: |
-          # Use Kudu REST API directly — returns immediately after upload (no startup polling)
-          TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv)
-          HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
-            "https://${APP_NAME}.scm.azurewebsites.net/api/zipdeploy?isAsync=true&clean=true" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/zip" \
-            --data-binary @./deploy.zip)
-          echo "Kudu zip deploy HTTP status: $HTTP_STATUS"
-          if [[ "$HTTP_STATUS" != "2"* ]]; then
-            echo "Deploy failed with HTTP $HTTP_STATUS"
-            exit 1
-          fi
-
-      - name: Start app after deploy
-        shell: bash
-        run: |
-          az webapp start --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
+          az webapp deploy --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" \
+            --src-path ./deploy.zip --type zip --clean true
 
