@@ -233,7 +233,7 @@ public class StaticFilesTests
 public class AzureReportStoreNoConnectionTests
 {
     [Fact]
-    public async Task LoadAsync_WhenConnectionStringIsEmpty_ReturnsNull()
+    public async Task LoadAsync_WhenConnectionStringIsEmpty_ReturnsFailureResult()
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
@@ -244,7 +244,9 @@ public class AzureReportStoreNoConnectionTests
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AzureReportStore>.Instance;
         var store  = new AzureReportStore(logger, config);
         var result = await store.LoadAsync();
-        result.Should().BeNull();
+        result.Should().NotBeNull();
+        result!.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("Table client not available");
     }
 }
 
@@ -316,5 +318,163 @@ public class AzureReportStoreAzuriteTests : IAsyncLifetime
         var result = await store.LoadAsync();
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().BeNull();
+    }
+}
+
+// ─── API JSON-schema contract tests ──────────────────────────────────────────
+// Guard against serialiser casing regressions (e.g. PascalCase vs camelCase).
+// These run against the in-memory TestWebApp — no Docker needed.
+
+[Collection("WebApp")]
+public class ApiSchemaContractTests
+{
+    private readonly HttpClient _client;
+    public ApiSchemaContractTests(TestWebApp factory) => _client = factory.CreateClient();
+
+    // /api/health ─────────────────────────────────────────────────────────────
+    [Theory]
+    [InlineData("status")]
+    [InlineData("application")]
+    [InlineData("timestamp")]
+    [InlineData("checks")]
+    [InlineData("environment")]
+    [InlineData("config")]
+    public async Task Health_HasCamelCaseProperty(string property)
+    {
+        var json = await _client.GetStringAsync("/api/health");
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.TryGetProperty(property, out _)
+            .Should().BeTrue(because: $"/api/health must expose camelCase '{property}'");
+    }
+
+    // /api/config ─────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task Config_HasCamelCase_ApiBase()
+    {
+        var json = await _client.GetStringAsync("/api/config");
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.TryGetProperty("apiBase", out _)
+            .Should().BeTrue(because: "/api/config must expose camelCase 'apiBase'");
+    }
+
+    // /api/diag/az-status ─────────────────────────────────────────────────────
+    [Fact]
+    public async Task AzStatus_HasCamelCase_LoggedIn()
+    {
+        var json = await _client.GetStringAsync("/api/diag/az-status");
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.TryGetProperty("loggedIn", out _)
+            .Should().BeTrue(because: "/api/diag/az-status must expose camelCase 'loggedIn'");
+    }
+
+    // /api/diag/report ────────────────────────────────────────────────────────
+    [Theory]
+    [InlineData("generatedAt")]
+    [InlineData("webServices")]
+    [InlineData("subscription")]
+    public async Task DiagReport_WhenOk_HasCamelCaseProperty(string property)
+    {
+        var response = await _client.GetAsync("/api/diag/report");
+        if (response.StatusCode != System.Net.HttpStatusCode.OK) return; // no report seeded — skip
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.TryGetProperty(property, out _)
+            .Should().BeTrue(because: $"/api/diag/report must expose camelCase '{property}'");
+    }
+
+    [Fact]
+    public async Task DiagReport_WhenOk_WebServices_TotalIsCamelCase()
+    {
+        var response = await _client.GetAsync("/api/diag/report");
+        if (response.StatusCode != System.Net.HttpStatusCode.OK) return;
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("webServices", out var ws)) return;
+        ws.TryGetProperty("total", out _)
+            .Should().BeTrue(because: "webServices.total must be camelCase");
+    }
+}
+
+// ─── Azurite — delta / history tests ─────────────────────────────────────────
+
+public class AzureReportStoreHistoryTests : IAsyncLifetime
+{
+    private readonly AzuriteContainer _container = new AzuriteBuilder()
+        .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
+        .Build();
+
+    public async Task InitializeAsync() => await _container.StartAsync();
+    public async Task DisposeAsync()    => await _container.DisposeAsync();
+
+    private AzureReportStore BuildStore()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AzureTableStorage:ConnectionString"] = _container.GetConnectionString()
+            })
+            .Build();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AzureReportStore>.Instance;
+        return new AzureReportStore(logger, config);
+    }
+
+    [Fact]
+    public async Task SaveThenSave_HistoryContainsPreviousReport()
+    {
+        var store = BuildStore();
+
+        var first = new AzureReport
+        {
+            GeneratedAt  = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            Subscription = new SubscriptionInfo { Name = "History-Sub-1" }
+        };
+        await store.SaveAsync(first);
+
+        var second = new AzureReport
+        {
+            GeneratedAt  = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+            Subscription = new SubscriptionInfo { Name = "History-Sub-2" }
+        };
+        await store.SaveAsync(second);
+
+        // Latest load should reflect the second save
+        var latest = await store.LoadAsync();
+        latest.IsSuccess.Should().BeTrue();
+        latest.Value!.Subscription!.Name.Should().Be("History-Sub-2");
+
+        // History should contain the first report
+        var history = await store.LoadHistoryAsync();
+        history.IsSuccess.Should().BeTrue();
+        history.Value.Should().NotBeNull();
+        history.Value!.Should().Contain(r => r.Subscription!.Name == "History-Sub-1",
+            because: "the previous report must be persisted to history on each save");
+    }
+
+    [Fact]
+    public async Task ConcurrentSaves_DoNotThrow_LastWriterWins()
+    {
+        var store = BuildStore();
+
+        // Seed a first save so the table exists before concurrent writes
+        await store.SaveAsync(new AzureReport { Subscription = new SubscriptionInfo { Name = "seed" } });
+
+        var tasks = Enumerable.Range(1, 5).Select(i => store.SaveAsync(new AzureReport
+        {
+            GeneratedAt  = DateTime.UtcNow,
+            Subscription = new SubscriptionInfo { Name = $"concurrent-{i}" }
+        }));
+
+        var results = await Task.WhenAll(tasks);
+
+        results.Should().AllSatisfy(r =>
+            r.IsSuccess.Should().BeTrue(because: "concurrent saves must not throw"));
+
+        // Final state must be readable — exactly one record survives
+        var final = await store.LoadAsync();
+        final.IsSuccess.Should().BeTrue();
+        final.Value.Should().NotBeNull();
+        final.Value!.Subscription!.Name.Should().StartWith("concurrent-");
     }
 }

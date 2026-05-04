@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
+using PoPunkouterSoftware.Application.Azure;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Domain.Azure;
@@ -8,13 +10,11 @@ namespace PoPunkouterSoftware.Features.Diag;
 
 internal static class DiagEndpoints
 {
-    // ─── Route registration ───────────────────────────────────────────────────
-    // SOLID: Single Responsibility — this method registers only /api/diag/* routes.
-    // GoF:   Extension Method (Decorator variant) — decorates WebApplication without subclassing.
+    static volatile bool _refreshRunning;
+
     internal static WebApplication MapDiagEndpoints(this WebApplication app)
     {
-        // ── Cached azure-full-report.json (Blob Storage first, file fallback) ──
-        app.MapGet("/api/diag/report", async (IWebHostEnvironment env, AzureReportStore store) =>
+        app.MapGet("/api/diag/report", async (IWebHostEnvironment env, IAzureReportRepository store) =>
         {
             var reportResult = await store.LoadAsync();
             if (reportResult.IsSuccess && reportResult.Value is not null)
@@ -39,71 +39,70 @@ internal static class DiagEndpoints
             return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
         });
 
-        // ── Refresh via C# Azure SDK (works locally + on Azure with Managed Identity) ──
-        // Fire-and-forget: returns 202 immediately so Azure App Service's 230s request
-        // timeout never fires. The client polls /api/diag/refresh-progress until done.
         app.MapPost("/api/diag/refresh",
-            (IServiceScopeFactory scopeFactory, RefreshProgressService progressSvc,
-             IWebHostEnvironment env, ILogger<Program> logger) =>
+            (IServiceScopeFactory scopeFactory, IWebHostEnvironment env, ILogger<Program> logger,
+             Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Features.Azure.RefreshHub> hubCtx) =>
         {
-            if (progressSvc.IsRunning)
+            if (_refreshRunning)
                 return Results.Problem(detail: "Refresh already in progress.", statusCode: 409);
 
-            progressSvc.Start();
+            _refreshRunning = true;
 
-            // Run in a background task — completely decoupled from the HTTP request lifetime.
             _ = Task.Run(async () =>
             {
                 using var scope = scopeFactory.CreateScope();
-                var azureService = scope.ServiceProvider.GetRequiredService<AzureReportService>();
-                var store = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
+                var azureService = scope.ServiceProvider.GetRequiredService<IAzureReportService>();
+                var store = scope.ServiceProvider.GetRequiredService<IAzureReportRepository>();
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
                 var ct = cts.Token;
                 var sw = Stopwatch.StartNew();
-                var progress = new Progress<(string Step, int Percent)>(p => progressSvc.Report(p.Step, p.Percent));
+                var progress = new Progress<(string Step, int Percent)>(p =>
+                {
+                    _ = hubCtx.Clients.All.SendAsync("RefreshProgress",
+                        new { step = p.Step, percent = p.Percent, done = false });
+                });
                 try
                 {
                     var report = await azureService.RunAsync(progress, ct);
-                    progressSvc.Complete();
+                    _refreshRunning = false;
 
                     await store.SaveAsync(report, ct);
+
+                    await hubCtx.Clients.All.SendAsync("RefreshProgress",
+                        new { step = "Done", percent = 100, done = true }, ct);
+
+                    try
+                    {
+                        var incidentSvc = scope.ServiceProvider.GetRequiredService<IncidentService>();
+                        await incidentSvc.DetectAndRecordAsync(report, ct);
+                    }
+                    catch (Exception iex)
+                    {
+                        logger.LogWarning(iex, "Incident detection failed (non-fatal)");
+                    }
 
                     var opts = new JsonSerializerOptions { WriteIndented = true };
                     var json = JsonSerializer.Serialize(report, opts);
                     var filePath = Path.Combine(GetDataDir(env), "azure-full-report.json");
                     await File.WriteAllTextAsync(filePath, json, ct);
 
-                    // AppsJsonSyncer removed — apps.json sync no longer performed
-
                     sw.Stop();
                     logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
                 }
                 catch (OperationCanceledException)
                 {
-                    progressSvc.Fail("Request cancelled or timed out.");
+                    _refreshRunning = false;
+                    logger.LogWarning("Refresh cancelled or timed out");
                 }
                 catch (Exception ex)
                 {
-                    progressSvc.Fail(ex.Message);
+                    _refreshRunning = false;
                     logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
                 }
             });
 
-            return Results.Accepted("/api/diag/refresh-progress", new { started = true });
-        });
-
-        // ── Refresh progress (polled by the UI during a running refresh) ──────
-        app.MapGet("/api/diag/refresh-progress", (RefreshProgressService progressSvc) =>
-        {
-            var snap = progressSvc.Snapshot();
-            return Results.Ok(new
-            {
-                isRunning = snap.IsRunning,
-                step = snap.Step,
-                percent = snap.Percent,
-                log = snap.Log,
-            });
+            return Results.Accepted();
         });
 
         // ── Az CLI login status ──────────────────────────────────────────────
@@ -154,7 +153,7 @@ internal static class DiagEndpoints
 
         // ── Public status page data ───────────────────────────────────────────
         // No auth required — only exposes HTTP status and response time.
-        app.MapGet("/api/status", async (IAzureReportRepository repository, CancellationToken ct) =>
+        app.MapGet("/api/status", async (IAzureReportRepository repository, IWebHostEnvironment env, CancellationToken ct) =>
         {
             // Build status page from history (newest first) — up to 30 samples per service
             var historyResult = await repository.LoadHistoryAsync(maxEntries: 30, ct);
@@ -162,9 +161,28 @@ internal static class DiagEndpoints
 
             if (history.Count == 0)
             {
-                // Fall back to latest report only
+                // Fall back to latest report from Table Storage
                 var latestResult = await repository.LoadAsync(ct);
-                if (latestResult.IsSuccess && latestResult.Value is not null) history.Add(latestResult.Value);
+                if (latestResult.IsSuccess && latestResult.Value is not null)
+                {
+                    history.Add(latestResult.Value);
+                }
+                else
+                {
+                    // Final fallback: load from local azure-full-report.json file
+                    var reportPath = Path.Combine(GetDataDir(env), "azure-full-report.json");
+                    if (File.Exists(reportPath))
+                    {
+                        try
+                        {
+                            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                            var json = await File.ReadAllTextAsync(reportPath, ct);
+                            var fileReport = JsonSerializer.Deserialize<AzureReport>(json, opts);
+                            if (fileReport is not null) history.Add(fileReport);
+                        }
+                        catch { /* ignore deserialization errors — return empty report below */ }
+                    }
+                }
             }
 
             if (history.Count == 0)

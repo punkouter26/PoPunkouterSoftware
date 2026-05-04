@@ -20,7 +20,5 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddRadzenComponents();
 builder.Services.AddScoped<DialogService>();
 builder.Services.AddScoped<NotificationService>();
-builder.Services.AddScoped<TooltipService>();
-builder.Services.AddScoped<ContextMenuService>();
 
 await builder.Build().RunAsync();

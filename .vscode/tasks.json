@@ -105,10 +105,10 @@
 		{
 			"label": "start-api-server",
 			"type": "shell",
-			"command": "dotnet run --project ${workspaceFolder}/PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+			"command": "dotnet run --project ${workspaceFolder}/PoPunkouterSoftware/PoPunkouterSoftware.csproj --no-build",
 			"group": "build",
 			"isBackground": true,
-			"dependsOn": "start-azurite",
+			"dependsOn": ["kill-dotnet", "start-azurite"],
 			"presentation": {
 				"echo": true,
 				"reveal": "always",

@@ -11,9 +11,6 @@ namespace PoPunkouterSoftware.Features.Azure;
 /// <summary>
 /// Persists the latest Azure report as a single entity in Azure Table Storage.
 /// Uses the app-specific storage account (not the shared PoShared one).
-/// SOLID: Single Responsibility — this class has one job: persist/load the Azure report.
-/// SOLID: Open/Closed — storage strategy can be extended without modifying callers.
-/// GoF:   Repository — implements IAzureReportRepository, hiding Table Storage details from the domain.
 /// </summary>
 public class AzureReportStore : IAzureReportRepository
 {

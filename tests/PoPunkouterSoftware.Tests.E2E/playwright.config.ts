@@ -1,6 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as path from 'path';
 
 const isDev = process.env['ASPNETCORE_ENVIRONMENT'] !== 'Production';
+const baseURL = process.env['BASE_URL'] ?? 'http://127.0.0.1:5000';
+
+// If BASE_URL is already set (server managed externally), skip the webServer block.
+// Otherwise Playwright starts (and stops) the Blazor API server automatically.
+const externalServer = !!process.env['BASE_URL'];
 
 export default defineConfig({
   testDir: './tests',
@@ -8,13 +14,22 @@ export default defineConfig({
   retries: 1,
   reporter: [['list'], ['json', { outputFile: '../../TESTRESULTS/playwright-results.json' }]],
   use: {
-    baseURL: process.env['BASE_URL'] ?? 'http://localhost:5000',
+    baseURL,
     // Headed in Dev so failures are visually debuggable; headless in CI/Production
     headless: !isDev,
     screenshot: 'only-on-failure',
     video: 'off',
     trace: 'off',
     javaScriptEnabled: true,
+  },
+  // Auto-start the Blazor server when no external BASE_URL is provided.
+  // Set reuseExistingServer:true so a manually-started server is reused.
+  webServer: externalServer ? undefined : {
+    command: `dotnet run --project ${path.resolve(__dirname, '../../PoPunkouterSoftware/PoPunkouterSoftware.csproj')} --no-build`,
+    url: baseURL,
+    reuseExistingServer: true,
+    timeout: 60_000,
+    env: { ASPNETCORE_URLS: baseURL },
   },
   projects: [
     {

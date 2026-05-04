@@ -7,8 +7,6 @@ namespace PoPunkouterSoftware.Features.GitHub;
 /// <summary>
 /// Exposes a lightweight GitHub activity proxy that caches results to avoid hitting rate limits.
 /// Returns last commit date and 8-week sparkline commit counts for a given public repo.
-/// SOLID: Single Responsibility — only handles GitHub activity lookups.
-/// GoF:   Proxy (via IMemoryCache) — wraps the GitHub API with a caching layer.
 /// </summary>
 internal static class GitHubEndpoints
 {
@@ -95,14 +93,47 @@ internal static class GitHubEndpoints
                     return Results.Ok(new { lastCommitDate, weeklyCommits = Array.Empty<int>(), rateLimited = true });
                 }
 
-                var result = new { lastCommitDate, weeklyCommits, rateLimited = false };
+                // ── Repo metadata for health score ───────────────────────────
+                bool hasReadme = false, hasDescription = false, hasLicense = false;
+                int openIssues = 0;
+                try
+                {
+                    var repoResp = await client.GetAsync($"https://api.github.com/repos/{repo}");
+                    if (repoResp.IsSuccessStatusCode)
+                    {
+                        var repoJson = await repoResp.Content.ReadAsStringAsync();
+                        using var rd = JsonDocument.Parse(repoJson);
+                        hasDescription = !string.IsNullOrWhiteSpace(rd.RootElement.GetProperty("description").GetString());
+                        hasLicense     = rd.RootElement.GetProperty("license").ValueKind != JsonValueKind.Null;
+                        openIssues     = rd.RootElement.GetProperty("open_issues_count").GetInt32();
+                    }
+
+                    var readmeResp = await client.GetAsync($"https://api.github.com/repos/{repo}/readme");
+                    hasReadme = readmeResp.IsSuccessStatusCode;
+                }
+                catch { /* non-fatal */ }
+
+                // ── Compute health score (0–100) ─────────────────────────────
+                // • Recent commit (≤90d): +40   • Active commits sparkline: +20
+                // • Has README: +15             • Has description: +10
+                // • Has license: +10            • Deduct 5 per open issue (max -15)
+                var score = 0;
+                if (lastCommitDate.HasValue && (DateTime.UtcNow - lastCommitDate.Value).TotalDays <= 90) score += 40;
+                if (weeklyCommits.Sum() > 0) score += 20;
+                if (hasReadme)       score += 15;
+                if (hasDescription)  score += 10;
+                if (hasLicense)      score += 10;
+                score -= Math.Min(15, openIssues * 5);
+                score = Math.Max(0, score);
+
+                var result = new { lastCommitDate, weeklyCommits, rateLimited = false, healthScore = score };
                 cache.Set(cacheKey, result, TimeSpan.FromHours(6));
                 return Results.Ok(result);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "GitHub activity fetch failed for {Repo}", repo);
-                return Results.Ok(new { lastCommitDate = (DateTime?)null, weeklyCommits = Array.Empty<int>() });
+                return Results.Ok(new { lastCommitDate = (DateTime?)null, weeklyCommits = Array.Empty<int>(), healthScore = 0 });
             }
         })
         .WithName("GetGitHubActivity")

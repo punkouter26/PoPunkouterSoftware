@@ -35,11 +35,13 @@ secrets.json
 bin/
 obj/
 .vs/
-.vscode/
 *.user
 *.suo
 *.DotSettings.user
 *.lscache
+
+# VS Code workspace-level overrides (shared configs tracked above)
+.vscode/launch.json.bak
 
 # Environment / secrets
 .env

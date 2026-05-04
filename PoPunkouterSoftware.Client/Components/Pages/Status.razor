@@ -1,17 +1,12 @@
-@page "/status"
 @rendermode WasmRenderModes.Interactive
 @using System.Text.Json
+@using System.Text.Json.Serialization
 @using PoPunkouterSoftware.Shared.Azure
 @inject HttpClient Http
 
 <PageTitle>PoPunkouterSoftware — Service Status</PageTitle>
 
 <div class="app-page">
-    <section class="app-section app-ops-hero">
-        <div class="app-kicker">Live operations</div>
-        <h1 class="app-section-heading">Service Status</h1>
-        <p class="app-section-copy rz-mb-0">A clearer health snapshot of the public portfolio, with degraded services pushed forward first.</p>
-    </section>
 
     @if (_loading)
     {
@@ -66,6 +61,16 @@
         </section>
 
         <section class="app-section">
+            @if (_pingerLoaded)
+            {
+                <div class="app-card" style="padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem;">
+                    <RadzenIcon Icon="wifi_tethering" Style="color:var(--app-accent-strong)" />
+                    <span class="app-note" style="margin:0">Wake-up pinger active — last sweep: @(_pingerSweptAt?.ToString("HH:mm UTC") ?? "pending")</span>
+                    <RadzenBadge Text="@($"{_pingerResults.Count} services")"
+                                 BadgeStyle="BadgeStyle.Info" IsPill="true" Variant="Variant.Flat" />
+                </div>
+            }
+
             <div class="app-list">
                 @foreach (var svc in _report.Services.OrderBy(s => s.CurrentStatus == "active" ? 1 : 0).ThenBy(s => s.FriendlyName ?? s.Name))
                 {
@@ -75,6 +80,7 @@
                     var statusColor = isActive ? "var(--app-accent-strong)" : isBroken ? "var(--app-danger-soft)" : "var(--app-accent-warm)";
                     var statusLabel = isActive ? "Operational" : isBroken ? "Degraded" : svc.CurrentStatus;
                     var uptimePct = CalcUptime(svc.Samples);
+                    _pingerResults.TryGetValue(svc.Name, out var ping);
 
                     <div class="app-service-card @statusClass">
                         <div class="app-toolbar">
@@ -102,24 +108,43 @@
                                 <RadzenBadge Text="@($"Uptime {uptimePct:F1}%")" IsPill="true"
                                              BadgeStyle="@(uptimePct >= 99 ? BadgeStyle.Success : uptimePct >= 90 ? BadgeStyle.Warning : BadgeStyle.Danger)"
                                              Variant="Variant.Flat" />
+                                @if (ping is not null)
+                                {
+                                    var pStyle = ping.Status == "reachable" ? BadgeStyle.Success : ping.Status == "timeout" ? BadgeStyle.Warning : BadgeStyle.Danger;
+                                    var pingerTitle = $"Last pinger probe: {ping.PingedAt:HH:mm} UTC";
+                                    <RadzenBadge Text="@($"Ping {ping.ResponseTimeMs}ms")" IsPill="true" BadgeStyle="@pStyle" Variant="Variant.Flat"
+                                                 title="@pingerTitle" />
+                                }
                             </div>
                         </div>
 
-                        @if (svc.Samples.Count > 1)
+                        @{
+                            var samples = svc.Samples.AsEnumerable().Reverse().TakeLast(30).ToList();
+                            const int cellW = 14; const int cellH = 16; const int gap = 2;
+                            var svgW = samples.Count * (cellW + gap);
+                        }
+                        @if (samples.Count > 1)
                         {
-                            <div class="app-history rz-mt-2" title="Report history — green=active, red=broken, grey=unknown (newest right)">
-                                @foreach (var sample in svc.Samples.AsEnumerable().Reverse().TakeLast(30))
-                                {
-                                    var barColor = sample.Status == "active" ? "var(--app-accent-strong)"
-                                                 : sample.Status is "broken" or "unreachable" ? "var(--app-danger-soft)"
-                                                 : "rgba(255,255,255,0.18)";
-                                    <div class="app-history-cell" style="background:@barColor" title="@sample.At.ToString("yyyy-MM-dd HH:mm") — @sample.Status"></div>
-                                }
-                            </div>
-                            <div class="app-note" style="display:flex;justify-content:space-between;margin-top:.35rem;">
-                                <span>Older</span>
-                                <span>@svc.Samples.Count report sample(s)</span>
-                                <span>Latest</span>
+                            <div class="rz-mt-2" title="Uptime heatmap — green=active, red=broken, grey=unknown (oldest left, newest right)">
+                                <svg width="@svgW" height="@cellH" style="display:block;">
+                                    @for (int si = 0; si < samples.Count; si++)
+                                    {
+                                        var s = samples[si];
+                                        var fill = s.Status == "active" ? "#22c55e"
+                                                 : s.Status is "broken" or "unreachable" ? "#ef4444"
+                                                 : "rgba(255,255,255,0.14)";
+                                        var x = si * (cellW + gap);
+                                        <rect x="@x" y="0" width="@cellW" height="@cellH" rx="3" fill="@fill"
+                                              opacity="0.85">
+                                            <title>@s.At.ToString("yyyy-MM-dd HH:mm") — @s.Status@(s.ResponseTimeMs.HasValue ? $" ({s.ResponseTimeMs}ms)" : "")</title>
+                                        </rect>
+                                    }
+                                </svg>
+                                <div class="app-note" style="display:flex;justify-content:space-between;margin-top:.3rem;font-size:.72rem;">
+                                    <span>Older</span>
+                                    <span>@samples.Count checks · @uptimePct.ToString("F0")% up</span>
+                                    <span>Latest</span>
+                                </div>
                             </div>
                         }
                     </div>
@@ -136,21 +161,33 @@
     private bool   _loading = true;
     private string? _error;
 
+    // Pinger snapshot
+    private bool   _pingerLoaded;
+    private DateTime? _pingerSweptAt;
+    private Dictionary<string, PingResultDto> _pingerResults = new(StringComparer.OrdinalIgnoreCase);
+
     protected override async Task OnInitializedAsync()
     {
+        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         try
         {
-            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            _report  = await Http.GetFromJsonAsync<StatusPageReport>("/api/status", opts);
+            _report = await Http.GetFromJsonAsync<StatusPageReport>("/api/status", opts);
         }
-        catch (Exception ex)
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _loading = false; }
+
+        // Load pinger results (non-fatal)
+        try
         {
-            _error = ex.Message;
+            var snap = await Http.GetFromJsonAsync<PingerSnapshotDto>("/api/pinger/status", opts);
+            if (snap?.Swept == true && snap.Results is not null)
+            {
+                _pingerSweptAt = snap.SweptAt;
+                _pingerResults = snap.Results.ToDictionary(r => r.Name, StringComparer.OrdinalIgnoreCase);
+                _pingerLoaded  = true;
+            }
         }
-        finally
-        {
-            _loading = false;
-        }
+        catch { /* non-fatal */ }
     }
 
     private static double CalcUptime(List<StatusSample> samples)
@@ -159,4 +196,16 @@
         var up = samples.Count(s => s.Status == "active");
         return (double)up / samples.Count * 100.0;
     }
+
+    // ── DTOs for pinger endpoint ──────────────────────────────────────
+    private record PingerSnapshotDto(
+        [property: JsonPropertyName("swept")] bool Swept,
+        [property: JsonPropertyName("sweptAt")] DateTime? SweptAt,
+        [property: JsonPropertyName("results")] List<PingResultDto>? Results);
+
+    private record PingResultDto(
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("status")] string Status,
+        [property: JsonPropertyName("responseTimeMs")] long ResponseTimeMs,
+        [property: JsonPropertyName("pingedAt")] DateTime PingedAt);
 }

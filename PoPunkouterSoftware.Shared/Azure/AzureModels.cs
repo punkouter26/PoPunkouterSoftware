@@ -20,15 +20,7 @@ public record AzureReport
     public List<ZombieApp>? ZombieApps { get; init; }
     public List<OrphanedResource>? OrphanedResources { get; init; }
     public BurnRateInfo? BurnRate { get; init; }
-    // New audit fields
     public ReportDelta? Delta { get; init; }
-    public AlertsAuditInfo? AlertsAudit { get; init; }
-    public AutoScaleAuditInfo? AutoScaleAudit { get; init; }
-    public BackupAuditInfo? BackupAudit { get; init; }
-    public DeploymentSlotsInfo? DeploymentSlots { get; init; }
-    public DiagnosticCoverageInfo? DiagnosticCoverage { get; init; }
-    public CriticalFindingsInfo? CriticalFindings { get; init; }
-    public RbacAuditInfo? RbacAudit { get; init; }
 }
 
 public record SubscriptionInfo { public string Name { get; init; } = ""; }
@@ -53,6 +45,8 @@ public record WebService
     public string HttpStatus { get; init; } = "";
     public string? PlatformState { get; init; }
     public string? Description { get; init; }
+    /// <summary>App Service Plan name — populated if service is a Microsoft.Web/sites resource.</summary>
+    public string? AppServicePlan { get; init; }
     public ConnectivityInfo? Connectivity { get; init; }
     public MetricsInfo? Metrics7Days { get; init; }
     public FreeTierCheckInfo? FreeTierCheck { get; init; }
@@ -219,122 +213,6 @@ public record ReportDelta
     public List<string> NewOrphanedResources { get; init; } = new();
 }
 
-// ─── Item 3: Alert Rules Audit ────────────────────────────────────────────────
-
-public record AlertsAuditInfo
-{
-    public int TotalAlertRules { get; init; }
-    public List<ServiceAlertStatus> ServicesWithoutAlerts { get; init; } = new();
-}
-
-public record ServiceAlertStatus
-{
-    public string Name { get; init; } = "";
-    public string? ResourceGroup { get; init; }
-    public bool HasAlerts { get; init; }
-    public int AlertCount { get; init; }
-}
-
-// ─── Item 4: Auto-Scale Audit ─────────────────────────────────────────────────
-
-public record AutoScaleAuditInfo
-{
-    public List<AutoScaleItem> WithAutoScale { get; init; } = new();
-    public List<AutoScaleItem> WithoutAutoScale { get; init; } = new();
-}
-
-public record AutoScaleItem
-{
-    public string Name { get; init; } = "";
-    public string? ResourceGroup { get; init; }
-    public string? Sku { get; init; }
-    public bool HasAutoScale { get; init; }
-}
-
-// ─── Item 5: Backup Audit ─────────────────────────────────────────────────────
-
-public record BackupAuditInfo
-{
-    public List<BackupItem> WithBackup { get; init; } = new();
-    public List<BackupItem> WithoutBackup { get; init; } = new();
-}
-
-public record BackupItem
-{
-    public string Name { get; init; } = "";
-    public string? ResourceGroup { get; init; }
-    public bool HasBackup { get; init; }
-    public string? BackupFrequency { get; init; }
-    public string? Retention { get; init; }
-}
-
-// ─── Item 6: Deployment Slots ─────────────────────────────────────────────────
-
-public record DeploymentSlotsInfo
-{
-    public int TotalSlots { get; init; }
-    public List<SlotEntry> Slots { get; init; } = new();
-}
-
-public record SlotEntry
-{
-    public string AppName { get; init; } = "";
-    public string SlotName { get; init; } = "";
-    public string? ResourceGroup { get; init; }
-    public string? State { get; init; }
-    public bool IsAlwaysOn { get; init; }
-    public string? Url { get; init; }
-}
-
-// ─── Item 7: Diagnostic Settings Coverage ────────────────────────────────────
-
-public record DiagnosticCoverageInfo
-{
-    public int TotalResources { get; init; }
-    public int ResourcesWithDiagnostics { get; init; }
-    public List<DiagnosticEntry> WithoutDiagnostics { get; init; } = new();
-}
-
-public record DiagnosticEntry
-{
-    public string Name { get; init; } = "";
-    public string? ResourceGroup { get; init; }
-    public string Type { get; init; } = "";
-}
-
-// ─── Item 9: Critical Findings / Severity Score ───────────────────────────────
-
-public record CriticalFindingsInfo
-{
-    public int SeverityScore { get; init; }
-    public string SeverityLabel { get; init; } = "Healthy";
-    public List<CriticalFinding> Findings { get; init; } = new();
-}
-
-public record CriticalFinding
-{
-    public string Severity { get; init; } = "";
-    public string Category { get; init; } = "";
-    public string Message { get; init; } = "";
-    public string? Resource { get; init; }
-}
-
-// ─── Item 10: RBAC Over-Permission Audit ─────────────────────────────────────
-
-public record RbacAuditInfo
-{
-    public List<RbacOverpermission> OverprivilegedAssignments { get; init; } = new();
-}
-
-public record RbacOverpermission
-{
-    public string PrincipalId { get; init; } = "";
-    public string? PrincipalName { get; init; }
-    public string Role { get; init; } = "";
-    public string Scope { get; init; } = "";
-    public string? PrincipalType { get; init; }
-}
-
 // ─── Public Status Page models ────────────────────────────────────────────────
 
 /// <summary>Data contract for the public /status page — safe to expose without auth.</summary>
@@ -407,4 +285,18 @@ public record InfraFileSummary
     public string FileType { get; init; } = "";
     /// <summary>Resource type strings extracted from Bicep files, e.g. Microsoft.Web/sites.</summary>
     public List<string> ResourceTypes { get; init; } = new();
+}
+
+// ─── Feature #9: Incident Log ─────────────────────────────────────────────────
+
+/// <summary>A single service health transition event detected during a report refresh.</summary>
+public record IncidentEntry
+{
+    public string ServiceName { get; init; } = "";
+    public string FriendlyName { get; init; } = "";
+    /// <summary>"new-incident" (active→broken) or "recovery" (broken→active).</summary>
+    public string Type { get; init; } = "";
+    public DateTime OccurredAt { get; init; }
+    public string? PreviousStatus { get; init; }
+    public string? CurrentStatus { get; init; }
 }

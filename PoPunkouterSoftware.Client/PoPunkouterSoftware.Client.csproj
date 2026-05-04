@@ -10,6 +10,8 @@
   <ItemGroup>
     <!-- WASM runtime — provides WebAssemblyHostBuilder, IWebAssemblyHostEnvironment -->
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <!-- SignalR client for live refresh push (Feature #7) -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     <!-- UI components -->
     <PackageReference Include="Radzen.Blazor" />
   </ItemGroup>

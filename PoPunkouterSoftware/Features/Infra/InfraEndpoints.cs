@@ -13,10 +13,6 @@ namespace PoPunkouterSoftware.Features.Infra;
 /// Scans every owned GitHub repo for CI/CD workflow files and infrastructure definitions,
 /// then returns a structured comparison so all apps' deployment setups can be reviewed
 /// side-by-side.
-///
-/// SOLID: Single Responsibility — this class is solely responsible for scanning and summarising
-///        GitHub repo infrastructure metadata.
-/// GoF:   Proxy (IMemoryCache) — wraps expensive GitHub API calls with a 6-hour cache.
 /// </summary>
 internal static class InfraEndpoints
 {

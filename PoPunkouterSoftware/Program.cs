@@ -97,8 +97,7 @@ try
     builder.Services.AddRadzenComponents();
     builder.Services.AddScoped<DialogService>();
     builder.Services.AddScoped<NotificationService>();
-    builder.Services.AddScoped<TooltipService>();
-    builder.Services.AddScoped<ContextMenuService>();
+
 
     // ─── CORS — origins loaded from configuration ─────────────────────
     var allowedOrigins = builder.Configuration
@@ -111,8 +110,7 @@ try
             policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
     });
 
-    // ─── HTTP clients for Azure services ────────────────────────────────────
-    // Centralized configuration via AzureClientFactory
+    // ─── HTTP clients for Azure services ──────────────────────────────────────
     builder.Services.AddHttpClient("health")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -131,17 +129,14 @@ try
             c.DefaultRequestHeaders.UserAgent.ParseAdd("PoPunkouterSoftware-Audit/3.0");
         });
 
-    // Register Azure client factory
-    builder.Services.AddSingleton<IAzureClientFactory, AzureClientFactory>();
-
     // ─── Azure report analysis + Blob persistence ─────────────────────────────
-    // SOLID: Dependency Inversion — register concrete classes against their domain/application interfaces.
+
     builder.Services.AddSingleton<IAzureReportRepository, AzureReportStore>();
     builder.Services.AddTransient<IAzureReportService, AzureReportService>();
-    // Also register concrete types for internal feature use (DiagEndpoints uses AzureReportStore/AzureReportService directly)
-    builder.Services.AddSingleton<AzureReportStore>(sp => (AzureReportStore)sp.GetRequiredService<IAzureReportRepository>());
-    builder.Services.AddTransient<AzureReportService>(sp => (AzureReportService)sp.GetRequiredService<IAzureReportService>());
-    builder.Services.AddSingleton<RefreshProgressService>();
+    builder.Services.AddSingleton<ServicePingerService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<ServicePingerService>());
+    builder.Services.AddSignalR();
+    builder.Services.AddSingleton<IncidentService>();
 
     // ─── In-process memory cache (GitHub activity + AI fix plans) ────────────
     builder.Services.AddMemoryCache();
@@ -199,9 +194,9 @@ try
     });
 
     // ─── Health — probes all external connections ─────────────────────────────
-    var healthHandler = async (IAzureClientFactory azureClientFactory, IConfiguration config, IWebHostEnvironment env) =>
+    var healthHandler = async (IHttpClientFactory httpClientFactory, IConfiguration config, IWebHostEnvironment env) =>
     {
-        var client = azureClientFactory.CreateHealthClient();
+        var client = httpClientFactory.CreateClient("health");
         var checks = new Dictionary<string, object>();
         var allHealthy = true;
 
@@ -230,16 +225,21 @@ try
         {
             try
             {
-                // Derive the probe URL: prefer explicit endpoint, otherwise parse it from the connection string.
-                // UseDevelopmentStorage=true is the Azurite shorthand — probe localhost:10002 directly.
-                string? probeUrl = string.IsNullOrWhiteSpace(tableEndpoint) ? null : tableEndpoint;
-                if (probeUrl is null && !string.IsNullOrWhiteSpace(tableConnStr))
+                // UseDevelopmentStorage=true always wins — probe Azurite directly regardless of any
+                // injected endpoint (e.g. Key Vault overriding the endpoint in dev).
+                string? probeUrl = null;
+                bool isDevStorage = false;
+                if (!string.IsNullOrWhiteSpace(tableConnStr) &&
+                    tableConnStr.Equals("UseDevelopmentStorage=true", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (tableConnStr.Equals("UseDevelopmentStorage=true", StringComparison.OrdinalIgnoreCase))
-                    {
-                        probeUrl = "http://127.0.0.1:10002/devstoreaccount1";
-                    }
-                    else
+                    probeUrl = "http://127.0.0.1:10002/devstoreaccount1";
+                    isDevStorage = true;
+                }
+                else
+                {
+                    // Prefer explicit endpoint, otherwise parse from connection string.
+                    probeUrl = string.IsNullOrWhiteSpace(tableEndpoint) ? null : tableEndpoint;
+                    if (probeUrl is null && !string.IsNullOrWhiteSpace(tableConnStr))
                     {
                         // Connection string contains TableEndpoint=https://... or we can build it from AccountName
                         var parts = tableConnStr.Split(';', StringSplitOptions.RemoveEmptyEntries)
@@ -256,12 +256,14 @@ try
                 using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 var tsResp = await client.GetAsync(probeUrl, cts2.Token);
                 // 2xx/3xx = healthy. 4xx = service is reachable but auth/config is wrong (degraded).
+                // Exception: Azurite (dev) returns 400 for unauthenticated GET — treat as healthy.
                 // 5xx or network error = unreachable.
                 var (tsStatus, tsHealthy) = (int)tsResp.StatusCode switch
                 {
-                    >= 200 and < 400 => ("reachable", true),
-                    >= 400 and < 500 => ("degraded",  false),
-                    _                => ("unreachable", false),
+                    >= 200 and < 400             => ("reachable", true),
+                    400 when isDevStorage        => ("reachable", true),   // Azurite 400 = running, no auth needed
+                    >= 400 and < 500             => ("degraded",  false),
+                    _                            => ("unreachable", false),
                 };
                 if (!tsHealthy) allHealthy = false;
                 checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode };
@@ -303,10 +305,15 @@ try
         .WithName("GetHealthRoot")
         .WithTags("Health");
 
-    // ─── Config — lets the client discover the canonical API base URL ─────────
+    // ─── Config — lets the client discover the canonical API base URL and env mode ─
+    // isMockMode=true tells the UI to display the "MOCK DATA" banner (rule 10).
+    // Activated when ASPNETCORE_ENVIRONMENT is "Testing" (integration / E2E test runs).
     app.MapGet("/api/config",
-        (HttpContext ctx) => Results.Ok(
-            new { apiBase = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api" }))
+        (HttpContext ctx, IWebHostEnvironment env) => Results.Ok(new
+        {
+            apiBase    = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api",
+            isMockMode = env.IsEnvironment("Testing"),
+        }))
         .WithName("GetConfig").WithTags("Config");
 
     // ─── Feature slices ───────────────────────────────────────────────
@@ -314,6 +321,12 @@ try
     app.MapGitHubEndpoints();
     app.MapFixPlanEndpoints();
     app.MapInfraEndpoints();
+    // New feature endpoints
+    app.MapHub<RefreshHub>("/hubs/refresh");
+    app.MapPingerEndpoints();
+    app.MapAppServiceControlEndpoints();
+    app.MapNarrativeEndpoints();
+    app.MapIncidentEndpoints();
 
     app.Run();
 }

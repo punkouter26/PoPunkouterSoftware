@@ -1,20 +1,26 @@
 ### PoPunkouterSoftware — API Tests
 ### Run these with the REST Client extension (Ctrl+Alt+R) or JetBrains HTTP Client
-### Server must be running on http://localhost:5000
+### Server must be running: F5 in VS Code or `dotnet run --project PoPunkouterSoftware/PoPunkouterSoftware.csproj`
 
 @baseUrl = http://localhost:5000
 
 # ─── Health ───────────────────────────────────────────────────────────────────
 
-### GET /api/health — probe all external connections
+### GET /api/health — probe all external connections (Key Vault, Table Storage)
 GET {{baseUrl}}/api/health
+Accept: application/json
+
+###
+
+### GET /health — alias for /api/health (same handler)
+GET {{baseUrl}}/health
 Accept: application/json
 
 ###
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-### GET /api/config — client uses this to discover API base URL
+### GET /api/config — returns API base URL + isMockMode flag for the WASM client
 GET {{baseUrl}}/api/config
 Accept: application/json
 
@@ -22,13 +28,13 @@ Accept: application/json
 
 # ─── Azure Report ─────────────────────────────────────────────────────────────
 
-### GET /api/diag/report — load latest Azure report (Table Storage then file fallback)
+### GET /api/diag/report — load latest Azure report (Table Storage then local file fallback)
 GET {{baseUrl}}/api/diag/report
 Accept: application/json
 
 ###
 
-### POST /api/diag/refresh — trigger live Azure SDK refresh (takes 30–90 seconds)
+### POST /api/diag/refresh — trigger live Azure SDK background refresh (202 Accepted immediately)
 POST {{baseUrl}}/api/diag/refresh
 Content-Type: application/json
 
@@ -36,15 +42,53 @@ Content-Type: application/json
 
 ###
 
+### GET /api/diag/refresh-progress — poll during a running refresh
+GET {{baseUrl}}/api/diag/refresh-progress
+Accept: application/json
+
+###
+
+### GET /api/diag/az-status — check whether a valid Azure credential exists locally
+GET {{baseUrl}}/api/diag/az-status
+Accept: application/json
+
+###
+
+# ─── AI Fix Plans ─────────────────────────────────────────────────────────────
+
+### GET /api/diag/fix-plan/{serviceName} — AI-powered repair steps for a broken App Service
+### Requires FeatureFlags:EnableAiIntegration=true + AzureOpenAI config. Cached 6h.
+GET {{baseUrl}}/api/diag/fix-plan/my-app-service-name
+Accept: application/json
+
+###
+
+# ─── GitHub Activity ──────────────────────────────────────────────────────────
+
+### GET /api/github-activity — last commit date + 8-week sparkline for a public repo
+GET {{baseUrl}}/api/github-activity?repo=punkouter/PoPunkouterSoftware
+Accept: application/json
+
+###
+
+# ─── Infrastructure / CI-CD Review ───────────────────────────────────────────
+
+### GET /api/infra/cicd-review — scans all owned GitHub repos for CI/CD workflows & IaC definitions
+### Requires GitHub:PersonalAccessToken or `gh auth login`. Cached 6h.
+GET {{baseUrl}}/api/infra/cicd-review
+Accept: application/json
+
+###
+
 # ─── OpenAPI / Scalar ─────────────────────────────────────────────────────────
 
-### GET /openapi/v1.json — raw OpenAPI spec
+### GET /openapi/v1.json — raw OpenAPI 3.x spec
 GET {{baseUrl}}/openapi/v1.json
 Accept: application/json
 
 ###
 
-### Scalar UI (open in browser)
+### Scalar interactive UI (open in browser)
 # http://localhost:5000/scalar
 
 ###

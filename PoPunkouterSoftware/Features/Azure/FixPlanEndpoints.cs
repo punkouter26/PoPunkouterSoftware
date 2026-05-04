@@ -9,8 +9,6 @@ namespace PoPunkouterSoftware.Features.Azure;
 /// <summary>
 /// Generates an AI-powered, step-by-step repair plan for a broken or unhealthy Azure App Service.
 /// Grounded in the latest AzureReport data to minimise hallucinations.
-/// SOLID: Single Responsibility — only handles fix-plan generation.
-/// GoF:   Proxy (IMemoryCache) — caches plans per service to avoid redundant OpenAI calls.
 /// </summary>
 internal static class FixPlanEndpoints
 {
