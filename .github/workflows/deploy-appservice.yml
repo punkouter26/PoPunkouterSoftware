@@ -93,18 +93,13 @@ jobs:
       - name: Deploy to Azure App Service
         shell: bash
         run: |
-          # Use Kudu REST API directly — returns immediately after upload (no startup polling)
-          TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv)
-          HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
-            "https://${APP_NAME}.scm.azurewebsites.net/api/zipdeploy?isAsync=true&clean=true" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/zip" \
-            --data-binary @./deploy.zip)
-          echo "Kudu zip deploy HTTP status: $HTTP_STATUS"
-          if [[ "$HTTP_STATUS" != "2"* ]]; then
-            echo "Deploy failed with HTTP $HTTP_STATUS"
-            exit 1
-          fi
+          az webapp deploy \
+            --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --src-path ./deploy.zip \
+            --type zip \
+            --async true \
+            --timeout 600
 
       - name: Start app after deploy
         shell: bash
