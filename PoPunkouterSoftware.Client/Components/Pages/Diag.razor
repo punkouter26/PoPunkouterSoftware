@@ -146,7 +146,9 @@
                         var detail = kv.Value.TryGetProperty("error", out var err)
                             ? err.GetString() ?? string.Empty
                             : kv.Value.TryGetProperty("httpStatus", out var code)
-                                ? $"HTTP {code}"
+                                ? kv.Value.TryGetProperty("note", out var noteEl) && noteEl.ValueKind != System.Text.Json.JsonValueKind.Null
+                                    ? $"HTTP {code} ({noteEl.GetString()})"
+                                    : $"HTTP {code}"
                                 : string.Empty;
                         var status = kv.Value.TryGetProperty("status", out var s)
                             ? s.GetString() ?? "unknown"

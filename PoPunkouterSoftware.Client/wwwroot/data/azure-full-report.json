@@ -1972,7 +1972,7 @@
       "Issues": [
         {
           "Severity": "high",
-          "Issue": "Public blob access enabled \u2014 potential data exposure"
+          "Issue": "Public blob access enabled — potential data exposure"
         }
       ]
     },
@@ -2057,7 +2057,7 @@
       "Issues": [
         {
           "Severity": "medium",
-          "Issue": "Min TLS TLS1_0 \u2014 upgrade to TLS 1.2"
+          "Issue": "Min TLS TLS1_0 — upgrade to TLS 1.2"
         }
       ]
     },
@@ -2088,28 +2088,28 @@
       "ResourceGroup": "PoRedoImage",
       "HttpStatus": "broken",
       "PlatformState": "Running",
-      "Recommendation": "az webapp stop --name \u0022poredoimage-web\u0022 --resource-group \u0022PoRedoImage\u0022"
+      "Recommendation": "az webapp stop --name \"poredoimage-web\" --resource-group \"PoRedoImage\""
     },
     {
       "Name": "app-pofunquiz-zizogpdhpyiwo",
       "ResourceGroup": "PoFunQuiz",
       "HttpStatus": "broken",
       "PlatformState": "Running",
-      "Recommendation": "az webapp stop --name \u0022app-pofunquiz-zizogpdhpyiwo\u0022 --resource-group \u0022PoFunQuiz\u0022"
+      "Recommendation": "az webapp stop --name \"app-pofunquiz-zizogpdhpyiwo\" --resource-group \"PoFunQuiz\""
     },
     {
       "Name": "app-polinks",
       "ResourceGroup": "PoLinks",
       "HttpStatus": "broken",
       "PlatformState": "Running",
-      "Recommendation": "az webapp stop --name \u0022app-polinks\u0022 --resource-group \u0022PoLinks\u0022"
+      "Recommendation": "az webapp stop --name \"app-polinks\" --resource-group \"PoLinks\""
     },
     {
       "Name": "app-porepolinetracker",
       "ResourceGroup": "PoRepoLineTracker",
       "HttpStatus": "broken",
       "PlatformState": "Running",
-      "Recommendation": "az webapp stop --name \u0022app-porepolinetracker\u0022 --resource-group \u0022PoRepoLineTracker\u0022"
+      "Recommendation": "az webapp stop --name \"app-porepolinetracker\" --resource-group \"PoRepoLineTracker\""
     }
   ],
   "OrphanedResources": [],
@@ -2843,31 +2843,31 @@
       {
         "Severity": "high",
         "Category": "Security",
-        "Message": "User has \u0027Owner\u0027 role at subscription scope",
+        "Message": "User has 'Owner' role at subscription scope",
         "Resource": "be360303-ef12-4fc9-8591-fe70b48b233f"
       },
       {
         "Severity": "medium",
         "Category": "Cost",
-        "Message": "Zero requests in 7 days \u2014 possible zombie app",
+        "Message": "Zero requests in 7 days — possible zombie app",
         "Resource": "poredoimage-web"
       },
       {
         "Severity": "medium",
         "Category": "Cost",
-        "Message": "Zero requests in 7 days \u2014 possible zombie app",
+        "Message": "Zero requests in 7 days — possible zombie app",
         "Resource": "app-pofunquiz-zizogpdhpyiwo"
       },
       {
         "Severity": "medium",
         "Category": "Cost",
-        "Message": "Zero requests in 7 days \u2014 possible zombie app",
+        "Message": "Zero requests in 7 days — possible zombie app",
         "Resource": "app-polinks"
       },
       {
         "Severity": "medium",
         "Category": "Cost",
-        "Message": "Zero requests in 7 days \u2014 possible zombie app",
+        "Message": "Zero requests in 7 days — possible zombie app",
         "Resource": "app-porepolinetracker"
       },
       {

@@ -64,10 +64,12 @@ else
                 </div>
 
                 <div class="app-actions">
-                    @if (currentReport.GeneratedAt is DateTime generatedAt && (DateTime.UtcNow - generatedAt).TotalHours > 24)
+                    @if (currentReport.GeneratedAt is DateTime generatedAt)
                     {
-                        <RadzenBadge Text="@($"{(int)(DateTime.UtcNow - generatedAt).TotalHours}h old")"
-                                     BadgeStyle="BadgeStyle.Warning" IsPill="true" />
+                        var _ageMin = (int)(DateTime.UtcNow - generatedAt).TotalMinutes;
+                        var _ageText = _ageMin < 60 ? $"{_ageMin}m old" : $"{(int)(DateTime.UtcNow - generatedAt).TotalHours}h old";
+                        var _ageBadge = _ageMin < 30 ? BadgeStyle.Success : _ageMin < 120 ? BadgeStyle.Info : _ageMin < 360 ? BadgeStyle.Warning : BadgeStyle.Danger;
+                        <RadzenBadge Text="@_ageText" BadgeStyle="@_ageBadge" IsPill="true" />
                     }
                     <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh from Azure")" Icon="refresh"
                                   ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
@@ -172,7 +174,7 @@ else
         </div>
     </section>
 
-    <section class="app-section">
+    <section class="app-section" id="detail-tabs">
     <div class="app-card">
     <div class="app-toolbar rz-mb-3">
         <div>
@@ -182,7 +184,7 @@ else
         </div>
     </div>
 
-    <RadzenTabs @bind-SelectedIndex="_selectedTabIndex">
+    <RadzenTabs @bind-SelectedIndex="_selectedTabIndex" @bind-SelectedIndex:after="ScrollTabsIntoView">
         <Tabs>
 
             <!-- ── Tab 1: Consolidated View ── -->
@@ -1297,6 +1299,12 @@ else
     private List<WebService> services = new();
     private List<SafeToRemoveItem> safeToRemove = new();
     private int _selectedTabIndex = 0;
+
+    private async Task ScrollTabsIntoView()
+    {
+        await JS.InvokeVoidAsync("eval",
+            "document.getElementById('detail-tabs')?.scrollIntoView({behavior:'smooth',block:'start'})");
+    }
     private bool _loading = true;
     private string? _loadError;
     private List<ConsolidatedService> ConsolidatedServices => BuildConsolidatedServices(report);
@@ -1387,6 +1395,10 @@ else
 
             services = report.WebServices?.Services ?? new List<WebService>();
             safeToRemove = BuildSafeToRemove(report);
+
+            // Auto-refresh if the cached report is more than 2 hours old
+            if (report.GeneratedAt is DateTime gen && (DateTime.UtcNow - gen).TotalHours > 2 && !_refreshing)
+                _ = RefreshAsync();
         }
         catch (Exception ex)
         {

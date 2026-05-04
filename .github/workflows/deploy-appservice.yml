@@ -11,9 +11,10 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  APP_NAME: app-popunkoutersoftware
 
 jobs:
-  build-test:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,77 +50,14 @@ jobs:
       - name: Publish
         run: dotnet publish PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish
 
-      - name: Upload publish artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish-output
-          path: ./publish
-          retention-days: 1
-          compression-level: 6
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-test
-    env:
-      APP_NAME: app-popunkoutersoftware
-      RESOURCE_GROUP: PoPunkouterSoftware
-    steps:
-      - name: Download publish artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: publish-output
-          path: ./publish
-
-      - name: Zip publish output
-        run: cd ./publish && zip -r ../deploy.zip .
-
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Ensure container startup timeout is sufficient
-        shell: bash
-        run: |
-          az webapp config appsettings set --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" \
-            --settings WEBSITE_CONTAINER_START_TIME_LIMIT=600 --output none
-
-      - name: Stop app before deploy
-        shell: bash
-        run: |
-          echo "Stopping app to clear any running background tasks..."
-          az webapp stop --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
-          sleep 5
-
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.APP_NAME }}
-          package: ./deploy.zip
-
-      - name: Start app after deploy
-        shell: bash
-        run: |
-          az webapp start --name "$APP_NAME" --resource-group "$RESOURCE_GROUP"
-
-      - name: Wait for app startup
-        shell: bash
-        run: sleep 30
-
-      - name: Health check
-        shell: bash
-        run: |
-          URL="https://${APP_NAME}.azurewebsites.net/api/health"
-          echo "Checking health at $URL"
-          for i in $(seq 1 5); do
-            STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "$URL" || echo "000")
-            echo "Attempt $i: HTTP $STATUS"
-            if [[ "$STATUS" == "200" ]]; then
-              echo "Health check passed!"
-              exit 0
-            fi
-            sleep 15
-          done
-          echo "Health check failed after 5 attempts"
-          exit 1
+          package: ./publish
 

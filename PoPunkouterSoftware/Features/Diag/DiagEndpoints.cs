@@ -26,7 +26,13 @@ internal static class DiagEndpoints
             if (File.Exists(reportPath))
             {
                 var json = await File.ReadAllTextAsync(reportPath);
-                return Results.Content(json, "application/json");
+                // Deserialize then re-serialize via Results.Json so ASP.NET Core's camelCase
+                // naming policy (JsonSerializerDefaults.Web) is applied consistently.
+                var fileOpts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var fileReport = JsonSerializer.Deserialize<AzureReport>(json, fileOpts);
+                return fileReport is not null
+                    ? Results.Json(fileReport)
+                    : Results.Content(json, "application/json");
             }
 
             if (!reportResult.IsSuccess)
@@ -82,7 +88,7 @@ internal static class DiagEndpoints
                         logger.LogWarning(iex, "Incident detection failed (non-fatal)");
                     }
 
-                    var opts = new JsonSerializerOptions { WriteIndented = true };
+                    var opts = new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
                     var json = JsonSerializer.Serialize(report, opts);
                     var filePath = Path.Combine(GetDataDir(env), "azure-full-report.json");
                     await File.WriteAllTextAsync(filePath, json, ct);

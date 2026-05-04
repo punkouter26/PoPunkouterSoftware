@@ -142,11 +142,15 @@ try
     builder.Services.AddMemoryCache();
 
     // ─── HTTP client for GitHub API ───────────────────────────────────
+    var ghPat = builder.Configuration["GitHub:PersonalAccessToken"];
     builder.Services.AddHttpClient("github")
         .ConfigureHttpClient(c =>
         {
             c.DefaultRequestHeaders.UserAgent.ParseAdd("PoPunkouterSoftware/1.0");
             c.Timeout = TimeSpan.FromSeconds(10);
+            if (!string.IsNullOrWhiteSpace(ghPat))
+                c.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ghPat);
         });
 
     // ─── HTTP client for Azure OpenAI ─────────────────────────────────
@@ -266,7 +270,7 @@ try
                     _                            => ("unreachable", false),
                 };
                 if (!tsHealthy) allHealthy = false;
-                checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode };
+                checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode, note = isDevStorage ? "Azurite" : (string?)null };
             }
             catch (Exception ex)
             {
