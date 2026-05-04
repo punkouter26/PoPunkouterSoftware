@@ -175,6 +175,33 @@ try
             diag.Set("SessionId",  ctx.TraceIdentifier);
             diag.Set("Environment", app.Environment.EnvironmentName);
         };
+        o.GetLevel = (ctx, _, ex) =>
+        {
+            // Ignore expected client disconnect noise (499 / aborted requests).
+            if (ctx.Response.StatusCode == 499)
+                return LogEventLevel.Debug;
+            if (ex is OperationCanceledException && ctx.RequestAborted.IsCancellationRequested)
+                return LogEventLevel.Debug;
+
+            if (ex is not null || ctx.Response.StatusCode >= 500)
+                return LogEventLevel.Error;
+            return LogEventLevel.Information;
+        };
+    });
+
+    // Convert expected client-aborted request cancellations into a 499 response
+    // so they do not surface as unhandled exception telemetry.
+    app.Use(async (ctx, next) =>
+    {
+        try
+        {
+            await next();
+        }
+        catch (OperationCanceledException) when (ctx.RequestAborted.IsCancellationRequested)
+        {
+            if (!ctx.Response.HasStarted)
+                ctx.Response.StatusCode = 499;
+        }
     });
 
     app.UseCors();
@@ -308,6 +335,15 @@ try
     app.MapGet("/health", healthHandler)
         .WithName("GetHealthRoot")
         .WithTags("Health");
+
+    // Lightweight platform probe endpoint: does not call external dependencies.
+    app.MapGet("/healthz", () => Results.Ok(new
+    {
+        status = "ok",
+        timestamp = DateTime.UtcNow,
+    }))
+    .WithName("GetLiveness")
+    .WithTags("Health");
 
     // ─── Config — lets the client discover the canonical API base URL and env mode ─
     // isMockMode=true tells the UI to display the "MOCK DATA" banner (rule 10).
