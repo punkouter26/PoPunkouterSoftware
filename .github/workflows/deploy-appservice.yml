@@ -55,6 +55,7 @@ jobs:
           name: publish-output
           path: ./publish
           retention-days: 1
+          compression-level: 6
 
   deploy:
     runs-on: ubuntu-latest
@@ -91,15 +92,10 @@ jobs:
           sleep 5
 
       - name: Deploy to Azure App Service
-        shell: bash
-        run: |
-          az webapp deploy \
-            --name "$APP_NAME" \
-            --resource-group "$RESOURCE_GROUP" \
-            --src-path ./deploy.zip \
-            --type zip \
-            --async true \
-            --timeout 600
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_NAME }}
+          package: ./deploy.zip
 
       - name: Start app after deploy
         shell: bash
