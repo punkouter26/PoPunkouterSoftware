@@ -9,6 +9,10 @@ concurrency:
   group: deploy-popunkoutersoftware-master
   cancel-in-progress: true
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   APP_NAME: app-popunkoutersoftware
@@ -50,10 +54,12 @@ jobs:
       - name: Publish
         run: dotnet publish PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish
 
-      - name: Azure Login
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
