@@ -116,8 +116,8 @@ internal static class GitHubEndpoints
                     var repoJson = await repoResp.Content.ReadAsStringAsync();
                     using var rd = JsonDocument.Parse(repoJson);
                     hasDescription = !string.IsNullOrWhiteSpace(rd.RootElement.GetProperty("description").GetString());
-                    hasLicense     = rd.RootElement.GetProperty("license").ValueKind != JsonValueKind.Null;
-                    openIssues     = rd.RootElement.GetProperty("open_issues_count").GetInt32();
+                    hasLicense = rd.RootElement.GetProperty("license").ValueKind != JsonValueKind.Null;
+                    openIssues = rd.RootElement.GetProperty("open_issues_count").GetInt32();
                 }
 
                 var readmeResp = await client.GetAsync($"https://api.github.com/repos/{repo}/readme");
@@ -132,9 +132,9 @@ internal static class GitHubEndpoints
             var score = 0;
             if (lastCommitDate.HasValue && (DateTime.UtcNow - lastCommitDate.Value).TotalDays <= 90) score += 40;
             if (weeklyCommits.Sum() > 0) score += 20;
-            if (hasReadme)       score += 15;
-            if (hasDescription)  score += 10;
-            if (hasLicense)      score += 10;
+            if (hasReadme) score += 15;
+            if (hasDescription) score += 10;
+            if (hasLicense) score += 10;
             score -= Math.Min(15, openIssues * 5);
             score = Math.Max(0, score);
 

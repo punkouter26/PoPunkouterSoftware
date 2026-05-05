@@ -16,9 +16,9 @@ internal static class PingerEndpoints
 
             return Results.Ok(new
             {
-                swept    = true,
-                sweptAt  = snap.SweptAt,
-                results  = snap.Results.Select(r => new
+                swept = true,
+                sweptAt = snap.SweptAt,
+                results = snap.Results.Select(r => new
                 {
                     r.Name,
                     r.FriendlyName,

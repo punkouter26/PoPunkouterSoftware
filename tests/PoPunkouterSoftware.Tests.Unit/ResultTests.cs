@@ -89,7 +89,7 @@ public class Result_BehaviourTests
     [Fact]
     public void Success_And_Failure_AreDistinct()
     {
-        var ok  = Result<bool>.Success(true);
+        var ok = Result<bool>.Success(true);
         var err = Result<bool>.Failure("nope");
 
         ok.IsSuccess.Should().BeTrue();
@@ -99,7 +99,7 @@ public class Result_BehaviourTests
     [Fact]
     public void Success_WithReferenceType_ValueIsSameInstance()
     {
-        var list   = new List<string> { "a", "b" };
+        var list = new List<string> { "a", "b" };
         var result = Result<List<string>>.Success(list);
         result.Value.Should().BeSameAs(list);
     }

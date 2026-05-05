@@ -11,8 +11,8 @@ namespace PoPunkouterSoftware.Features.Azure;
 public sealed class IncidentService
 {
     private readonly IAzureReportRepository _repository;
-    private readonly IConfiguration         _config;
-    private readonly IHttpClientFactory     _httpFactory;
+    private readonly IConfiguration _config;
+    private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<IncidentService> _logger;
 
     // Table Storage constants
@@ -24,10 +24,10 @@ public sealed class IncidentService
         IHttpClientFactory httpFactory,
         ILogger<IncidentService> logger)
     {
-        _repository  = repository;
-        _config      = config;
+        _repository = repository;
+        _config = config;
         _httpFactory = httpFactory;
-        _logger      = logger;
+        _logger = logger;
     }
 
     /// <summary>
@@ -57,24 +57,24 @@ public sealed class IncidentService
             if (!prevMap.TryGetValue(svc.Name, out var prev)) continue;
 
             var wasHealthy = prev.HttpStatus == "active";
-            var isHealthy  = svc.HttpStatus  == "active";
-            var wasBroken  = prev.HttpStatus is "broken" or "unreachable";
-            var isBroken   = svc.HttpStatus  is "broken" or "unreachable";
+            var isHealthy = svc.HttpStatus == "active";
+            var wasBroken = prev.HttpStatus is "broken" or "unreachable";
+            var isBroken = svc.HttpStatus is "broken" or "unreachable";
 
             string? type = null;
-            if (wasHealthy && isBroken)  type = "new-incident";
-            if (wasBroken  && isHealthy) type = "recovery";
+            if (wasHealthy && isBroken) type = "new-incident";
+            if (wasBroken && isHealthy) type = "recovery";
 
             if (type is null) continue;
 
             var entry = new IncidentEntry
             {
-                ServiceName    = svc.Name,
-                FriendlyName   = svc.FriendlyName ?? svc.Name,
-                Type           = type,
-                OccurredAt     = DateTime.UtcNow,
+                ServiceName = svc.Name,
+                FriendlyName = svc.FriendlyName ?? svc.Name,
+                Type = type,
+                OccurredAt = DateTime.UtcNow,
                 PreviousStatus = prev.HttpStatus,
-                CurrentStatus  = svc.HttpStatus,
+                CurrentStatus = svc.HttpStatus,
             };
             incidents.Add(entry);
         }
@@ -102,12 +102,12 @@ public sealed class IncidentService
                 var rowKey = (DateTime.MaxValue.Ticks - inc.OccurredAt.Ticks).ToString("D19");
                 var entity = new TableEntity(PartitionKey, rowKey)
                 {
-                    ["ServiceName"]    = inc.ServiceName,
-                    ["FriendlyName"]   = inc.FriendlyName,
-                    ["Type"]           = inc.Type,
-                    ["OccurredAt"]     = inc.OccurredAt,
+                    ["ServiceName"] = inc.ServiceName,
+                    ["FriendlyName"] = inc.FriendlyName,
+                    ["Type"] = inc.Type,
+                    ["OccurredAt"] = inc.OccurredAt,
                     ["PreviousStatus"] = inc.PreviousStatus,
-                    ["CurrentStatus"]  = inc.CurrentStatus,
+                    ["CurrentStatus"] = inc.CurrentStatus,
                 };
                 await tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace, ct);
             }
@@ -133,7 +133,7 @@ public sealed class IncidentService
         try
         {
             var tableClient = new TableClient(tableConnectionString, "incidents");
-            var entries     = new List<IncidentEntry>();
+            var entries = new List<IncidentEntry>();
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>(
                 filter: $"PartitionKey eq '{PartitionKey}'",
@@ -142,12 +142,12 @@ public sealed class IncidentService
             {
                 entries.Add(new IncidentEntry
                 {
-                    ServiceName    = entity.GetString("ServiceName")    ?? "",
-                    FriendlyName   = entity.GetString("FriendlyName")  ?? "",
-                    Type           = entity.GetString("Type")           ?? "",
-                    OccurredAt     = entity.GetDateTimeOffset("OccurredAt")?.UtcDateTime ?? DateTime.MinValue,
+                    ServiceName = entity.GetString("ServiceName") ?? "",
+                    FriendlyName = entity.GetString("FriendlyName") ?? "",
+                    Type = entity.GetString("Type") ?? "",
+                    OccurredAt = entity.GetDateTimeOffset("OccurredAt")?.UtcDateTime ?? DateTime.MinValue,
                     PreviousStatus = entity.GetString("PreviousStatus"),
-                    CurrentStatus  = entity.GetString("CurrentStatus"),
+                    CurrentStatus = entity.GetString("CurrentStatus"),
                 });
                 if (entries.Count >= limit) break;
             }

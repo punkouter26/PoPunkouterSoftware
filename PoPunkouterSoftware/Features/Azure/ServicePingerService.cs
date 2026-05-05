@@ -13,11 +13,11 @@ public sealed class ServicePingerService : BackgroundService
 {
     private const string CacheKey = "pinger-status";
 
-    private readonly IServiceScopeFactory    _scopeFactory;
-    private readonly IHttpClientFactory      _httpClientFactory;
-    private readonly IMemoryCache            _cache;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<ServicePingerService> _logger;
-    private readonly TimeSpan                _interval;
+    private readonly TimeSpan _interval;
 
     // Per-service opt-out: populated by PingerEndpoints.ToggleService.
     // ConcurrentDictionary so the endpoint can write from a different thread safely.
@@ -30,11 +30,11 @@ public sealed class ServicePingerService : BackgroundService
         IConfiguration config,
         ILogger<ServicePingerService> logger)
     {
-        _scopeFactory      = scopeFactory;
+        _scopeFactory = scopeFactory;
         _httpClientFactory = httpClientFactory;
-        _cache             = cache;
-        _logger            = logger;
-        _interval          = TimeSpan.FromMinutes(config.GetValue<int>("Pinger:IntervalMinutes", 10));
+        _cache = cache;
+        _logger = logger;
+        _interval = TimeSpan.FromMinutes(config.GetValue<int>("Pinger:IntervalMinutes", 10));
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -53,14 +53,14 @@ public sealed class ServicePingerService : BackgroundService
     {
         // Load the latest report to get the current service list.
         using var scope = _scopeFactory.CreateScope();
-        var repository  = scope.ServiceProvider.GetRequiredService<IAzureReportRepository>();
+        var repository = scope.ServiceProvider.GetRequiredService<IAzureReportRepository>();
         var reportResult = await repository.LoadAsync(ct);
         if (!reportResult.IsSuccess || reportResult.Value?.WebServices is null)
             return;
 
         var services = reportResult.Value.WebServices.Services;
-        var client   = _httpClientFactory.CreateClient("azure-probe");
-        var results  = new List<PingResult>();
+        var client = _httpClientFactory.CreateClient("azure-probe");
+        var results = new List<PingResult>();
 
         foreach (var svc in services)
         {
@@ -82,7 +82,7 @@ public sealed class ServicePingerService : BackgroundService
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            using var cts  = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(14));
             var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             sw.Stop();

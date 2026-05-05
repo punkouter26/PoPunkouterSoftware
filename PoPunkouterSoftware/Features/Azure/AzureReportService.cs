@@ -27,10 +27,10 @@ namespace PoPunkouterSoftware.Features.Azure;
 public class AzureReportService : IAzureReportService
 {
     private readonly ILogger<AzureReportService> _logger;
-    private readonly IHttpClientFactory          _httpClientFactory;
-    private readonly IWebHostEnvironment         _env;
-    private readonly IConfiguration             _config;
-    private readonly IAzureReportRepository      _repository;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IWebHostEnvironment _env;
+    private readonly IConfiguration _config;
+    private readonly IAzureReportRepository _repository;
 
     public AzureReportService(
         ILogger<AzureReportService> logger,
@@ -39,11 +39,11 @@ public class AzureReportService : IAzureReportService
         IConfiguration config,
         IAzureReportRepository repository)
     {
-        _logger            = logger;
+        _logger = logger;
         _httpClientFactory = httpClientFactory;
-        _env               = env;
-        _config            = config;
-        _repository        = repository;
+        _env = env;
+        _config = config;
+        _repository = repository;
     }
 
     // ── Public entry point ────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ public class AzureReportService : IAzureReportService
 
         Report("Authenticating with Azure…", 3);
         var cred = new DefaultAzureCredential();
-        var arm  = new ArmClient(cred);
+        var arm = new ArmClient(cred);
 
         Report("Loading subscription…", 7);
         // Use configured subscription ID if set — avoids VS Code credential picking wrong account
@@ -83,18 +83,18 @@ public class AzureReportService : IAzureReportService
         _logger.LogInformation("Subscription: {Name} ({Id})", subscription.Data.DisplayName, subscriptionId);
 
         Report("Discovering web services…", 15, subscription.Data.DisplayName);
-        var rawServices   = await DiscoverWebServicesAsync(subscription, ct);
+        var rawServices = await DiscoverWebServicesAsync(subscription, ct);
         _logger.LogInformation("Discovered {Count} web services", rawServices.Count);
 
         Report("Testing connectivity…", 28, $"{rawServices.Count} services found");
         var connectedSvcs = await TestConnectivityAsync(rawServices, ct);
 
         Report("Loading all resources…", 36);
-        var allResources  = await GetAllResourcesAsync(subscription, ct);
+        var allResources = await GetAllResourcesAsync(subscription, ct);
         _logger.LogInformation("Found {Count} total resources", allResources.Count);
 
         Report("Fetching metrics (7 days)…", 45, $"{allResources.Count} resources");
-        var metricsMap  = await GetMetricsAsync(connectedSvcs, cred, ct);
+        var metricsMap = await GetMetricsAsync(connectedSvcs, cred, ct);
 
         // Acquire one ARM token shared across all Cost Management calls to avoid extra roundtrips
         string? armToken = null;
@@ -106,62 +106,62 @@ public class AzureReportService : IAzureReportService
         catch (Exception ex) { _logger.LogWarning(ex, "Could not obtain ARM token — cost/burn-rate will be unavailable"); }
 
         Report("Fetching cost data…", 53);
-        var costInfo    = await GetCostAsync(subscriptionId, armToken, ct);
+        var costInfo = await GetCostAsync(subscriptionId, armToken, ct);
 
         Report("Checking SSL certificates…", 60);
-        var sslExpiry   = await CheckSslAsync(connectedSvcs, ct);
+        var sslExpiry = await CheckSslAsync(connectedSvcs, ct);
 
         Report("Checking configuration drift…", 65);
         var configDrift = await GetConfigDriftAsync(connectedSvcs, arm, ct);
 
         Report("Scanning storage accounts…", 70);
-        var storageInv  = await GetStorageInventoryAsync(allResources, armToken, ct);
+        var storageInv = await GetStorageInventoryAsync(allResources, armToken, ct);
 
         Report("Analysing free tiers & zombies…", 74);
-        var freeTier    = AnalyzeFreeTiers(allResources);
-        var zombies     = DetectZombies(connectedSvcs, metricsMap);
+        var freeTier = AnalyzeFreeTiers(allResources);
+        var zombies = DetectZombies(connectedSvcs, metricsMap);
 
         Report("Diffing apps.json…", 77);
-        var appsDiff     = await DiffAppsJsonAsync(connectedSvcs, ct);
+        var appsDiff = await DiffAppsJsonAsync(connectedSvcs, ct);
 
         Report("Calculating burn rate…", 80);
-        var burnRate     = await GetBurnRateAsync(subscriptionId, armToken, ct);
+        var burnRate = await GetBurnRateAsync(subscriptionId, armToken, ct);
 
         Report("Scanning orphaned resources…", 83);
-        var orphaned     = await GetOrphanedResourcesAsync(allResources, armToken, ct);
+        var orphaned = await GetOrphanedResourcesAsync(allResources, armToken, ct);
 
         Report("Fetching App Insights metrics…", 86);
-        var appInsights  = await GetAppInsightsMetricsAsync(allResources, cred, ct);
+        var appInsights = await GetAppInsightsMetricsAsync(allResources, cred, ct);
 
         var servicesList = connectedSvcs.Select(s =>
         {
             metricsMap.TryGetValue(s.ResourceId ?? "", out var m);
             return s with
             {
-                Metrics7Days  = s.ResourceId is not null ? m : null,
+                Metrics7Days = s.ResourceId is not null ? m : null,
                 FreeTierCheck = CheckFreeTierForService(s.ResourceTypeRaw, s.Sku),
             };
         }).ToList();
 
         var active = servicesList.Count(s => s.HttpStatus == "active");
         var broken = servicesList.Count(s => s.HttpStatus == "broken");
-        var other  = servicesList.Count(s => s.HttpStatus != "active" && s.HttpStatus != "broken");
+        var other = servicesList.Count(s => s.HttpStatus != "active" && s.HttpStatus != "broken");
 
         var report = new AzureReport
         {
-            GeneratedAt  = DateTime.UtcNow,
+            GeneratedAt = DateTime.UtcNow,
             Subscription = new SubscriptionInfo { Name = subscription.Data.DisplayName ?? subscriptionId },
-            WebServices  = new WebServicesInfo
+            WebServices = new WebServicesInfo
             {
-                Total    = servicesList.Count,
+                Total = servicesList.Count,
                 ByStatus = new ByStatusInfo { Active = active, Broken = broken, Other = other },
                 Services = servicesList.Select(s => (WebService)s).ToList(),
             },
-            Cost               = costInfo,
-            FreeTier           = freeTier,
+            Cost = costInfo,
+            FreeTier = freeTier,
             AllResourceSummary = new AllResourceSummaryInfo
             {
-                Total  = allResources.Count,
+                Total = allResources.Count,
                 ByType = allResources
                     .GroupBy(r => ShortType(r.ResourceType.ToString()))
                     .ToDictionary(g => g.Key, g => g.Count()),
@@ -171,24 +171,24 @@ public class AzureReportService : IAzureReportService
                         g => g.Key,
                         g => g.Select(r => new ResourceDetail
                         {
-                            Name          = r.Name,
+                            Name = r.Name,
                             ResourceGroup = r.Id?.ResourceGroupName,
-                            Location      = r.Location.Name,
-                            Sku           = r.Sku?.Name?.ToString(),
+                            Location = r.Location.Name,
+                            Sku = r.Sku?.Name?.ToString(),
                         }).OrderBy(x => x.Name).ToList()),
             },
-            SslExpiry          = sslExpiry,
-            ConfigDrift        = configDrift,
-            StorageInventory   = storageInv,
-            AppsJsonDiff       = appsDiff,
+            SslExpiry = sslExpiry,
+            ConfigDrift = configDrift,
+            StorageInventory = storageInv,
+            AppsJsonDiff = appsDiff,
             AppInsightsMetrics = appInsights,
-            ZombieApps         = zombies,
-            OrphanedResources  = orphaned,
-            BurnRate           = burnRate,
+            ZombieApps = zombies,
+            OrphanedResources = orphaned,
+            BurnRate = burnRate,
         };
 
         var delta = ComputeDelta(report, previousReport);
-        report    = report with { Delta = delta };
+        report = report with { Delta = delta };
 
         _logger.LogInformation("AzureReportService: analysis complete");
         return report;
@@ -205,19 +205,19 @@ public class AzureReportService : IAzureReportService
         {
             if (site.Data.Name.Contains('/')) continue; // skip slots
             var url = site.Data.DefaultHostName is { } h ? $"https://{h}" : null;
-            var rg  = site.Data.Id?.ResourceGroupName ?? "";
+            var rg = site.Data.Id?.ResourceGroupName ?? "";
             var isFunctionApp = site.Data.Kind?.Contains("functionapp", StringComparison.OrdinalIgnoreCase) == true;
             list.Add(new RawService
             {
-                Name            = site.Data.Name,
-                FriendlyName    = FriendlyFromContext(site.Data.Name, rg),
-                ResourceGroup   = rg,
+                Name = site.Data.Name,
+                FriendlyName = FriendlyFromContext(site.Data.Name, rg),
+                ResourceGroup = rg,
                 ResourceTypeRaw = isFunctionApp ? "Microsoft.Web/sites/functions" : "Microsoft.Web/sites",
-                Kind            = site.Data.Kind,
-                Url             = url,
-                Sku             = null, // SKU is on the App Service Plan, not the site
-                PlatformState   = site.Data.State,
-                ResourceId      = site.Data.Id?.ToString(),
+                Kind = site.Data.Kind,
+                Url = url,
+                Sku = null, // SKU is on the App Service Plan, not the site
+                PlatformState = site.Data.State,
+                ResourceId = site.Data.Id?.ToString(),
             });
         }
 
@@ -225,17 +225,17 @@ public class AzureReportService : IAzureReportService
         await foreach (var swa in sub.GetStaticSitesAsync(cancellationToken: ct))
         {
             var url = swa.Data.DefaultHostname is { } h ? $"https://{h}" : null;
-            var rg  = swa.Data.Id?.ResourceGroupName ?? "";
+            var rg = swa.Data.Id?.ResourceGroupName ?? "";
             list.Add(new RawService
             {
-                Name            = swa.Data.Name,
-                FriendlyName    = FriendlyFromContext(swa.Data.Name, rg),
-                ResourceGroup   = rg,
+                Name = swa.Data.Name,
+                FriendlyName = FriendlyFromContext(swa.Data.Name, rg),
+                ResourceGroup = rg,
                 ResourceTypeRaw = "Microsoft.Web/staticSites",
-                Url             = url,
-                Sku             = swa.Data.Sku?.Name ?? "Free",
-                PlatformState   = "Running",
-                ResourceId      = swa.Data.Id?.ToString(),
+                Url = url,
+                Sku = swa.Data.Sku?.Name ?? "Free",
+                PlatformState = "Running",
+                ResourceId = swa.Data.Id?.ToString(),
             });
         }
 
@@ -247,14 +247,14 @@ public class AzureReportService : IAzureReportService
             var rg = ca.Data.Id?.ResourceGroupName ?? "";
             list.Add(new RawService
             {
-                Name            = ca.Data.Name,
-                FriendlyName    = FriendlyFromContext(ca.Data.Name, rg),
-                ResourceGroup   = rg,
+                Name = ca.Data.Name,
+                FriendlyName = FriendlyFromContext(ca.Data.Name, rg),
+                ResourceGroup = rg,
                 ResourceTypeRaw = "Microsoft.App/containerApps",
-                Url             = null,
-                Sku             = "Consumption",
-                PlatformState   = "Running",
-                ResourceId      = ca.Data.Id?.ToString(),
+                Url = null,
+                Sku = "Consumption",
+                PlatformState = "Running",
+                ResourceId = ca.Data.Id?.ToString(),
             });
         }
 
@@ -266,11 +266,11 @@ public class AzureReportService : IAzureReportService
     private async Task<List<RawService>> TestConnectivityAsync(List<RawService> services, CancellationToken ct)
     {
         var client = _httpClientFactory.CreateClient("azure-probe");
-        var tasks  = services.Select(async svc =>
+        var tasks = services.Select(async svc =>
         {
             if (string.IsNullOrEmpty(svc.Url))
                 return svc with { Connectivity = new ConnectivityInfo { Success = false, Error = "No URL" }, HttpStatus = "unknown" };
-            var conn   = await ProbeUrlAsync(client, svc.Url, ct);
+            var conn = await ProbeUrlAsync(client, svc.Url, ct);
             var status = conn.Success ? "active" : conn.ResponseTime > 0 ? "broken" : "unreachable";
             return svc with { Connectivity = conn, HttpStatus = status };
         });
@@ -282,15 +282,15 @@ public class AzureReportService : IAzureReportService
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            using var req  = new HttpRequestMessage(HttpMethod.Head, url);
+            using var req = new HttpRequestMessage(HttpMethod.Head, url);
             using var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             sw.Stop();
             var isAzureError = resp.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.BadGateway;
             return new ConnectivityInfo
             {
-                Success          = resp.IsSuccessStatusCode && !isAzureError,
-                ResponseTime     = (int)sw.ElapsedMilliseconds,
-                Error            = isAzureError ? "Azure error page" : null,
+                Success = resp.IsSuccessStatusCode && !isAzureError,
+                ResponseTime = (int)sw.ElapsedMilliseconds,
+                Error = isAzureError ? "Azure error page" : null,
                 IsAzureErrorPage = isAzureError,
             };
         }
@@ -316,7 +316,7 @@ public class AzureReportService : IAzureReportService
     private async Task<Dictionary<string, MetricsInfo>> GetMetricsAsync(
         List<RawService> services, DefaultAzureCredential cred, CancellationToken ct)
     {
-        var result  = new Dictionary<string, MetricsInfo>(StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<string, MetricsInfo>(StringComparer.OrdinalIgnoreCase);
         var appSvcs = services.Where(s => s.ResourceId is not null && s.ResourceTypeRaw == "Microsoft.Web/sites").ToList();
         if (appSvcs.Count == 0) return result;
 
@@ -328,7 +328,7 @@ public class AzureReportService : IAzureReportService
             return result;
         }
 
-        var end   = DateTimeOffset.UtcNow;
+        var end = DateTimeOffset.UtcNow;
         var start = end.AddDays(-7);
 
         foreach (var svc in appSvcs)
@@ -350,15 +350,15 @@ public class AzureReportService : IAzureReportService
                     if (metric.Name.Contains("Request", StringComparison.OrdinalIgnoreCase) && !metric.Name.Contains("5"))
                         requests = (int)total;
                     else if (metric.Name.Contains("5", StringComparison.OrdinalIgnoreCase))
-                        http5xx  = (int)total;
+                        http5xx = (int)total;
                     else if (metric.Name.Contains("Response", StringComparison.OrdinalIgnoreCase))
-                        avgRt    = Math.Round(total, 1);
+                        avgRt = Math.Round(total, 1);
                 }
 
                 result[svc.ResourceId!] = new MetricsInfo
                 {
-                    Requests            = requests,
-                    Http5xx             = http5xx,
+                    Requests = requests,
+                    Http5xx = http5xx,
                     AverageResponseTime = avgRt,
                 };
             }
@@ -380,16 +380,16 @@ public class AzureReportService : IAzureReportService
         {
             var today = DateTime.UtcNow.Date;
             var start = today.AddDays(-30);
-            var body  = JsonSerializer.Serialize(new
+            var body = JsonSerializer.Serialize(new
             {
-                type       = "Usage",
-                timeframe  = "Custom",
+                type = "Usage",
+                timeframe = "Custom",
                 timePeriod = new { from = start.ToString("yyyy-MM-dd"), to = today.ToString("yyyy-MM-dd") },
-                dataset    = new
+                dataset = new
                 {
                     granularity = "None",
                     aggregation = new { totalCost = new { name = "PreTaxCost", function = "Sum" } },
-                    grouping    = new[]
+                    grouping = new[]
                     {
                         new { type = "Dimension", name = "ServiceName" },
                         new { type = "Dimension", name = "ResourceGroupName" },
@@ -397,30 +397,30 @@ public class AzureReportService : IAzureReportService
                 },
             });
 
-            var url  = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
+            var url = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
             var json = await PostCostManagementWithRetryAsync(url, body, armToken, ct);
             if (json is null)
                 return new CostInfo { Note = "Cost data unavailable (rate-limited or request failed)" };
 
-            var doc   = JsonDocument.Parse(json);
+            var doc = JsonDocument.Parse(json);
             var props = doc.RootElement.GetProperty("properties");
-            var rows  = props.GetProperty("rows").EnumerateArray().ToList();
-            var cols  = props.GetProperty("columns").EnumerateArray()
+            var rows = props.GetProperty("rows").EnumerateArray().ToList();
+            var cols = props.GetProperty("columns").EnumerateArray()
                 .Select(c => c.GetProperty("name").GetString()!.ToLowerInvariant()).ToList();
 
             int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
-            int svcIdx  = cols.FindIndex(c => c.Contains("service"));
-            int rgIdx   = cols.FindIndex(c => c.Contains("resourcegroup"));
+            int svcIdx = cols.FindIndex(c => c.Contains("service"));
+            int rgIdx = cols.FindIndex(c => c.Contains("resourcegroup"));
 
             double totalCost = 0;
             var byKey = new Dictionary<string, double>();
             foreach (var row in rows)
             {
-                var arr  = row.EnumerateArray().ToArray();
+                var arr = row.EnumerateArray().ToArray();
                 var cost = costIdx >= 0 ? arr[costIdx].GetDouble() : 0;
-                var svc  = svcIdx  >= 0 ? arr[svcIdx].GetString() ?? "Unknown" : "Unknown";
-                var rg   = rgIdx   >= 0 ? arr[rgIdx].GetString() ?? "" : "";
-                var key  = string.IsNullOrEmpty(rg) ? svc : $"{svc} ({rg})";
+                var svc = svcIdx >= 0 ? arr[svcIdx].GetString() ?? "Unknown" : "Unknown";
+                var rg = rgIdx >= 0 ? arr[rgIdx].GetString() ?? "" : "";
+                var key = string.IsNullOrEmpty(rg) ? svc : $"{svc} ({rg})";
                 byKey[key] = byKey.GetValueOrDefault(key) + cost;
                 totalCost += cost;
             }
@@ -435,8 +435,8 @@ public class AzureReportService : IAzureReportService
             return new CostInfo
             {
                 TotalCost30Days = Math.Round(totalCost, 4),
-                TotalFormatted  = $"${totalCost:F2}",
-                TopCostDrivers  = drivers,
+                TotalFormatted = $"${totalCost:F2}",
+                TopCostDrivers = drivers,
                 Note = totalCost == 0 ? "All costs $0.00 — subscription may be covered by credits." : null,
             };
         }
@@ -479,7 +479,7 @@ public class AzureReportService : IAzureReportService
                 var cert = ssl.RemoteCertificate;
                 if (cert is null) { results.Add(new SslEntry { Name = svc.Name, Url = url, Error = "No cert" }); continue; }
 
-                var expiry   = DateTime.Parse(cert.GetExpirationDateString());
+                var expiry = DateTime.Parse(cert.GetExpirationDateString());
                 var daysLeft = (int)(expiry - DateTime.UtcNow).TotalDays;
                 results.Add(new SslEntry { Name = svc.Name, Url = url, Expiry = expiry.ToString("yyyy-MM-dd"), DaysLeft = daysLeft, Subject = cert.Subject });
             }
@@ -502,33 +502,33 @@ public class AzureReportService : IAzureReportService
             try
             {
                 // Get the site config child resource directly by resource ID (no RG traversal needed)
-                var siteRes    = arm.GetWebSiteResource(new ResourceIdentifier(svc.ResourceId!));
-                var configRes  = siteRes.GetWebSiteConfig();
+                var siteRes = arm.GetWebSiteResource(new ResourceIdentifier(svc.ResourceId!));
+                var configRes = siteRes.GetWebSiteConfig();
                 var configResp = await configRes.GetAsync(cancellationToken: ct);
-                var cfg        = configResp.Value.Data;
+                var cfg = configResp.Value.Data;
 
                 var issues = new List<ConfigIssue>();
                 if (cfg.FtpsState is not null &&
                     cfg.FtpsState != AppServiceFtpsState.Disabled &&
                     cfg.FtpsState != AppServiceFtpsState.FtpsOnly)
-                    issues.Add(new ConfigIssue { Severity = "high",   Issue = $"FTP enabled ({cfg.FtpsState}) — use FTPS-only or Disabled" });
+                    issues.Add(new ConfigIssue { Severity = "high", Issue = $"FTP enabled ({cfg.FtpsState}) — use FTPS-only or Disabled" });
                 if (cfg.IsHttp20Enabled == false)
-                    issues.Add(new ConfigIssue { Severity = "low",    Issue = "HTTP/2 disabled" });
+                    issues.Add(new ConfigIssue { Severity = "low", Issue = "HTTP/2 disabled" });
                 if (cfg.MinTlsVersion is not null &&
                     string.Compare(cfg.MinTlsVersion.ToString(), "1.2", StringComparison.Ordinal) < 0)
-                    issues.Add(new ConfigIssue { Severity = "high",   Issue = $"Min TLS {cfg.MinTlsVersion} — must be ≥1.2" });
+                    issues.Add(new ConfigIssue { Severity = "high", Issue = $"Min TLS {cfg.MinTlsVersion} — must be ≥1.2" });
                 if (cfg.IsAlwaysOn == false)
-                    issues.Add(new ConfigIssue { Severity = "low",    Issue = "Always-On disabled (cold starts)" });
+                    issues.Add(new ConfigIssue { Severity = "low", Issue = "Always-On disabled (cold starts)" });
                 if (cfg.Cors?.AllowedOrigins?.Contains("*") == true)
                     issues.Add(new ConfigIssue { Severity = "medium", Issue = "CORS * — all origins allowed" });
 
                 results.Add(new ConfigDriftItem
                 {
-                    Name          = svc.Name,
-                    FriendlyName  = svc.FriendlyName,
+                    Name = svc.Name,
+                    FriendlyName = svc.FriendlyName,
                     ResourceGroup = svc.ResourceGroup,
-                    IssueCount    = issues.Count,
-                    Issues        = issues,
+                    IssueCount = issues.Count,
+                    Issues = issues,
                 });
             }
             catch (Exception ex)
@@ -544,7 +544,7 @@ public class AzureReportService : IAzureReportService
     private async Task<List<StorageItem>> GetStorageInventoryAsync(
         List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
     {
-        var results  = new List<StorageItem>();
+        var results = new List<StorageItem>();
         if (armToken is null) return results;
         var storages = allResources
             .Where(r => r.ResourceType.ToString().Equals(
@@ -568,42 +568,42 @@ public class AzureReportService : IAzureReportService
                 using var resp = await client.SendAsync(req, cts.Token);
 
                 bool publicBlob = false;
-                bool httpsOnly  = true;
-                string? minTls  = null;
+                bool httpsOnly = true;
+                string? minTls = null;
 
                 if (resp.IsSuccessStatusCode)
                 {
                     var json = await resp.Content.ReadAsStringAsync(cts.Token);
-                    var doc  = JsonDocument.Parse(json);
+                    var doc = JsonDocument.Parse(json);
                     if (doc.RootElement.TryGetProperty("properties", out var p))
                     {
                         if (p.TryGetProperty("allowBlobPublicAccess", out var pub))
                             publicBlob = pub.GetBoolean();
                         if (p.TryGetProperty("supportsHttpsTrafficOnly", out var https))
-                            httpsOnly  = https.GetBoolean();
+                            httpsOnly = https.GetBoolean();
                         if (p.TryGetProperty("minimumTlsVersion", out var tls))
-                            minTls     = tls.GetString();
+                            minTls = tls.GetString();
                     }
                 }
 
                 var issues = new List<StorageIssue>();
                 if (publicBlob)
-                    issues.Add(new StorageIssue { Severity = "high",   Issue = "Public blob access enabled — potential data exposure" });
+                    issues.Add(new StorageIssue { Severity = "high", Issue = "Public blob access enabled — potential data exposure" });
                 if (!httpsOnly)
-                    issues.Add(new StorageIssue { Severity = "high",   Issue = "HTTPS-only is off — HTTP traffic allowed" });
+                    issues.Add(new StorageIssue { Severity = "high", Issue = "HTTPS-only is off — HTTP traffic allowed" });
                 if (minTls is not null && string.Compare(minTls, "TLS1_2", StringComparison.Ordinal) < 0)
                     issues.Add(new StorageIssue { Severity = "medium", Issue = $"Min TLS {minTls} — upgrade to TLS 1.2" });
 
                 return new StorageItem
                 {
-                    Name             = sa.Name,
-                    ResourceGroup    = sa.Id?.ResourceGroupName,
-                    Sku              = sa.Sku?.Name?.ToString(),
+                    Name = sa.Name,
+                    ResourceGroup = sa.Id?.ResourceGroupName,
+                    Sku = sa.Sku?.Name?.ToString(),
                     PublicBlobAccess = publicBlob,
-                    HttpsOnly        = httpsOnly,
-                    MinTls           = minTls,
-                    IssueCount       = issues.Count,
-                    Issues           = issues,
+                    HttpsOnly = httpsOnly,
+                    MinTls = minTls,
+                    IssueCount = issues.Count,
+                    Issues = issues,
                 };
             }
             catch (Exception ex)
@@ -622,34 +622,34 @@ public class AzureReportService : IAzureReportService
 
     private static FreeTierInfo AnalyzeFreeTiers(List<GenericResourceData> resources)
     {
-        var onFree    = new List<FreeTierItem>();
+        var onFree = new List<FreeTierItem>();
         var canGoFree = new List<FreeTierItem>();
-        var noFree    = new List<FreeTierItem>();
+        var noFree = new List<FreeTierItem>();
 
         foreach (var r in resources)
         {
             var typeKey = r.ResourceType.ToString();
             if (!FreeTierMap.TryGetValue(typeKey, out var info)) continue;
 
-            var currentSku  = r.Sku?.Name?.ToString() ?? r.Kind ?? "unknown";
-            var isOnFree    = info.FreeSku is not null &&
+            var currentSku = r.Sku?.Name?.ToString() ?? r.Kind ?? "unknown";
+            var isOnFree = info.FreeSku is not null &&
                               string.Equals(currentSku, info.FreeSku, StringComparison.OrdinalIgnoreCase);
             var canGoToFree = info.FreeSku is not null && !isOnFree;
 
             var entry = new FreeTierItem
             {
-                Name           = r.Name,
-                Label          = info.Label,
-                CurrentSku     = currentSku,
-                FreeSku        = info.FreeSku,
-                FreeSkuLabel   = info.FreeSkuLabel,
-                ResourceGroup  = r.Id?.ResourceGroupName,
+                Name = r.Name,
+                Label = info.Label,
+                CurrentSku = currentSku,
+                FreeSku = info.FreeSku,
+                FreeSkuLabel = info.FreeSkuLabel,
+                ResourceGroup = r.Id?.ResourceGroupName,
                 Recommendation = info.Note,
             };
 
-            if (isOnFree)         onFree.Add(entry);
+            if (isOnFree) onFree.Add(entry);
             else if (canGoToFree) canGoFree.Add(entry);
-            else                  noFree.Add(entry);
+            else noFree.Add(entry);
         }
 
         return new FreeTierInfo { OnFree = onFree, CanGoFree = canGoFree, NoFreeTier = noFree };
@@ -664,7 +664,7 @@ public class AzureReportService : IAzureReportService
         {
             IsOnFreeTier = isOnFree,
             IsOnPaidTier = !isOnFree && info.PaidSkus.Any(p => string.Equals(sku, p, StringComparison.OrdinalIgnoreCase)),
-            CanGoFree    = info.FreeSku is not null && !isOnFree,
+            CanGoFree = info.FreeSku is not null && !isOnFree,
         };
     }
 
@@ -685,10 +685,10 @@ public class AzureReportService : IAzureReportService
             .Where(s => metricsMap.TryGetValue(s.ResourceId!, out var m) && m.Requests == 0)
             .Select(s => new ZombieApp
             {
-                Name           = s.Name,
-                ResourceGroup  = s.ResourceGroup,
-                HttpStatus     = s.HttpStatus,
-                PlatformState  = s.PlatformState,
+                Name = s.Name,
+                ResourceGroup = s.ResourceGroup,
+                HttpStatus = s.HttpStatus,
+                PlatformState = s.PlatformState,
                 Recommendation = $"az webapp stop --name \"{s.Name}\" --resource-group \"{s.ResourceGroup}\"",
             })
             .ToList();
@@ -703,7 +703,7 @@ public class AzureReportService : IAzureReportService
             if (!File.Exists(path)) return null;
 
             var json = await File.ReadAllTextAsync(path, ct);
-            var doc  = JsonDocument.Parse(json);
+            var doc = JsonDocument.Parse(json);
             var existing = doc.RootElement.TryGetProperty("apps", out var appsEl)
                 ? appsEl.EnumerateArray()
                     .Select(a => a.TryGetProperty("id", out var id) ? id.GetString() : null)
@@ -714,11 +714,11 @@ public class AzureReportService : IAzureReportService
             var discovered = services.Select(s => GetCanonicalName(s.Name)).ToHashSet();
             return new AppsJsonDiffInfo
             {
-                CurrentCount    = existing.Count,
+                CurrentCount = existing.Count,
                 DiscoveredCount = discovered.Count,
-                NewApps         = discovered.Except(existing).ToList()!,
-                RemovedApps     = existing.Except(discovered).ToList()!,
-                UpdatedApps     = discovered.Intersect(existing).ToList()!,
+                NewApps = discovered.Except(existing).ToList()!,
+                RemovedApps = existing.Except(discovered).ToList()!,
+                UpdatedApps = discovered.Intersect(existing).ToList()!,
             };
         }
         catch (Exception ex)
@@ -750,21 +750,21 @@ public class AzureReportService : IAzureReportService
                 if (!resp.IsSuccessStatusCode) continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
-                var doc  = JsonDocument.Parse(json);
+                var doc = JsonDocument.Parse(json);
                 if (!doc.RootElement.TryGetProperty("properties", out var props)) continue;
                 if (!props.TryGetProperty("diskState", out var state) || state.GetString() != "Unattached") continue;
 
                 var sizeGb = props.TryGetProperty("diskSizeGB", out var sz) ? sz.GetInt32() : 0;
-                var sku    = doc.RootElement.TryGetProperty("sku", out var skuEl) &&
+                var sku = doc.RootElement.TryGetProperty("sku", out var skuEl) &&
                              skuEl.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
                 orphans.Add(new OrphanedResource
                 {
-                    Name                 = disk.Name,
-                    ResourceGroup        = disk.Id?.ResourceGroupName,
-                    Type                 = "Managed Disk",
-                    Reason               = $"Unattached ({sizeGb} GB, {sku ?? "unknown SKU"})",
+                    Name = disk.Name,
+                    ResourceGroup = disk.Id?.ResourceGroupName,
+                    Type = "Managed Disk",
+                    Reason = $"Unattached ({sizeGb} GB, {sku ?? "unknown SKU"})",
                     EstimatedMonthlyCost = sizeGb > 0 ? $"~${sizeGb * 0.04:F2}/mo" : null,
-                    Command              = $"az disk delete --name \"{disk.Name}\" --resource-group \"{disk.Id?.ResourceGroupName}\" --yes",
+                    Command = $"az disk delete --name \"{disk.Name}\" --resource-group \"{disk.Id?.ResourceGroupName}\" --yes",
                 });
             }
             catch (Exception ex) { _logger.LogDebug(ex, "Disk orphan check failed for {Name}", disk.Name); }
@@ -783,10 +783,10 @@ public class AzureReportService : IAzureReportService
                 if (!resp.IsSuccessStatusCode) continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
-                var doc  = JsonDocument.Parse(json);
+                var doc = JsonDocument.Parse(json);
                 if (!doc.RootElement.TryGetProperty("properties", out var props)) continue;
 
-                var hasIpConfig  = props.TryGetProperty("ipConfiguration", out _);
+                var hasIpConfig = props.TryGetProperty("ipConfiguration", out _);
                 var hasNatGateway = props.TryGetProperty("natGateway", out _);
                 if (hasIpConfig || hasNatGateway) continue;
 
@@ -794,12 +794,12 @@ public class AzureReportService : IAzureReportService
                           skuEl.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
                 orphans.Add(new OrphanedResource
                 {
-                    Name                 = ip.Name,
-                    ResourceGroup        = ip.Id?.ResourceGroupName,
-                    Type                 = "Public IP",
-                    Reason               = $"Not associated with any NIC or NAT gateway (SKU: {sku ?? "—"})",
+                    Name = ip.Name,
+                    ResourceGroup = ip.Id?.ResourceGroupName,
+                    Type = "Public IP",
+                    Reason = $"Not associated with any NIC or NAT gateway (SKU: {sku ?? "—"})",
                     EstimatedMonthlyCost = sku == "Standard" ? "~$3.65/mo" : null,
-                    Command              = $"az network public-ip delete --name \"{ip.Name}\" --resource-group \"{ip.Id?.ResourceGroupName}\"",
+                    Command = $"az network public-ip delete --name \"{ip.Name}\" --resource-group \"{ip.Id?.ResourceGroupName}\"",
                 });
             }
             catch (Exception ex) { _logger.LogDebug(ex, "Public IP orphan check failed for {Name}", ip.Name); }
@@ -818,19 +818,19 @@ public class AzureReportService : IAzureReportService
                 if (!resp.IsSuccessStatusCode) continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
-                var doc  = JsonDocument.Parse(json);
+                var doc = JsonDocument.Parse(json);
                 var siteCount = doc.RootElement.TryGetProperty("value", out var v) ? v.GetArrayLength() : 1;
                 if (siteCount > 0) continue;
 
                 var sku = farm.Sku?.Name?.ToString() ?? "unknown";
                 orphans.Add(new OrphanedResource
                 {
-                    Name                 = farm.Name,
-                    ResourceGroup        = farm.Id?.ResourceGroupName,
-                    Type                 = "App Service Plan",
-                    Reason               = $"No apps deployed (SKU: {sku})",
+                    Name = farm.Name,
+                    ResourceGroup = farm.Id?.ResourceGroupName,
+                    Type = "App Service Plan",
+                    Reason = $"No apps deployed (SKU: {sku})",
                     EstimatedMonthlyCost = sku is "F1" or "FREE" ? "$0/mo (Free)" : "Paid tier — check portal",
-                    Command              = $"az appservice plan delete --name \"{farm.Name}\" --resource-group \"{farm.Id?.ResourceGroupName}\" --yes",
+                    Command = $"az appservice plan delete --name \"{farm.Name}\" --resource-group \"{farm.Id?.ResourceGroupName}\" --yes",
                 });
             }
             catch (Exception ex) { _logger.LogDebug(ex, "App Service Plan orphan check failed for {Name}", farm.Name); }
@@ -847,30 +847,30 @@ public class AzureReportService : IAzureReportService
         if (armToken is null) return null;
         try
         {
-            var today        = DateTime.UtcNow.Date;
+            var today = DateTime.UtcNow.Date;
             var startOfMonth = new DateTime(today.Year, today.Month, 1);
             if (startOfMonth == today) startOfMonth = today.AddDays(-1);
 
             var body = JsonSerializer.Serialize(new
             {
-                type       = "Usage",
-                timeframe  = "Custom",
+                type = "Usage",
+                timeframe = "Custom",
                 timePeriod = new { from = startOfMonth.ToString("yyyy-MM-dd"), to = today.ToString("yyyy-MM-dd") },
-                dataset    = new
+                dataset = new
                 {
                     granularity = "Daily",
                     aggregation = new { totalCost = new { name = "PreTaxCost", function = "Sum" } },
                 },
             });
 
-            var url  = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
+            var url = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
             var json = await PostCostManagementWithRetryAsync(url, body, armToken, ct);
             if (json is null) return null;
 
-            var doc   = JsonDocument.Parse(json);
+            var doc = JsonDocument.Parse(json);
             var props = doc.RootElement.GetProperty("properties");
-            var rows  = props.GetProperty("rows").EnumerateArray().ToList();
-            var cols  = props.GetProperty("columns").EnumerateArray()
+            var rows = props.GetProperty("rows").EnumerateArray().ToList();
+            var cols = props.GetProperty("columns").EnumerateArray()
                 .Select(c => c.GetProperty("name").GetString()!.ToLowerInvariant()).ToList();
 
             int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
@@ -879,9 +879,9 @@ public class AzureReportService : IAzureReportService
             var daily = new List<DailyCostEntry>();
             foreach (var row in rows)
             {
-                var arr  = row.EnumerateArray().ToArray();
+                var arr = row.EnumerateArray().ToArray();
                 var cost = costIdx >= 0 ? arr[costIdx].GetDouble() : 0;
-                var raw  = dateIdx >= 0
+                var raw = dateIdx >= 0
                     ? arr[dateIdx].ValueKind == JsonValueKind.Number
                         ? arr[dateIdx].GetInt32().ToString()
                         : arr[dateIdx].GetString() ?? ""
@@ -893,16 +893,16 @@ public class AzureReportService : IAzureReportService
             }
 
             daily = daily.OrderBy(d => d.Date).ToList();
-            var totalSoFar   = daily.Sum(d => d.Cost);
-            var daysInMonth  = DateTime.DaysInMonth(today.Year, today.Month);
-            var daysElapsed  = Math.Max(1, (today - startOfMonth).Days + 1);
-            var projected    = Math.Round(totalSoFar / daysElapsed * daysInMonth, 2);
+            var totalSoFar = daily.Sum(d => d.Cost);
+            var daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
+            var daysElapsed = Math.Max(1, (today - startOfMonth).Days + 1);
+            var projected = Math.Round(totalSoFar / daysElapsed * daysInMonth, 2);
 
             return new BurnRateInfo
             {
-                DailyCosts          = daily,
+                DailyCosts = daily,
                 ProjectedMonthTotal = projected,
-                ProjectedFormatted  = $"${projected:F2}",
+                ProjectedFormatted = $"${projected:F2}",
             };
         }
         catch (Exception ex)
@@ -956,7 +956,7 @@ public class AzureReportService : IAzureReportService
     private async Task<List<AppInsightsMetric>> GetAppInsightsMetricsAsync(
         List<GenericResourceData> allResources, DefaultAzureCredential cred, CancellationToken ct)
     {
-        var results    = new List<AppInsightsMetric>();
+        var results = new List<AppInsightsMetric>();
         var components = allResources
             .Where(r => r.ResourceType.ToString().Equals(
                 "microsoft.insights/components", StringComparison.OrdinalIgnoreCase))
@@ -993,7 +993,7 @@ public class AzureReportService : IAzureReportService
                 if (reqResp.Value?.Table?.Rows is { Count: > 0 } reqRows)
                 {
                     requests = (int)(reqRows[0].GetInt64(0) ?? 0L);
-                    failed   = (int)(reqRows[0].GetInt64(1) ?? 0L);
+                    failed = (int)(reqRows[0].GetInt64(1) ?? 0L);
                 }
 
                 // Exceptions
@@ -1007,11 +1007,11 @@ public class AzureReportService : IAzureReportService
 
                 results.Add(new AppInsightsMetric
                 {
-                    Name                = comp.Name,
-                    ResourceGroup       = comp.Id?.ResourceGroupName,
-                    Requests7Days       = requests,
+                    Name = comp.Name,
+                    ResourceGroup = comp.Id?.ResourceGroupName,
+                    Requests7Days = requests,
                     FailedRequests7Days = failed,
-                    Exceptions7Days     = exceptions,
+                    Exceptions7Days = exceptions,
                 });
             }
             catch (Exception ex) { _logger.LogDebug(ex, "App Insights logs query failed for {Name}", comp.Name); }
@@ -1025,12 +1025,12 @@ public class AzureReportService : IAzureReportService
     {
         if (previous is null) return null;
 
-        var currentBroken  = current.WebServices?.Services
+        var currentBroken = current.WebServices?.Services
             .Where(s => s.HttpStatus == "broken").Select(s => s.Name).ToHashSet() ?? [];
         var previousBroken = previous.WebServices?.Services
             .Where(s => s.HttpStatus == "broken").Select(s => s.Name).ToHashSet() ?? [];
 
-        var currentOrphaned  = current.OrphanedResources?.Select(o => o.Name).ToHashSet() ?? [];
+        var currentOrphaned = current.OrphanedResources?.Select(o => o.Name).ToHashSet() ?? [];
         var previousOrphaned = previous.OrphanedResources?.Select(o => o.Name).ToHashSet() ?? [];
 
         var costDelta = current.Cost is not null && previous.Cost is not null
@@ -1039,11 +1039,11 @@ public class AzureReportService : IAzureReportService
 
         return new ReportDelta
         {
-            PreviousGeneratedAt  = previous.GeneratedAt,
-            BrokenServicesDelta  = currentBroken.Count - previousBroken.Count,
-            CostDelta            = costDelta,
-            NewBrokenServices    = currentBroken.Except(previousBroken).ToList(),
-            RecoveredServices    = previousBroken.Except(currentBroken).ToList(),
+            PreviousGeneratedAt = previous.GeneratedAt,
+            BrokenServicesDelta = currentBroken.Count - previousBroken.Count,
+            CostDelta = costDelta,
+            NewBrokenServices = currentBroken.Except(previousBroken).ToList(),
+            RecoveredServices = previousBroken.Except(currentBroken).ToList(),
             NewOrphanedResources = currentOrphaned.Except(previousOrphaned).ToList(),
         };
     }
@@ -1068,9 +1068,9 @@ public class AzureReportService : IAzureReportService
         if (resourceGroup is { Length: > 2 } rg && char.IsUpper(rg[2]) && rg != "PoShared")
             return rg;
         var canonical = GetCanonicalName(rawName);
-        var parts     = canonical.Split('-', StringSplitOptions.RemoveEmptyEntries);
-        var deduped   = parts.Where((p, i) => i == 0 || p != parts[i - 1]).ToArray();
-        var clean     = System.Text.RegularExpressions.Regex.Replace(
+        var parts = canonical.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        var deduped = parts.Where((p, i) => i == 0 || p != parts[i - 1]).ToArray();
+        var clean = System.Text.RegularExpressions.Regex.Replace(
             string.Join("-", deduped), "^po", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (string.IsNullOrEmpty(clean)) return rawName;
         return "Po" + string.Concat(clean.Split('-', StringSplitOptions.RemoveEmptyEntries)
@@ -1086,54 +1086,54 @@ public class AzureReportService : IAzureReportService
 
     private static readonly Dictionary<string, FreeTierEntry> FreeTierMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Microsoft.Web/sites"]                      = new("App Service",          "F1",   "Free (F1)",                      ["B1","B2","B3","S1","S2","S3","P1V2","P2V2","P3V2"], "F1 provides 60 CPU-min/day."),
-        ["Microsoft.Web/serverFarms"]                = new("App Service Plan",     "F1",   "Free (F1)",                      ["B1","B2","B3","S1","S2","S3"],                      "Downgrade to F1 if traffic is low."),
-        ["Microsoft.Web/staticSites"]                = new("Static Web App",       "Free", "Free",                           ["Standard"],                                         "Free tier: 100 GB bandwidth/month."),
-        ["Microsoft.App/containerApps"]              = new("Container App",        null,   "180k vCPU-s free/month",         ["Consumption"],                                      "Set min-replicas=0 to stay in free quota."),
-        ["Microsoft.ContainerRegistry/registries"]   = new("Container Registry",   null,   "No free tier",                   ["Basic","Standard","Premium"],                       "Basic ~$5/mo. Consider ghcr.io for free private images."),
-        ["Microsoft.DocumentDB/databaseAccounts"]    = new("Cosmos DB",            "Free", "Free tier (1000 RU/s + 25 GB)", ["Standard"],                                         "One free Cosmos DB per subscription."),
-        ["Microsoft.Sql/servers/databases"]          = new("Azure SQL",            "Free", "Free offer (32 GB serverless)", ["Basic","Standard","Premium"],                       "One free Azure SQL per subscription."),
-        ["Microsoft.Storage/storageAccounts"]        = new("Storage Account",      null,   "5 GB Blob free/month (12 mo)",  ["Standard_LRS","Standard_GRS"],                      "Use LRS for lowest cost."),
-        ["Microsoft.CognitiveServices/accounts"]     = new("Azure AI / Cognitive", "F0",   "Free (F0)",                      ["S0","S1"],                                          "F0 sufficient for dev/hobby use."),
-        ["Microsoft.Search/searchServices"]          = new("Azure AI Search",      "free", "Free (1 svc, 3 indexes, 50 MB)",["basic","standard"],                                 "One free search service per subscription."),
-        ["microsoft.insights/components"]            = new("Application Insights",  null,  "5 GB/month free ingestion",      ["pergb2018"],                                        "Enable adaptive sampling to stay under 5 GB/month."),
-        ["Microsoft.OperationalInsights/workspaces"] = new("Log Analytics",        "Free", "Free (500 MB/day)",              ["PerGB2018","Standard"],                             "Set a data cap on paid SKUs."),
-        ["Microsoft.KeyVault/vaults"]                = new("Key Vault",            null,   "~$0.03 per 10k ops",             ["standard","premium"],                               "Consolidate vaults when possible."),
-        ["Microsoft.Network/publicIPAddresses"]      = new("Public IP",            null,   "First 5 Basic static IPs free",  ["Standard"],                                         "Delete IPs not attached to any resource."),
-        ["Microsoft.ServiceBus/namespaces"]          = new("Service Bus",          null,   "No free tier — Basic ~$0.05/M ops", ["Basic","Standard","Premium"],                   "Use Basic if only simple queues needed."),
-        ["Microsoft.SignalRService/SignalR"]         = new("SignalR",              "Free", "Free (20 connections)",          ["Standard"],                                         "Free tier: 20 concurrent connections."),
+        ["Microsoft.Web/sites"] = new("App Service", "F1", "Free (F1)", ["B1", "B2", "B3", "S1", "S2", "S3", "P1V2", "P2V2", "P3V2"], "F1 provides 60 CPU-min/day."),
+        ["Microsoft.Web/serverFarms"] = new("App Service Plan", "F1", "Free (F1)", ["B1", "B2", "B3", "S1", "S2", "S3"], "Downgrade to F1 if traffic is low."),
+        ["Microsoft.Web/staticSites"] = new("Static Web App", "Free", "Free", ["Standard"], "Free tier: 100 GB bandwidth/month."),
+        ["Microsoft.App/containerApps"] = new("Container App", null, "180k vCPU-s free/month", ["Consumption"], "Set min-replicas=0 to stay in free quota."),
+        ["Microsoft.ContainerRegistry/registries"] = new("Container Registry", null, "No free tier", ["Basic", "Standard", "Premium"], "Basic ~$5/mo. Consider ghcr.io for free private images."),
+        ["Microsoft.DocumentDB/databaseAccounts"] = new("Cosmos DB", "Free", "Free tier (1000 RU/s + 25 GB)", ["Standard"], "One free Cosmos DB per subscription."),
+        ["Microsoft.Sql/servers/databases"] = new("Azure SQL", "Free", "Free offer (32 GB serverless)", ["Basic", "Standard", "Premium"], "One free Azure SQL per subscription."),
+        ["Microsoft.Storage/storageAccounts"] = new("Storage Account", null, "5 GB Blob free/month (12 mo)", ["Standard_LRS", "Standard_GRS"], "Use LRS for lowest cost."),
+        ["Microsoft.CognitiveServices/accounts"] = new("Azure AI / Cognitive", "F0", "Free (F0)", ["S0", "S1"], "F0 sufficient for dev/hobby use."),
+        ["Microsoft.Search/searchServices"] = new("Azure AI Search", "free", "Free (1 svc, 3 indexes, 50 MB)", ["basic", "standard"], "One free search service per subscription."),
+        ["microsoft.insights/components"] = new("Application Insights", null, "5 GB/month free ingestion", ["pergb2018"], "Enable adaptive sampling to stay under 5 GB/month."),
+        ["Microsoft.OperationalInsights/workspaces"] = new("Log Analytics", "Free", "Free (500 MB/day)", ["PerGB2018", "Standard"], "Set a data cap on paid SKUs."),
+        ["Microsoft.KeyVault/vaults"] = new("Key Vault", null, "~$0.03 per 10k ops", ["standard", "premium"], "Consolidate vaults when possible."),
+        ["Microsoft.Network/publicIPAddresses"] = new("Public IP", null, "First 5 Basic static IPs free", ["Standard"], "Delete IPs not attached to any resource."),
+        ["Microsoft.ServiceBus/namespaces"] = new("Service Bus", null, "No free tier — Basic ~$0.05/M ops", ["Basic", "Standard", "Premium"], "Use Basic if only simple queues needed."),
+        ["Microsoft.SignalRService/SignalR"] = new("SignalR", "Free", "Free (20 connections)", ["Standard"], "Free tier: 20 concurrent connections."),
     };
 
     // ── Internal intermediary ─────────────────────────────────────────────────
 
     private record RawService
     {
-        public string  Name             { get; init; } = "";
-        public string  FriendlyName     { get; init; } = "";
-        public string  ResourceGroup    { get; init; } = "";
-        public string  ResourceTypeRaw  { get; init; } = "";
-        public string? Url              { get; init; }
-        public string? Sku              { get; init; }
-        public string? PlatformState    { get; init; }
-        public string? ResourceId       { get; init; }
-        public ConnectivityInfo?  Connectivity  { get; init; }
-        public MetricsInfo?       Metrics7Days  { get; init; }
+        public string Name { get; init; } = "";
+        public string FriendlyName { get; init; } = "";
+        public string ResourceGroup { get; init; } = "";
+        public string ResourceTypeRaw { get; init; } = "";
+        public string? Url { get; init; }
+        public string? Sku { get; init; }
+        public string? PlatformState { get; init; }
+        public string? ResourceId { get; init; }
+        public ConnectivityInfo? Connectivity { get; init; }
+        public MetricsInfo? Metrics7Days { get; init; }
         public FreeTierCheckInfo? FreeTierCheck { get; init; }
-        public string  HttpStatus       { get; init; } = "unknown";
-        public string? Kind              { get; init; }
+        public string HttpStatus { get; init; } = "unknown";
+        public string? Kind { get; init; }
 
         public static explicit operator WebService(RawService s) => new()
         {
-            Name          = s.Name,
-            FriendlyName  = s.FriendlyName,
+            Name = s.Name,
+            FriendlyName = s.FriendlyName,
             ResourceGroup = s.ResourceGroup,
-            ResourceType  = s.ResourceTypeRaw,
-            Kind          = s.Kind,
-            Url           = s.Url ?? "",
-            HttpStatus    = s.HttpStatus,
+            ResourceType = s.ResourceTypeRaw,
+            Kind = s.Kind,
+            Url = s.Url ?? "",
+            HttpStatus = s.HttpStatus,
             PlatformState = s.PlatformState,
-            Connectivity  = s.Connectivity,
-            Metrics7Days  = s.Metrics7Days,
+            Connectivity = s.Connectivity,
+            Metrics7Days = s.Metrics7Days,
             FreeTierCheck = s.FreeTierCheck,
         };
     }

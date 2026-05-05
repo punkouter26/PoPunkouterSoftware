@@ -13,7 +13,7 @@ builder.Services.AddScoped(sp =>
     new HttpClient
     {
         BaseAddress = new Uri(builder.HostEnvironment.BaseAddress),
-        Timeout     = TimeSpan.FromMinutes(5),
+        Timeout = TimeSpan.FromMinutes(5),
     });
 
 // ─── Radzen UI services ───────────────────────────────────────────────────────

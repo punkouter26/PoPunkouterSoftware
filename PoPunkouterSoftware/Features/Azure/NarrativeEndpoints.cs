@@ -27,35 +27,47 @@ internal static class NarrativeEndpoints
 
             // ── Feature flag guard ────────────────────────────────────────────
             if (!config.GetValue<bool>("FeatureFlags:EnableAiIntegration"))
-                return Results.Ok(new { narrative = (string?)null, disabled = true,
-                    message = "AI integration is disabled. Set FeatureFlags:EnableAiIntegration=true to enable." });
+                return Results.Ok(new
+                {
+                    narrative = (string?)null,
+                    disabled = true,
+                    message = "AI integration is disabled. Set FeatureFlags:EnableAiIntegration=true to enable."
+                });
 
             // ── Cache hit ─────────────────────────────────────────────────────
             if (cache.TryGetValue(cacheKey, out string? cached))
                 return Results.Ok(new { narrative = cached, generatedAt = (DateTime?)null, cached = true });
 
             // ── OpenAI config ─────────────────────────────────────────────────
-            var endpoint   = config["AzureOpenAI:Endpoint"];
-            var apiKey     = config["AzureOpenAI:ApiKey"];
+            var endpoint = config["AzureOpenAI:Endpoint"];
+            var apiKey = config["AzureOpenAI:ApiKey"];
             var deployment = config["AzureOpenAI:DeploymentName"] ?? "gpt-4o";
 
             if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
-                return Results.Ok(new { narrative = (string?)null, disabled = true,
-                    message = "Azure OpenAI is not configured." });
+                return Results.Ok(new
+                {
+                    narrative = (string?)null,
+                    disabled = true,
+                    message = "Azure OpenAI is not configured."
+                });
 
             // ── Load latest report ────────────────────────────────────────────
             var result = await repository.LoadAsync(ct);
             if (!result.IsSuccess || result.Value is null)
-                return Results.Ok(new { narrative = (string?)null, disabled = false,
-                    message = "No Azure report available yet. Run a refresh first." });
+                return Results.Ok(new
+                {
+                    narrative = (string?)null,
+                    disabled = false,
+                    message = "No Azure report available yet. Run a refresh first."
+                });
 
             var report = result.Value;
             var services = report.WebServices?.Services ?? new List<WebService>();
 
             // ── Build prompt ─────────────────────────────────────────────────
-            var active   = services.Count(s => s.HttpStatus == "active");
-            var broken   = services.Count(s => s.HttpStatus is "broken" or "unreachable");
-            var total    = services.Count;
+            var active = services.Count(s => s.HttpStatus == "active");
+            var broken = services.Count(s => s.HttpStatus is "broken" or "unreachable");
+            var total = services.Count;
 
             var fastestSvc = services
                 .Where(s => s.Metrics7Days?.AverageResponseTime > 0)
@@ -88,9 +100,9 @@ internal static class NarrativeEndpoints
             // ── Call Azure OpenAI ─────────────────────────────────────────────
             try
             {
-                var client     = httpClientFactory.CreateClient("azure-openai");
+                var client = httpClientFactory.CreateClient("azure-openai");
                 var apiVersion = "2024-02-01";
-                var url        = $"{endpoint.TrimEnd('/')}/openai/deployments/{deployment}/chat/completions?api-version={apiVersion}";
+                var url = $"{endpoint.TrimEnd('/')}/openai/deployments/{deployment}/chat/completions?api-version={apiVersion}";
 
                 var requestBody = JsonSerializer.Serialize(new
                 {
@@ -100,7 +112,7 @@ internal static class NarrativeEndpoints
                         new { role = "user",   content = userPrompt   },
                     },
                     temperature = 0.5,
-                    max_tokens  = 200,
+                    max_tokens = 200,
                 });
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, url)

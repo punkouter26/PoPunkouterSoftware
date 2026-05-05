@@ -32,7 +32,7 @@ internal static class AppServiceControlEndpoints
                     return Results.Problem("Azure:SubscriptionId is not configured.", statusCode: 503);
 
                 var siteId = WebSiteResource.CreateResourceIdentifier(subscriptionId, resourceGroup, name);
-                var site   = client.GetWebSiteResource(siteId);
+                var site = client.GetWebSiteResource(siteId);
                 await site.RestartAsync(cancellationToken: ct);
 
                 logger.LogInformation("App Service {Name} in {ResourceGroup} restarted successfully", name, resourceGroup);
@@ -61,8 +61,8 @@ internal static class AppServiceControlEndpoints
                 if (string.IsNullOrWhiteSpace(subscriptionId))
                     return Results.Problem("Azure:SubscriptionId is not configured.", statusCode: 503);
 
-                var planId   = AppServicePlanResource.CreateResourceIdentifier(subscriptionId, resourceGroup, planName);
-                var planRes  = client.GetAppServicePlanResource(planId);
+                var planId = AppServicePlanResource.CreateResourceIdentifier(subscriptionId, resourceGroup, planName);
+                var planRes = client.GetAppServicePlanResource(planId);
                 var existing = (await planRes.GetAsync(ct)).Value;
 
                 // Build updated data with F1 SKU — CreateOrUpdate from parent resource group

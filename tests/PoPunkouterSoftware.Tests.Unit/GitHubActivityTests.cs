@@ -67,22 +67,22 @@ public class GitHubActivityEndpoint_ValidationTests
     public async Task ValidRepo_DoesNotReturnBadRequest(string repo)
     {
         var commitJson = """[{"commit":{"author":{"date":"2026-01-01T00:00:00Z"}}}]""";
-        var statsJson  = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8]}""";
-        var repoJson   = """{"description":"d","license":{"key":"mit"},"open_issues_count":0}""";
+        var statsJson = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8]}""";
+        var repoJson = """{"description":"d","license":{"key":"mit"},"open_issues_count":0}""";
 
         var handler = new StubHandler(req =>
         {
             if (req.RequestUri!.PathAndQuery.Contains("/commits"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/stats/participation"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/readme"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
+                { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
             return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
+            { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
         });
 
         var result = await InvokeEndpoint(repo, handler);
@@ -92,9 +92,9 @@ public class GitHubActivityEndpoint_ValidationTests
 
     private static async Task<IResult> InvokeEndpoint(string? repo, HttpMessageHandler handler)
     {
-        var cache   = new MemoryCache(new MemoryCacheOptions());
+        var cache = new MemoryCache(new MemoryCacheOptions());
         var factory = GitHubClientFactory.Create(handler);
-        var logger  = NullLogger<Program>.Instance;
+        var logger = NullLogger<Program>.Instance;
         return await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints
             .InvokeAsync(repo, factory, cache, logger);
     }
@@ -109,28 +109,28 @@ public class GitHubActivityEndpoint_CacheTests
     {
         int callCount = 0;
         var commitJson = """[{"commit":{"author":{"date":"2026-01-01T00:00:00Z"}}}]""";
-        var statsJson  = """{"all":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51]}""";
-        var repoJson   = """{"description":"d","license":{"key":"mit"},"open_issues_count":1}""";
+        var statsJson = """{"all":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51]}""";
+        var repoJson = """{"description":"d","license":{"key":"mit"},"open_issues_count":1}""";
 
         var handler = new StubHandler(req =>
         {
             callCount++;
             if (req.RequestUri!.PathAndQuery.Contains("/commits"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/stats/participation"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/readme"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
+                { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
             return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
+            { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
         });
 
-        var cache   = new MemoryCache(new MemoryCacheOptions());
+        var cache = new MemoryCache(new MemoryCacheOptions());
         var factory = GitHubClientFactory.Create(handler);
-        var logger  = NullLogger<Program>.Instance;
+        var logger = NullLogger<Program>.Instance;
 
         await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints.InvokeAsync("owner/repo", factory, cache, logger);
         var countAfterFirst = callCount;
@@ -151,9 +151,9 @@ public class GitHubActivityEndpoint_RateLimitTests
     public async Task RateLimited_ReturnsOkWithRateLimitedTrue(HttpStatusCode status)
     {
         var handler = StubHandler.Json("{}", status);
-        var cache   = new MemoryCache(new MemoryCacheOptions());
+        var cache = new MemoryCache(new MemoryCacheOptions());
         var factory = GitHubClientFactory.Create(handler);
-        var logger  = NullLogger<Program>.Instance;
+        var logger = NullLogger<Program>.Instance;
 
         var result = await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints
             .InvokeAsync("owner/repo", factory, cache, logger);
@@ -172,8 +172,8 @@ public class GitHubActivityEndpoint_RateLimitTests
         // After a 403, a second call with a fixed response must return fresh data
         int calls = 0;
         var commitJson = """[{"commit":{"author":{"date":"2026-04-01T00:00:00Z"}}}]""";
-        var statsJson  = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,5]}""";
-        var repoJson   = """{"description":"d","license":{"key":"mit"},"open_issues_count":0}""";
+        var statsJson = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,5]}""";
+        var repoJson = """{"description":"d","license":{"key":"mit"},"open_issues_count":0}""";
 
         var handler = new StubHandler(req =>
         {
@@ -181,25 +181,25 @@ public class GitHubActivityEndpoint_RateLimitTests
             // First batch: 403 on commits
             if (calls == 1)
                 return new HttpResponseMessage(HttpStatusCode.Forbidden)
-                    { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
+                { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
             // Subsequent: healthy
             if (req.RequestUri!.PathAndQuery.Contains("/commits"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/stats/participation"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/readme"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
+                { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
             return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
+            { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
         });
 
         // Use very short cooldown: set via MemoryCache with sliding expiration of 0
-        var cache   = new MemoryCache(new MemoryCacheOptions());
+        var cache = new MemoryCache(new MemoryCacheOptions());
         var factory = GitHubClientFactory.Create(handler);
-        var logger  = NullLogger<Program>.Instance;
+        var logger = NullLogger<Program>.Instance;
 
         // First call → rate limited
         await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints.InvokeAsync("owner/repo", factory, cache, logger);
@@ -223,29 +223,29 @@ public class GitHubActivityEndpoint_HealthScoreTests
     [Fact]
     public async Task RecentCommit_HasReadme_HasLicense_HasDescription_ScoreIsHigh()
     {
-        var date       = DateTime.UtcNow.AddDays(-10).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        var date = DateTime.UtcNow.AddDays(-10).ToString("yyyy-MM-ddTHH:mm:ssZ");
         var commitJson = $"[{{\"commit\":{{\"author\":{{\"date\":\"{date}\"}}}}}}]";
-        var statsJson  = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,5]}""";
-        var repoJson   = """{"description":"a real description","license":{"key":"mit"},"open_issues_count":0}""";
+        var statsJson = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,5]}""";
+        var repoJson = """{"description":"a real description","license":{"key":"mit"},"open_issues_count":0}""";
 
         var handler = new StubHandler(req =>
         {
             if (req.RequestUri!.PathAndQuery.Contains("/commits"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/stats/participation"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/readme"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
+                { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
             return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
+            { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
         });
 
         var result = await InvokeAsync("owner/repo", handler);
-        var val    = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
-        var json   = JsonSerializer.Serialize(val.Value);
+        var val = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
+        var json = JsonSerializer.Serialize(val.Value);
         using var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("healthScore").GetInt32().Should().BeGreaterThanOrEqualTo(75);
     }
@@ -253,29 +253,29 @@ public class GitHubActivityEndpoint_HealthScoreTests
     [Fact]
     public async Task StaleRepo_NoReadme_NoLicense_ManyIssues_ScoreIsLow()
     {
-        var date       = DateTime.UtcNow.AddDays(-200).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        var date = DateTime.UtcNow.AddDays(-200).ToString("yyyy-MM-ddTHH:mm:ssZ");
         var commitJson = $"[{{\"commit\":{{\"author\":{{\"date\":\"{date}\"}}}}}}]";
-        var statsJson  = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}""";
-        var repoJson   = """{"description":null,"license":null,"open_issues_count":10}""";
+        var statsJson = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}""";
+        var repoJson = """{"description":null,"license":null,"open_issues_count":10}""";
 
         var handler = new StubHandler(req =>
         {
             if (req.RequestUri!.PathAndQuery.Contains("/commits"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/stats/participation"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/readme"))
                 return new HttpResponseMessage(HttpStatusCode.NotFound)
-                    { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
+                { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
             return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
+            { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
         });
 
         var result = await InvokeAsync("owner/repo", handler);
-        var val    = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
-        var json   = JsonSerializer.Serialize(val.Value);
+        var val = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
+        var json = JsonSerializer.Serialize(val.Value);
         using var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("healthScore").GetInt32().Should().Be(0,
             because: "stale repo with no readme/license and many issues should score 0");
@@ -284,45 +284,45 @@ public class GitHubActivityEndpoint_HealthScoreTests
     [Fact]
     public async Task HealthScore_IsNeverNegative()
     {
-        var date       = DateTime.UtcNow.AddDays(-500).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        var date = DateTime.UtcNow.AddDays(-500).ToString("yyyy-MM-ddTHH:mm:ssZ");
         var commitJson = $"[{{\"commit\":{{\"author\":{{\"date\":\"{date}\"}}}}}}]";
-        var statsJson  = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}""";
-        var repoJson   = """{"description":null,"license":null,"open_issues_count":100}""";
+        var statsJson = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}""";
+        var repoJson = """{"description":null,"license":null,"open_issues_count":100}""";
 
         var handler = new StubHandler(req =>
         {
             if (req.RequestUri!.PathAndQuery.Contains("/commits"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/stats/participation"))
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                    { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
+                { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
             if (req.RequestUri.PathAndQuery.Contains("/readme"))
                 return new HttpResponseMessage(HttpStatusCode.NotFound)
-                    { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
+                { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
             return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
+            { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
         });
 
         var result = await InvokeAsync("owner/repo", handler);
-        var val    = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
-        var json   = JsonSerializer.Serialize(val.Value);
+        var val = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
+        var json = JsonSerializer.Serialize(val.Value);
         using var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("healthScore").GetInt32().Should().BeGreaterThanOrEqualTo(0);
     }
 
     private static async Task<IResult> InvokeAsync(string repo, HttpMessageHandler handler)
     {
-        var cache   = new MemoryCache(new MemoryCacheOptions());
+        var cache = new MemoryCache(new MemoryCacheOptions());
         var factory = GitHubClientFactory.Create(handler);
-        var logger  = NullLogger<Program>.Instance;
+        var logger = NullLogger<Program>.Instance;
         return await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints
             .InvokeAsync(repo, factory, cache, logger);
     }
 
     private static void AssertHealthScore(IResult result, Action<int> assertion)
     {
-        var val  = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
+        var val = result.Should().BeAssignableTo<IValueHttpResult>().Subject;
         var json = JsonSerializer.Serialize(val.Value);
         using var doc = JsonDocument.Parse(json);
         assertion(doc.RootElement.GetProperty("healthScore").GetInt32());

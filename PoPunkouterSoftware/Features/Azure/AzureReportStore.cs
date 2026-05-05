@@ -14,9 +14,9 @@ namespace PoPunkouterSoftware.Features.Azure;
 /// </summary>
 public class AzureReportStore : IAzureReportRepository
 {
-    private const string DefaultTableName   = "PoPunkouterSoftwareReport";
-    private const string PartitionKey       = "report";
-    private const string RowKey             = "latest";
+    private const string DefaultTableName = "PoPunkouterSoftwareReport";
+    private const string PartitionKey = "report";
+    private const string RowKey = "latest";
     private const string HistoryPartitionKey = "history";
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -26,7 +26,7 @@ public class AzureReportStore : IAzureReportRepository
     };
 
     private readonly ILogger<AzureReportStore> _logger;
-    private readonly IConfiguration            _config;
+    private readonly IConfiguration _config;
 
     // Cached after first successful init so CreateIfNotExistsAsync is not called on every request.
     private TableClient? _cachedClient;
@@ -81,17 +81,17 @@ public class AzureReportStore : IAzureReportRepository
             var entity = new TableEntity(PartitionKey, RowKey)
             {
                 ["ReportJsonGz"] = compressed,
-                ["SavedAt"]      = DateTimeOffset.UtcNow,
+                ["SavedAt"] = DateTimeOffset.UtcNow,
             };
 
             await tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace, ct);
 
             // Also save a timestamped history entry (inverse ticks = newest first in queries)
-            var histRowKey    = (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks).ToString("D20");
+            var histRowKey = (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks).ToString("D20");
             var historyEntity = new TableEntity(HistoryPartitionKey, histRowKey)
             {
                 ["ReportJsonGz"] = compressed,
-                ["SavedAt"]      = DateTimeOffset.UtcNow,
+                ["SavedAt"] = DateTimeOffset.UtcNow,
             };
             await tableClient.UpsertEntityAsync(historyEntity, TableUpdateMode.Replace, ct);
 
@@ -179,8 +179,8 @@ public class AzureReportStore : IAzureReportRepository
         if (!string.IsNullOrWhiteSpace(compressed))
         {
             var bytes = Convert.FromBase64String(compressed);
-            using var input  = new MemoryStream(bytes);
-            using var gz     = new GZipStream(input, CompressionMode.Decompress);
+            using var input = new MemoryStream(bytes);
+            using var gz = new GZipStream(input, CompressionMode.Decompress);
             using var reader = new StreamReader(gz, Encoding.UTF8);
             return reader.ReadToEnd();
         }
@@ -198,7 +198,7 @@ public class AzureReportStore : IAzureReportRepository
             if (_cachedClient is not null)
                 return _cachedClient;
 
-            var tableName        = _config["AzureTableStorage:TableName"] ?? DefaultTableName;
+            var tableName = _config["AzureTableStorage:TableName"] ?? DefaultTableName;
             var connectionString = _config["AzureTableStorage:ConnectionString"];
 
             TableServiceClient serviceClient;

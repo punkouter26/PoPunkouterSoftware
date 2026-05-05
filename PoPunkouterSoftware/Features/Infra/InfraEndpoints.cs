@@ -25,14 +25,14 @@ internal static class InfraEndpoints
     // Azure deploy GitHub Actions — maps action id → friendly deploy target
     private static readonly Dictionary<string, string> DeployActions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["azure/webapps-deploy"]             = "App Service",
-        ["azure/static-web-apps-deploy"]     = "Static Web Apps",
-        ["azure/container-apps-deploy"]      = "Container Apps",
-        ["azure/functions-action"]           = "Azure Functions",
-        ["azure/aci-deploy"]                 = "Container Instance",
-        ["azure/k8s-deploy"]                 = "AKS",
-        ["azure/arm-deploy"]                 = "ARM/Bicep",
-        ["azure/login"]                      = "(Azure login)",
+        ["azure/webapps-deploy"] = "App Service",
+        ["azure/static-web-apps-deploy"] = "Static Web Apps",
+        ["azure/container-apps-deploy"] = "Container Apps",
+        ["azure/functions-action"] = "Azure Functions",
+        ["azure/aci-deploy"] = "Container Instance",
+        ["azure/k8s-deploy"] = "AKS",
+        ["azure/arm-deploy"] = "ARM/Bicep",
+        ["azure/login"] = "(Azure login)",
     };
 
     // Bicep resource extraction: `resource <id> '<type>@<version>'`
@@ -79,10 +79,10 @@ internal static class InfraEndpoints
                 return Results.Ok(new
                 {
                     disabled = true,
-                    message  = "GitHub CI/CD review requires authentication. Either:\n" +
+                    message = "GitHub CI/CD review requires authentication. Either:\n" +
                                "• Run 'gh auth login' locally (uses gh CLI token automatically), or\n" +
                                "• Add a PAT to Key Vault as PoPunkouterSoftware--GitHub--PersonalAccessToken.",
-                    reviews  = Array.Empty<InfraReview>(),
+                    reviews = Array.Empty<InfraReview>(),
                 });
             }
 
@@ -105,12 +105,12 @@ internal static class InfraEndpoints
                 var reviews = new List<InfraReview>();
                 foreach (var repo in repos)
                 {
-                    var repoName     = repo["name"]?.GetValue<string>() ?? "";
-                    var fullName     = repo["full_name"]?.GetValue<string>() ?? "";
-                    var owner        = fullName.Contains('/') ? fullName.Split('/')[0] : "punkouter26";
+                    var repoName = repo["name"]?.GetValue<string>() ?? "";
+                    var fullName = repo["full_name"]?.GetValue<string>() ?? "";
+                    var owner = fullName.Contains('/') ? fullName.Split('/')[0] : "punkouter26";
                     var defaultBranch = repo["default_branch"]?.GetValue<string>() ?? "main";
-                    var isPrivate    = repo["private"]?.GetValue<bool>() ?? false;
-                    var repoUrl      = repo["html_url"]?.GetValue<string>();
+                    var isPrivate = repo["private"]?.GetValue<bool>() ?? false;
+                    var repoUrl = repo["html_url"]?.GetValue<string>();
 
                     try
                     {
@@ -123,12 +123,12 @@ internal static class InfraEndpoints
                         logger.LogWarning(ex, "Failed to scan repo {Repo}", repoName);
                         reviews.Add(new InfraReview
                         {
-                            RepoName      = repoName,
+                            RepoName = repoName,
                             DefaultBranch = defaultBranch,
-                            IsPrivate     = isPrivate,
-                            RepoUrl       = repoUrl,
-                            ScannedAt     = DateTime.UtcNow,
-                            Error         = ex.Message,
+                            IsPrivate = isPrivate,
+                            RepoUrl = repoUrl,
+                            ScannedAt = DateTime.UtcNow,
+                            Error = ex.Message,
                         });
                     }
                 }
@@ -196,7 +196,7 @@ internal static class InfraEndpoints
         CancellationToken ct)
     {
         // Get the full recursive file tree for this repo
-        var treeUrl  = $"https://api.github.com/repos/{owner}/{repoName}/git/trees/{defaultBranch}?recursive=1";
+        var treeUrl = $"https://api.github.com/repos/{owner}/{repoName}/git/trees/{defaultBranch}?recursive=1";
         var treeResp = await http.GetAsync(treeUrl, ct);
 
         if (!treeResp.IsSuccessStatusCode)
@@ -204,12 +204,12 @@ internal static class InfraEndpoints
             var errBody = await treeResp.Content.ReadAsStringAsync(ct);
             return new InfraReview
             {
-                RepoName      = repoName,
+                RepoName = repoName,
                 DefaultBranch = defaultBranch,
-                IsPrivate     = isPrivate,
-                RepoUrl       = repoUrl,
-                ScannedAt     = DateTime.UtcNow,
-                Error         = $"Tree fetch failed ({(int)treeResp.StatusCode}): {Truncate(errBody, 120)}",
+                IsPrivate = isPrivate,
+                RepoUrl = repoUrl,
+                ScannedAt = DateTime.UtcNow,
+                Error = $"Tree fetch failed ({(int)treeResp.StatusCode}): {Truncate(errBody, 120)}",
             };
         }
 
@@ -261,26 +261,26 @@ internal static class InfraEndpoints
 
         return new InfraReview
         {
-            RepoName          = repoName,
-            DefaultBranch     = defaultBranch,
-            IsPrivate         = isPrivate,
-            RepoUrl           = repoUrl,
-            DeploymentTarget  = target,
-            DeploymentMethod  = method,
-            CiCdFiles         = cicdFiles,
-            InfraFiles        = infraFiles,
-            ScannedAt         = DateTime.UtcNow,
+            RepoName = repoName,
+            DefaultBranch = defaultBranch,
+            IsPrivate = isPrivate,
+            RepoUrl = repoUrl,
+            DeploymentTarget = target,
+            DeploymentMethod = method,
+            CiCdFiles = cicdFiles,
+            InfraFiles = infraFiles,
+            ScannedAt = DateTime.UtcNow,
         };
     }
 
     private static async Task<string?> FetchFileContentAsync(
         HttpClient http, string owner, string repo, string path, CancellationToken ct)
     {
-        var url  = $"https://api.github.com/repos/{owner}/{repo}/contents/{Uri.EscapeDataString(path)}";
+        var url = $"https://api.github.com/repos/{owner}/{repo}/contents/{Uri.EscapeDataString(path)}";
         var resp = await http.GetAsync(url, ct);
         if (!resp.IsSuccessStatusCode) return null;
 
-        var json    = await resp.Content.ReadAsStringAsync(ct);
+        var json = await resp.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
 
         if (!doc.RootElement.TryGetProperty("content", out var contentEl)) return null;
@@ -305,9 +305,9 @@ internal static class InfraEndpoints
 
     private static CiCdFileSummary ParseWorkflow(string path, string content)
     {
-        var triggers    = new List<string>();
-        var deployActs  = new List<string>();
-        var branches    = new List<string>();
+        var triggers = new List<string>();
+        var deployActs = new List<string>();
+        var branches = new List<string>();
 
         // Extract `on:` triggers
         var onMatch = OnTriggerRx.Match(content);
@@ -353,7 +353,7 @@ internal static class InfraEndpoints
         foreach (Match m in BranchRx.Matches(content))
         {
             var inline = m.Groups[1].Value;
-            var block  = m.Groups[2].Value;
+            var block = m.Groups[2].Value;
             if (!string.IsNullOrWhiteSpace(inline))
                 branches.AddRange(inline.Split(',').Select(s => s.Trim(' ', '\'', '"')).Where(s => s.Length > 0));
             if (!string.IsNullOrWhiteSpace(block))
@@ -362,9 +362,9 @@ internal static class InfraEndpoints
 
         return new CiCdFileSummary
         {
-            FileName      = Path.GetFileName(path),
-            FilePath      = path,
-            Triggers      = triggers.Distinct().ToList(),
+            FileName = Path.GetFileName(path),
+            FilePath = path,
+            Triggers = triggers.Distinct().ToList(),
             DeployActions = deployActs.Distinct().ToList(),
             BranchFilters = branches.Distinct().ToList(),
         };
@@ -372,13 +372,13 @@ internal static class InfraEndpoints
 
     private static InfraFileSummary ParseInfraFile(string path, string content)
     {
-        var lower     = path.ToLowerInvariant();
-        var fileType  = lower.EndsWith(".bicep")             ? "bicep"
-                      : lower.EndsWith("azuredeploy.json")  ? "arm"
+        var lower = path.ToLowerInvariant();
+        var fileType = lower.EndsWith(".bicep") ? "bicep"
+                      : lower.EndsWith("azuredeploy.json") ? "arm"
                       : lower.EndsWith("azure.yaml") ||
-                        lower.EndsWith("azure.yml")          ? "azd"
-                      : lower.Contains("dockerfile")         ? "docker"
-                      : lower.Contains("docker-compose")     ? "compose"
+                        lower.EndsWith("azure.yml") ? "azd"
+                      : lower.Contains("dockerfile") ? "docker"
+                      : lower.Contains("docker-compose") ? "compose"
                       : "other";
 
         var resourceTypes = new List<string>();
@@ -404,9 +404,9 @@ internal static class InfraEndpoints
 
         return new InfraFileSummary
         {
-            FileName      = Path.GetFileName(path),
-            FilePath      = path,
-            FileType      = fileType,
+            FileName = Path.GetFileName(path),
+            FilePath = path,
+            FileType = fileType,
             ResourceTypes = resourceTypes,
         };
     }
@@ -425,11 +425,11 @@ internal static class InfraEndpoints
         // Determine primary hosting target (most specific wins)
         var target = "Unknown";
         if (allActions.Contains("azure/container-apps-deploy")) target = "Container Apps";
-        else if (allActions.Contains("azure/k8s-deploy"))       target = "AKS";
+        else if (allActions.Contains("azure/k8s-deploy")) target = "AKS";
         else if (allActions.Contains("azure/functions-action")) target = "Azure Functions";
         else if (allActions.Contains("azure/static-web-apps-deploy")) target = "Static Web Apps";
-        else if (allActions.Contains("azure/webapps-deploy"))   target = "App Service";
-        else if (allActions.Contains("azure/aci-deploy"))       target = "Container Instance";
+        else if (allActions.Contains("azure/webapps-deploy")) target = "App Service";
+        else if (allActions.Contains("azure/aci-deploy")) target = "Container Instance";
         else if (allActions.Contains("azure/arm-deploy"))
         {
             // Check bicep resource types for more context
@@ -463,7 +463,7 @@ internal static class InfraEndpoints
     private static bool IsInfraFile(string path)
     {
         var lower = path.ToLowerInvariant();
-        var file  = Path.GetFileName(lower);
+        var file = Path.GetFileName(lower);
 
         return lower.EndsWith(".bicep")
             || file == "azuredeploy.json"
@@ -492,9 +492,9 @@ internal static class InfraEndpoints
             var psi = new ProcessStartInfo("gh", "auth token")
             {
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                UseShellExecute        = false,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
             };
 
             using var process = Process.Start(psi);

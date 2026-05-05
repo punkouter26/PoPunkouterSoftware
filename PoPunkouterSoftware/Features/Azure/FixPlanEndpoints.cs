@@ -30,9 +30,9 @@ internal static class FixPlanEndpoints
             if (!config.GetValue<bool>("FeatureFlags:EnableAiIntegration"))
                 return Results.Ok(new
                 {
-                    plan     = (string?)null,
+                    plan = (string?)null,
                     disabled = true,
-                    message  = "AI integration is disabled. Set FeatureFlags:EnableAiIntegration=true and configure AzureOpenAI settings to enable."
+                    message = "AI integration is disabled. Set FeatureFlags:EnableAiIntegration=true and configure AzureOpenAI settings to enable."
                 });
 
             // ── Cache hit ─────────────────────────────────────────────────────
@@ -54,16 +54,16 @@ internal static class FixPlanEndpoints
                 return Results.NotFound(new { error = $"Service '{serviceName}' not found in the latest report." });
 
             // ── Check OpenAI config ───────────────────────────────────────────
-            var endpoint   = config["AzureOpenAI:Endpoint"];
-            var apiKey     = config["AzureOpenAI:ApiKey"];
+            var endpoint = config["AzureOpenAI:Endpoint"];
+            var apiKey = config["AzureOpenAI:ApiKey"];
             var deployment = config["AzureOpenAI:DeploymentName"] ?? "gpt-4o";
 
             if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
                 return Results.Ok(new
                 {
-                    plan     = (string?)null,
+                    plan = (string?)null,
                     disabled = true,
-                    message  = "Azure OpenAI is not configured. Add AzureOpenAI:Endpoint and AzureOpenAI:ApiKey to configuration or Key Vault."
+                    message = "Azure OpenAI is not configured. Add AzureOpenAI:Endpoint and AzureOpenAI:ApiKey to configuration or Key Vault."
                 });
 
             // ── Build prompt from report data ─────────────────────────────────
@@ -77,9 +77,9 @@ internal static class FixPlanEndpoints
             // ── Call Azure OpenAI REST API ────────────────────────────────────
             try
             {
-                var client     = httpClientFactory.CreateClient("azure-openai");
+                var client = httpClientFactory.CreateClient("azure-openai");
                 var apiVersion = "2024-02-01";
-                var url        = $"{endpoint.TrimEnd('/')}/openai/deployments/{deployment}/chat/completions?api-version={apiVersion}";
+                var url = $"{endpoint.TrimEnd('/')}/openai/deployments/{deployment}/chat/completions?api-version={apiVersion}";
 
                 var requestBody = JsonSerializer.Serialize(new
                 {
@@ -93,7 +93,7 @@ internal static class FixPlanEndpoints
                         new { role = "user", content = prompt }
                     },
                     temperature = 0.3,
-                    max_tokens  = 800
+                    max_tokens = 800
                 });
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, url)
@@ -110,7 +110,7 @@ internal static class FixPlanEndpoints
                     var truncated = err.Length > 200 ? err[..200] + "…" : err;
                     logger.LogWarning("Azure OpenAI fix-plan call failed: {Status} — {Body}", response.StatusCode, truncated);
                     return Results.Problem(
-                        detail:     $"Azure OpenAI returned {(int)response.StatusCode}. Check your endpoint, key, and deployment name.",
+                        detail: $"Azure OpenAI returned {(int)response.StatusCode}. Check your endpoint, key, and deployment name.",
                         statusCode: 502);
                 }
 
@@ -169,8 +169,8 @@ internal static class FixPlanEndpoints
         {
             sb.AppendLine("\nConfiguration issues detected:");
             foreach (var d in driftItems)
-            foreach (var issue in d.Issues ?? new())
-                sb.AppendLine($"  [{issue.Severity}] {issue.Issue}");
+                foreach (var issue in d.Issues ?? new())
+                    sb.AppendLine($"  [{issue.Severity}] {issue.Issue}");
         }
 
         sb.AppendLine("\nProvide a numbered, step-by-step fix plan with specific az CLI commands where applicable.");

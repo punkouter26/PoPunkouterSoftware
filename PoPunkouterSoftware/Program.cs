@@ -171,8 +171,8 @@ try
     {
         o.EnrichDiagnosticContext = (diag, ctx) =>
         {
-            diag.Set("UserId",     "anonymous");
-            diag.Set("SessionId",  ctx.TraceIdentifier);
+            diag.Set("UserId", "anonymous");
+            diag.Set("SessionId", ctx.TraceIdentifier);
             diag.Set("Environment", app.Environment.EnvironmentName);
         };
         o.GetLevel = (ctx, _, ex) =>
@@ -291,10 +291,10 @@ try
                 // 5xx or network error = unreachable.
                 var (tsStatus, tsHealthy) = (int)tsResp.StatusCode switch
                 {
-                    >= 200 and < 400             => ("reachable", true),
-                    400 when isDevStorage        => ("reachable", true),   // Azurite 400 = running, no auth needed
-                    >= 400 and < 500             => ("degraded",  false),
-                    _                            => ("unreachable", false),
+                    >= 200 and < 400 => ("reachable", true),
+                    400 when isDevStorage => ("reachable", true),   // Azurite 400 = running, no auth needed
+                    >= 400 and < 500 => ("degraded", false),
+                    _ => ("unreachable", false),
                 };
                 if (!tsHealthy) allHealthy = false;
                 checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode, note = isDevStorage ? "Azurite" : (string?)null };
@@ -319,11 +319,11 @@ try
             checks,
             config = new Dictionary<string, string>
             {
-                ["AzureKeyVaultUri"]                         = MaskValue(config["AzureKeyVaultUri"]),
-                ["AzureTableStorage:ConnectionString"]       = MaskValue(config["AzureTableStorage:ConnectionString"]),
-                ["AzureTableStorage:Endpoint"]               = MaskValue(config["AzureTableStorage:Endpoint"]),
-                ["ApplicationInsights:ConnectionString"]     = MaskValue(config["ApplicationInsights:ConnectionString"]),
-                ["ASPNETCORE_ENVIRONMENT"]                   = env.EnvironmentName,
+                ["AzureKeyVaultUri"] = MaskValue(config["AzureKeyVaultUri"]),
+                ["AzureTableStorage:ConnectionString"] = MaskValue(config["AzureTableStorage:ConnectionString"]),
+                ["AzureTableStorage:Endpoint"] = MaskValue(config["AzureTableStorage:Endpoint"]),
+                ["ApplicationInsights:ConnectionString"] = MaskValue(config["ApplicationInsights:ConnectionString"]),
+                ["ASPNETCORE_ENVIRONMENT"] = env.EnvironmentName,
             }
         });
     };
@@ -351,7 +351,7 @@ try
     app.MapGet("/api/config",
         (HttpContext ctx, IWebHostEnvironment env) => Results.Ok(new
         {
-            apiBase    = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api",
+            apiBase = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api",
             isMockMode = env.IsEnvironment("Testing"),
         }))
         .WithName("GetConfig").WithTags("Config");

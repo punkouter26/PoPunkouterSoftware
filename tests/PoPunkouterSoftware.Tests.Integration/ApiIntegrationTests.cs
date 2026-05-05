@@ -24,9 +24,9 @@ public class TestWebApp : WebApplicationFactory<Program>
         {
             cfg.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["AzureKeyVaultUri"]                       = "",
-                ["ApplicationInsights:ConnectionString"]   = "",
-                ["AzureTableStorage:ConnectionString"]     = "",
+                ["AzureKeyVaultUri"] = "",
+                ["ApplicationInsights:ConnectionString"] = "",
+                ["AzureTableStorage:ConnectionString"] = "",
             });
         });
     }
@@ -68,7 +68,7 @@ public class HealthEndpointTests
     public async Task GetHealth_ReturnsStatusField()
     {
         var json = await _client.GetStringAsync("/api/health");
-        var doc  = JsonDocument.Parse(json);
+        var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("status", out _).Should().BeTrue();
     }
 
@@ -76,7 +76,7 @@ public class HealthEndpointTests
     public async Task GetHealth_ReturnsApplicationField()
     {
         var json = await _client.GetStringAsync("/api/health");
-        var doc  = JsonDocument.Parse(json);
+        var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("application").GetString().Should().Be("PoPunkouterSoftware");
     }
 
@@ -84,7 +84,7 @@ public class HealthEndpointTests
     public async Task GetHealth_ReturnsTimestamp()
     {
         var json = await _client.GetStringAsync("/api/health");
-        var doc  = JsonDocument.Parse(json);
+        var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("timestamp", out _).Should().BeTrue();
     }
 
@@ -92,7 +92,7 @@ public class HealthEndpointTests
     public async Task GetHealth_ReturnsChecksObject()
     {
         var json = await _client.GetStringAsync("/api/health");
-        var doc  = JsonDocument.Parse(json);
+        var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("checks", out _).Should().BeTrue();
     }
 
@@ -100,7 +100,7 @@ public class HealthEndpointTests
     public async Task GetHealth_ReturnsEnvironmentField()
     {
         var json = await _client.GetStringAsync("/api/health");
-        var doc  = JsonDocument.Parse(json);
+        var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("environment", out _).Should().BeTrue();
     }
 
@@ -108,8 +108,8 @@ public class HealthEndpointTests
     public async Task GetHealth_ConfigMasked_NotEmpty()
     {
         var json = await _client.GetStringAsync("/api/health");
-        var doc  = JsonDocument.Parse(json);
-        var cfg  = doc.RootElement.GetProperty("config");
+        var doc = JsonDocument.Parse(json);
+        var cfg = doc.RootElement.GetProperty("config");
         cfg.GetProperty("ASPNETCORE_ENVIRONMENT").GetString().Should().NotBeNullOrWhiteSpace();
     }
 }
@@ -133,7 +133,7 @@ public class ConfigEndpointTests
     public async Task GetConfig_ReturnsApiBase_StartingWithHttp()
     {
         var json = await _client.GetStringAsync("/api/config");
-        var doc  = JsonDocument.Parse(json);
+        var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("apiBase").GetString().Should().StartWith("http");
     }
 
@@ -141,7 +141,7 @@ public class ConfigEndpointTests
     public async Task GetConfig_ApiBase_EndsWithSlashApi()
     {
         var json = await _client.GetStringAsync("/api/config");
-        var doc  = JsonDocument.Parse(json);
+        var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("apiBase").GetString().Should().EndWith("/api");
     }
 }
@@ -191,7 +191,7 @@ public class AzStatusEndpointTests
     public async Task GetAzStatus_ReturnsLoggedInField()
     {
         var json = await _client.GetStringAsync("/api/diag/az-status");
-        var doc  = JsonDocument.Parse(json);
+        var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("loggedIn", out _).Should().BeTrue();
     }
 }
@@ -236,13 +236,14 @@ public class AzureReportStoreNoConnectionTests
     public async Task LoadAsync_WhenConnectionStringIsEmpty_ReturnsFailureResult()
     {
         var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> {
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
                 ["AzureTableStorage:ConnectionString"] = "",
-                ["AzureTableStorage:Endpoint"]         = "",
+                ["AzureTableStorage:Endpoint"] = "",
             })
             .Build();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AzureReportStore>.Instance;
-        var store  = new AzureReportStore(logger, config);
+        var store = new AzureReportStore(logger, config);
         var result = await store.LoadAsync();
         result.Should().NotBeNull();
         result!.IsSuccess.Should().BeFalse();
@@ -259,7 +260,7 @@ public class AzureReportStoreAzuriteTests : IAsyncLifetime
         .Build();
 
     public async Task InitializeAsync() => await _container.StartAsync();
-    public async Task DisposeAsync()    => await _container.DisposeAsync();
+    public async Task DisposeAsync() => await _container.DisposeAsync();
 
     private AzureReportStore BuildStore()
     {
@@ -279,11 +280,11 @@ public class AzureReportStoreAzuriteTests : IAsyncLifetime
         var store = BuildStore();
         var original = new AzureReport
         {
-            GeneratedAt  = new DateTime(2026, 4, 10, 12, 0, 0, DateTimeKind.Utc),
+            GeneratedAt = new DateTime(2026, 4, 10, 12, 0, 0, DateTimeKind.Utc),
             Subscription = new SubscriptionInfo { Name = "Test-Sub" },
-            WebServices  = new WebServicesInfo
+            WebServices = new WebServicesInfo
             {
-                Total    = 2,
+                Total = 2,
                 Services = new List<WebService>
                 {
                     new() { Name = "svc-a", Url = "https://svc-a.azurewebsites.net", HttpStatus = "200" },
@@ -406,7 +407,7 @@ public class AzureReportStoreHistoryTests : IAsyncLifetime
         .Build();
 
     public async Task InitializeAsync() => await _container.StartAsync();
-    public async Task DisposeAsync()    => await _container.DisposeAsync();
+    public async Task DisposeAsync() => await _container.DisposeAsync();
 
     private AzureReportStore BuildStore()
     {
@@ -427,14 +428,14 @@ public class AzureReportStoreHistoryTests : IAsyncLifetime
 
         var first = new AzureReport
         {
-            GeneratedAt  = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            GeneratedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             Subscription = new SubscriptionInfo { Name = "History-Sub-1" }
         };
         await store.SaveAsync(first);
 
         var second = new AzureReport
         {
-            GeneratedAt  = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+            GeneratedAt = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
             Subscription = new SubscriptionInfo { Name = "History-Sub-2" }
         };
         await store.SaveAsync(second);
@@ -462,7 +463,7 @@ public class AzureReportStoreHistoryTests : IAsyncLifetime
 
         var tasks = Enumerable.Range(1, 5).Select(i => store.SaveAsync(new AzureReport
         {
-            GeneratedAt  = DateTime.UtcNow,
+            GeneratedAt = DateTime.UtcNow,
             Subscription = new SubscriptionInfo { Name = $"concurrent-{i}" }
         }));
 
