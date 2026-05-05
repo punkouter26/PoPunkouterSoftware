@@ -1,4 +1,4 @@
-﻿using Azure.Core;
+using Azure.Core;
 using Azure.Identity;
 using Azure.Monitor.Query;
 using Azure.Monitor.Query.Models;
