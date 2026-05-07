@@ -7,6 +7,7 @@ using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Features.GitHub;
 using PoPunkouterSoftware.Features.Infra;
 using PoPunkouterSoftware.Infrastructure;
+using PoPunkouterSoftware.Infrastructure.Azure;
 using Radzen;
 using Scalar.AspNetCore;
 using Serilog;

@@ -1,8 +1,10 @@
 using Azure.Data.Tables;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Domain.Azure;
 
-namespace PoPunkouterSoftware.Features.Azure;
+namespace PoPunkouterSoftware.Infrastructure.Azure;
 
 /// <summary>
 /// Detects service health transitions after each report refresh and stores them in Table Storage.

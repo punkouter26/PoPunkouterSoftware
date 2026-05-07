@@ -6,6 +6,9 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.AppService;
 using Azure.ResourceManager.AppService.Models;
 using Azure.ResourceManager.Resources;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using PoPunkouterSoftware.Shared.Azure;
 using System.Net;
 using System.Net.Http.Headers;
@@ -17,7 +20,7 @@ using System.Text.Json;
 using PoPunkouterSoftware.Application.Azure;
 using PoPunkouterSoftware.Domain.Azure;
 
-namespace PoPunkouterSoftware.Features.Azure;
+namespace PoPunkouterSoftware.Infrastructure.Azure;
 
 /// <summary>
 /// Analyses an Azure subscription using the Azure SDK and DefaultAzureCredential.

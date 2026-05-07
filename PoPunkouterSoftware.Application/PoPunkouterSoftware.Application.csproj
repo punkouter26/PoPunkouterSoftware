@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PoPunkouterSoftware.Application</RootNamespace>
+    <AssemblyName>PoPunkouterSoftware.Application</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PoPunkouterSoftware.Domain\PoPunkouterSoftware.Domain.csproj" />
+    <ProjectReference Include="..\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

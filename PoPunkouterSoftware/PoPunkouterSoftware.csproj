@@ -17,12 +17,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
 
     <!-- UI -->
-    <PackageReference Include="Azure.Monitor.Query" />
-    <PackageReference Include="Azure.Data.Tables" />
-    <PackageReference Include="Azure.ResourceManager" />
-    <PackageReference Include="Azure.ResourceManager.AppContainers" />
-    <PackageReference Include="Azure.ResourceManager.AppService" />
-    <PackageReference Include="Azure.ResourceManager.Resources" />
     <PackageReference Include="Radzen.Blazor" />
 
     <!-- Structured logging -->
@@ -47,6 +41,8 @@
   <ItemGroup>
     <ProjectReference Include="..\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
     <ProjectReference Include="..\PoPunkouterSoftware.Client\PoPunkouterSoftware.Client.csproj" />
+    <ProjectReference Include="..\PoPunkouterSoftware.Application\PoPunkouterSoftware.Application.csproj" />
+    <ProjectReference Include="..\PoPunkouterSoftware.Infrastructure\PoPunkouterSoftware.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

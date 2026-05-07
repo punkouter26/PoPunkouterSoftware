@@ -1,5 +1,6 @@
 using Azure.Security.KeyVault.Secrets;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using Microsoft.Extensions.Configuration;
 
 namespace PoPunkouterSoftware.Infrastructure;
 
@@ -12,7 +13,7 @@ namespace PoPunkouterSoftware.Infrastructure;
 ///   → config key "ApplicationInsights:ConnectionString"
 ///
 /// </summary>
-internal sealed class AppKeyVaultSecretManager : KeyVaultSecretManager
+public sealed class AppKeyVaultSecretManager : KeyVaultSecretManager
 {
     private const string Prefix = "PoPunkouterSoftware--";
 

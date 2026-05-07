@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using PoPunkouterSoftware.Application.Azure;
-using PoPunkouterSoftware.Features.Azure;
+using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Domain.Azure;
 

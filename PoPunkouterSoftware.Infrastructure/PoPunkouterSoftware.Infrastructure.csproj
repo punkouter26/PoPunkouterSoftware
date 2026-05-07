@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PoPunkouterSoftware.Infrastructure</RootNamespace>
+    <AssemblyName>PoPunkouterSoftware.Infrastructure</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Data.Tables" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Monitor.Query" />
+    <PackageReference Include="Azure.ResourceManager" />
+    <PackageReference Include="Azure.ResourceManager.AppContainers" />
+    <PackageReference Include="Azure.ResourceManager.AppService" />
+    <PackageReference Include="Azure.ResourceManager.Resources" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PoPunkouterSoftware.Domain\PoPunkouterSoftware.Domain.csproj" />
+    <ProjectReference Include="..\PoPunkouterSoftware.Application\PoPunkouterSoftware.Application.csproj" />
+    <ProjectReference Include="..\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

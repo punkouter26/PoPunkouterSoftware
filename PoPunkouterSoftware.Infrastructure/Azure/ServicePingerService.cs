@@ -1,9 +1,13 @@
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using PoPunkouterSoftware.Domain.Azure;
 using PoPunkouterSoftware.Shared.Azure;
 using System.Collections.Concurrent;
 
-namespace PoPunkouterSoftware.Features.Azure;
+namespace PoPunkouterSoftware.Infrastructure.Azure;
 
 /// <summary>
 /// Background service that periodically pings each Azure web service URL to warm cold-start instances.

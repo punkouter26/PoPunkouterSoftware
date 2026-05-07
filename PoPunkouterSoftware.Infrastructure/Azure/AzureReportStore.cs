@@ -1,12 +1,14 @@
 using Azure.Data.Tables;
 using Azure.Identity;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Domain.Azure;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 
-namespace PoPunkouterSoftware.Features.Azure;
+namespace PoPunkouterSoftware.Infrastructure.Azure;
 
 /// <summary>
 /// Persists the latest Azure report as a single entity in Azure Table Storage.

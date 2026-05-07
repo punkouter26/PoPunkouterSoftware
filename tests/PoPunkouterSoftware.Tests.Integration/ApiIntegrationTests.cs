@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using PoPunkouterSoftware.Shared.Azure;
-using PoPunkouterSoftware.Features.Azure;
+using PoPunkouterSoftware.Infrastructure.Azure;
 using Testcontainers.Azurite;
 using System.Net;
 using System.Text.Json;
