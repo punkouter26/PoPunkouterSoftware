@@ -69,6 +69,14 @@ docker-compose.override.yml
 
 # Azure Functions local settings
 local.settings.json
+.azure/
+.azd/
+
+# Terraform local state
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
 
 # Test coverage
 coverage/
@@ -93,6 +101,8 @@ artifacts/
 
 # Publish profile user settings
 *.pubxml.user
+*.rsuser
+*.userosscache
 
 # Blazor / Wasm cache
 .blazor/

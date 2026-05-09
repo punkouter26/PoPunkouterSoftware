@@ -25,8 +25,8 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // ─── Azure Key Vault — always loaded when URI is configured ───
-    var kvUriStr = builder.Configuration["AzureKeyVaultUri"];
+    // ─── Azure Key Vault — default to shared PoShared vault unless overridden ───
+    var kvUriStr = builder.Configuration["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
     if (!string.IsNullOrWhiteSpace(kvUriStr))
     {
         try
