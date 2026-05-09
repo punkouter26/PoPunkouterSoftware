@@ -74,6 +74,9 @@ jobs:
     needs: build-and-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     timeout-minutes: 20
+    env:
+      HAS_OIDC: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+      HAS_AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS != '' }}
 
     steps:
       - name: Download artifact
@@ -83,7 +86,7 @@ jobs:
           path: ./publish
 
       - name: Azure Login (OIDC)
-        if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+        if: ${{ env.HAS_OIDC == 'true' }}
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -91,13 +94,13 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Azure Login (Service Principal JSON)
-        if: ${{ (secrets.AZURE_CLIENT_ID == '' || secrets.AZURE_TENANT_ID == '' || secrets.AZURE_SUBSCRIPTION_ID == '') && secrets.AZURE_CREDENTIALS != '' }}
+        if: ${{ env.HAS_OIDC != 'true' && env.HAS_AZURE_CREDENTIALS == 'true' }}
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Validate Azure auth secrets
-        if: ${{ (secrets.AZURE_CLIENT_ID == '' || secrets.AZURE_TENANT_ID == '' || secrets.AZURE_SUBSCRIPTION_ID == '') && secrets.AZURE_CREDENTIALS == '' }}
+        if: ${{ env.HAS_OIDC != 'true' && env.HAS_AZURE_CREDENTIALS != 'true' }}
         run: |
           echo "::error::Missing Azure auth secrets. Configure either OIDC secrets (AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID) or AZURE_CREDENTIALS."
           exit 1
