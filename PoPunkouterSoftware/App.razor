@@ -12,6 +12,17 @@
 </head>
 <body class="rz-background-color-base rz-color-base">
     <Routes />
+    <script>
+        // Suppress expected hotreload errors in development
+        const originalError = console.error;
+        console.error = function(...args) {
+            const msg = args[0]?.toString?.() || '';
+            if (msg.includes('blazor-hotreload') || msg.includes('net::ERR_ABORTED')) {
+                return;  // Silently ignore hotreload connection errors
+            }
+            originalError.apply(console, args);
+        };
+    </script>
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
 </body>

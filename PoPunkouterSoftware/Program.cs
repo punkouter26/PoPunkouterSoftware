@@ -1,7 +1,5 @@
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
-using PoPunkouterSoftware.Application.Azure;
-using PoPunkouterSoftware.Domain.Azure;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Features.GitHub;
@@ -132,8 +130,8 @@ try
 
     // ─── Azure report analysis + Blob persistence ─────────────────────────────
 
-    builder.Services.AddSingleton<IAzureReportRepository, AzureReportStore>();
-    builder.Services.AddTransient<IAzureReportService, AzureReportService>();
+    builder.Services.AddSingleton<AzureReportStore>();
+    builder.Services.AddTransient<AzureReportService>();
     builder.Services.AddSingleton<ServicePingerService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<ServicePingerService>());
     builder.Services.AddSignalR();
@@ -331,10 +329,6 @@ try
 
     app.MapGet("/api/health", healthHandler)
         .WithName("GetHealth")
-        .WithTags("Health");
-
-    app.MapGet("/health", healthHandler)
-        .WithName("GetHealthRoot")
         .WithTags("Health");
 
     // Lightweight platform probe endpoint: does not call external dependencies.

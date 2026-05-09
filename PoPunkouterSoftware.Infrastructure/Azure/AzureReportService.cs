@@ -19,8 +19,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 
-using PoPunkouterSoftware.Application.Azure;
-using PoPunkouterSoftware.Domain.Azure;
 
 namespace PoPunkouterSoftware.Infrastructure.Azure;
 
@@ -29,20 +27,20 @@ namespace PoPunkouterSoftware.Infrastructure.Azure;
 /// Works locally (via az login / VS login) and on Azure (via Managed Identity).
 /// Produces the same AzureReport structure consumed by AzureDashboard.razor.
 /// </summary>
-public class AzureReportService : IAzureReportService
+public class AzureReportService
 {
     private readonly ILogger<AzureReportService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IWebHostEnvironment _env;
     private readonly IConfiguration _config;
-    private readonly IAzureReportRepository _repository;
+    private readonly AzureReportStore _repository;
 
     public AzureReportService(
         ILogger<AzureReportService> logger,
         IHttpClientFactory httpClientFactory,
         IWebHostEnvironment env,
         IConfiguration config,
-        IAzureReportRepository repository)
+        AzureReportStore repository)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
@@ -172,7 +170,7 @@ public class AzureReportService : IAzureReportService
             {
                 Total = servicesList.Count,
                 ByStatus = new ByStatusInfo { Active = active, Broken = broken, Other = other },
-                Services = servicesList.Select(s => (WebService)s).ToList(),
+                Services = servicesList.Select(s => s.ToWebService()).ToList(),
             },
             Cost = costInfo,
             FreeTier = freeTier,
@@ -1174,19 +1172,19 @@ public class AzureReportService : IAzureReportService
         public string HttpStatus { get; init; } = "unknown";
         public string? Kind { get; init; }
 
-        public static explicit operator WebService(RawService s) => new()
+        public WebService ToWebService() => new()
         {
-            Name = s.Name,
-            FriendlyName = s.FriendlyName,
-            ResourceGroup = s.ResourceGroup,
-            ResourceType = s.ResourceTypeRaw,
-            Kind = s.Kind,
-            Url = s.Url ?? "",
-            HttpStatus = s.HttpStatus,
-            PlatformState = s.PlatformState,
-            Connectivity = s.Connectivity,
-            Metrics7Days = s.Metrics7Days,
-            FreeTierCheck = s.FreeTierCheck,
+            Name = Name,
+            FriendlyName = FriendlyName,
+            ResourceGroup = ResourceGroup,
+            ResourceType = ResourceTypeRaw,
+            Kind = Kind,
+            Url = Url ?? "",
+            HttpStatus = HttpStatus,
+            PlatformState = PlatformState,
+            Connectivity = Connectivity,
+            Metrics7Days = Metrics7Days,
+            FreeTierCheck = FreeTierCheck,
         };
     }
 }

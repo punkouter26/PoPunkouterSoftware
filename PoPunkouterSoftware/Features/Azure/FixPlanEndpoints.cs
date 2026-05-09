@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using PoPunkouterSoftware.Shared.Azure;
-using PoPunkouterSoftware.Domain.Azure;
+using PoPunkouterSoftware.Infrastructure.Azure;
 using System.Text;
 using System.Text.Json;
 
@@ -19,7 +19,7 @@ internal static class FixPlanEndpoints
         // server-side, so repeated GETs do not re-invoke OpenAI.
         app.MapGet("/api/diag/fix-plan/{serviceName}", async (
             string serviceName,
-            IAzureReportRepository repository,
+            AzureReportStore repository,
             IHttpClientFactory httpClientFactory,
             IMemoryCache cache,
             IConfiguration config,

@@ -2,7 +2,6 @@ using Azure.Data.Tables;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PoPunkouterSoftware.Shared.Azure;
-using PoPunkouterSoftware.Domain.Azure;
 
 namespace PoPunkouterSoftware.Infrastructure.Azure;
 
@@ -12,7 +11,7 @@ namespace PoPunkouterSoftware.Infrastructure.Azure;
 /// </summary>
 public sealed class IncidentService
 {
-    private readonly IAzureReportRepository _repository;
+    private readonly AzureReportStore _repository;
     private readonly IConfiguration _config;
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<IncidentService> _logger;
@@ -21,7 +20,7 @@ public sealed class IncidentService
     private const string PartitionKey = "incidents";
 
     public IncidentService(
-        IAzureReportRepository repository,
+        AzureReportStore repository,
         IConfiguration config,
         IHttpClientFactory httpFactory,
         ILogger<IncidentService> logger)

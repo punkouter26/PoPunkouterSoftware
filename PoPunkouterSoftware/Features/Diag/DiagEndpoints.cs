@@ -1,10 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
-using PoPunkouterSoftware.Application.Azure;
 using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Shared.Azure;
-using PoPunkouterSoftware.Domain.Azure;
 
 namespace PoPunkouterSoftware.Features.Diag;
 
@@ -14,7 +12,7 @@ internal static class DiagEndpoints
 
     internal static WebApplication MapDiagEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/diag/report", async (IWebHostEnvironment env, IAzureReportRepository store) =>
+        app.MapGet("/api/diag/report", async (IWebHostEnvironment env, AzureReportStore store) =>
         {
             var reportResult = await store.LoadAsync();
             if (reportResult.IsSuccess && reportResult.Value is not null)
@@ -57,8 +55,8 @@ internal static class DiagEndpoints
             _ = Task.Run(async () =>
             {
                 using var scope = scopeFactory.CreateScope();
-                var azureService = scope.ServiceProvider.GetRequiredService<IAzureReportService>();
-                var store = scope.ServiceProvider.GetRequiredService<IAzureReportRepository>();
+                var azureService = scope.ServiceProvider.GetRequiredService<AzureReportService>();
+                var store = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
                 var ct = cts.Token;
@@ -159,7 +157,7 @@ internal static class DiagEndpoints
 
         // ── Public status page data ───────────────────────────────────────────
         // No auth required — only exposes HTTP status and response time.
-        app.MapGet("/api/status", async (IAzureReportRepository repository, IWebHostEnvironment env, CancellationToken ct) =>
+        app.MapGet("/api/status", async (AzureReportStore repository, IWebHostEnvironment env, CancellationToken ct) =>
         {
             // Build status page from history (newest first) — up to 30 samples per service
             var historyResult = await repository.LoadHistoryAsync(maxEntries: 30, ct);

@@ -2,8 +2,8 @@ using Azure.Data.Tables;
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Domain.Azure;
+using PoPunkouterSoftware.Shared.Azure;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
@@ -14,7 +14,7 @@ namespace PoPunkouterSoftware.Infrastructure.Azure;
 /// Persists the latest Azure report as a single entity in Azure Table Storage.
 /// Uses the app-specific storage account (not the shared PoShared one).
 /// </summary>
-public class AzureReportStore : IAzureReportRepository
+public class AzureReportStore
 {
     private const string DefaultTableName = "PoPunkouterSoftwareReport";
     private const string PartitionKey = "report";

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using PoPunkouterSoftware.Shared.Azure;
-using PoPunkouterSoftware.Domain.Azure;
+using PoPunkouterSoftware.Infrastructure.Azure;
 using System.Text;
 using System.Text.Json;
 
@@ -16,7 +16,7 @@ internal static class NarrativeEndpoints
     internal static WebApplication MapNarrativeEndpoints(this WebApplication app)
     {
         app.MapGet("/api/narrative", async (
-            IAzureReportRepository repository,
+            AzureReportStore repository,
             IHttpClientFactory httpClientFactory,
             IMemoryCache cache,
             IConfiguration config,

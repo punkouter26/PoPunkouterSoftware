@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using PoPunkouterSoftware.Domain.Azure;
 using PoPunkouterSoftware.Shared.Azure;
 using System.Collections.Concurrent;
 
@@ -57,7 +56,7 @@ public sealed class ServicePingerService : BackgroundService
     {
         // Load the latest report to get the current service list.
         using var scope = _scopeFactory.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IAzureReportRepository>();
+        var repository = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
         var reportResult = await repository.LoadAsync(ct);
         if (!reportResult.IsSuccess || reportResult.Value?.WebServices is null)
             return;
