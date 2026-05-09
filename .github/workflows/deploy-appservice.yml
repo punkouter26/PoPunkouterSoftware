@@ -117,7 +117,8 @@ jobs:
           sleep 30
           for i in $(seq 1 10); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
-              "https://${{ env.APP_NAME }}.azurewebsites.net/health")
+              "https://${{ env.APP_NAME }}.azurewebsites.net/health" || true)
+            [ -z "$STATUS" ] && STATUS="000"
             echo "Health check attempt $i: HTTP $STATUS"
             [ "$STATUS" = "200" ] && exit 0
             sleep 15
