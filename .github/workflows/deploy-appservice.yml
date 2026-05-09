@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-popunkoutersoftware-master
+  group: deploy-popunkoutersoftware-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
