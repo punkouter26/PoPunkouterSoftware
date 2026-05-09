@@ -20,6 +20,7 @@ public record AzureReport
     public List<ZombieApp>? ZombieApps { get; init; }
     public List<OrphanedResource>? OrphanedResources { get; init; }
     public BurnRateInfo? BurnRate { get; init; }
+    public List<StepTimingEntry>? StepTimings { get; init; }
     public ReportDelta? Delta { get; init; }
 }
 
@@ -199,6 +200,12 @@ public record BurnRateInfo
     public List<DailyCostEntry> DailyCosts { get; init; } = new();
     public double ProjectedMonthTotal { get; init; }
     public string? ProjectedFormatted { get; init; }
+}
+
+public record StepTimingEntry
+{
+    public string Step { get; init; } = "";
+    public long ElapsedMs { get; init; }
 }
 
 // ─── Item 1: Report Delta / Trending ──────────────────────────────────────────

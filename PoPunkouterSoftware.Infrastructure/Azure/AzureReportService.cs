@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PoPunkouterSoftware.Shared.Azure;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Security;
@@ -53,10 +55,22 @@ public class AzureReportService : IAzureReportService
 
     public async Task<AzureReport> RunAsync(IProgress<(string Step, int Percent)>? progress = null, CancellationToken ct = default)
     {
+        var stepTimings = new List<StepTimingEntry>();
+
         void Report(string step, int pct, string? detail = null)
         {
             _logger.LogInformation("[{Pct}%] {Step}{Detail}", pct, step, detail is not null ? $" — {detail}" : "");
             progress?.Report((step, pct));
+        }
+
+        async Task<T> RunTimedStepAsync<T>(string step, Func<Task<T>> action)
+        {
+            var sw = Stopwatch.StartNew();
+            var result = await action();
+            sw.Stop();
+            stepTimings.Add(new StepTimingEntry { Step = step, ElapsedMs = sw.ElapsedMilliseconds });
+            _logger.LogInformation("Step '{Step}' completed in {ElapsedMs}ms", step, sw.ElapsedMilliseconds);
+            return result;
         }
 
         var previousReportResult = await _repository.LoadPreviousAsync(ct);
@@ -86,18 +100,18 @@ public class AzureReportService : IAzureReportService
         _logger.LogInformation("Subscription: {Name} ({Id})", subscription.Data.DisplayName, subscriptionId);
 
         Report("Discovering web services…", 15, subscription.Data.DisplayName);
-        var rawServices = await DiscoverWebServicesAsync(subscription, ct);
+        var rawServices = await RunTimedStepAsync("Discovering web services", () => DiscoverWebServicesAsync(subscription, ct));
         _logger.LogInformation("Discovered {Count} web services", rawServices.Count);
 
         Report("Testing connectivity…", 28, $"{rawServices.Count} services found");
-        var connectedSvcs = await TestConnectivityAsync(rawServices, ct);
+        var connectedSvcs = await RunTimedStepAsync("Testing connectivity", () => TestConnectivityAsync(rawServices, ct));
 
         Report("Loading all resources…", 36);
-        var allResources = await GetAllResourcesAsync(subscription, ct);
+        var allResources = await RunTimedStepAsync("Loading all resources", () => GetAllResourcesAsync(subscription, ct));
         _logger.LogInformation("Found {Count} total resources", allResources.Count);
 
         Report("Fetching metrics (7 days)…", 45, $"{allResources.Count} resources");
-        var metricsMap = await GetMetricsAsync(connectedSvcs, cred, ct);
+        var metricsMap = await RunTimedStepAsync("Fetching metrics (7 days)", () => GetMetricsAsync(connectedSvcs, cred, ct));
 
         // Acquire one ARM token shared across all Cost Management calls to avoid extra roundtrips
         string? armToken = null;
@@ -109,32 +123,32 @@ public class AzureReportService : IAzureReportService
         catch (Exception ex) { _logger.LogWarning(ex, "Could not obtain ARM token — cost/burn-rate will be unavailable"); }
 
         Report("Fetching cost data…", 53);
-        var costInfo = await GetCostAsync(subscriptionId, armToken, ct);
+        var costInfo = await RunTimedStepAsync("Fetching cost data", () => GetCostAsync(subscriptionId, armToken, ct));
 
         Report("Checking SSL certificates…", 60);
-        var sslExpiry = await CheckSslAsync(connectedSvcs, ct);
+        var sslExpiry = await RunTimedStepAsync("Checking SSL certificates", () => CheckSslAsync(connectedSvcs, ct));
 
         Report("Checking configuration drift…", 65);
-        var configDrift = await GetConfigDriftAsync(connectedSvcs, arm, ct);
+        var configDrift = await RunTimedStepAsync("Checking configuration drift", () => GetConfigDriftAsync(connectedSvcs, arm, ct));
 
         Report("Scanning storage accounts…", 70);
-        var storageInv = await GetStorageInventoryAsync(allResources, armToken, ct);
+        var storageInv = await RunTimedStepAsync("Scanning storage accounts", () => GetStorageInventoryAsync(allResources, armToken, ct));
 
         Report("Analysing free tiers & zombies…", 74);
         var freeTier = AnalyzeFreeTiers(allResources);
         var zombies = DetectZombies(connectedSvcs, metricsMap);
 
         Report("Diffing apps.json…", 77);
-        var appsDiff = await DiffAppsJsonAsync(connectedSvcs, ct);
+        var appsDiff = await RunTimedStepAsync("Diffing apps.json", () => DiffAppsJsonAsync(connectedSvcs, ct));
 
         Report("Calculating burn rate…", 80);
-        var burnRate = await GetBurnRateAsync(subscriptionId, armToken, ct);
+        var burnRate = await RunTimedStepAsync("Calculating burn rate", () => GetBurnRateAsync(subscriptionId, armToken, ct));
 
         Report("Scanning orphaned resources…", 83);
-        var orphaned = await GetOrphanedResourcesAsync(allResources, armToken, ct);
+        var orphaned = await RunTimedStepAsync("Scanning orphaned resources", () => GetOrphanedResourcesAsync(allResources, armToken, ct));
 
         Report("Fetching App Insights metrics…", 86);
-        var appInsights = await GetAppInsightsMetricsAsync(allResources, cred, ct);
+        var appInsights = await RunTimedStepAsync("Fetching App Insights metrics", () => GetAppInsightsMetricsAsync(allResources, cred, ct));
 
         var servicesList = connectedSvcs.Select(s =>
         {
@@ -188,6 +202,7 @@ public class AzureReportService : IAzureReportService
             ZombieApps = zombies,
             OrphanedResources = orphaned,
             BurnRate = burnRate,
+            StepTimings = stepTimings.OrderByDescending(x => x.ElapsedMs).ToList(),
         };
 
         var delta = ComputeDelta(report, previousReport);
@@ -319,23 +334,25 @@ public class AzureReportService : IAzureReportService
     private async Task<Dictionary<string, MetricsInfo>> GetMetricsAsync(
         List<RawService> services, DefaultAzureCredential cred, CancellationToken ct)
     {
-        var result = new Dictionary<string, MetricsInfo>(StringComparer.OrdinalIgnoreCase);
+        var result = new ConcurrentDictionary<string, MetricsInfo>(StringComparer.OrdinalIgnoreCase);
         var appSvcs = services.Where(s => s.ResourceId is not null && s.ResourceTypeRaw == "Microsoft.Web/sites").ToList();
-        if (appSvcs.Count == 0) return result;
+        if (appSvcs.Count == 0) return [];
 
         MetricsQueryClient metricsClient;
         try { metricsClient = new MetricsQueryClient(cred); }
         catch (Exception ex)
         {
             _logger.LogInformation(ex, "MetricsQueryClient could not be initialised — skipping metrics (expected in local dev without App Insights)");
-            return result;
+            return [];
         }
 
         var end = DateTimeOffset.UtcNow;
         var start = end.AddDays(-7);
 
-        foreach (var svc in appSvcs)
+        using var gate = new SemaphoreSlim(6);
+        var tasks = appSvcs.Select(async svc =>
         {
+            await gate.WaitAsync(ct);
             try
             {
                 var response = await metricsClient.QueryResourceAsync(
@@ -369,8 +386,14 @@ public class AzureReportService : IAzureReportService
             {
                 _logger.LogDebug(ex, "Metrics unavailable for {Name}", svc.Name);
             }
-        }
-        return result;
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks);
+        return result.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
     }
 
     // ── Step 5: 30-day cost via Cost Management REST ───────────────────────────
@@ -454,44 +477,50 @@ public class AzureReportService : IAzureReportService
 
     private async Task<List<SslEntry>> CheckSslAsync(List<RawService> services, CancellationToken ct)
     {
-        var results = new List<SslEntry>();
-        foreach (var svc in services)
+        using var gate = new SemaphoreSlim(8);
+        var tasks = services.Select(async svc =>
         {
-            if (svc.Url is not { } url || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            {
-                results.Add(new SslEntry { Name = svc.Name, Url = svc.Url, Error = "Non-HTTPS" });
-                continue;
-            }
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                results.Add(new SslEntry { Name = svc.Name, Url = url, Error = "Invalid URL" });
-                continue;
-            }
+            await gate.WaitAsync(ct);
             try
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(TimeSpan.FromSeconds(8));
-                using var tcp = new TcpClient();
-                await tcp.ConnectAsync(uri.Host, 443, cts.Token);
-                using var ssl = new SslStream(tcp.GetStream(), false, (_, _, _, _) => true);
-                await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+                if (svc.Url is not { } url || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                    return new SslEntry { Name = svc.Name, Url = svc.Url, Error = "Non-HTTPS" };
+
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                    return new SslEntry { Name = svc.Name, Url = url, Error = "Invalid URL" };
+
+                try
                 {
-                    TargetHost = uri.Host,
-                }, cts.Token);
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    cts.CancelAfter(TimeSpan.FromSeconds(8));
+                    using var tcp = new TcpClient();
+                    await tcp.ConnectAsync(uri.Host, 443, cts.Token);
+                    using var ssl = new SslStream(tcp.GetStream(), false, (_, _, _, _) => true);
+                    await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+                    {
+                        TargetHost = uri.Host,
+                    }, cts.Token);
 
-                var cert = ssl.RemoteCertificate;
-                if (cert is null) { results.Add(new SslEntry { Name = svc.Name, Url = url, Error = "No cert" }); continue; }
+                    var cert = ssl.RemoteCertificate;
+                    if (cert is null)
+                        return new SslEntry { Name = svc.Name, Url = url, Error = "No cert" };
 
-                var expiry = DateTime.Parse(cert.GetExpirationDateString());
-                var daysLeft = (int)(expiry - DateTime.UtcNow).TotalDays;
-                results.Add(new SslEntry { Name = svc.Name, Url = url, Expiry = expiry.ToString("yyyy-MM-dd"), DaysLeft = daysLeft, Subject = cert.Subject });
+                    var expiry = DateTime.Parse(cert.GetExpirationDateString());
+                    var daysLeft = (int)(expiry - DateTime.UtcNow).TotalDays;
+                    return new SslEntry { Name = svc.Name, Url = url, Expiry = expiry.ToString("yyyy-MM-dd"), DaysLeft = daysLeft, Subject = cert.Subject };
+                }
+                catch (Exception ex)
+                {
+                    return new SslEntry { Name = svc.Name, Url = url, Error = ex.Message };
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                results.Add(new SslEntry { Name = svc.Name, Url = url, Error = ex.Message });
+                gate.Release();
             }
-        }
-        return results;
+        });
+
+        return (await Task.WhenAll(tasks)).ToList();
     }
 
     // ── Step 7: Config drift ───────────────────────────────────────────────────
@@ -499,9 +528,11 @@ public class AzureReportService : IAzureReportService
     private async Task<List<ConfigDriftItem>> GetConfigDriftAsync(
         List<RawService> services, ArmClient arm, CancellationToken ct)
     {
-        var results = new List<ConfigDriftItem>();
-        foreach (var svc in services.Where(s => s.ResourceTypeRaw == "Microsoft.Web/sites" && s.ResourceId is not null))
+        var targets = services.Where(s => s.ResourceTypeRaw == "Microsoft.Web/sites" && s.ResourceId is not null).ToList();
+        using var gate = new SemaphoreSlim(6);
+        var tasks = targets.Select(async svc =>
         {
+            await gate.WaitAsync(ct);
             try
             {
                 // Get the site config child resource directly by resource ID (no RG traversal needed)
@@ -525,21 +556,28 @@ public class AzureReportService : IAzureReportService
                 if (cfg.Cors?.AllowedOrigins?.Contains("*") == true)
                     issues.Add(new ConfigIssue { Severity = "medium", Issue = "CORS * — all origins allowed" });
 
-                results.Add(new ConfigDriftItem
+                return new ConfigDriftItem
                 {
                     Name = svc.Name,
                     FriendlyName = svc.FriendlyName,
                     ResourceGroup = svc.ResourceGroup,
                     IssueCount = issues.Count,
                     Issues = issues,
-                });
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Config drift check failed for {Name}", svc.Name);
+                return null;
             }
-        }
-        return results;
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        return results.OfType<ConfigDriftItem>().OrderBy(x => x.Name).ToList();
     }
 
     // ── Step 8: Storage inventory ─────────────────────────────────────────────
@@ -959,13 +997,12 @@ public class AzureReportService : IAzureReportService
     private async Task<List<AppInsightsMetric>> GetAppInsightsMetricsAsync(
         List<GenericResourceData> allResources, DefaultAzureCredential cred, CancellationToken ct)
     {
-        var results = new List<AppInsightsMetric>();
         var components = allResources
             .Where(r => r.ResourceType.ToString().Equals(
                 "microsoft.insights/components", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        if (components.Count == 0) return results;
+        if (components.Count == 0) return [];
 
         // App Insights telemetry (requests, exceptions) lives in Log Analytics —
         // it cannot be queried via MetricsQueryClient. Use LogsQueryClient instead.
@@ -974,13 +1011,15 @@ public class AzureReportService : IAzureReportService
         catch (Exception ex)
         {
             _logger.LogInformation(ex, "LogsQueryClient unavailable for App Insights — expected in local dev without connection string");
-            return results;
+            return [];
         }
 
         var timeRange = new QueryTimeRange(DateTimeOffset.UtcNow.AddDays(-7), DateTimeOffset.UtcNow);
 
-        foreach (var comp in components)
+        using var gate = new SemaphoreSlim(4);
+        var tasks = components.Select(async comp =>
         {
+            await gate.WaitAsync(ct);
             try
             {
                 var resourceId = new ResourceIdentifier(comp.Id!.ToString());
@@ -1008,18 +1047,28 @@ public class AzureReportService : IAzureReportService
                 if (excResp.Value?.Table?.Rows is { Count: > 0 } excRows)
                     exceptions = (int)(excRows[0].GetInt64(0) ?? 0L);
 
-                results.Add(new AppInsightsMetric
+                return new AppInsightsMetric
                 {
                     Name = comp.Name,
                     ResourceGroup = comp.Id?.ResourceGroupName,
                     Requests7Days = requests,
                     FailedRequests7Days = failed,
                     Exceptions7Days = exceptions,
-                });
+                };
             }
-            catch (Exception ex) { _logger.LogDebug(ex, "App Insights logs query failed for {Name}", comp.Name); }
-        }
-        return results;
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "App Insights logs query failed for {Name}", comp.Name);
+                return null;
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        return results.OfType<AppInsightsMetric>().OrderBy(x => x.Name).ToList();
     }
 
     // ── Item 1: Report Delta ──────────────────────────────────────────────────

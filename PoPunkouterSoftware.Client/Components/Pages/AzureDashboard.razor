@@ -690,6 +690,45 @@ else
                     </RadzenDataGrid>
                     </div>
                 }
+
+                <RadzenText TextStyle="TextStyle.H6" class="rz-mt-4 rz-mb-2">⏱ Refresh Step Timings</RadzenText>
+                @if (currentReport.StepTimings?.Any() != true)
+                {
+                    <div class="app-callout info">
+                        ⏱ No step timing data yet — run Refresh from Azure to collect timing breakdowns.
+                    </div>
+                }
+                else
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="10px" class="rz-mb-2">
+                        <RadzenBadge Text="@($"Total: {StepTimingTotalMs / 1000.0:F1}s")" BadgeStyle="BadgeStyle.Info" IsPill="true" />
+                        @if (SlowestStepTiming is not null)
+                        {
+                            <RadzenBadge Text="@($"Slowest: {SlowestStepTiming.Step} ({SlowestStepTiming.ElapsedMs / 1000.0:F1}s)")" BadgeStyle="BadgeStyle.Warning" IsPill="true" />
+                        }
+                    </RadzenStack>
+
+                    <div class="app-table-frame">
+                    <RadzenDataGrid Data="@currentReport.StepTimings.OrderByDescending(x => x.ElapsedMs)" TItem="StepTimingEntry"
+                                    AllowSorting="true" AllowPaging="true" PageSize="10">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="StepTimingEntry" Property="Step" Title="Step" />
+                            <RadzenDataGridColumn TItem="StepTimingEntry" Property="ElapsedMs" Title="Elapsed" Width="120px" TextAlign="TextAlign.Right">
+                                <Template Context="t">
+                                    <RadzenBadge Text="@($"{t.ElapsedMs / 1000.0:F2}s")" IsPill="true"
+                                                 BadgeStyle="@(t.ElapsedMs > 30000 ? BadgeStyle.Danger : t.ElapsedMs > 10000 ? BadgeStyle.Warning : BadgeStyle.Success)" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="StepTimingEntry" Title="Share" Width="110px" TextAlign="TextAlign.Right" Sortable="false" Filterable="false">
+                                <Template Context="t">
+                                    @($"{(StepTimingTotalMs > 0 ? (t.ElapsedMs * 100.0 / StepTimingTotalMs) : 0):F0}%")
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                    </div>
+                }
+
                 <RadzenText TextStyle="TextStyle.H6" class="rz-mt-4 rz-mb-2">📦 Resources</RadzenText>
                 <RadzenRow>
                     <RadzenColumn SizeXS="12" SizeMD="6">
@@ -1718,6 +1757,9 @@ else
             .Select(d => new DailyCostChartPoint(
                 DateTime.TryParse(d.Date, out var dt) ? dt.ToString("MMM d") : d.Date,
                 d.Cost)).ToList() ?? new();
+
+    private long StepTimingTotalMs => report?.StepTimings?.Sum(x => x.ElapsedMs) ?? 0;
+    private StepTimingEntry? SlowestStepTiming => report?.StepTimings?.OrderByDescending(x => x.ElapsedMs).FirstOrDefault();
 
     // Show a label every ~5 days so the x-axis stays readable
     private int BurnRateLabelStep =>
