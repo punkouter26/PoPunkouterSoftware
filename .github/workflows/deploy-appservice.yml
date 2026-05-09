@@ -87,7 +87,7 @@ jobs:
 
       - name: Azure Login (OIDC)
         if: ${{ env.HAS_OIDC == 'true' }}
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Azure Login (Service Principal JSON)
         if: ${{ env.HAS_OIDC != 'true' && env.HAS_AZURE_CREDENTIALS == 'true' }}
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 

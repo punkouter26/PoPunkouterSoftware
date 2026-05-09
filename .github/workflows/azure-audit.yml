@@ -46,7 +46,7 @@ jobs:
       #     --scopes /subscriptions/<SUB_ID> \
       #     --sdk-auth
       - name: Azure CLI login
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           creds: |
             {
