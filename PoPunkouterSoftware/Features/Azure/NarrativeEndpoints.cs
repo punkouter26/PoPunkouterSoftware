@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Infrastructure.Azure;
-using System.Text;
 using System.Text.Json;
 
 namespace PoPunkouterSoftware.Features.Azure;
@@ -100,44 +99,20 @@ internal static class NarrativeEndpoints
             // ── Call Azure OpenAI ─────────────────────────────────────────────
             try
             {
-                var client = httpClientFactory.CreateClient("azure-openai");
-                var apiVersion = "2024-02-01";
-                var url = $"{endpoint.TrimEnd('/')}/openai/deployments/{deployment}/chat/completions?api-version={apiVersion}";
+                var narrative = await AzureOpenAiClient.GetCompletionAsync(
+                    httpClientFactory,
+                    endpoint,
+                    apiKey,
+                    deployment,
+                    systemPrompt,
+                    userPrompt,
+                    maxTokens: 200,
+                    temperature: 0.5,
+                    logger,
+                    ct);
 
-                var requestBody = JsonSerializer.Serialize(new
-                {
-                    messages = new[]
-                    {
-                        new { role = "system", content = systemPrompt },
-                        new { role = "user",   content = userPrompt   },
-                    },
-                    temperature = 0.5,
-                    max_tokens = 200,
-                });
-
-                using var request = new HttpRequestMessage(HttpMethod.Post, url)
-                {
-                    Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
-                };
-                request.Headers.Add("api-key", apiKey);
-
-                using var response = await client.SendAsync(request, ct);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var err = await response.Content.ReadAsStringAsync(ct);
-                    var truncated = err.Length > 200 ? err[..200] + "…" : err;
-                    logger.LogWarning("Azure OpenAI narrative call failed: {Status} — {Body}", response.StatusCode, truncated);
-                    return Results.Problem(detail: $"Azure OpenAI returned {(int)response.StatusCode}.", statusCode: 502);
-                }
-
-                var json = await response.Content.ReadAsStringAsync(ct);
-                using var doc = JsonDocument.Parse(json);
-                var narrative = doc.RootElement
-                    .GetProperty("choices")[0]
-                    .GetProperty("message")
-                    .GetProperty("content")
-                    .GetString()
-                    ?.Trim() ?? "";
+                if (narrative is null)
+                    return Results.Problem(detail: "Azure OpenAI call failed.", statusCode: 502);
 
                 cache.Set(cacheKey, narrative, TimeSpan.FromHours(24));
                 logger.LogInformation("Narrative generated ({Chars} chars) and cached 24h", narrative.Length);

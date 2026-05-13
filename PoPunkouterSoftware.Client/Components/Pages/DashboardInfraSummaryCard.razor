@@ -1,0 +1,13 @@
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenCard class="app-text-right" Style="@($"text-align:center;border-top:4px solid {Color};padding:.65rem")">
+    <RadzenText TextStyle="TextStyle.H5" Style="@($"color:{Color};margin:0")"><strong>@Num</strong></RadzenText>
+    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary rz-text-uppercase app-badge-2xs">@Label</RadzenText>
+</RadzenCard>
+
+@code {
+    [Parameter] public string Num   { get; set; } = "";
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Color { get; set; } = "";
+}

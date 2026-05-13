@@ -74,53 +74,25 @@ internal static class FixPlanEndpoints
 
             var prompt = BuildPrompt(service, driftItems);
 
-            // ── Call Azure OpenAI REST API ────────────────────────────────────
+            // ── Call Azure OpenAI ─────────────────────────────────────────────
             try
             {
-                var client = httpClientFactory.CreateClient("azure-openai");
-                var apiVersion = "2024-02-01";
-                var url = $"{endpoint.TrimEnd('/')}/openai/deployments/{deployment}/chat/completions?api-version={apiVersion}";
+                var plan = await AzureOpenAiClient.GetCompletionAsync(
+                    httpClientFactory,
+                    endpoint,
+                    apiKey,
+                    deployment,
+                    systemPrompt: "You are an Azure infrastructure expert. Produce concise, actionable fix plans for broken or unhealthy Azure App Services. Use numbered steps. Be specific and include az CLI commands where applicable. Do not include preamble — start directly with the numbered list.",
+                    userPrompt: prompt,
+                    maxTokens: 800,
+                    temperature: 0.3,
+                    logger,
+                    ct);
 
-                var requestBody = JsonSerializer.Serialize(new
-                {
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role    = "system",
-                            content = "You are an Azure infrastructure expert. Produce concise, actionable fix plans for broken or unhealthy Azure App Services. Use numbered steps. Be specific and include az CLI commands where applicable. Do not include preamble — start directly with the numbered list."
-                        },
-                        new { role = "user", content = prompt }
-                    },
-                    temperature = 0.3,
-                    max_tokens = 800
-                });
-
-                using var request = new HttpRequestMessage(HttpMethod.Post, url)
-                {
-                    Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
-                };
-                request.Headers.Add("api-key", apiKey);
-
-                using var response = await client.SendAsync(request, ct);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var err = await response.Content.ReadAsStringAsync(ct);
-                    // Truncate error body to avoid leaking secrets / large bodies
-                    var truncated = err.Length > 200 ? err[..200] + "…" : err;
-                    logger.LogWarning("Azure OpenAI fix-plan call failed: {Status} — {Body}", response.StatusCode, truncated);
+                if (plan is null)
                     return Results.Problem(
-                        detail: $"Azure OpenAI returned {(int)response.StatusCode}. Check your endpoint, key, and deployment name.",
+                        detail: "Azure OpenAI call failed. Check your endpoint, key, and deployment name.",
                         statusCode: 502);
-                }
-
-                var json = await response.Content.ReadAsStringAsync(ct);
-                using var doc = JsonDocument.Parse(json);
-                var plan = doc.RootElement
-                    .GetProperty("choices")[0]
-                    .GetProperty("message")
-                    .GetProperty("content")
-                    .GetString() ?? "";
 
                 cache.Set(cacheKey, plan, TimeSpan.FromHours(4));
                 return Results.Ok(new { plan });

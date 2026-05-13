@@ -53,6 +53,7 @@ obj/
 /azure-spend-detail-report.json
 /azure-cost-audit-report.json
 AZURE-REPORT.md
+results.txt
 AZURE-ARCHITECTURE.mmd
 AZURE-DEPENDENCIES.mmd
 AZURE-RESOURCE-BREAKDOWN.mmd

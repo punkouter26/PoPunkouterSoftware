@@ -8,7 +8,7 @@ namespace PoPunkouterSoftware.Features.Diag;
 
 internal static class DiagEndpoints
 {
-    static volatile bool _refreshRunning;
+    static readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     internal static WebApplication MapDiagEndpoints(this WebApplication app)
     {
@@ -47,10 +47,8 @@ internal static class DiagEndpoints
             (IServiceScopeFactory scopeFactory, IWebHostEnvironment env, ILogger<Program> logger,
              Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Features.Azure.RefreshHub> hubCtx) =>
         {
-            if (_refreshRunning)
+            if (!_refreshLock.Wait(0))
                 return Results.Problem(detail: "Refresh already in progress.", statusCode: 409);
-
-            _refreshRunning = true;
 
             _ = Task.Run(async () =>
             {
@@ -66,10 +64,12 @@ internal static class DiagEndpoints
                     _ = hubCtx.Clients.All.SendAsync("RefreshProgress",
                         new { step = p.Step, percent = p.Percent, done = false });
                 });
+                bool lockReleased = false;
                 try
                 {
                     var report = await azureService.RunAsync(progress, ct);
-                    _refreshRunning = false;
+                    _refreshLock.Release();
+                    lockReleased = true;
 
                     await store.SaveAsync(report, ct);
 
@@ -96,12 +96,12 @@ internal static class DiagEndpoints
                 }
                 catch (OperationCanceledException)
                 {
-                    _refreshRunning = false;
+                    if (!lockReleased) _refreshLock.Release();
                     logger.LogWarning("Refresh cancelled or timed out");
                 }
                 catch (Exception ex)
                 {
-                    _refreshRunning = false;
+                    if (!lockReleased) _refreshLock.Release();
                     logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
                 }
             });

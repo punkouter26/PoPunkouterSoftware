@@ -17,12 +17,6 @@
                 usable diagnostics, and portfolio quality instead of demo-only surfaces.
             </p>
 
-            <div class="app-actions">
-                <RadzenButton Text="Open Azure Command Center" Icon="dashboard" ButtonStyle="ButtonStyle.Primary"
-                              Click="@(() => NavigationManager.NavigateTo("/azure"))" />
-                <RadzenButton Text="View Live Status" Icon="monitor_heart" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
-                              Click="@(() => NavigationManager.NavigateTo("/status"))" />
-            </div>
 
             <div class="app-grid metrics">
                 <div class="app-stat">
@@ -184,9 +178,6 @@
                                           ButtonStyle="ButtonStyle.Primary"
                                           Disabled="@(string.IsNullOrEmpty(app.Url))"
                                           Click="@(() => OpenApp(app.Url))" />
-                            <RadzenButton Text="Azure View" Icon="dashboard" Size="ButtonSize.Small"
-                                          ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
-                                          Click="@(() => NavigationManager.NavigateTo("/azure"))" />
                         </div>
                     </RadzenCard>
                 }
