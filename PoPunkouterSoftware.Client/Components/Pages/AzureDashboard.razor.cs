@@ -54,7 +54,7 @@ public partial class AzureDashboard
         responseTime < 1000 ? "app-tone-success" : responseTime < 3000 ? "app-tone-warning" : "app-tone-danger";
 
     private bool _refreshing;
-    private int    _progressPercent;
+    private int _progressPercent;
     private string _progressStep = "";
     private CancellationTokenSource? _refreshCts;
     private const int RefreshTimeoutSeconds = 120;
@@ -65,17 +65,17 @@ public partial class AzureDashboard
 
     // ── Fix Plan state ────────────────────────────────────────────────────────
     private WebService? _fixPlanService;
-    private string?     _fixPlanText;
-    private string?     _fixPlanError;
-    private string?     _fixPlanDisabledMessage;
-    private bool        _fixPlanLoading;
+    private string? _fixPlanText;
+    private string? _fixPlanError;
+    private string? _fixPlanDisabledMessage;
+    private bool _fixPlanLoading;
 
     // ── CI/CD Review state ────────────────────────────────────────────────────
-    private List<InfraReview>  _infraReviews         = new();
-    private bool               _infraLoading;
-    private string?            _infraError;
-    private string?            _infraDisabledMessage;
-    private InfraReview?       _infraSelected;
+    private List<InfraReview> _infraReviews = new();
+    private bool _infraLoading;
+    private string? _infraError;
+    private string? _infraDisabledMessage;
+    private InfraReview? _infraSelected;
 
     // ── Incidents state ───────────────────────────────────────────────────────
     private List<IncidentEntry> _incidents = new();
@@ -148,11 +148,11 @@ public partial class AzureDashboard
 
     private async Task RefreshAsync()
     {
-        _refreshing      = true;
+        _refreshing = true;
         _progressPercent = 0;
-        _progressStep    = "Starting…";
-        report           = null;
-        _refreshCts      = new CancellationTokenSource(TimeSpan.FromSeconds(RefreshTimeoutSeconds));
+        _progressStep = "Starting…";
+        report = null;
+        _refreshCts = new CancellationTokenSource(TimeSpan.FromSeconds(RefreshTimeoutSeconds));
         StateHasChanged();
 
         await EnsureHubConnectedAsync();
@@ -240,11 +240,11 @@ public partial class AzureDashboard
         {
             try
             {
-                var json   = JsonSerializer.Serialize(payload);
+                var json = JsonSerializer.Serialize(payload);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                if (root.TryGetProperty("percent", out var pct))  _progressPercent = pct.GetInt32();
-                if (root.TryGetProperty("step",    out var step)) _progressStep    = step.GetString() ?? "";
+                if (root.TryGetProperty("percent", out var pct)) _progressPercent = pct.GetInt32();
+                if (root.TryGetProperty("step", out var step)) _progressStep = step.GetString() ?? "";
                 bool done = root.TryGetProperty("done", out var d) && d.GetBoolean();
                 if (done) _refreshing = false;
             }
@@ -268,26 +268,26 @@ public partial class AzureDashboard
         var items = new List<SafeToRemoveItem>();
         foreach (var svc in r.WebServices?.Services ?? new())
         {
-            var zero        = svc.Metrics7Days?.Requests == 0;
-            var broken      = svc.HttpStatus == "broken";
+            var zero = svc.Metrics7Days?.Requests == 0;
+            var broken = svc.HttpStatus == "broken";
             var unreachable = svc.HttpStatus == "unreachable";
-            var stopped     = svc.PlatformState == "Stopped";
-            var azErr       = svc.Connectivity?.IsAzureErrorPage == true;
+            var stopped = svc.PlatformState == "Stopped";
+            var azErr = svc.Connectivity?.IsAzureErrorPage == true;
             if ((broken || unreachable || stopped || azErr) && zero)
             {
                 var reasons = new List<string>();
-                if (broken)      reasons.Add("HTTP broken");
+                if (broken) reasons.Add("HTTP broken");
                 if (unreachable) reasons.Add("Unreachable (timeout)");
-                if (stopped)     reasons.Add("Platform Stopped");
-                if (azErr)       reasons.Add("Serving Azure error page");
-                if (zero)        reasons.Add("0 requests in 7 days");
+                if (stopped) reasons.Add("Platform Stopped");
+                if (azErr) reasons.Add("Serving Azure error page");
+                if (zero) reasons.Add("0 requests in 7 days");
                 items.Add(new SafeToRemoveItem
                 {
-                    Name       = svc.Name,
-                    Source     = "Connectivity + Metrics",
-                    Reason     = string.Join(", ", reasons),
+                    Name = svc.Name,
+                    Source = "Connectivity + Metrics",
+                    Reason = string.Join(", ", reasons),
                     Confidence = broken ? "high" : "medium",
-                    Command    = svc.ResourceType == "Microsoft.Web/sites"
+                    Command = svc.ResourceType == "Microsoft.Web/sites"
                         ? $"az webapp delete --name \"{svc.Name}\" --resource-group \"{svc.ResourceGroup}\""
                         : null,
                 });
@@ -303,26 +303,26 @@ public partial class AzureDashboard
 
     private static string TypeLabel(string? t) => t switch
     {
-        "Microsoft.Web/sites"         => "App Service",
+        "Microsoft.Web/sites" => "App Service",
         "Microsoft.App/containerApps" => "Container App",
-        "Microsoft.Web/staticSites"   => "Static Web App",
-        _                             => t?.Split('/').LastOrDefault() ?? "—",
+        "Microsoft.Web/staticSites" => "Static Web App",
+        _ => t?.Split('/').LastOrDefault() ?? "—",
     };
 
     private static BadgeStyle HttpBadgeStyle(string? s) => s switch
     {
         "active" => BadgeStyle.Success,
         "broken" => BadgeStyle.Danger,
-        _        => BadgeStyle.Warning,
+        _ => BadgeStyle.Warning,
     };
 
     private async Task OpenFixPlan(WebService service)
     {
-        _fixPlanService         = service;
-        _fixPlanText            = null;
-        _fixPlanError           = null;
+        _fixPlanService = service;
+        _fixPlanText = null;
+        _fixPlanError = null;
         _fixPlanDisabledMessage = null;
-        _fixPlanLoading         = true;
+        _fixPlanLoading = true;
         StateHasChanged();
         _selectedTabIndex = 2;
 
@@ -366,8 +366,8 @@ public partial class AzureDashboard
         NotificationService.Notify(new NotificationMessage
         {
             Severity = NotificationSeverity.Success,
-            Summary  = "Copied",
-            Detail   = "Command copied to clipboard",
+            Summary = "Copied",
+            Detail = "Command copied to clipboard",
             Duration = 2500
         });
     }
@@ -377,8 +377,8 @@ public partial class AzureDashboard
         try
         {
             var resp = await Http.PostAsync($"/api/manage/restart/{Uri.EscapeDataString(resourceGroup)}/{Uri.EscapeDataString(name)}", null);
-            var msg  = resp.IsSuccessStatusCode ? $"{name} restart initiated." : $"Restart failed ({(int)resp.StatusCode}).";
-            var sev  = resp.IsSuccessStatusCode ? NotificationSeverity.Success : NotificationSeverity.Error;
+            var msg = resp.IsSuccessStatusCode ? $"{name} restart initiated." : $"Restart failed ({(int)resp.StatusCode}).";
+            var sev = resp.IsSuccessStatusCode ? NotificationSeverity.Success : NotificationSeverity.Error;
             NotificationService.Notify(sev, "App Service", msg);
         }
         catch (Exception ex)
@@ -392,8 +392,8 @@ public partial class AzureDashboard
         try
         {
             var resp = await Http.PostAsync($"/api/manage/scale-free/{Uri.EscapeDataString(resourceGroup)}/{Uri.EscapeDataString(planName)}", null);
-            var msg  = resp.IsSuccessStatusCode ? $"{planName} scaled to Free tier." : $"Scale failed ({(int)resp.StatusCode}).";
-            var sev  = resp.IsSuccessStatusCode ? NotificationSeverity.Success : NotificationSeverity.Error;
+            var msg = resp.IsSuccessStatusCode ? $"{planName} scaled to Free tier." : $"Scale failed ({(int)resp.StatusCode}).";
+            var sev = resp.IsSuccessStatusCode ? NotificationSeverity.Success : NotificationSeverity.Error;
             NotificationService.Notify(sev, "Scale", msg);
         }
         catch (Exception ex)
@@ -424,7 +424,7 @@ public partial class AzureDashboard
     private async Task LoadStatusAsync()
     {
         _statusLoading = true;
-        _statusError   = null;
+        _statusError = null;
         StateHasChanged();
         var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         try
@@ -442,7 +442,7 @@ public partial class AzureDashboard
             {
                 _pingerSweptAt = snap.SweptAt;
                 _pingerResults = snap.Results.ToDictionary(r => r.Name, StringComparer.OrdinalIgnoreCase);
-                _pingerLoaded  = true;
+                _pingerLoaded = true;
             }
         }
         catch { /* non-fatal */ }
@@ -460,7 +460,7 @@ public partial class AzureDashboard
     private async Task LoadHealthAsync()
     {
         _healthLoading = true;
-        _healthError   = null;
+        _healthError = null;
         StateHasChanged();
         try
         {
@@ -493,11 +493,11 @@ public partial class AzureDashboard
     {
         if (_selectedResourceType == typeLabel)
         {
-            _selectedResourceType    = null;
+            _selectedResourceType = null;
             _selectedResourceDetails = null;
             return;
         }
-        _selectedResourceType    = typeLabel;
+        _selectedResourceType = typeLabel;
         _selectedResourceDetails = report?.AllResourceSummary?.ResourcesByType.GetValueOrDefault(typeLabel);
     }
 
@@ -522,7 +522,7 @@ public partial class AzureDashboard
             var byRg = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             foreach (var d in report.Cost.TopCostDrivers)
             {
-                var m  = System.Text.RegularExpressions.Regex.Match(d.Name, @"\(([^)]+)\)$");
+                var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"\(([^)]+)\)$");
                 var rg = m.Success ? m.Groups[1].Value : "Other";
                 byRg[rg] = byRg.GetValueOrDefault(rg) + d.Cost;
             }
@@ -547,8 +547,8 @@ public partial class AzureDashboard
     // ── CI/CD Review helpers ──────────────────────────────────────────────────
     private async Task LoadInfraReviewAsync()
     {
-        _infraLoading         = true;
-        _infraError           = null;
+        _infraLoading = true;
+        _infraError = null;
         _infraDisabledMessage = null;
         StateHasChanged();
         try
@@ -583,7 +583,7 @@ public partial class AzureDashboard
     private async Task RescanInfraAsync()
     {
         await Http.PostAsync("/api/infra/cicd-review/refresh", null);
-        _infraReviews  = new();
+        _infraReviews = new();
         _infraSelected = null;
         await LoadInfraReviewAsync();
     }
@@ -595,42 +595,42 @@ public partial class AzureDashboard
 
     private static BadgeStyle TargetBadge(string? target) => target switch
     {
-        "Container Apps"     => BadgeStyle.Info,
-        "App Service"        => BadgeStyle.Primary,
-        "Static Web Apps"    => BadgeStyle.Success,
-        "Azure Functions"    => BadgeStyle.Warning,
-        "AKS"                => BadgeStyle.Danger,
+        "Container Apps" => BadgeStyle.Info,
+        "App Service" => BadgeStyle.Primary,
+        "Static Web Apps" => BadgeStyle.Success,
+        "Azure Functions" => BadgeStyle.Warning,
+        "AKS" => BadgeStyle.Danger,
         "Container Instance" => BadgeStyle.Light,
-        "ARM/Bicep Deploy"   => BadgeStyle.Secondary,
-        _                    => BadgeStyle.Light,
+        "ARM/Bicep Deploy" => BadgeStyle.Secondary,
+        _ => BadgeStyle.Light,
     };
 
     private static BadgeStyle TriggerBadge(string trigger) => trigger switch
     {
-        "push"              => BadgeStyle.Primary,
-        "pull_request"      => BadgeStyle.Success,
+        "push" => BadgeStyle.Primary,
+        "pull_request" => BadgeStyle.Success,
         "workflow_dispatch" => BadgeStyle.Warning,
-        "schedule"          => BadgeStyle.Info,
-        "release"           => BadgeStyle.Danger,
-        _                   => BadgeStyle.Light,
+        "schedule" => BadgeStyle.Info,
+        "release" => BadgeStyle.Danger,
+        _ => BadgeStyle.Light,
     };
 
     private static BadgeStyle InfraFileBadge(string fileType) => fileType switch
     {
-        "bicep"   => BadgeStyle.Primary,
-        "arm"     => BadgeStyle.Info,
-        "azd"     => BadgeStyle.Success,
-        "docker"  => BadgeStyle.Warning,
+        "bicep" => BadgeStyle.Primary,
+        "arm" => BadgeStyle.Info,
+        "azd" => BadgeStyle.Success,
+        "docker" => BadgeStyle.Warning,
         "compose" => BadgeStyle.Warning,
-        _         => BadgeStyle.Light,
+        _ => BadgeStyle.Light,
     };
 
     private static BadgeStyle ActionabilityBadge(string? tier) => tier switch
     {
-        "Fix Now"          => BadgeStyle.Danger,
-        "Fix Soon"         => BadgeStyle.Warning,
+        "Fix Now" => BadgeStyle.Danger,
+        "Fix Soon" => BadgeStyle.Warning,
         "Remove Candidate" => BadgeStyle.Secondary,
-        _                  => BadgeStyle.Info,
+        _ => BadgeStyle.Info,
     };
 
     private static List<ConsolidatedService> BuildConsolidatedServices(AzureReport? r)
@@ -646,50 +646,50 @@ public partial class AzureDashboard
         var raw = new List<ConsolidatedService>();
         foreach (var group in grouped)
         {
-            var entries    = group.ToList();
-            var first      = entries[0];
+            var entries = group.ToList();
+            var first = entries[0];
             var requests7d = entries.Sum(x => x.Metrics7Days?.Requests ?? 0);
-            var http5xx7d  = entries.Sum(x => x.Metrics7Days?.Http5xx ?? 0);
-            var hasBroken  = entries.Any(x => x.HttpStatus is "broken" or "unreachable" || x.Connectivity?.IsAzureErrorPage == true || x.PlatformState == "Stopped");
+            var http5xx7d = entries.Sum(x => x.Metrics7Days?.Http5xx ?? 0);
+            var hasBroken = entries.Any(x => x.HttpStatus is "broken" or "unreachable" || x.Connectivity?.IsAzureErrorPage == true || x.PlatformState == "Stopped");
             var rtCandidates = entries.Where(x => x.Connectivity?.Success == true).Select(x => x.Connectivity!.ResponseTime).ToList();
             var responseMs = rtCandidates.Count > 0 ? (int?)Math.Round(rtCandidates.Average()) : null;
-            var status     = hasBroken ? "broken" : entries.Any(x => x.HttpStatus == "active") ? "active" : "other";
+            var status = hasBroken ? "broken" : entries.Any(x => x.HttpStatus == "active") ? "active" : "other";
 
             var reliability = 100;
             reliability -= hasBroken ? 35 : 0;
             reliability -= Math.Min(30, http5xx7d * 3);
             reliability -= responseMs is > 3000 ? 20 : responseMs is > 1200 ? 10 : 0;
             reliability -= requests7d == 0 ? 10 : 0;
-            reliability  = Math.Clamp(reliability, 0, 100);
+            reliability = Math.Clamp(reliability, 0, 100);
 
             var health = reliability;
             if (entries.Any(x => x.FreeTierCheck?.CanGoFree == true)) health -= 5;
             health = Math.Clamp(health, 0, 100);
 
             raw.Add(new ConsolidatedService(
-                Key:                  group.Key,
-                DisplayName:          string.IsNullOrWhiteSpace(first.FriendlyName) ? first.Name : first.FriendlyName,
-                ResourceTypeSummary:  string.Join(" + ", entries.Select(x => TypeLabel(x.ResourceType)).Distinct()),
-                HttpStatus:           status,
-                Requests7d:           requests7d,
-                Http5xx7d:            http5xx7d,
-                ResponseTimeMs:       responseMs,
-                HealthScore:          health,
-                ReliabilityScore:     reliability,
-                Actionability:        ToActionability(status, http5xx7d, requests7d),
-                HasAnomaly:           false,
-                Owner:                InferOwner(first.ResourceGroup, first.Name),
-                Environment:          InferEnvironment(first.ResourceGroup, first.Name),
-                Criticality:          InferCriticality(first.ResourceGroup, first.Name),
-                ResourceGroup:        first.ResourceGroup,
-                Command:              first.ResourceType == "Microsoft.Web/sites"
+                Key: group.Key,
+                DisplayName: string.IsNullOrWhiteSpace(first.FriendlyName) ? first.Name : first.FriendlyName,
+                ResourceTypeSummary: string.Join(" + ", entries.Select(x => TypeLabel(x.ResourceType)).Distinct()),
+                HttpStatus: status,
+                Requests7d: requests7d,
+                Http5xx7d: http5xx7d,
+                ResponseTimeMs: responseMs,
+                HealthScore: health,
+                ReliabilityScore: reliability,
+                Actionability: ToActionability(status, http5xx7d, requests7d),
+                HasAnomaly: false,
+                Owner: InferOwner(first.ResourceGroup, first.Name),
+                Environment: InferEnvironment(first.ResourceGroup, first.Name),
+                Criticality: InferCriticality(first.ResourceGroup, first.Name),
+                ResourceGroup: first.ResourceGroup,
+                Command: first.ResourceType == "Microsoft.Web/sites"
                     ? $"az webapp show --name \"{first.Name}\" --resource-group \"{first.ResourceGroup}\""
                     : null
             ));
         }
 
         var medianReq = Median(raw.Select(x => x.Requests7d).ToList());
-        var medianRt  = Median(raw.Where(x => x.ResponseTimeMs.HasValue).Select(x => (double)x.ResponseTimeMs!.Value).ToList());
+        var medianRt = Median(raw.Where(x => x.ResponseTimeMs.HasValue).Select(x => (double)x.ResponseTimeMs!.Value).ToList());
 
         return raw
             .Select(x => x with { HasAnomaly = IsAnomalous(x, medianReq, medianRt) })
@@ -706,14 +706,14 @@ public partial class AzureDashboard
         {
             items.Add(new PriorityQueueItem(
                 Actionability: c.Actionability,
-                Item:          c.DisplayName,
-                Source:        "Reliability",
-                ImpactScore:   100 - c.HealthScore,
-                Confidence:    c.HealthScore < 50 ? "high" : "medium",
-                Reason:        $"Status={c.HttpStatus}; 7d 5xx={c.Http5xx7d}; Reliability={c.ReliabilityScore}%",
-                Owner:         c.Owner,
-                Environment:   c.Environment,
-                Command:       c.Command
+                Item: c.DisplayName,
+                Source: "Reliability",
+                ImpactScore: 100 - c.HealthScore,
+                Confidence: c.HealthScore < 50 ? "high" : "medium",
+                Reason: $"Status={c.HttpStatus}; 7d 5xx={c.Http5xx7d}; Reliability={c.ReliabilityScore}%",
+                Owner: c.Owner,
+                Environment: c.Environment,
+                Command: c.Command
             ));
         }
 
@@ -721,14 +721,14 @@ public partial class AzureDashboard
         {
             items.Add(new PriorityQueueItem(
                 Actionability: "Remove Candidate",
-                Item:          s.Name,
-                Source:        "SafeToRemove",
-                ImpactScore:   s.Confidence == "high" ? 75 : 55,
-                Confidence:    s.Confidence,
-                Reason:        s.Reason,
-                Owner:         "unassigned",
-                Environment:   "unknown",
-                Command:       s.Command
+                Item: s.Name,
+                Source: "SafeToRemove",
+                ImpactScore: s.Confidence == "high" ? 75 : 55,
+                Confidence: s.Confidence,
+                Reason: s.Reason,
+                Owner: "unassigned",
+                Environment: "unknown",
+                Command: s.Command
             ));
         }
 
@@ -737,14 +737,14 @@ public partial class AzureDashboard
             var days = ssl.DaysLeft ?? 0;
             items.Add(new PriorityQueueItem(
                 Actionability: days < 14 ? "Fix Now" : "Fix Soon",
-                Item:          ssl.Name,
-                Source:        "SSL",
-                ImpactScore:   days < 14 ? 90 : 65,
-                Confidence:    "high",
-                Reason:        $"Certificate expires in {days} days",
-                Owner:         "unassigned",
-                Environment:   InferEnvironment(ssl.Name, ssl.Name),
-                Command:       null
+                Item: ssl.Name,
+                Source: "SSL",
+                ImpactScore: days < 14 ? 90 : 65,
+                Confidence: "high",
+                Reason: $"Certificate expires in {days} days",
+                Owner: "unassigned",
+                Environment: InferEnvironment(ssl.Name, ssl.Name),
+                Command: null
             ));
         }
 
@@ -752,14 +752,14 @@ public partial class AzureDashboard
         {
             items.Add(new PriorityQueueItem(
                 Actionability: "Remove Candidate",
-                Item:          orphan.Name,
-                Source:        "Orphaned",
-                ImpactScore:   60,
-                Confidence:    "medium",
-                Reason:        orphan.Reason,
-                Owner:         "unassigned",
-                Environment:   InferEnvironment(orphan.ResourceGroup, orphan.Name),
-                Command:       orphan.Command
+                Item: orphan.Name,
+                Source: "Orphaned",
+                ImpactScore: 60,
+                Confidence: "medium",
+                Reason: orphan.Reason,
+                Owner: "unassigned",
+                Environment: InferEnvironment(orphan.ResourceGroup, orphan.Name),
+                Command: orphan.Command
             ));
         }
 
@@ -772,9 +772,9 @@ public partial class AzureDashboard
 
     private static bool IsAnomalous(ConsolidatedService service, double medianReq, double medianRt)
     {
-        var requestAnomaly  = medianReq > 0 && service.Requests7d > medianReq * 3;
+        var requestAnomaly = medianReq > 0 && service.Requests7d > medianReq * 3;
         var responseAnomaly = service.ResponseTimeMs.HasValue && medianRt > 0 && service.ResponseTimeMs.Value > medianRt * 2;
-        var errorAnomaly    = service.Http5xx7d > 5;
+        var errorAnomaly = service.Http5xx7d > 5;
         return requestAnomaly || responseAnomaly || errorAnomaly;
     }
 
@@ -782,7 +782,7 @@ public partial class AzureDashboard
     {
         if (values.Count == 0) return 0;
         var ordered = values.OrderBy(v => v).ToList();
-        var mid     = ordered.Count / 2;
+        var mid = ordered.Count / 2;
         return ordered.Count % 2 == 0 ? (ordered[mid - 1] + ordered[mid]) / 2 : ordered[mid];
     }
 
@@ -798,7 +798,7 @@ public partial class AzureDashboard
     {
         var text = $"{resourceGroup} {name}".ToLowerInvariant();
         if (text.Contains("prod") || text.Contains("production")) return "prod";
-        if (text.Contains("dev")  || text.Contains("test") || text.Contains("staging")) return "dev";
+        if (text.Contains("dev") || text.Contains("test") || text.Contains("staging")) return "dev";
         return "shared";
     }
 
@@ -814,7 +814,7 @@ public partial class AzureDashboard
     {
         var text = $"{resourceGroup} {name}".ToLowerInvariant();
         if (text.Contains("prod") || text.Contains("core") || text.Contains("api")) return "high";
-        if (text.Contains("dev")  || text.Contains("test")) return "low";
+        if (text.Contains("dev") || text.Contains("test")) return "low";
         return "medium";
     }
 
