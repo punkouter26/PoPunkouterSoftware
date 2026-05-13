@@ -22,6 +22,8 @@ public record AzureReport
     public BurnRateInfo? BurnRate { get; init; }
     public List<StepTimingEntry>? StepTimings { get; init; }
     public ReportDelta? Delta { get; init; }
+    /// <summary>Root-cause analysis for each broken or unreachable App Service.</summary>
+    public List<ServiceDowntimeDiagnosis>? DowntimeDiagnoses { get; init; }
 }
 
 public record SubscriptionInfo { public string Name { get; init; } = ""; }
@@ -292,6 +294,60 @@ public record InfraFileSummary
     public string FileType { get; init; } = "";
     /// <summary>Resource type strings extracted from Bicep files, e.g. Microsoft.Web/sites.</summary>
     public List<string> ResourceTypes { get; init; } = new();
+}
+
+// ─── Downtime root-cause diagnosis ───────────────────────────────────────────
+
+/// <summary>
+/// Per-service root-cause analysis performed for every broken or unreachable
+/// App Service after connectivity testing.  Aggregates ARM state, App Service
+/// Plan health, recent deployment results, and 48-hour activity-log events.
+/// </summary>
+public record ServiceDowntimeDiagnosis
+{
+    public string Name { get; init; } = "";
+    public string? FriendlyName { get; init; }
+    public string? ResourceGroup { get; init; }
+    public string HttpStatus { get; init; } = "";
+    /// <summary>Normal | Limited | DisasterRecoveryMode — from ARM site resource.</summary>
+    public string? AvailabilityState { get; init; }
+    /// <summary>Normal | Exceeded — indicates free-tier quota breach.</summary>
+    public string? UsageState { get; init; }
+    /// <summary>True when the app is currently quota-suspended.</summary>
+    public bool IsSuspended { get; init; }
+    public DateTime? SuspendedTill { get; init; }
+    public string? PlanName { get; init; }
+    /// <summary>Ready | Pending | Creating — from ARM server farm resource.</summary>
+    public string? PlanStatus { get; init; }
+    public string? PlanSku { get; init; }
+    public bool PlanStopped { get; init; }
+    public List<DeploymentEntry> RecentDeployments { get; init; } = new();
+    public List<ActivityLogEntry> RecentActivity { get; init; } = new();
+    public string LikelyCause { get; init; } = "Unknown";
+    public string? SuggestedFix { get; init; }
+}
+
+/// <summary>One entry from the Kudu/ARM deployment history of an App Service.</summary>
+public record DeploymentEntry
+{
+    public string? DeploymentId { get; init; }
+    public bool? Active { get; init; }
+    public int? StatusCode { get; init; }
+    /// <summary>Success | Failed | Deploying | Building | Pending</summary>
+    public string? StatusText { get; init; }
+    public string? Message { get; init; }
+    public DateTime? DeployedAt { get; init; }
+    public string? Author { get; init; }
+}
+
+/// <summary>One event from the Azure Activity Log (last 48 hours) for a broken service.</summary>
+public record ActivityLogEntry
+{
+    public string? OperationName { get; init; }
+    public string? Status { get; init; }
+    public DateTime? EventTimestamp { get; init; }
+    public string? Caller { get; init; }
+    public string? Level { get; init; }
 }
 
 // ─── History summary (for /details page time-series charts) ──────────────────
