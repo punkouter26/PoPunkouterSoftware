@@ -294,6 +294,30 @@ public record InfraFileSummary
     public List<string> ResourceTypes { get; init; } = new();
 }
 
+// ─── History summary (for /details page time-series charts) ──────────────────
+
+/// <summary>Lightweight per-scan summary used for time-series charts on the Details page.</summary>
+public record HistorySummary
+{
+    public DateTime GeneratedAt { get; init; }
+    public int TotalServices { get; init; }
+    public int ActiveServices { get; init; }
+    public int BrokenServices { get; init; }
+    public double TotalCost30Days { get; init; }
+    public double ProjectedMonthCost { get; init; }
+    public double AvgResponseTimeMs { get; init; }
+    public List<ServiceHistoryPoint> Services { get; init; } = new();
+}
+
+/// <summary>Per-service snapshot within a single <see cref="HistorySummary"/> entry.</summary>
+public record ServiceHistoryPoint
+{
+    public string Name { get; init; } = "";
+    public string HttpStatus { get; init; } = "";
+    public int ResponseTimeMs { get; init; }
+    public int Requests7d { get; init; }
+}
+
 // ─── Feature #9: Incident Log ─────────────────────────────────────────────────
 
 /// <summary>A single service health transition event detected during a report refresh.</summary>

@@ -155,6 +155,39 @@ internal static class DiagEndpoints
             }
         });
 
+        // ── History summary for /details time-series charts ──────────────────
+        app.MapGet("/api/diag/history", async (AzureReportStore store, CancellationToken ct) =>
+        {
+            var result = await store.LoadHistoryAsync(maxEntries: 90, ct);
+            if (!result.IsSuccess)
+                return Results.Problem(detail: result.Error ?? "Failed to load history", statusCode: 503);
+
+            var summaries = (result.Value ?? new())
+                .Select(r => new PoPunkouterSoftware.Shared.Azure.HistorySummary
+                {
+                    GeneratedAt = r.GeneratedAt ?? DateTime.MinValue,
+                    TotalServices = r.WebServices?.Total ?? 0,
+                    ActiveServices = r.WebServices?.ByStatus?.Active ?? 0,
+                    BrokenServices = r.WebServices?.ByStatus?.Broken ?? 0,
+                    TotalCost30Days = r.Cost?.TotalCost30Days ?? 0,
+                    ProjectedMonthCost = r.BurnRate?.ProjectedMonthTotal ?? 0,
+                    AvgResponseTimeMs = r.WebServices?.Services?.Where(s => s.Connectivity?.Success == true)
+                        .Select(s => (double)(s.Connectivity?.ResponseTime ?? 0))
+                        .DefaultIfEmpty(0).Average() ?? 0,
+                    Services = (r.WebServices?.Services ?? new()).Select(s => new PoPunkouterSoftware.Shared.Azure.ServiceHistoryPoint
+                    {
+                        Name = s.FriendlyName ?? s.Name,
+                        HttpStatus = s.HttpStatus,
+                        ResponseTimeMs = s.Connectivity?.ResponseTime ?? 0,
+                        Requests7d = s.Metrics7Days?.Requests ?? 0,
+                    }).ToList(),
+                })
+                .OrderBy(s => s.GeneratedAt)
+                .ToList();
+
+            return Results.Json(summaries);
+        });
+
         // ── Public status page data ───────────────────────────────────────────
         // No auth required — only exposes HTTP status and response time.
         app.MapGet("/api/status", async (AzureReportStore repository, IWebHostEnvironment env, CancellationToken ct) =>
