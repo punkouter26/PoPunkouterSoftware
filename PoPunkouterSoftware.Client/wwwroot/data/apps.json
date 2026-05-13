@@ -83,13 +83,13 @@
       "name": "PoCoupleQuiz",
       "description": "Interactive couplequiz game",
       "category": "games",
-      "status": "disabled",
+      "status": "active",
       "technologies": [
         "Azure App Service",
         "Blazor"
       ],
       "url": "https://pocouplequiz-app.azurewebsites.net",
-      "githubRepo": null
+      "githubRepo": "punkouter26/PoCoupleQuiz"
     },
     {
       "id": "pofunquiz-zizogpdhpyiwo",

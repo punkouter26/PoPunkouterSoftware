@@ -221,7 +221,7 @@
         try
         {
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var report = await Http.GetFromJsonAsync<AzureReport>("data/azure-full-report.json", opts);
+            var report = await Http.GetFromJsonAsync<AzureReport>("/api/diag/report", opts);
             var services = report?.WebServices?.Services ?? new List<WebService>();
             _liveByUrl = services
                 .Where(s => !string.IsNullOrEmpty(s.Url))

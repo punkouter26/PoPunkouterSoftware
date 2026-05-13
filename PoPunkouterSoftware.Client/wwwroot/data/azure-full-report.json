@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-13T18:00:59.3575872Z",
+  "generatedAt": "2026-05-13T18:40:34.2252032Z",
   "subscription": {
     "name": "Punkouter26"
   },
@@ -24,14 +24,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15010,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 3313,
+          "requests": 3302,
           "http5xx": 26,
-          "averageResponseTime": 57.6
+          "averageResponseTime": 56.4
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -52,7 +52,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 283,
+          "responseTime": 274,
           "error": null,
           "isAzureErrorPage": false
         },
@@ -80,14 +80,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": true,
-          "responseTime": 296,
+          "responseTime": 291,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 318,
+          "requests": 319,
           "http5xx": 0,
-          "averageResponseTime": 18
+          "averageResponseTime": 10.1
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -108,7 +108,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -136,7 +136,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15010,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -164,7 +164,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -192,14 +192,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15024,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
         "metrics7Days": {
           "requests": 500,
           "http5xx": 4,
-          "averageResponseTime": 56.5
+          "averageResponseTime": 54.9
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -220,14 +220,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
         "metrics7Days": {
           "requests": 717,
           "http5xx": 6,
-          "averageResponseTime": 8.4
+          "averageResponseTime": 136.9
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -248,14 +248,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 762,
-          "http5xx": 0,
-          "averageResponseTime": 337.1
+          "requests": 886,
+          "http5xx": 1,
+          "averageResponseTime": 457.3
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -276,14 +276,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15019,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 2326,
+          "requests": 2338,
           "http5xx": 0,
-          "averageResponseTime": 258
+          "averageResponseTime": 255.9
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -304,7 +304,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15019,
+          "responseTime": 15024,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -332,7 +332,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 284,
+          "responseTime": 289,
           "error": null,
           "isAzureErrorPage": false
         },
@@ -360,7 +360,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 283,
+          "responseTime": 309,
           "error": null,
           "isAzureErrorPage": false
         },
@@ -388,7 +388,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15024,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -416,14 +416,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 1980,
+          "requests": 1976,
           "http5xx": 0,
-          "averageResponseTime": 132.2
+          "averageResponseTime": 129.8
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -444,7 +444,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15004,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -472,7 +472,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15005,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -500,14 +500,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15019,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 102,
+          "requests": 99,
           "http5xx": 0,
-          "averageResponseTime": 120.9
+          "averageResponseTime": 124.2
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -528,7 +528,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15019,
+          "responseTime": 15009,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -2043,9 +2043,9 @@
     {
       "name": "poappideinsights8f9c9a4e",
       "resourceGroup": "PoShared",
-      "requests7Days": 77208,
-      "failedRequests7Days": 3302,
-      "exceptions7Days": 4903
+      "requests7Days": 77263,
+      "failedRequests7Days": 3304,
+      "exceptions7Days": 4876
     }
   ],
   "zombieApps": [],
@@ -2119,48 +2119,48 @@
   },
   "stepTimings": [
     {
-      "step": "Checking configuration drift",
-      "elapsedMs": 37693
+      "step": "Testing connectivity",
+      "elapsedMs": 15024
     },
     {
-      "step": "Testing connectivity",
-      "elapsedMs": 15021
+      "step": "Checking configuration drift",
+      "elapsedMs": 5970
     },
     {
       "step": "Fetching metrics (7 days)",
-      "elapsedMs": 3980
+      "elapsedMs": 3614
     },
     {
       "step": "Fetching cost data",
-      "elapsedMs": 3624
-    },
-    {
-      "step": "Calculating burn rate",
-      "elapsedMs": 3199
+      "elapsedMs": 3592
     },
     {
       "step": "Scanning orphaned resources",
-      "elapsedMs": 2523
+      "elapsedMs": 3170
     },
     {
-      "step": "Fetching App Insights metrics",
-      "elapsedMs": 2498
+      "step": "Calculating burn rate",
+      "elapsedMs": 2628
     },
     {
       "step": "Discovering web services",
-      "elapsedMs": 2039
+      "elapsedMs": 2555
     },
     {
-      "step": "Checking SSL certificates",
-      "elapsedMs": 644
+      "step": "Fetching App Insights metrics",
+      "elapsedMs": 1880
     },
     {
       "step": "Scanning storage accounts",
-      "elapsedMs": 621
+      "elapsedMs": 620
+    },
+    {
+      "step": "Checking SSL certificates",
+      "elapsedMs": 597
     },
     {
       "step": "Loading all resources",
-      "elapsedMs": 403
+      "elapsedMs": 370
     },
     {
       "step": "Diffing apps.json",
@@ -2168,18 +2168,11 @@
     }
   ],
   "delta": {
-    "previousGeneratedAt": "2026-05-13T17:23:45.7146087Z",
-    "brokenServicesDelta": 3,
+    "previousGeneratedAt": "2026-05-13T18:00:59.3575872Z",
+    "brokenServicesDelta": 0,
     "costDelta": 0,
-    "newBrokenServices": [
-      "PoTagGame-Server",
-      "PoLocalCompare-AppService-dev",
-      "ponovaweight-app",
-      "app-powatch"
-    ],
-    "recoveredServices": [
-      "PoRobotStocks-PoRobotStocks-web"
-    ],
+    "newBrokenServices": [],
+    "recoveredServices": [],
     "newOrphanedResources": []
   }
 }
