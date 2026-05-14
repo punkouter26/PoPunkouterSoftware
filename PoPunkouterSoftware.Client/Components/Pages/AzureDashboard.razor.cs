@@ -68,9 +68,12 @@ public partial class AzureDashboard
 
     private static string FormatAge(TimeSpan age)
     {
-        if (age.TotalMinutes < 1)  return "just now";
-        if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
-        if (age.TotalHours < 24)   return $"{(int)age.TotalHours}h {age.Minutes}m ago";
+        if (age.TotalMinutes < 1)
+            return "just now";
+        if (age.TotalMinutes < 60)
+            return $"{(int)age.TotalMinutes}m ago";
+        if (age.TotalHours < 24)
+            return $"{(int)age.TotalHours}h {age.Minutes}m ago";
         return $"{(int)age.TotalDays}d {age.Hours}h ago";
     }
 
