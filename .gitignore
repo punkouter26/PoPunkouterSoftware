@@ -99,6 +99,9 @@ TestResults/
 ~$*
 .cache/
 artifacts/
+build_output.txt
+gh_output.txt
+poll_run.py
 
 # Publish profile user settings
 *.pubxml.user

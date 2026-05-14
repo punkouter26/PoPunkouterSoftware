@@ -41,7 +41,6 @@
   <ItemGroup>
     <ProjectReference Include="..\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
     <ProjectReference Include="..\PoPunkouterSoftware.Client\PoPunkouterSoftware.Client.csproj" />
-    <ProjectReference Include="..\PoPunkouterSoftware.Application\PoPunkouterSoftware.Application.csproj" />
     <ProjectReference Include="..\PoPunkouterSoftware.Infrastructure\PoPunkouterSoftware.Infrastructure.csproj" />
   </ItemGroup>
 

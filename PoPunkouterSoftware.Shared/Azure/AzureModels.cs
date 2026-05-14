@@ -362,6 +362,10 @@ public record HistorySummary
     public double TotalCost30Days { get; init; }
     public double ProjectedMonthCost { get; init; }
     public double AvgResponseTimeMs { get; init; }
+    public int Total5xxErrors { get; init; }
+    public int TotalResources { get; init; }
+    public long ScanDurationMs { get; init; }
+    public int? BrokenDelta { get; init; }
     public List<ServiceHistoryPoint> Services { get; init; } = new();
 }
 

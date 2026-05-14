@@ -60,6 +60,7 @@ public partial class DetailsPage
     private record TimePoint(string Label, double Value);
     private record StatusHistPoint(string Label, double Active, double Broken);
     private record ServiceTimePoint(string Label, double ResponseMs);
+    private record DeltaPoint(string Label, int Delta);
 
     // ── History charts ────────────────────────────────────────────────────────
 
@@ -109,6 +110,46 @@ public partial class DetailsPage
                 h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
                 h.Services.FirstOrDefault(s => s.Name == name)?.ResponseTimeMs ?? 0))
             .Where(p => p.ResponseMs > 0)
+            .ToList();
+
+    private List<TimePoint> Errors5xxHistory =>
+        _history
+            .Where(h => h.GeneratedAt != DateTime.MinValue)
+            .Select(h => new TimePoint(
+                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                h.Total5xxErrors))
+            .ToList();
+
+    private List<TimePoint> UptimePctHistory =>
+        _history
+            .Where(h => h.GeneratedAt != DateTime.MinValue && h.TotalServices > 0)
+            .Select(h => new TimePoint(
+                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                Math.Round(h.ActiveServices / (double)h.TotalServices * 100, 1)))
+            .ToList();
+
+    private List<DeltaPoint> BrokenDeltaHistory =>
+        _history
+            .Where(h => h.GeneratedAt != DateTime.MinValue && h.BrokenDelta.HasValue)
+            .Select(h => new DeltaPoint(
+                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                h.BrokenDelta!.Value))
+            .ToList();
+
+    private List<TimePoint> ResourceCountHistory =>
+        _history
+            .Where(h => h.GeneratedAt != DateTime.MinValue && h.TotalResources > 0)
+            .Select(h => new TimePoint(
+                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                h.TotalResources))
+            .ToList();
+
+    private List<TimePoint> ScanDurationHistory =>
+        _history
+            .Where(h => h.GeneratedAt != DateTime.MinValue && h.ScanDurationMs > 0)
+            .Select(h => new TimePoint(
+                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                (double)h.ScanDurationMs))
             .ToList();
 
     // ── Current report helpers ────────────────────────────────────────────────

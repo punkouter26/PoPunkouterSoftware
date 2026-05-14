@@ -174,6 +174,10 @@ internal static class DiagEndpoints
                     AvgResponseTimeMs = r.WebServices?.Services?.Where(s => s.Connectivity?.Success == true)
                         .Select(s => (double)(s.Connectivity?.ResponseTime ?? 0))
                         .DefaultIfEmpty(0).Average() ?? 0,
+                    Total5xxErrors = r.WebServices?.Services?.Sum(s => s.Metrics7Days?.Http5xx ?? 0) ?? 0,
+                    TotalResources = r.AllResourceSummary?.Total ?? 0,
+                    ScanDurationMs = r.StepTimings?.Sum(t => t.ElapsedMs) ?? 0,
+                    BrokenDelta = r.Delta?.BrokenServicesDelta,
                     Services = (r.WebServices?.Services ?? new()).Select(s => new PoPunkouterSoftware.Shared.Azure.ServiceHistoryPoint
                     {
                         Name = s.FriendlyName ?? s.Name,

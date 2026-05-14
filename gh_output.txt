@@ -1,5 +1,0 @@
-completed	failure	feat: add /details page with full scan analysis and time-series histo…	Deploy to Azure App Service	master	push	25820874338	47s	2026-05-13T19:14:49Z
-completed	cancelled	chore: remove temp check_run.py	Deploy to Azure App Service	master	push	25819552906	24m58s	2026-05-13T18:49:15Z
-completed	cancelled	fix: home page reads live /api/diag/report instead of stale static JS…	Deploy to Azure App Service	master	push	25819543838	1m18s	2026-05-13T18:49:05Z
-completed	cancelled	style: apply dotnet format auto-corrections	Deploy to Azure App Service	master	push	25818778226	15m2s	2026-05-13T18:34:08Z
-completed	failure	refactor: streamline Azure dashboard, health endpoints, and CI/CD	Deploy to Azure App Service	master	push	25818541189	1m34s	2026-05-13T18:29:26Z

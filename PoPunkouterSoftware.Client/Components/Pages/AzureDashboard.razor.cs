@@ -7,6 +7,7 @@ using Radzen.Blazor;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+#pragma warning disable CS0414 // fields assigned by background methods; display removed from UI
 
 namespace PoPunkouterSoftware.Client.Components.Pages;
 
@@ -489,6 +490,55 @@ public partial class AzureDashboard
         }).ToList() ?? new();
 
     // ── Chart helpers ─────────────────────────────────────────────────────────
+
+    private List<ChartPoint> FleetHealthDonutData
+    {
+        get
+        {
+            var ws = report?.WebServices;
+            if (ws == null) return new();
+            return new List<ChartPoint>
+            {
+                new("Active", ws.ByStatus?.Active ?? 0),
+                new("Broken", ws.ByStatus?.Broken ?? 0),
+                new("Other",  ws.ByStatus?.Other  ?? 0),
+            }.Where(p => p.Value > 0).ToList();
+        }
+    }
+
+    private List<ChartPoint> CostDriversBarData =>
+        report?.Cost?.TopCostDrivers
+            .Where(d => d.Cost > 0)
+            .Take(10)
+            .Select(d => new ChartPoint(
+                d.Name.Length > 28 ? d.Name[..25] + "…" : d.Name,
+                Math.Round(d.Cost, 2)))
+            .ToList() ?? new();
+
+    private List<ChartPoint> ResponseTimeBarData =>
+        services
+            .Where(s => s.Connectivity?.ResponseTime > 0)
+            .OrderByDescending(s => s.Connectivity!.ResponseTime)
+            .Take(15)
+            .Select(s =>
+            {
+                var lbl = s.FriendlyName ?? s.Name;
+                return new ChartPoint(lbl.Length > 20 ? lbl[..17] + "…" : lbl, s.Connectivity!.ResponseTime);
+            })
+            .ToList();
+
+    private List<ChartPoint> ErrorRateBarData =>
+        services
+            .Where(s => s.Metrics7Days?.Http5xx > 0)
+            .OrderByDescending(s => s.Metrics7Days!.Http5xx)
+            .Take(15)
+            .Select(s =>
+            {
+                var lbl = s.FriendlyName ?? s.Name;
+                return new ChartPoint(lbl.Length > 20 ? lbl[..17] + "…" : lbl, s.Metrics7Days!.Http5xx);
+            })
+            .ToList();
+
     private void SelectResourceType(string typeLabel)
     {
         if (_selectedResourceType == typeLabel)
