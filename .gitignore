@@ -103,6 +103,13 @@ build_output.txt
 gh_output.txt
 poll_run.py
 
+# Root-level screenshot/image artifacts generated during dev/demos
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+
 # Publish profile user settings
 *.pubxml.user
 *.rsuser
