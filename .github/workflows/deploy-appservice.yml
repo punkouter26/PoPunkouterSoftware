@@ -25,15 +25,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
@@ -53,7 +53,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-results
           path: ./TESTRESULTS/*.trx
@@ -62,7 +62,7 @@ jobs:
         run: dotnet publish PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: published-app
           path: ./publish
@@ -80,14 +80,14 @@ jobs:
 
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: published-app
           path: ./publish
 
       - name: Azure Login (OIDC)
         if: ${{ env.HAS_OIDC == 'true' }}
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Azure Login (Service Principal JSON)
         if: ${{ env.HAS_OIDC != 'true' && env.HAS_AZURE_CREDENTIALS == 'true' }}
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
