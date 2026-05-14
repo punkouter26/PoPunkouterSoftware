@@ -231,7 +231,8 @@ public class AzureReportService
         // App Service web apps
         await foreach (var site in sub.GetWebSitesAsync(cancellationToken: ct))
         {
-            if (site.Data.Name.Contains('/')) continue; // skip slots
+            if (site.Data.Name.Contains('/'))
+                continue; // skip slots
             var url = site.Data.DefaultHostName is { } h ? $"https://{h}" : null;
             var rg = site.Data.Id?.ResourceGroupName ?? "";
             var isFunctionApp = site.Data.Kind?.Contains("functionapp", StringComparison.OrdinalIgnoreCase) == true;
@@ -346,10 +347,12 @@ public class AzureReportService
     {
         var result = new ConcurrentDictionary<string, MetricsInfo>(StringComparer.OrdinalIgnoreCase);
         var appSvcs = services.Where(s => s.ResourceId is not null && s.ResourceTypeRaw == "Microsoft.Web/sites").ToList();
-        if (appSvcs.Count == 0) return [];
+        if (appSvcs.Count == 0)
+            return [];
 
         MetricsQueryClient metricsClient;
-        try { metricsClient = new MetricsQueryClient(cred); }
+        try
+        { metricsClient = new MetricsQueryClient(cred); }
         catch (Exception ex)
         {
             _logger.LogInformation(ex, "MetricsQueryClient could not be initialised — skipping metrics (expected in local dev without App Insights)");
@@ -596,13 +599,15 @@ public class AzureReportService
         List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
     {
         var results = new List<StorageItem>();
-        if (armToken is null) return results;
+        if (armToken is null)
+            return results;
         var storages = allResources
             .Where(r => r.ResourceType.ToString().Equals(
                 "Microsoft.Storage/storageAccounts", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        if (storages.Count == 0) return results;
+        if (storages.Count == 0)
+            return results;
 
         var client = _httpClientFactory.CreateClient();
 
@@ -680,7 +685,8 @@ public class AzureReportService
         foreach (var r in resources)
         {
             var typeKey = r.ResourceType.ToString();
-            if (!FreeTierMap.TryGetValue(typeKey, out var info)) continue;
+            if (!FreeTierMap.TryGetValue(typeKey, out var info))
+                continue;
 
             var currentSku = r.Sku?.Name?.ToString() ?? r.Kind ?? "unknown";
             var isOnFree = info.FreeSku is not null &&
@@ -698,9 +704,12 @@ public class AzureReportService
                 Recommendation = info.Note,
             };
 
-            if (isOnFree) onFree.Add(entry);
-            else if (canGoToFree) canGoFree.Add(entry);
-            else noFree.Add(entry);
+            if (isOnFree)
+                onFree.Add(entry);
+            else if (canGoToFree)
+                canGoFree.Add(entry);
+            else
+                noFree.Add(entry);
         }
 
         return new FreeTierInfo { OnFree = onFree, CanGoFree = canGoFree, NoFreeTier = noFree };
@@ -708,7 +717,8 @@ public class AzureReportService
 
     private static FreeTierCheckInfo? CheckFreeTierForService(string typeKey, string? sku)
     {
-        if (!FreeTierMap.TryGetValue(typeKey, out var info)) return null;
+        if (!FreeTierMap.TryGetValue(typeKey, out var info))
+            return null;
         var isOnFree = info.FreeSku is not null &&
                        string.Equals(sku, info.FreeSku, StringComparison.OrdinalIgnoreCase);
         return new FreeTierCheckInfo
@@ -751,7 +761,8 @@ public class AzureReportService
         try
         {
             var path = Path.Combine(_env.WebRootPath, "data", "apps.json");
-            if (!File.Exists(path)) return null;
+            if (!File.Exists(path))
+                return null;
 
             var json = await File.ReadAllTextAsync(path, ct);
             var doc = JsonDocument.Parse(json);
@@ -785,7 +796,8 @@ public class AzureReportService
         List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
     {
         var orphans = new List<OrphanedResource>();
-        if (armToken is null) return orphans;
+        if (armToken is null)
+            return orphans;
         var client = _httpClientFactory.CreateClient();
 
         // 1 — Unattached managed disks
@@ -798,12 +810,15 @@ public class AzureReportService
                     $"https://management.azure.com{disk.Id}?api-version=2023-10-02");
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
                 using var resp = await client.SendAsync(req, ct);
-                if (!resp.IsSuccessStatusCode) continue;
+                if (!resp.IsSuccessStatusCode)
+                    continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
                 var doc = JsonDocument.Parse(json);
-                if (!doc.RootElement.TryGetProperty("properties", out var props)) continue;
-                if (!props.TryGetProperty("diskState", out var state) || state.GetString() != "Unattached") continue;
+                if (!doc.RootElement.TryGetProperty("properties", out var props))
+                    continue;
+                if (!props.TryGetProperty("diskState", out var state) || state.GetString() != "Unattached")
+                    continue;
 
                 var sizeGb = props.TryGetProperty("diskSizeGB", out var sz) ? sz.GetInt32() : 0;
                 var sku = doc.RootElement.TryGetProperty("sku", out var skuEl) &&
@@ -831,15 +846,18 @@ public class AzureReportService
                     $"https://management.azure.com{ip.Id}?api-version=2023-11-01");
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
                 using var resp = await client.SendAsync(req, ct);
-                if (!resp.IsSuccessStatusCode) continue;
+                if (!resp.IsSuccessStatusCode)
+                    continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
                 var doc = JsonDocument.Parse(json);
-                if (!doc.RootElement.TryGetProperty("properties", out var props)) continue;
+                if (!doc.RootElement.TryGetProperty("properties", out var props))
+                    continue;
 
                 var hasIpConfig = props.TryGetProperty("ipConfiguration", out _);
                 var hasNatGateway = props.TryGetProperty("natGateway", out _);
-                if (hasIpConfig || hasNatGateway) continue;
+                if (hasIpConfig || hasNatGateway)
+                    continue;
 
                 var sku = doc.RootElement.TryGetProperty("sku", out var skuEl) &&
                           skuEl.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
@@ -866,12 +884,14 @@ public class AzureReportService
                     $"https://management.azure.com{farm.Id}/sites?api-version=2023-12-01");
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
                 using var resp = await client.SendAsync(req, ct);
-                if (!resp.IsSuccessStatusCode) continue;
+                if (!resp.IsSuccessStatusCode)
+                    continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
                 var doc = JsonDocument.Parse(json);
                 var siteCount = doc.RootElement.TryGetProperty("value", out var v) ? v.GetArrayLength() : 1;
-                if (siteCount > 0) continue;
+                if (siteCount > 0)
+                    continue;
 
                 var sku = farm.Sku?.Name?.ToString() ?? "unknown";
                 orphans.Add(new OrphanedResource
@@ -895,12 +915,14 @@ public class AzureReportService
     private async Task<BurnRateInfo?> GetBurnRateAsync(
         string subscriptionId, string? armToken, CancellationToken ct)
     {
-        if (armToken is null) return null;
+        if (armToken is null)
+            return null;
         try
         {
             var today = DateTime.UtcNow.Date;
             var startOfMonth = new DateTime(today.Year, today.Month, 1);
-            if (startOfMonth == today) startOfMonth = today.AddDays(-1);
+            if (startOfMonth == today)
+                startOfMonth = today.AddDays(-1);
 
             var body = JsonSerializer.Serialize(new
             {
@@ -916,7 +938,8 @@ public class AzureReportService
 
             var url = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
             var json = await PostCostManagementWithRetryAsync(url, body, armToken, ct);
-            if (json is null) return null;
+            if (json is null)
+                return null;
 
             var doc = JsonDocument.Parse(json);
             var props = doc.RootElement.GetProperty("properties");
@@ -968,7 +991,8 @@ public class AzureReportService
     private async Task<string?> PostCostManagementWithRetryAsync(
         string url, string body, string? armToken, CancellationToken ct)
     {
-        if (armToken is null) return null;
+        if (armToken is null)
+            return null;
         var client = _httpClientFactory.CreateClient();
         const int maxRetries = 3;
         for (int attempt = 0; attempt < maxRetries; attempt++)
@@ -1012,12 +1036,14 @@ public class AzureReportService
                 "microsoft.insights/components", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        if (components.Count == 0) return [];
+        if (components.Count == 0)
+            return [];
 
         // App Insights telemetry (requests, exceptions) lives in Log Analytics —
         // it cannot be queried via MetricsQueryClient. Use LogsQueryClient instead.
         LogsQueryClient logsClient;
-        try { logsClient = new LogsQueryClient(cred); }
+        try
+        { logsClient = new LogsQueryClient(cred); }
         catch (Exception ex)
         {
             _logger.LogInformation(ex, "LogsQueryClient unavailable for App Insights — expected in local dev without connection string");
@@ -1085,7 +1111,8 @@ public class AzureReportService
 
     private static ReportDelta? ComputeDelta(AzureReport current, AzureReport? previous)
     {
-        if (previous is null) return null;
+        if (previous is null)
+            return null;
 
         var currentBroken = current.WebServices?.Services
             .Where(s => s.HttpStatus == "broken").Select(s => s.Name).ToHashSet() ?? [];
@@ -1115,7 +1142,8 @@ public class AzureReportService
     private async Task<List<ServiceDowntimeDiagnosis>> DiagnoseDowntimeAsync(
         List<RawService> brokenServices, string subscriptionId, string? armToken, CancellationToken ct)
     {
-        if (armToken is null) return [];
+        if (armToken is null)
+            return [];
         var client = _httpClientFactory.CreateClient();
         using var gate = new SemaphoreSlim(4);
 
@@ -1203,7 +1231,8 @@ public class AzureReportService
                         {
                             foreach (var item in arr.EnumerateArray().Take(5))
                             {
-                                if (!item.TryGetProperty("properties", out var p)) continue;
+                                if (!item.TryGetProperty("properties", out var p))
+                                    continue;
                                 int? statusCode = p.TryGetProperty("status", out var sc) && sc.ValueKind == JsonValueKind.Number
                                     ? sc.GetInt32() : null;
                                 DateTime? depAt = p.TryGetProperty("end_time", out var et) && et.ValueKind == JsonValueKind.String
@@ -1400,7 +1429,8 @@ public class AzureReportService
         var deduped = parts.Where((p, i) => i == 0 || p != parts[i - 1]).ToArray();
         var clean = System.Text.RegularExpressions.Regex.Replace(
             string.Join("-", deduped), "^po", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (string.IsNullOrEmpty(clean)) return rawName;
+        if (string.IsNullOrEmpty(clean))
+            return rawName;
         return "Po" + string.Concat(clean.Split('-', StringSplitOptions.RemoveEmptyEntries)
             .Select(p => char.ToUpper(p[0]) + p[1..]));
     }

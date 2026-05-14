@@ -176,10 +176,13 @@ internal static class InfraEndpoints
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             var arr = JsonSerializer.Deserialize<JsonArray>(json, _jsonOpts) ?? new JsonArray();
-            if (arr.Count == 0) break;
+            if (arr.Count == 0)
+                break;
             foreach (var item in arr)
-                if (item is JsonObject obj) all.Add(obj);
-            if (arr.Count < 100) break;
+                if (item is JsonObject obj)
+                    all.Add(obj);
+            if (arr.Count < 100)
+                break;
             page++;
         }
         return all;
@@ -223,7 +226,8 @@ internal static class InfraEndpoints
             {
                 var path = node.GetProperty("path").GetString() ?? "";
                 var type = node.TryGetProperty("type", out var t) ? t.GetString() : "blob";
-                if (type == "blob") paths.Add(path);
+                if (type == "blob")
+                    paths.Add(path);
             }
         }
 
@@ -243,7 +247,8 @@ internal static class InfraEndpoints
         foreach (var wfPath in workflowPaths)
         {
             var content = await FetchFileContentAsync(http, owner, repoName, wfPath, ct);
-            if (content is null) continue;
+            if (content is null)
+                continue;
             cicdFiles.Add(ParseWorkflow(wfPath, content));
         }
 
@@ -252,7 +257,8 @@ internal static class InfraEndpoints
         foreach (var infraPath in infraPaths)
         {
             var content = await FetchFileContentAsync(http, owner, repoName, infraPath, ct);
-            if (content is null) continue;
+            if (content is null)
+                continue;
             infraFiles.Add(ParseInfraFile(infraPath, content));
         }
 
@@ -278,14 +284,17 @@ internal static class InfraEndpoints
     {
         var url = $"https://api.github.com/repos/{owner}/{repo}/contents/{Uri.EscapeDataString(path)}";
         var resp = await http.GetAsync(url, ct);
-        if (!resp.IsSuccessStatusCode) return null;
+        if (!resp.IsSuccessStatusCode)
+            return null;
 
         var json = await resp.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
 
-        if (!doc.RootElement.TryGetProperty("content", out var contentEl)) return null;
+        if (!doc.RootElement.TryGetProperty("content", out var contentEl))
+            return null;
         var b64 = contentEl.GetString()?.Replace("\n", "") ?? "";
-        if (string.IsNullOrWhiteSpace(b64)) return null;
+        if (string.IsNullOrWhiteSpace(b64))
+            return null;
 
         try
         {
@@ -424,12 +433,18 @@ internal static class InfraEndpoints
 
         // Determine primary hosting target (most specific wins)
         var target = "Unknown";
-        if (allActions.Contains("azure/container-apps-deploy")) target = "Container Apps";
-        else if (allActions.Contains("azure/k8s-deploy")) target = "AKS";
-        else if (allActions.Contains("azure/functions-action")) target = "Azure Functions";
-        else if (allActions.Contains("azure/static-web-apps-deploy")) target = "Static Web Apps";
-        else if (allActions.Contains("azure/webapps-deploy")) target = "App Service";
-        else if (allActions.Contains("azure/aci-deploy")) target = "Container Instance";
+        if (allActions.Contains("azure/container-apps-deploy"))
+            target = "Container Apps";
+        else if (allActions.Contains("azure/k8s-deploy"))
+            target = "AKS";
+        else if (allActions.Contains("azure/functions-action"))
+            target = "Azure Functions";
+        else if (allActions.Contains("azure/static-web-apps-deploy"))
+            target = "Static Web Apps";
+        else if (allActions.Contains("azure/webapps-deploy"))
+            target = "App Service";
+        else if (allActions.Contains("azure/aci-deploy"))
+            target = "Container Instance";
         else if (allActions.Contains("azure/arm-deploy"))
         {
             // Check bicep resource types for more context
@@ -498,7 +513,8 @@ internal static class InfraEndpoints
             };
 
             using var process = Process.Start(psi);
-            if (process is null) return null;
+            if (process is null)
+                return null;
 
             var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
             var stderrTask = process.StandardError.ReadToEndAsync(ct);

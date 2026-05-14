@@ -350,7 +350,7 @@ public record ActivityLogEntry
     public string? Level { get; init; }
 }
 
-// ─── History summary (for /details page time-series charts) ──────────────────
+// ─── History summary (for /timebased page time-series charts) ───────────────
 
 /// <summary>Lightweight per-scan summary used for time-series charts on the Details page.</summary>
 public record HistorySummary

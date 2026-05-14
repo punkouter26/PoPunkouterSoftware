@@ -96,12 +96,14 @@ internal static class DiagEndpoints
                 }
                 catch (OperationCanceledException)
                 {
-                    if (!lockReleased) _refreshLock.Release();
+                    if (!lockReleased)
+                        _refreshLock.Release();
                     logger.LogWarning("Refresh cancelled or timed out");
                 }
                 catch (Exception ex)
                 {
-                    if (!lockReleased) _refreshLock.Release();
+                    if (!lockReleased)
+                        _refreshLock.Release();
                     logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
                 }
             });
@@ -155,7 +157,7 @@ internal static class DiagEndpoints
             }
         });
 
-        // ── History summary for /details time-series charts ──────────────────
+        // ── History summary for /timebased time-series charts ─────────────────
         app.MapGet("/api/diag/history", async (AzureReportStore store, CancellationToken ct) =>
         {
             var result = await store.LoadHistoryAsync(maxEntries: 90, ct);
@@ -219,7 +221,8 @@ internal static class DiagEndpoints
                             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                             var json = await File.ReadAllTextAsync(reportPath, ct);
                             var fileReport = JsonSerializer.Deserialize<AzureReport>(json, opts);
-                            if (fileReport is not null) history.Add(fileReport);
+                            if (fileReport is not null)
+                                history.Add(fileReport);
                         }
                         catch { /* ignore deserialization errors — return empty report below */ }
                     }

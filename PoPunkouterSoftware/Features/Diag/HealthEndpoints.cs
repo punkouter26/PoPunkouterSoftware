@@ -20,7 +20,8 @@ internal static class HealthEndpoints
                 // A 401/403 from Key Vault means it's reachable but auth is needed (expected from anonymous ping)
                 var kvStatus = resp.StatusCode is >= System.Net.HttpStatusCode.OK and <= System.Net.HttpStatusCode.InternalServerError
                     ? "reachable" : "unreachable";
-                if (kvStatus != "reachable") allHealthy = false;
+                if (kvStatus != "reachable")
+                    allHealthy = false;
                 checks["KeyVault"] = new { status = kvStatus, httpStatus = (int)resp.StatusCode };
             }
             catch (Exception ex)
@@ -76,7 +77,8 @@ internal static class HealthEndpoints
                         >= 400 and < 500 => ("degraded", false),
                         _ => ("unreachable", false),
                     };
-                    if (!tsHealthy) allHealthy = false;
+                    if (!tsHealthy)
+                        allHealthy = false;
                     checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode, note = isDevStorage ? "Azurite" : (string?)null };
                 }
                 catch (Exception ex)

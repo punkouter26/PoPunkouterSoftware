@@ -67,8 +67,10 @@ public sealed class ServicePingerService : BackgroundService
 
         foreach (var svc in services)
         {
-            if (string.IsNullOrWhiteSpace(svc.Url)) continue;
-            if (_disabled.TryGetValue(svc.Name, out var dis) && dis) continue;
+            if (string.IsNullOrWhiteSpace(svc.Url))
+                continue;
+            if (_disabled.TryGetValue(svc.Name, out var dis) && dis)
+                continue;
 
             var result = await PingOneAsync(client, svc.Name, svc.FriendlyName, svc.Url, ct);
             results.Add(result);

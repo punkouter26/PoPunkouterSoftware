@@ -130,11 +130,16 @@ internal static class GitHubEndpoints
             // • Has README: +15             • Has description: +10
             // • Has license: +10            • Deduct 5 per open issue (max -15)
             var score = 0;
-            if (lastCommitDate.HasValue && (DateTime.UtcNow - lastCommitDate.Value).TotalDays <= 90) score += 40;
-            if (weeklyCommits.Sum() > 0) score += 20;
-            if (hasReadme) score += 15;
-            if (hasDescription) score += 10;
-            if (hasLicense) score += 10;
+            if (lastCommitDate.HasValue && (DateTime.UtcNow - lastCommitDate.Value).TotalDays <= 90)
+                score += 40;
+            if (weeklyCommits.Sum() > 0)
+                score += 20;
+            if (hasReadme)
+                score += 15;
+            if (hasDescription)
+                score += 10;
+            if (hasLicense)
+                score += 10;
             score -= Math.Min(15, openIssues * 5);
             score = Math.Max(0, score);
 

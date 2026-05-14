@@ -212,7 +212,8 @@ public partial class AzureDashboard
         while (_refreshing && !ct.IsCancellationRequested)
         {
             await Task.Delay(2000, ct);
-            if (!_refreshing) break;
+            if (!_refreshing)
+                break;
         }
         ct.ThrowIfCancellationRequested();
     }
@@ -222,15 +223,18 @@ public partial class AzureDashboard
         while (_refreshing && !ct.IsCancellationRequested)
         {
             await Task.Delay(1500, ct);
-            if (!_refreshing) break;
+            if (!_refreshing)
+                break;
         }
         ct.ThrowIfCancellationRequested();
     }
 
     private async Task EnsureHubConnectedAsync()
     {
-        if (_hub is not null && _hub.State == HubConnectionState.Connected) return;
-        if (_hub is not null) { await _hub.DisposeAsync(); }
+        if (_hub is not null && _hub.State == HubConnectionState.Connected)
+            return;
+        if (_hub is not null)
+        { await _hub.DisposeAsync(); }
 
         _hub = new HubConnectionBuilder()
             .WithUrl(NavManager.ToAbsoluteUri("/hubs/refresh"))
@@ -244,10 +248,13 @@ public partial class AzureDashboard
                 var json = JsonSerializer.Serialize(payload);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                if (root.TryGetProperty("percent", out var pct)) _progressPercent = pct.GetInt32();
-                if (root.TryGetProperty("step", out var step)) _progressStep = step.GetString() ?? "";
+                if (root.TryGetProperty("percent", out var pct))
+                    _progressPercent = pct.GetInt32();
+                if (root.TryGetProperty("step", out var step))
+                    _progressStep = step.GetString() ?? "";
                 bool done = root.TryGetProperty("done", out var d) && d.GetBoolean();
-                if (done) _refreshing = false;
+                if (done)
+                    _refreshing = false;
             }
             catch { }
 
@@ -265,7 +272,8 @@ public partial class AzureDashboard
 
     private static List<SafeToRemoveItem> BuildSafeToRemove(AzureReport? r)
     {
-        if (r == null) return new();
+        if (r == null)
+            return new();
         var items = new List<SafeToRemoveItem>();
         foreach (var svc in r.WebServices?.Services ?? new())
         {
@@ -277,11 +285,16 @@ public partial class AzureDashboard
             if ((broken || unreachable || stopped || azErr) && zero)
             {
                 var reasons = new List<string>();
-                if (broken) reasons.Add("HTTP broken");
-                if (unreachable) reasons.Add("Unreachable (timeout)");
-                if (stopped) reasons.Add("Platform Stopped");
-                if (azErr) reasons.Add("Serving Azure error page");
-                if (zero) reasons.Add("0 requests in 7 days");
+                if (broken)
+                    reasons.Add("HTTP broken");
+                if (unreachable)
+                    reasons.Add("Unreachable (timeout)");
+                if (stopped)
+                    reasons.Add("Platform Stopped");
+                if (azErr)
+                    reasons.Add("Serving Azure error page");
+                if (zero)
+                    reasons.Add("0 requests in 7 days");
                 items.Add(new SafeToRemoveItem
                 {
                     Name = svc.Name,
@@ -362,7 +375,8 @@ public partial class AzureDashboard
 
     private async Task CopyToClipboard(string text)
     {
-        try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
+        try
+        { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
         catch { }
         NotificationService.Notify(new NotificationMessage
         {
@@ -452,7 +466,8 @@ public partial class AzureDashboard
 
     private static double CalcUptime(List<StatusSample> samples)
     {
-        if (samples.Count == 0) return 100.0;
+        if (samples.Count == 0)
+            return 100.0;
         var up = samples.Count(s => s.Status == "active");
         return (double)up / samples.Count * 100.0;
     }
@@ -496,7 +511,8 @@ public partial class AzureDashboard
         get
         {
             var ws = report?.WebServices;
-            if (ws == null) return new();
+            if (ws == null)
+                return new();
             return new List<ChartPoint>
             {
                 new("Active", ws.ByStatus?.Active ?? 0),
@@ -568,7 +584,8 @@ public partial class AzureDashboard
     {
         get
         {
-            if (report?.Cost?.TopCostDrivers is null) return new();
+            if (report?.Cost?.TopCostDrivers is null)
+                return new();
             var byRg = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             foreach (var d in report.Cost.TopCostDrivers)
             {
@@ -685,9 +702,11 @@ public partial class AzureDashboard
 
     private static List<ConsolidatedService> BuildConsolidatedServices(AzureReport? r)
     {
-        if (r is null) return new();
+        if (r is null)
+            return new();
         var sourceServices = r.WebServices?.Services ?? new List<WebService>();
-        if (sourceServices.Count == 0) return new();
+        if (sourceServices.Count == 0)
+            return new();
 
         var grouped = sourceServices
             .GroupBy(s => CanonicalAppKey(s.FriendlyName, s.Name))
@@ -713,7 +732,8 @@ public partial class AzureDashboard
             reliability = Math.Clamp(reliability, 0, 100);
 
             var health = reliability;
-            if (entries.Any(x => x.FreeTierCheck?.CanGoFree == true)) health -= 5;
+            if (entries.Any(x => x.FreeTierCheck?.CanGoFree == true))
+                health -= 5;
             health = Math.Clamp(health, 0, 100);
 
             raw.Add(new ConsolidatedService(
@@ -830,7 +850,8 @@ public partial class AzureDashboard
 
     private static double Median(List<double> values)
     {
-        if (values.Count == 0) return 0;
+        if (values.Count == 0)
+            return 0;
         var ordered = values.OrderBy(v => v).ToList();
         var mid = ordered.Count / 2;
         return ordered.Count % 2 == 0 ? (ordered[mid - 1] + ordered[mid]) / 2 : ordered[mid];
@@ -847,8 +868,10 @@ public partial class AzureDashboard
     private static string InferEnvironment(string? resourceGroup, string? name)
     {
         var text = $"{resourceGroup} {name}".ToLowerInvariant();
-        if (text.Contains("prod") || text.Contains("production")) return "prod";
-        if (text.Contains("dev") || text.Contains("test") || text.Contains("staging")) return "dev";
+        if (text.Contains("prod") || text.Contains("production"))
+            return "prod";
+        if (text.Contains("dev") || text.Contains("test") || text.Contains("staging"))
+            return "dev";
         return "shared";
     }
 
@@ -863,16 +886,21 @@ public partial class AzureDashboard
     private static string InferCriticality(string? resourceGroup, string? name)
     {
         var text = $"{resourceGroup} {name}".ToLowerInvariant();
-        if (text.Contains("prod") || text.Contains("core") || text.Contains("api")) return "high";
-        if (text.Contains("dev") || text.Contains("test")) return "low";
+        if (text.Contains("prod") || text.Contains("core") || text.Contains("api"))
+            return "high";
+        if (text.Contains("dev") || text.Contains("test"))
+            return "low";
         return "medium";
     }
 
     private static string ToActionability(string status, int http5xx7d, int req7d)
     {
-        if (status == "broken" || http5xx7d > 10) return "Fix Now";
-        if (http5xx7d > 0 || (status != "active" && req7d > 0)) return "Fix Soon";
-        if (status != "active" && req7d == 0) return "Remove Candidate";
+        if (status == "broken" || http5xx7d > 10)
+            return "Fix Now";
+        if (http5xx7d > 0 || (status != "active" && req7d > 0))
+            return "Fix Soon";
+        if (status != "active" && req7d == 0)
+            return "Remove Candidate";
         return "Watch";
     }
 

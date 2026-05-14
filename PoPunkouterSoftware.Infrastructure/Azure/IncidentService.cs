@@ -55,7 +55,8 @@ public sealed class IncidentService
 
         foreach (var svc in currServices)
         {
-            if (!prevMap.TryGetValue(svc.Name, out var prev)) continue;
+            if (!prevMap.TryGetValue(svc.Name, out var prev))
+                continue;
 
             var wasHealthy = prev.HttpStatus == "active";
             var isHealthy = svc.HttpStatus == "active";
@@ -63,10 +64,13 @@ public sealed class IncidentService
             var isBroken = svc.HttpStatus is "broken" or "unreachable";
 
             string? type = null;
-            if (wasHealthy && isBroken) type = "new-incident";
-            if (wasBroken && isHealthy) type = "recovery";
+            if (wasHealthy && isBroken)
+                type = "new-incident";
+            if (wasBroken && isHealthy)
+                type = "recovery";
 
-            if (type is null) continue;
+            if (type is null)
+                continue;
 
             var entry = new IncidentEntry
             {
@@ -80,7 +84,8 @@ public sealed class IncidentService
             incidents.Add(entry);
         }
 
-        if (incidents.Count == 0) return;
+        if (incidents.Count == 0)
+            return;
 
         _logger.LogInformation("Detected {Count} incident(s) — persisting to Table Storage", incidents.Count);
 
@@ -150,7 +155,8 @@ public sealed class IncidentService
                     PreviousStatus = entity.GetString("PreviousStatus"),
                     CurrentStatus = entity.GetString("CurrentStatus"),
                 });
-                if (entries.Count >= limit) break;
+                if (entries.Count >= limit)
+                    break;
             }
 
             return entries;

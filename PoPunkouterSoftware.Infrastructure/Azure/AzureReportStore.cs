@@ -122,11 +122,13 @@ public class AzureReportStore
                 cancellationToken: ct))
             {
                 var json = DecompressEntity(entity);
-                if (string.IsNullOrWhiteSpace(json)) continue;
+                if (string.IsNullOrWhiteSpace(json))
+                    continue;
                 var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
                 if (report is not null)
                     results.Add(report);
-                if (results.Count >= maxEntries) break;
+                if (results.Count >= maxEntries)
+                    break;
             }
             return Result<List<AzureReport>>.Success(results);
         }
@@ -152,7 +154,8 @@ public class AzureReportStore
                 cancellationToken: ct))
             {
                 var json = DecompressEntity(entity);
-                if (string.IsNullOrWhiteSpace(json)) return Result<AzureReport?>.Success(null);
+                if (string.IsNullOrWhiteSpace(json))
+                    return Result<AzureReport?>.Success(null);
                 var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
                 return Result<AzureReport?>.Success(report);
             }

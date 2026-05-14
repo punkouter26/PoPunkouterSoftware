@@ -1,8 +1,8 @@
-@page "/details"
+@page "/timebased"
 @rendermode WasmRenderModes.Interactive
 @using PoPunkouterSoftware.Shared.Azure
 
-<PageTitle>PoPunkouterSoftware — Scan Details</PageTitle>
+<PageTitle>PoPunkouterSoftware — Time-Based Trends</PageTitle>
 
 <div class="app-page">
 
@@ -25,7 +25,7 @@ else
     <section class="app-section app-hero" style="padding-bottom:1rem">
         <div>
             <span class="app-eyebrow">Internal diagnostics</span>
-            <h1 class="app-hero-title" style="font-size:clamp(1.6rem,3vw,2.2rem)">Full Scan Details</h1>
+            <h1 class="app-hero-title" style="font-size:clamp(1.6rem,3vw,2.2rem)">Time-Based Trends</h1>
             <p class="app-hero-copy">
                 Complete analysis from the latest Azure subscription scan · Last scan <strong>@ScanAge</strong>
                 @if (_report?.GeneratedAt is DateTime dt)

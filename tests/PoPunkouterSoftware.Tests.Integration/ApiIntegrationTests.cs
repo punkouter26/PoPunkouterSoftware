@@ -376,7 +376,8 @@ public class ApiSchemaContractTests
     public async Task DiagReport_WhenOk_HasCamelCaseProperty(string property)
     {
         var response = await _client.GetAsync("/api/diag/report");
-        if (response.StatusCode != System.Net.HttpStatusCode.OK) return; // no report seeded — skip
+        if (response.StatusCode != System.Net.HttpStatusCode.OK)
+            return; // no report seeded — skip
 
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
@@ -388,11 +389,13 @@ public class ApiSchemaContractTests
     public async Task DiagReport_WhenOk_WebServices_TotalIsCamelCase()
     {
         var response = await _client.GetAsync("/api/diag/report");
-        if (response.StatusCode != System.Net.HttpStatusCode.OK) return;
+        if (response.StatusCode != System.Net.HttpStatusCode.OK)
+            return;
 
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
-        if (!doc.RootElement.TryGetProperty("webServices", out var ws)) return;
+        if (!doc.RootElement.TryGetProperty("webServices", out var ws))
+            return;
         ws.TryGetProperty("total", out _)
             .Should().BeTrue(because: "webServices.total must be camelCase");
     }
