@@ -1210,8 +1210,12 @@ public class AzureReportService
                                     && DateTime.TryParse(et.GetString(), out var dt) ? dt : null;
                                 var statusText = statusCode switch
                                 {
-                                    4 => "Success", 3 => "Failed", 2 => "Deploying",
-                                    1 => "Building", 0 => "Pending", _ => statusCode?.ToString()
+                                    4 => "Success",
+                                    3 => "Failed",
+                                    2 => "Deploying",
+                                    1 => "Building",
+                                    0 => "Pending",
+                                    _ => statusCode?.ToString()
                                 };
                                 deployments.Add(new DeploymentEntry
                                 {
