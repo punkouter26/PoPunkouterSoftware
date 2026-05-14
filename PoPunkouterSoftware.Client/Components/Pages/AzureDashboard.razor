@@ -40,6 +40,7 @@ else
     var healthPct = total > 0 ? (int)(active * 100.0 / total) : 100;
     var ageMin   = currentReport.GeneratedAt is DateTime genDt
                    ? (int)(DateTime.UtcNow - genDt).TotalMinutes : -1;
+    var ageLabel = ageMin < 0 ? "" : ageMin < 60 ? $"{ageMin}m old" : ageMin < 1440 ? $"{ageMin / 60}h {ageMin % 60}m old" : $"{ageMin / 1440}d {ageMin % 1440 / 60}h old";
 
     <!-- ── Header banner ── -->
     <section class="app-section">
@@ -57,7 +58,7 @@ else
                     @if (ageMin >= 0)
                     {
                         var ageBadge = ageMin < 30 ? BadgeStyle.Success : ageMin < 120 ? BadgeStyle.Info : ageMin < 360 ? BadgeStyle.Warning : BadgeStyle.Danger;
-                        <RadzenBadge Text="@(ageMin < 60 ? $"{ageMin}m old" : $"{ageMin / 60}h old")" BadgeStyle="@ageBadge" IsPill="true" />
+                        <RadzenBadge Text="@ageLabel" BadgeStyle="@ageBadge" IsPill="true" />
                     }
                     <RadzenStack Orientation="Orientation.Horizontal" Gap="6px">
                         <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh from Azure")" Icon="refresh"

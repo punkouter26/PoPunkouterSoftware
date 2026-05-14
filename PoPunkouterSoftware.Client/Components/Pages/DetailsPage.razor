@@ -36,6 +36,13 @@ else
 
     @* ── Quick-stat strip ────────────────────────────────────────────────── *@
     <section class="app-section" style="padding-top:0">
+        @if (IsStale)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" ShowIcon="true" class="rz-mb-3" AllowClose="false">
+                <strong>Data is @ScanAge.</strong> These counts reflect a past scan — fleet health numbers may not represent the current state.
+                Navigate to <a href="/azure" class="app-inline-link">Azure Dashboard</a> and click <strong>Refresh from Azure</strong> for live data.
+            </RadzenAlert>
+        }
         <div class="app-grid metrics" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
             <div class="app-stat">
                 <span class="app-stat-label">Total services</span>

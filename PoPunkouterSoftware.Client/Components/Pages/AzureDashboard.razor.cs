@@ -58,11 +58,20 @@ public partial class AzureDashboard
     private int _progressPercent;
     private string _progressStep = "";
     private CancellationTokenSource? _refreshCts;
+    private IDisposable? _locationChangingRegistration;
     private const int RefreshTimeoutSeconds = 120;
 
     private string LastRefreshTime => report?.GeneratedAt is DateTime dt
-        ? $" · Last updated {(DateTime.UtcNow - dt).TotalMinutes:F0}m ago"
+        ? " · Last updated " + FormatAge(DateTime.UtcNow - dt)
         : "";
+
+    private static string FormatAge(TimeSpan age)
+    {
+        if (age.TotalMinutes < 1)  return "just now";
+        if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
+        if (age.TotalHours < 24)   return $"{(int)age.TotalHours}h {age.Minutes}m ago";
+        return $"{(int)age.TotalDays}d {age.Hours}h ago";
+    }
 
     // ── Fix Plan state ────────────────────────────────────────────────────────
     private WebService? _fixPlanService;
@@ -104,9 +113,21 @@ public partial class AzureDashboard
 
     protected override async Task OnInitializedAsync()
     {
+        _locationChangingRegistration = NavManager.RegisterLocationChangingHandler(OnLocationChanging);
         await LoadReportAsync();
         _ = LoadIncidentsAsync();
         _ = LoadStatusAsync();
+    }
+
+    private ValueTask OnLocationChanging(LocationChangingContext context)
+    {
+        if (_refreshing)
+        {
+            context.PreventNavigation();
+            NotificationService.Notify(NotificationSeverity.Warning, "Scan in progress",
+                "An Azure scan is running. Cancel it or wait for it to complete before leaving this page.");
+        }
+        return ValueTask.CompletedTask;
     }
 
     private async Task LoadReportAsync()
@@ -266,6 +287,7 @@ public partial class AzureDashboard
 
     public async ValueTask DisposeAsync()
     {
+        _locationChangingRegistration?.Dispose();
         if (_hub is not null)
             await _hub.DisposeAsync();
     }

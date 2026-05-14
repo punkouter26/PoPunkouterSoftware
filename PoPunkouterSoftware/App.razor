@@ -6,11 +6,15 @@
     <base href="/" />
     <title>PoPunkouterSoftware</title>
     <link rel="icon" href="images/favicon.ico" type="image/x-icon" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="stylesheet" href="_content/Radzen.Blazor/css/software-dark.css" />
     <link rel="stylesheet" href="css/modern-ui.css" />
     <HeadOutlet />
 </head>
 <body class="rz-background-color-base rz-color-base">
+    <div id="app-nav-progress" style="position:fixed;top:0;left:0;width:0;height:2px;background:linear-gradient(90deg,#49c7a3,#8de2c5);z-index:10000;transition:width .2s,opacity .3s;opacity:0;pointer-events:none"></div>
     <Routes />
     <script>
         // Suppress expected hotreload errors in development
@@ -22,6 +26,20 @@
             }
             originalError.apply(console, args);
         };
+        // Navigation progress bar for Blazor enhanced navigation
+        (function () {
+            var bar = null;
+            function getBar() { return bar || (bar = document.getElementById('app-nav-progress')); }
+            document.addEventListener('enhancednavigationstart', function () {
+                var b = getBar(); if (!b) return;
+                b.style.width = '40%'; b.style.opacity = '1';
+            });
+            document.addEventListener('enhancedload', function () {
+                var b = getBar(); if (!b) return;
+                b.style.width = '100%';
+                setTimeout(function () { b.style.opacity = '0'; setTimeout(function () { b.style.width = '0'; }, 300); }, 200);
+            });
+        })();
     </script>
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>

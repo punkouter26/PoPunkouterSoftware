@@ -25,11 +25,13 @@
                 </div>
                 <div class="app-stat">
                     <span class="app-stat-label">Recently shipped</span>
-                    <span class="app-stat-value">@CountRecentRepos(30)</span>
+                    <span class="app-stat-value" title="Apps with a GitHub commit in the last 30 days">
+                        @(_ghLoaded ? (CountRecentRepos(30) == 0 && CountTrackedRepos() == 0 ? "—" : $"{CountRecentRepos(30)}") : "—")
+                    </span>
                 </div>
                 <div class="app-stat">
                     <span class="app-stat-label">Avg response time</span>
-                    <span class="app-stat-value">@AverageResponseLabel</span>
+                    <span class="app-stat-value" title="Average HTTP probe response time across live services. High values may include cold-start latency on idle Azure free-tier plans.">@AverageResponseLabel</span>
                 </div>
             </div>
 
@@ -100,11 +102,11 @@
                         @if (live is not null)
                         {
                             <div class="app-chip-row">
-                                <RadzenBadge Text="@live.HttpStatus.ToUpper()" IsPill="true"
+                                <RadzenBadge Text="@($"HTTP: {live.HttpStatus.ToUpper()}")" IsPill="true"
                                              BadgeStyle="@(live.HttpStatus == "active" ? BadgeStyle.Success : live.HttpStatus == "broken" ? BadgeStyle.Danger : BadgeStyle.Warning)" />
                                 @if (!string.IsNullOrEmpty(live.PlatformState))
                                 {
-                                    <RadzenBadge Text="@live.PlatformState" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
+                                    <RadzenBadge Text="@($"Platform: {live.PlatformState}")" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
                                 }
                                 @if ((live.Connectivity?.ResponseTime ?? 0) > 0)
                                 {
@@ -126,7 +128,9 @@
                             </div>
                         }
 
-                        @if (!string.IsNullOrEmpty(app.GithubRepo) && _ghActivity.TryGetValue(app.GithubRepo, out var gh))
+                        @if (!string.IsNullOrEmpty(app.GithubRepo))
+                        {
+                        if (_ghActivity.TryGetValue(app.GithubRepo, out var gh))
                         {
                             <div class="app-card app-surface-soft" style="padding:.85rem;box-shadow:none;">
                                 <div class="app-kicker">GitHub activity</div>
@@ -172,6 +176,17 @@
                                 </div>
                             </div>
                         }
+                        else
+                        {
+                            <div class="app-card app-surface-soft" style="padding:.85rem;box-shadow:none;">
+                                <div class="app-kicker">GitHub activity</div>
+                                <div class="app-status-row">
+                                    <a class="app-inline-link" href="@($"https://github.com/{app.GithubRepo}")" target="_blank" rel="noopener noreferrer">@app.GithubRepo</a>
+                                    <span class="app-note">@(_ghLoaded ? "Activity unavailable" : "Loading…")</span>
+                                </div>
+                            </div>
+                        }
+                        }
 
                         <div class="app-actions">
                             <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small"
@@ -192,6 +207,7 @@
     private List<AppModel> filteredApps = new();
     private Dictionary<string, WebService> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, GitHubActivity> _ghActivity = new(StringComparer.OrdinalIgnoreCase);
+    private bool _ghLoaded;
 
     protected override async Task OnInitializedAsync()
     {
@@ -252,6 +268,7 @@
             catch { /* non-fatal */ }
         }
 
+        _ghLoaded = true;
         await InvokeAsync(StateHasChanged);
     }
 

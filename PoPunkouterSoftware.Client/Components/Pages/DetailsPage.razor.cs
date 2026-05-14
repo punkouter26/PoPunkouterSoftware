@@ -50,10 +50,19 @@ public partial class DetailsPage
     private double Cost30d => _report?.Cost?.TotalCost30Days ?? 0;
     private int OrphanedCount => _report?.OrphanedResources?.Count ?? 0;
     private int SslCritical => _report?.SslExpiry?.Count(e => e.DaysLeft is not null && e.DaysLeft <= 30) ?? 0;
+    private bool IsStale => _report?.GeneratedAt is DateTime dt && (DateTime.UtcNow - dt).TotalHours > 24;
 
     private string ScanAge => _report?.GeneratedAt is DateTime dt
-        ? $"{(int)(DateTime.UtcNow - dt).TotalMinutes}m ago"
+        ? FormatAge(DateTime.UtcNow - dt)
         : "unknown";
+
+    private static string FormatAge(TimeSpan age)
+    {
+        if (age.TotalMinutes < 1)  return "just now";
+        if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
+        if (age.TotalHours < 24)   return $"{(int)age.TotalHours}h {age.Minutes}m ago";
+        return $"{(int)age.TotalDays}d {age.Hours}h ago";
+    }
 
     // ── Chart records ─────────────────────────────────────────────────────────
 

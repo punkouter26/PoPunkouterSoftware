@@ -11,7 +11,23 @@
     </div>
 }
 
-<RadzenLayout Style="grid-template-areas: 'rz-body';">
+<RadzenLayout Style="grid-template-areas: 'rz-header' 'rz-body'; grid-template-rows: auto 1fr;">
+    <RadzenHeader>
+        <nav class="app-topbar">
+            <a href="/" class="app-topbar-brand">Po Software</a>
+            <div class="app-topbar-nav">
+                <a href="/" class="app-topbar-link @NavClass("/")">
+                    <span class="material-symbols-outlined">home</span>Portfolio
+                </a>
+                <a href="/azure" class="app-topbar-link @NavClass("/azure")">
+                    <span class="material-symbols-outlined">cloud</span>Azure
+                </a>
+                <a href="/timebased" class="app-topbar-link @NavClass("/timebased")">
+                    <span class="material-symbols-outlined">show_chart</span>Trends
+                </a>
+            </div>
+        </nav>
+    </RadzenHeader>
     <RadzenBody Style="overflow-y: auto">
         <div class="app-shell-body">
             <DevErrorBoundary>
@@ -37,6 +53,14 @@
         {
             // Non-fatal — banner stays hidden if the call fails.
         }
+    }
+
+    private string NavClass(string href)
+    {
+        var current = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        if (href == "/")
+            return current == "" || current == "/" ? "active" : "";
+        return current.StartsWith(href.TrimStart('/'), StringComparison.OrdinalIgnoreCase) ? "active" : "";
     }
 
     // GoF: Value Object — immutable config response carrier.
