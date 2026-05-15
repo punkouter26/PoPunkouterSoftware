@@ -917,6 +917,47 @@ a {
     .app-hero {
         padding: 1rem;
     }
+
+    /* Hero title: prevent clipping on narrow screens */
+    .app-hero-title {
+        font-size: clamp(1.8rem, 8vw, 2.6rem);
+        overflow-wrap: break-word;
+        word-break: break-word;
+        white-space: normal;
+    }
+
+    /* KPI strip: allow wrapping so numbers don't overflow */
+    .app-grid.metrics {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .app-stat-value {
+        font-size: clamp(1.4rem, 5vw, 2rem);
+    }
+
+    /* Radzen layout: remove sidebar body offset on mobile */
+    .rz-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    .rz-body {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        grid-column: 1 !important;
+    }
+}
+
+/* ── Scroll trap fix: let page scroll naturally instead of .rz-body container ── */
+.rz-layout {
+    min-height: 100dvh;
+    height: auto;
+}
+
+.rz-body {
+    overflow-y: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
 }
 
 @keyframes app-fade-in {

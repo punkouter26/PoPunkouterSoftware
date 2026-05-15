@@ -10,7 +10,7 @@ namespace PoPunkouterSoftware.Features.Azure;
 
 /// <summary>
 /// Exposes one-click management actions (restart, scale to free) for Azure App Services.
-/// Uses DefaultAzureCredential via the existing AzureClientFactory pattern.
+/// Uses the shared ArmClient singleton registered in Program.cs.
 /// </summary>
 internal static class AppServiceControlEndpoints
 {
@@ -20,13 +20,13 @@ internal static class AppServiceControlEndpoints
         app.MapPost("/api/manage/restart/{resourceGroup}/{name}", async (
             string resourceGroup,
             string name,
+            ArmClient client,
             IConfiguration config,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
             try
             {
-                var client = GetArmClient(config);
                 var subscriptionId = config["Azure:SubscriptionId"];
                 if (string.IsNullOrWhiteSpace(subscriptionId))
                     return Results.Problem("Azure:SubscriptionId is not configured.", statusCode: 503);
@@ -50,13 +50,13 @@ internal static class AppServiceControlEndpoints
         app.MapPost("/api/manage/scale-free/{resourceGroup}/{planName}", async (
             string resourceGroup,
             string planName,
+            ArmClient client,
             IConfiguration config,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
             try
             {
-                var client = GetArmClient(config);
                 var subscriptionId = config["Azure:SubscriptionId"];
                 if (string.IsNullOrWhiteSpace(subscriptionId))
                     return Results.Problem("Azure:SubscriptionId is not configured.", statusCode: 503);
@@ -85,7 +85,4 @@ internal static class AppServiceControlEndpoints
 
         return app;
     }
-
-    private static ArmClient GetArmClient(IConfiguration _) =>
-        new ArmClient(new DefaultAzureCredential());
 }

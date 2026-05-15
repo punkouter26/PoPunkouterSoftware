@@ -139,7 +139,8 @@ internal static class InfraEndpoints
                     .ThenBy(r => r.RepoName)
                     .ToList();
 
-                cache.Set(CacheKey, reviews, TimeSpan.FromHours(6));
+                var cacheTtlHours = config.GetValue<int>("Infra:CiCdCacheHours", 6);
+                cache.Set(CacheKey, reviews, TimeSpan.FromHours(cacheTtlHours));
                 return Results.Ok(new { disabled = false, reviews });
             }
             catch (Exception ex)
@@ -173,7 +174,14 @@ internal static class InfraEndpoints
         {
             var url = $"https://api.github.com/user/repos?visibility=all&affiliation=owner&per_page=100&page={page}";
             var resp = await http.GetAsync(url, ct);
-            resp.EnsureSuccessStatusCode();
+            if ((int)resp.StatusCode == 429)
+            {
+                // GitHub rate-limited — return whatever repos we collected so far
+                // rather than throwing and losing the partial result.
+                break;
+            }
+            if (!resp.IsSuccessStatusCode)
+                break;
             var json = await resp.Content.ReadAsStringAsync(ct);
             var arr = JsonSerializer.Deserialize<JsonArray>(json, _jsonOpts) ?? new JsonArray();
             if (arr.Count == 0)

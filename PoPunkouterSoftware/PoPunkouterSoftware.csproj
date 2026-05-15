@@ -24,9 +24,8 @@
     <PackageReference Include="Serilog.Enrichers.CorrelationId" />
     <PackageReference Include="Serilog.Enrichers.Environment" />
     <PackageReference Include="Serilog.Enrichers.Thread" />
-    <PackageReference Include="Serilog.Sinks.ApplicationInsights" />
 
-    <!-- OpenTelemetry + Azure Monitor -->
+    <!-- OpenTelemetry + Azure Monitor (sole App Insights pipeline — Serilog sink removed to prevent duplicate telemetry) -->
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
 
     <!-- OpenAPI / Scalar -->

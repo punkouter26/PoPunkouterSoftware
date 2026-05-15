@@ -2,7 +2,7 @@
 @rendermode WasmRenderModes.Interactive
 @using PoPunkouterSoftware.Shared.Azure
 
-<PageTitle>PoPunkouterSoftware — Time-Based Trends</PageTitle>
+<PageTitle>Po Software — Trends &amp; History</PageTitle>
 
 <div class="app-page">
 
@@ -78,6 +78,45 @@ else
             </div>
         </div>
     </section>
+
+    @* ── Web Traffic chart ───────────────────────────────────────────────── *@
+    @if (WebTrafficByService.Count > 0)
+    {
+        <section class="app-section">
+            <div class="app-kicker">Traffic</div>
+            <h2 class="app-section-heading">Web Traffic (Requests — Last 7 Days)</h2>
+            <div class="app-card">
+                <RadzenChart Style="height:300px">
+                    <RadzenBarSeries TItem="TrafficPoint" Data="@WebTrafficByService"
+                                     CategoryProperty="Service" ValueProperty="Requests"
+                                     Title="Requests">
+                        <RadzenSeriesDataLabels Visible="false" />
+                    </RadzenBarSeries>
+                    @if (WebTrafficByService.Any(p => p.Http5xx > 0))
+                    {
+                        <RadzenBarSeries TItem="TrafficPoint" Data="@WebTrafficByService"
+                                         CategoryProperty="Service" ValueProperty="Http5xx"
+                                         Title="5xx errors">
+                            <RadzenSeriesDataLabels Visible="false" />
+                        </RadzenBarSeries>
+                    }
+                    <RadzenCategoryAxis>
+                        <RadzenAxisTitle Text="App" />
+                    </RadzenCategoryAxis>
+                    <RadzenValueAxis>
+                        <RadzenAxisTitle Text="Requests (7d)" />
+                        <RadzenGridLines Visible="true" />
+                    </RadzenValueAxis>
+                    <RadzenLegend Visible="true" />
+                </RadzenChart>
+                <p class="app-note rz-mt-2 rz-mb-0">
+                    Showing @WebTrafficByService.Count service(s) with Azure Monitor request metrics.
+                    Total: <strong>@WebTrafficByService.Sum(p => p.Requests).ToString("N0")</strong> requests
+                    · @WebTrafficByService.Sum(p => p.Http5xx).ToString("N0") server errors.
+                </p>
+            </div>
+        </section>
+    }
 
     @* ── Time-series charts ──────────────────────────────────────────────── *@
     @if (HasHistory)

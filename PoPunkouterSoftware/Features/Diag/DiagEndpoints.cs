@@ -9,6 +9,8 @@ namespace PoPunkouterSoftware.Features.Diag;
 internal static class DiagEndpoints
 {
     static readonly SemaphoreSlim _refreshLock = new(1, 1);
+    // Holds the active refresh CTS so the cancel-refresh endpoint can signal it.
+    static volatile CancellationTokenSource? _runningRefreshCts;
 
     internal static WebApplication MapDiagEndpoints(this WebApplication app)
     {
@@ -57,6 +59,7 @@ internal static class DiagEndpoints
                 var store = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                _runningRefreshCts = cts;
                 var ct = cts.Token;
                 var sw = Stopwatch.StartNew();
                 var progress = new Progress<(string Step, int Percent)>(p =>
@@ -98,18 +101,29 @@ internal static class DiagEndpoints
                 {
                     if (!lockReleased)
                         _refreshLock.Release();
+                    _runningRefreshCts = null;
                     logger.LogWarning("Refresh cancelled or timed out");
                 }
                 catch (Exception ex)
                 {
                     if (!lockReleased)
                         _refreshLock.Release();
+                    _runningRefreshCts = null;
                     logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
                 }
             });
 
             return Results.Accepted();
         });
+
+        // ── Cancel in-progress refresh ───────────────────────────────────────
+        app.MapPost("/api/diag/cancel-refresh", () =>
+        {
+            _runningRefreshCts?.Cancel();
+            return Results.Ok(new { cancelled = true });
+        })
+        .WithName("CancelDiagRefresh")
+        .WithTags("Diag");
 
         // ── Az CLI login status ──────────────────────────────────────────────
         app.MapGet("/api/diag/az-status", async (HttpContext ctx) =>

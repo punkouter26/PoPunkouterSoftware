@@ -1,5 +1,7 @@
+using Azure.Core;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Azure.ResourceManager;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Features.GitHub;
@@ -41,7 +43,10 @@ try
         }
     }
 
-    // ─── Serilog — structured logging to Console, File, App Insights ─────────
+    // ─── Serilog — structured logging to Console and File ────────────────────
+    // App Insights / Azure Monitor telemetry is handled exclusively by OpenTelemetry
+    // (Azure.Monitor.OpenTelemetry.AspNetCore). The Serilog.Sinks.ApplicationInsights
+    // package was removed to prevent duplicate traces/logs in Application Insights.
     var aiConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
     // CorrelationId enricher requires IHttpContextAccessor
     builder.Services.AddHttpContextAccessor();
@@ -128,6 +133,12 @@ try
         });
 
     // ─── Azure report analysis + Blob persistence ─────────────────────────────
+    // Shared credential and ArmClient registered as Singletons so every service
+    // and endpoint reuses the same credential chain walk instead of re-initialising
+    // DefaultAzureCredential on every scan or control action.
+    builder.Services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+    builder.Services.AddSingleton<ArmClient>(sp =>
+        new ArmClient(sp.GetRequiredService<TokenCredential>()));
 
     builder.Services.AddSingleton<AzureReportStore>();
     builder.Services.AddTransient<AzureReportService>();

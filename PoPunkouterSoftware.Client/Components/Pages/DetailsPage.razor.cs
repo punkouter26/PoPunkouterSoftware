@@ -70,6 +70,18 @@ public partial class DetailsPage
     // ── Chart records ─────────────────────────────────────────────────────────
 
     private record TimePoint(string Label, double Value);
+    private record TrafficPoint(string Service, int Requests, int Http5xx);
+
+    /// <summary>Services that have 7-day request metrics, sorted highest traffic first.</summary>
+    private List<TrafficPoint> WebTrafficByService =>
+        (_report?.WebServices?.Services ?? new())
+            .Where(s => s.Metrics7Days?.Requests > 0)
+            .OrderByDescending(s => s.Metrics7Days!.Requests)
+            .Select(s => new TrafficPoint(
+                s.FriendlyName ?? s.Name,
+                s.Metrics7Days!.Requests,
+                s.Metrics7Days!.Http5xx))
+            .ToList();
     private record StatusHistPoint(string Label, double Active, double Broken);
     private record ServiceTimePoint(string Label, double ResponseMs);
     private record DeltaPoint(string Label, int Delta);

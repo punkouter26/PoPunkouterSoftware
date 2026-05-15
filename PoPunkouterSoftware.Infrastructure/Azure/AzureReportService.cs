@@ -34,19 +34,25 @@ public class AzureReportService
     private readonly IWebHostEnvironment _env;
     private readonly IConfiguration _config;
     private readonly AzureReportStore _repository;
+    private readonly ArmClient _arm;
+    private readonly TokenCredential _credential;
 
     public AzureReportService(
         ILogger<AzureReportService> logger,
         IHttpClientFactory httpClientFactory,
         IWebHostEnvironment env,
         IConfiguration config,
-        AzureReportStore repository)
+        AzureReportStore repository,
+        ArmClient arm,
+        TokenCredential credential)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _env = env;
         _config = config;
         _repository = repository;
+        _arm = arm;
+        _credential = credential;
     }
 
     // ── Public entry point ────────────────────────────────────────────────────
@@ -78,8 +84,8 @@ public class AzureReportService
         _logger.LogInformation("AzureReportService: starting analysis");
 
         Report("Authenticating with Azure…", 3);
-        var cred = new DefaultAzureCredential();
-        var arm = new ArmClient(cred);
+        var cred = _credential;
+        var arm = _arm;
 
         Report("Loading subscription…", 7);
         // Use configured subscription ID if set — avoids VS Code credential picking wrong account
@@ -343,7 +349,7 @@ public class AzureReportService
     // ── Step 4: 7-day metrics ─────────────────────────────────────────────────
 
     private async Task<Dictionary<string, MetricsInfo>> GetMetricsAsync(
-        List<RawService> services, DefaultAzureCredential cred, CancellationToken ct)
+        List<RawService> services, TokenCredential cred, CancellationToken ct)
     {
         var result = new ConcurrentDictionary<string, MetricsInfo>(StringComparer.OrdinalIgnoreCase);
         var appSvcs = services.Where(s => s.ResourceId is not null && s.ResourceTypeRaw == "Microsoft.Web/sites").ToList();
@@ -1029,7 +1035,7 @@ public class AzureReportService
     // ── New: App Insights component metrics ───────────────────────────────────
 
     private async Task<List<AppInsightsMetric>> GetAppInsightsMetricsAsync(
-        List<GenericResourceData> allResources, DefaultAzureCredential cred, CancellationToken ct)
+        List<GenericResourceData> allResources, TokenCredential cred, CancellationToken ct)
     {
         var components = allResources
             .Where(r => r.ResourceType.ToString().Equals(

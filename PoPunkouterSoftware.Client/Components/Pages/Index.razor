@@ -5,7 +5,7 @@
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
 
-<PageTitle>PoPunkouterSoftware — Home</PageTitle>
+<PageTitle>Po Software — Portfolio</PageTitle>
 
 <div class="app-page">
     <section class="app-section app-hero app-glow">
@@ -31,7 +31,7 @@
                 </div>
                 <div class="app-stat">
                     <span class="app-stat-label">Avg response time</span>
-                    <span class="app-stat-value" title="Average HTTP probe response time across live services. High values may include cold-start latency on idle Azure free-tier plans.">@AverageResponseLabel</span>
+                    <span class="app-stat-value" title="Avg HTTP probe time for responding services only. Timed-out/cold-start apps (≥14 s) are excluded. Active count shown in parentheses when some apps are down.">@AverageResponseLabel</span>
                 </div>
             </div>
 
@@ -193,6 +193,14 @@
                                           ButtonStyle="ButtonStyle.Primary"
                                           Disabled="@(string.IsNullOrEmpty(app.Url))"
                                           Click="@(() => OpenApp(app.Url))" />
+                            <RadzenButton Text="Azure" Icon="cloud" Size="ButtonSize.Small"
+                                          ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                                          Click="@(() => NavigationManager.NavigateTo("/azure"))"
+                                          title="View this service in the Azure Dashboard" />
+                            <RadzenButton Text="Trends" Icon="show_chart" Size="ButtonSize.Small"
+                                          ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                                          Click="@(() => NavigationManager.NavigateTo("/timebased"))"
+                                          title="View scan history and cost trends" />
                         </div>
                     </RadzenCard>
                 }
@@ -293,11 +301,21 @@
         filteredApps = (apps ?? Enumerable.Empty<AppModel>())
             .Where(a =>
             {
+                // When live data has not loaded yet, show all apps so the portfolio
+                // is never empty on first render.
                 if (_liveByUrl.Count == 0) return true;
+
                 var live = GetLiveStatus(a.Url);
+
+                // No matching live entry — hide (service not tracked in Azure report).
                 if (live is null) return false;
-                if (live.HttpStatus != "active") return false;
+
+                // Azure error/splash page — hide (not a real app response).
                 if (live.Connectivity?.IsAzureErrorPage == true) return false;
+
+                // Show the app regardless of live HttpStatus (broken, unreachable, active).
+                // Hiding broken apps makes the portfolio appear empty during an outage,
+                // which is worse UX than showing a broken badge.
                 return true;
             })
             .GroupBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
@@ -326,16 +344,24 @@
     {
         get
         {
+            // Exclude cold-start timeouts (≥14 000 ms) — they skew the average
+            // and hide the real response quality of healthy services.
+            const int TimeoutThresholdMs = 14_000;
+
             var responseTimes = filteredApps
                 .Select(a => GetLiveStatus(a.Url)?.Connectivity?.ResponseTime)
-                .Where(rt => rt is > 0)
+                .Where(rt => rt is > 0 and < TimeoutThresholdMs)
                 .Select(rt => rt!.Value)
                 .ToList();
 
             if (responseTimes.Count == 0)
                 return "—";
 
-            return $"{responseTimes.Average():F0} ms";
+            var avg = (long)responseTimes.Average();
+            var label = avg < 1000 ? $"{avg} ms" : $"{avg / 1000.0:F1} s";
+            return responseTimes.Count < filteredApps.Count
+                ? $"{label} ({responseTimes.Count} active)"
+                : label;
         }
     }
 

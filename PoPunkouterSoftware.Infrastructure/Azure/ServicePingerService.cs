@@ -42,13 +42,20 @@ public sealed class ServicePingerService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Delay 30 s on startup so the app fully initialises before the first sweep.
-        await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            await PingAllServicesAsync(stoppingToken);
-            await Task.Delay(_interval, stoppingToken);
+            // Delay 30 s on startup so the app fully initialises before the first sweep.
+            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await PingAllServicesAsync(stoppingToken);
+                await Task.Delay(_interval, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal graceful shutdown — host cancellation token fired. Do not rethrow.
         }
     }
 

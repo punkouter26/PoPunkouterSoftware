@@ -1,0 +1,23 @@
+name: Keep-Alive — Warm Production App
+
+# Ping the production app every 10 minutes Mon–Fri 06:00–22:00 UTC
+# to prevent Azure free-tier cold-start timeouts on the ops dashboard itself.
+on:
+  schedule:
+    - cron: "*/10 6-22 * * 1-5"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping production app
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+            --max-time 25 \
+            https://app-popunkoutersoftware.azurewebsites.net/api/health)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 500 ]; then
+            echo "::warning::Production ping returned $STATUS — app may be down or unhealthy."
+          fi

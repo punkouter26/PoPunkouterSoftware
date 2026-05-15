@@ -1,4 +1,5 @@
 using Azure.Data.Tables;
+using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PoPunkouterSoftware.Shared.Azure;
@@ -89,17 +90,13 @@ public sealed class IncidentService
 
         _logger.LogInformation("Detected {Count} incident(s) — persisting to Table Storage", incidents.Count);
 
-        // Persist each incident to Table Storage
-        var tableConnectionString = _config["AzureTableStorage:ConnectionString"];
-        if (string.IsNullOrWhiteSpace(tableConnectionString))
-        {
-            _logger.LogWarning("AzureTableStorage:ConnectionString not configured — incidents not persisted");
+        // Resolve TableClient supporting both connection string (local/dev) and
+        // Managed Identity endpoint (production — no secret needed at runtime).
+        var tableClient = ResolveTableClient();
+        if (tableClient is null)
             return;
-        }
-
         try
         {
-            var tableClient = new TableClient(tableConnectionString, "incidents");
             await tableClient.CreateIfNotExistsAsync(ct);
 
             foreach (var inc in incidents)
@@ -132,13 +129,12 @@ public sealed class IncidentService
     /// <summary>Loads the most recent incidents from Table Storage.</summary>
     public async Task<List<IncidentEntry>> LoadRecentAsync(int limit = 50, CancellationToken ct = default)
     {
-        var tableConnectionString = _config["AzureTableStorage:ConnectionString"];
-        if (string.IsNullOrWhiteSpace(tableConnectionString))
+        var tableClient = ResolveTableClient();
+        if (tableClient is null)
             return new List<IncidentEntry>();
 
         try
         {
-            var tableClient = new TableClient(tableConnectionString, "incidents");
             var entries = new List<IncidentEntry>();
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>(
@@ -166,6 +162,32 @@ public sealed class IncidentService
             _logger.LogWarning(ex, "Failed to load incidents from Table Storage");
             return new List<IncidentEntry>();
         }
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Creates a <see cref="TableClient"/> for the <c>incidents</c> table using whichever
+    /// authentication path is configured:
+    /// <list type="bullet">
+    ///   <item><c>AzureTableStorage:ConnectionString</c> — used when present (local / Azurite)</item>
+    ///   <item><c>AzureTableStorage:Endpoint</c> — used with <see cref="DefaultAzureCredential"/> (production MI)</item>
+    /// </list>
+    /// Returns <see langword="null"/> and logs a warning when neither is set.
+    /// </summary>
+    private TableClient? ResolveTableClient()
+    {
+        var connStr = _config["AzureTableStorage:ConnectionString"];
+        if (!string.IsNullOrWhiteSpace(connStr))
+            return new TableClient(connStr, "incidents");
+
+        var endpoint = _config["AzureTableStorage:Endpoint"];
+        if (!string.IsNullOrWhiteSpace(endpoint))
+            return new TableClient(new Uri(endpoint), "incidents", new DefaultAzureCredential());
+
+        _logger.LogWarning(
+            "AzureTableStorage is not configured (neither ConnectionString nor Endpoint) — incidents will not be persisted");
+        return null;
     }
 
     private async Task PostWebhookAsync(string webhookUrl, List<IncidentEntry> incidents, CancellationToken ct)

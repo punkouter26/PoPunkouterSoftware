@@ -10,7 +10,7 @@
 @inject NotificationService NotificationService
 @inject NavigationManager NavManager
 
-<PageTitle>PoPunkouterSoftware — Azure Dashboard</PageTitle>
+<PageTitle>Po Software — Azure Dashboard</PageTitle>
 
 <div class="app-page">
 
@@ -63,8 +63,10 @@ else
                     <RadzenStack Orientation="Orientation.Horizontal" Gap="6px">
                         <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh from Azure")" Icon="refresh"
                                       ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
-                                      Disabled="@_refreshing" Click="RefreshAsync" />
-                        @if (_refreshing)
+                                      Disabled="@_refreshing" Click="RefreshAsync" />                        <RadzenButton Text="Download JSON" Icon="download" ButtonStyle="ButtonStyle.Light"
+                                      Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                      Disabled="@(report == null)" Click="DownloadReportAsync"
+                                      title="Download the full Azure report as JSON for sharing with AI tools or debugging" />                        @if (_refreshing)
                         {
                             <RadzenButton Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
                                           Click="CancelRefreshAsync" />
@@ -83,6 +85,18 @@ else
                 <RadzenIcon Icon="sync" Style="font-size:1rem;animation:spin 1.4s linear infinite" />
                 <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary">@_progressStep</RadzenText>
             </RadzenStack>
+        </section>
+    }
+
+    <!-- ── Stale data banner: only shown when report age exceeds 6 h (header badge alone is not enough for very old data) ── -->
+    @if (_isStale && !_refreshing && ageMin >= 360)
+    {
+        <section class="app-section">
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true" class="rz-my-2">
+                <strong>Report is more than 2 hours old.</strong> Data may not reflect the current Azure state.
+                <RadzenButton Text="Refresh now" Icon="refresh" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Small"
+                              Click="RefreshAsync" Style="margin-left:.75rem" />
+            </RadzenAlert>
         </section>
     }
 
