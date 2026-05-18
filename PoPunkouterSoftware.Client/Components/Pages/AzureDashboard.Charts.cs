@@ -35,7 +35,7 @@ public partial class AzureDashboard
             .Where(d => d.Cost > 0)
             .Take(10)
             .Select(d => new ChartPoint(
-                d.Name.Length > 28 ? d.Name[..25] + "…" : d.Name,
+                d.Name.Length > 40 ? d.Name[..37] + "…" : d.Name,
                 Math.Round(d.Cost, 2)))
             .ToList() ?? new();
 
@@ -47,7 +47,7 @@ public partial class AzureDashboard
             .Select(s =>
             {
                 var lbl = s.FriendlyName ?? s.Name;
-                return new ChartPoint(lbl.Length > 20 ? lbl[..17] + "…" : lbl, s.Connectivity!.ResponseTime);
+                return new ChartPoint(lbl.Length > 28 ? lbl[..25] + "…" : lbl, s.Connectivity!.ResponseTime);
             })
             .ToList();
 
@@ -59,7 +59,7 @@ public partial class AzureDashboard
             .Select(s =>
             {
                 var lbl = s.FriendlyName ?? s.Name;
-                return new ChartPoint(lbl.Length > 20 ? lbl[..17] + "…" : lbl, s.Metrics7Days!.Http5xx);
+                return new ChartPoint(lbl.Length > 28 ? lbl[..25] + "…" : lbl, s.Metrics7Days!.Http5xx);
             })
             .ToList();
 

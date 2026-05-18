@@ -8,10 +8,6 @@ namespace PoPunkouterSoftware.Features.Diag;
 
 internal static class DiagEndpoints
 {
-    static readonly SemaphoreSlim _refreshLock = new(1, 1);
-    // Holds the active refresh CTS so the cancel-refresh endpoint can signal it.
-    static volatile CancellationTokenSource? _runningRefreshCts;
-
     internal static WebApplication MapDiagEndpoints(this WebApplication app)
     {
         app.MapGet("/api/diag/report", async (IWebHostEnvironment env, AzureReportStore store) =>
@@ -47,9 +43,10 @@ internal static class DiagEndpoints
 
         app.MapPost("/api/diag/refresh",
             (IServiceScopeFactory scopeFactory, IWebHostEnvironment env, ILogger<Program> logger,
-             Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Features.Azure.RefreshHub> hubCtx) =>
+             Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Features.Azure.RefreshHub> hubCtx,
+             RefreshSessionManager session) =>
         {
-            if (!_refreshLock.Wait(0))
+            if (!session.Lock.Wait(0))
                 return Results.Problem(detail: "Refresh already in progress.", statusCode: 409);
 
             _ = Task.Run(async () =>
@@ -59,7 +56,7 @@ internal static class DiagEndpoints
                 var store = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-                _runningRefreshCts = cts;
+                session.SetActiveCts(cts);
                 var ct = cts.Token;
                 var sw = Stopwatch.StartNew();
                 var progress = new Progress<(string Step, int Percent)>(p =>
@@ -71,7 +68,7 @@ internal static class DiagEndpoints
                 try
                 {
                     var report = await azureService.RunAsync(progress, ct);
-                    _refreshLock.Release();
+                    session.Lock.Release();
                     lockReleased = true;
 
                     await store.SaveAsync(report, ct);
@@ -100,15 +97,15 @@ internal static class DiagEndpoints
                 catch (OperationCanceledException)
                 {
                     if (!lockReleased)
-                        _refreshLock.Release();
-                    _runningRefreshCts = null;
+                        session.Lock.Release();
+                    session.SetActiveCts(null);
                     logger.LogWarning("Refresh cancelled or timed out");
                 }
                 catch (Exception ex)
                 {
                     if (!lockReleased)
-                        _refreshLock.Release();
-                    _runningRefreshCts = null;
+                        session.Lock.Release();
+                    session.SetActiveCts(null);
                     logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
                 }
             });
@@ -117,9 +114,9 @@ internal static class DiagEndpoints
         });
 
         // ── Cancel in-progress refresh ───────────────────────────────────────
-        app.MapPost("/api/diag/cancel-refresh", () =>
+        app.MapPost("/api/diag/cancel-refresh", (RefreshSessionManager session) =>
         {
-            _runningRefreshCts?.Cancel();
+            session.Cancel();
             return Results.Ok(new { cancelled = true });
         })
         .WithName("CancelDiagRefresh")

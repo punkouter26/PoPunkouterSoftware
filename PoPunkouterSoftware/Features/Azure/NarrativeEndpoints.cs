@@ -24,31 +24,13 @@ internal static class NarrativeEndpoints
         {
             const string cacheKey = "narrative";
 
-            // ── Feature flag guard ────────────────────────────────────────────
-            if (!config.GetValue<bool>("FeatureFlags:EnableAiIntegration"))
-                return Results.Ok(new
-                {
-                    narrative = (string?)null,
-                    disabled = true,
-                    message = "AI integration is disabled. Set FeatureFlags:EnableAiIntegration=true to enable."
-                });
+            // ── Feature flag + OpenAI config guard ────────────────────────────
+            var (blocked, ai) = AiEndpointGuard.Validate(config);
+            if (blocked is not null) return blocked;
 
             // ── Cache hit ─────────────────────────────────────────────────────
             if (cache.TryGetValue(cacheKey, out string? cached))
                 return Results.Ok(new { narrative = cached, generatedAt = (DateTime?)null, cached = true });
-
-            // ── OpenAI config ─────────────────────────────────────────────────
-            var endpoint = config["AzureOpenAI:Endpoint"];
-            var apiKey = config["AzureOpenAI:ApiKey"];
-            var deployment = config["AzureOpenAI:DeploymentName"] ?? "gpt-4o";
-
-            if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
-                return Results.Ok(new
-                {
-                    narrative = (string?)null,
-                    disabled = true,
-                    message = "Azure OpenAI is not configured."
-                });
 
             // ── Load latest report ────────────────────────────────────────────
             var result = await repository.LoadAsync(ct);
@@ -101,9 +83,9 @@ internal static class NarrativeEndpoints
             {
                 var narrative = await AzureOpenAiClient.GetCompletionAsync(
                     httpClientFactory,
-                    endpoint,
-                    apiKey,
-                    deployment,
+                    ai!.Endpoint,
+                    ai.ApiKey,
+                    ai.Deployment,
                     systemPrompt,
                     userPrompt,
                     maxTokens: 200,

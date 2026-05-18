@@ -18,23 +18,6 @@
             </p>
 
 
-            <div class="app-grid metrics">
-                <div class="app-stat">
-                    <span class="app-stat-label">Live portfolio</span>
-                    <span class="app-stat-value">@filteredApps.Count</span>
-                </div>
-                <div class="app-stat">
-                    <span class="app-stat-label">Recently shipped</span>
-                    <span class="app-stat-value" title="Apps with a GitHub commit in the last 30 days">
-                        @(_ghLoaded ? (CountRecentRepos(30) == 0 && CountTrackedRepos() == 0 ? "—" : $"{CountRecentRepos(30)}") : "—")
-                    </span>
-                </div>
-                <div class="app-stat">
-                    <span class="app-stat-label">Avg response time</span>
-                    <span class="app-stat-value" title="Avg HTTP probe time for responding services only. Timed-out/cold-start apps (≥14 s) are excluded. Active count shown in parentheses when some apps are down.">@AverageResponseLabel</span>
-                </div>
-            </div>
-
             <div class="app-chip-row">
                 <RadzenBadge Text="C# / .NET 10" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
                 <RadzenBadge Text="Blazor + Radzen" BadgeStyle="BadgeStyle.Primary" Variant="Variant.Flat" IsPill="true" />
@@ -89,7 +72,8 @@
                     var isActive = app.Status?.ToLower() == "active";
                     var live = GetLiveStatus(app.Url);
 
-                    <RadzenCard class="app-card app-glow" Style="@($"display:flex;flex-direction:column;gap:1rem;border-left:4px solid {(isActive ? "var(--app-accent-strong)" : "var(--app-border-strong)")}")">
+                    var cardBorder = isActive ? "var(--app-accent-strong)" : (live?.HttpStatus == "broken" ? "var(--rz-danger)" : "var(--app-border-strong)");
+                    <RadzenCard class="app-card app-glow" Style="@($"display:flex;flex-direction:column;gap:1rem;border-left:4px solid {cardBorder}")">  
                         <div class="app-status-row">
                             <div>
                                 <div class="app-kicker">App</div>
@@ -111,7 +95,8 @@
                                 @if ((live.Connectivity?.ResponseTime ?? 0) > 0)
                                 {
                                     var rt = live.Connectivity!.ResponseTime;
-                                    <RadzenBadge Text="@($"{rt} ms")" BadgeStyle="@(rt < 1000 ? BadgeStyle.Success : BadgeStyle.Warning)" Variant="Variant.Flat" IsPill="true" />
+                                    var isTimeout = rt >= 15000;
+                                    <RadzenBadge Text="@(isTimeout ? "TIMEOUT" : $"{rt} ms")" BadgeStyle="@(isTimeout ? BadgeStyle.Danger : rt < 1000 ? BadgeStyle.Success : BadgeStyle.Warning)" Variant="Variant.Flat" IsPill="true" />
                                 }
                             </div>
                         }
@@ -195,11 +180,11 @@
                                           Click="@(() => OpenApp(app.Url))" />
                             <RadzenButton Text="Azure" Icon="cloud" Size="ButtonSize.Small"
                                           ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
-                                          Click="@(() => NavigationManager.NavigateTo("/azure"))"
+                                          Click="@(() => NavigationManager.NavigateTo("/admin"))"
                                           title="View this service in the Azure Dashboard" />
                             <RadzenButton Text="Trends" Icon="show_chart" Size="ButtonSize.Small"
                                           ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
-                                          Click="@(() => NavigationManager.NavigateTo("/timebased"))"
+                                          Click="@(() => NavigationManager.NavigateTo("/admin"))"
                                           title="View scan history and cost trends" />
                         </div>
                     </RadzenCard>

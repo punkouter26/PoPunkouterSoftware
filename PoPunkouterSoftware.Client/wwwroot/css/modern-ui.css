@@ -209,6 +209,7 @@ a {
 .app-grid.cards {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
+.app-grid.cards > * { height: 100%; }
 
 .app-grid.metrics {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

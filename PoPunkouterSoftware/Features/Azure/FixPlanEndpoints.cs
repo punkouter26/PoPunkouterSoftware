@@ -26,14 +26,9 @@ internal static class FixPlanEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            // ── Feature flag guard ────────────────────────────────────────────
-            if (!config.GetValue<bool>("FeatureFlags:EnableAiIntegration"))
-                return Results.Ok(new
-                {
-                    plan = (string?)null,
-                    disabled = true,
-                    message = "AI integration is disabled. Set FeatureFlags:EnableAiIntegration=true and configure AzureOpenAI settings to enable."
-                });
+            // ── Feature flag + OpenAI config guard ──────────────────────────────────
+            var (blocked, ai) = AiEndpointGuard.Validate(config);
+            if (blocked is not null) return blocked;
 
             // ── Cache hit ─────────────────────────────────────────────────────
             var cacheKey = $"fix-plan:{serviceName.ToLowerInvariant()}";
@@ -53,18 +48,6 @@ internal static class FixPlanEndpoints
             if (service is null)
                 return Results.NotFound(new { error = $"Service '{serviceName}' not found in the latest report." });
 
-            // ── Check OpenAI config ───────────────────────────────────────────
-            var endpoint = config["AzureOpenAI:Endpoint"];
-            var apiKey = config["AzureOpenAI:ApiKey"];
-            var deployment = config["AzureOpenAI:DeploymentName"] ?? "gpt-4o";
-
-            if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
-                return Results.Ok(new
-                {
-                    plan = (string?)null,
-                    disabled = true,
-                    message = "Azure OpenAI is not configured. Add AzureOpenAI:Endpoint and AzureOpenAI:ApiKey to configuration or Key Vault."
-                });
 
             // ── Build prompt from report data ─────────────────────────────────
             var driftItems = report?.ConfigDrift?
@@ -79,9 +62,9 @@ internal static class FixPlanEndpoints
             {
                 var plan = await AzureOpenAiClient.GetCompletionAsync(
                     httpClientFactory,
-                    endpoint,
-                    apiKey,
-                    deployment,
+                    ai!.Endpoint,
+                    ai.ApiKey,
+                    ai.Deployment,
                     systemPrompt: "You are an Azure infrastructure expert. Produce concise, actionable fix plans for broken or unhealthy Azure App Services. Use numbered steps. Be specific and include az CLI commands where applicable. Do not include preamble — start directly with the numbered list.",
                     userPrompt: prompt,
                     maxTokens: 800,

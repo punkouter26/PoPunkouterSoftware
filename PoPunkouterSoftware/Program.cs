@@ -2,6 +2,7 @@ using Azure.Core;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.ResourceManager;
+using PoPunkouterSoftware;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Features.GitHub;
@@ -50,7 +51,8 @@ try
     var aiConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
     // CorrelationId enricher requires IHttpContextAccessor
     builder.Services.AddHttpContextAccessor();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
     builder.Host.UseSerilog((ctx, services, cfg) =>
     {
         try
@@ -82,11 +84,9 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     // ─── .NET 10 TimeProvider abstraction — enables testable time ────────────
     builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     // ─── OpenTelemetry + Azure Monitor (only when connection string is present) ──
     var otelBuilder = builder.Services.AddOpenTelemetry();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     if (!string.IsNullOrWhiteSpace(aiConnectionString))
     {
         otelBuilder.UseAzureMonitor(o => o.ConnectionString = aiConnectionString);
@@ -94,7 +94,6 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     // ─── OpenAPI / Scalar ────────────────────────────────────────────
     builder.Services.AddOpenApi();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     builder.WebHost.UseStaticWebAssets();
 
@@ -102,11 +101,8 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
         .AddInteractiveWebAssemblyComponents();
 
     builder.Services.AddRadzenComponents();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddScoped<DialogService>();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddScoped<NotificationService>();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 
     // ─── CORS — origins loaded from configuration ─────────────────────
@@ -144,26 +140,19 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     // and endpoint reuses the same credential chain walk instead of re-initialising
     // DefaultAzureCredential on every scan or control action.
     builder.Services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSingleton<ArmClient>(sp =>
         new ArmClient(sp.GetRequiredService<TokenCredential>()));
 
     builder.Services.AddSingleton<AzureReportStore>();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddTransient<AzureReportService>();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSingleton<ServicePingerService>();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<ServicePingerService>());
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSignalR();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSingleton<IncidentService>();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddSingleton<RefreshSessionManager>();
 
     // ─── In-process memory cache (GitHub activity + AI fix plans) ────────────
     builder.Services.AddMemoryCache();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     // ─── HTTP client for GitHub API ───────────────────────────────────
     var ghPat = builder.Configuration["GitHub:PersonalAccessToken"];
@@ -183,7 +172,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     var app = builder.Build();
 
-app.UseExceptionHandler();
+    app.UseExceptionHandler();
 
     // ─── Startup configuration health-checks (non-fatal, informational) ──────
     var startupLog = app.Services.GetRequiredService<ILogger<Program>>();

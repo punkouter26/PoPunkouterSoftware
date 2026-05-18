@@ -1,80 +1,48 @@
-using Microsoft.AspNetCore.Components;
 using PoPunkouterSoftware.Shared.Azure;
 using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace PoPunkouterSoftware.Client.Components.Pages;
 
-public partial class DetailsPage
+// Partial class — Trends & History tab (merged from former DetailsPage).
+// Uses the shared `report` field and `_history` loaded alongside the main report.
+public partial class AzureDashboard
 {
-    [Inject] private HttpClient Http { get; set; } = default!;
-
-    private AzureReport? _report;
+    // ── State ──────────────────────────────────────────────────────────────────
     private List<HistorySummary> _history = new();
-    private bool _loading = true;
-    private string? _error;
 
-    private static readonly JsonSerializerOptions _opts = new() { PropertyNameCaseInsensitive = true };
-
-    protected override async Task OnInitializedAsync()
+    internal async Task LoadHistoryAsync()
     {
         try
         {
-            AzureReport? report = null;
-            List<HistorySummary>? history = null;
-
-            var reportTask = Http.GetFromJsonAsync<AzureReport>("/api/diag/report", _opts)
-                .ContinueWith(t => { if (t.IsCompletedSuccessfully) report = t.Result; });
-            var histTask = Http.GetFromJsonAsync<List<HistorySummary>>("/api/diag/history", _opts)
-                .ContinueWith(t => { if (t.IsCompletedSuccessfully) history = t.Result; });
-
-            await Task.WhenAll(reportTask, histTask);
-            _report = report;
-            _history = history ?? new();
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var hist = await Http.GetFromJsonAsync<List<HistorySummary>>("/api/diag/history", opts);
+            _history = hist ?? new();
         }
-        catch (Exception ex)
+        catch
         {
-            _error = ex.Message;
+            _history = new();
         }
-        finally
-        {
-            _loading = false;
-        }
+        await InvokeAsync(StateHasChanged);
     }
 
-    // ── Summary helpers ───────────────────────────────────────────────────────
+    // ── Summary helpers ────────────────────────────────────────────────────────
+    private int TotalCount => report?.WebServices?.Total ?? 0;
 
-    private int ActiveCount => _report?.WebServices?.ByStatus?.Active ?? 0;
-    private int BrokenCount => _report?.WebServices?.ByStatus?.Broken ?? 0;
-    private int TotalCount => _report?.WebServices?.Total ?? 0;
-    private double Cost30d => _report?.Cost?.TotalCost30Days ?? 0;
-    private int OrphanedCount => _report?.OrphanedResources?.Count ?? 0;
-    private int SslCritical => _report?.SslExpiry?.Count(e => e.DaysLeft is not null && e.DaysLeft <= 30) ?? 0;
-    private bool IsStale => _report?.GeneratedAt is DateTime dt && (DateTime.UtcNow - dt).TotalHours > 24;
-
-    private string ScanAge => _report?.GeneratedAt is DateTime dt
+    private string ScanAge => report?.GeneratedAt is DateTime dt
         ? FormatAge(DateTime.UtcNow - dt)
         : "unknown";
 
-    private static string FormatAge(TimeSpan age)
-    {
-        if (age.TotalMinutes < 1)
-            return "just now";
-        if (age.TotalMinutes < 60)
-            return $"{(int)age.TotalMinutes}m ago";
-        if (age.TotalHours < 24)
-            return $"{(int)age.TotalHours}h {age.Minutes}m ago";
-        return $"{(int)age.TotalDays}d {age.Hours}h ago";
-    }
-
-    // ── Chart records ─────────────────────────────────────────────────────────
-
+    // ── Chart records ──────────────────────────────────────────────────────────
     private record TimePoint(string Label, double Value);
     private record TrafficPoint(string Service, int Requests, int Http5xx);
+    private record StatusHistPoint(string Label, double Active, double Broken);
+    private record ServiceTimePoint(string Label, double ResponseMs);
+    private record DeltaPoint(string Label, int Delta);
 
-    /// <summary>Services that have 7-day request metrics, sorted highest traffic first.</summary>
+    // ── Traffic data ───────────────────────────────────────────────────────────
     private List<TrafficPoint> WebTrafficByService =>
-        (_report?.WebServices?.Services ?? new())
+        (report?.WebServices?.Services ?? new())
             .Where(s => s.Metrics7Days?.Requests > 0)
             .OrderByDescending(s => s.Metrics7Days!.Requests)
             .Select(s => new TrafficPoint(
@@ -82,12 +50,8 @@ public partial class DetailsPage
                 s.Metrics7Days!.Requests,
                 s.Metrics7Days!.Http5xx))
             .ToList();
-    private record StatusHistPoint(string Label, double Active, double Broken);
-    private record ServiceTimePoint(string Label, double ResponseMs);
-    private record DeltaPoint(string Label, int Delta);
 
-    // ── History charts ────────────────────────────────────────────────────────
-
+    // ── History chart data ─────────────────────────────────────────────────────
     private bool HasHistory => _history.Count > 1;
 
     private List<StatusHistPoint> ServiceStatusHistory =>
@@ -176,42 +140,42 @@ public partial class DetailsPage
                 (double)h.ScanDurationMs))
             .ToList();
 
-    // ── Current report helpers ────────────────────────────────────────────────
-
+    // ── All-services grid ──────────────────────────────────────────────────────
     private IEnumerable<WebService> AllServices =>
-        (_report?.WebServices?.Services ?? new())
+        (report?.WebServices?.Services ?? new())
             .OrderBy(s => s.HttpStatus == "active" ? 0 : s.HttpStatus == "broken" ? 1 : 2)
             .ThenBy(s => s.FriendlyName ?? s.Name);
 
+    // ── Badge / style helpers (inline-style variants used in Trends tab) ────────
     private static string HttpStatusBadgeStyle(string status) => status switch
     {
-        "active" => "background:var(--rz-success);color:#fff",
-        "broken" => "background:var(--rz-danger);color:#fff",
+        "active"      => "background:var(--rz-success);color:#fff",
+        "broken"      => "background:var(--rz-danger);color:#fff",
         "unreachable" => "background:var(--rz-warning);color:#fff",
-        _ => "background:var(--rz-base-300);color:var(--rz-text-color)",
+        _             => "background:var(--rz-base-300);color:var(--rz-text-color)",
     };
 
     private static string SslBadgeStyle(SslEntry e) => (e.DaysLeft ?? 999) switch
     {
-        <= 0 => "background:var(--rz-danger);color:#fff",
+        <= 0  => "background:var(--rz-danger);color:#fff",
         <= 14 => "background:var(--rz-danger);color:#fff",
         <= 30 => "background:var(--rz-warning);color:#fff",
-        _ => "background:var(--rz-success);color:#fff",
+        _     => "background:var(--rz-success);color:#fff",
     };
 
     private static string SslLabel(SslEntry e) => e.DaysLeft switch
     {
-        null => "unknown",
-        <= 0 => "EXPIRED",
+        null  => "unknown",
+        <= 0  => "EXPIRED",
         <= 14 => $"{e.DaysLeft}d CRITICAL",
         <= 30 => $"{e.DaysLeft}d WARNING",
-        _ => $"{e.DaysLeft}d OK",
+        _     => $"{e.DaysLeft}d OK",
     };
 
     private static string SeverityStyle(string sev) => sev.ToLowerInvariant() switch
     {
-        "critical" or "high" => "color:var(--rz-danger)",
-        "medium" or "warning" => "color:var(--rz-warning)",
-        _ => "color:var(--rz-text-disabled-color)",
+        "critical" or "high"     => "color:var(--rz-danger)",
+        "medium" or "warning"    => "color:var(--rz-warning)",
+        _                        => "color:var(--rz-text-disabled-color)",
     };
 }

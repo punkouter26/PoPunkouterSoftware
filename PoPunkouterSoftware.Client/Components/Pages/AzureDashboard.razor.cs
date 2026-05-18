@@ -8,7 +8,7 @@ using Radzen.Blazor;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-#pragma warning disable CS0414 // fields assigned by background methods; display removed from UI
+#pragma warning disable CS0414 // Blazor fields read by .razor markup; compiler sees only the .cs file
 
 namespace PoPunkouterSoftware.Client.Components.Pages;
 
@@ -102,12 +102,6 @@ public partial class AzureDashboard
     private string? _fixPlanDisabledMessage;
     private bool _fixPlanLoading;
 
-    // ── CI/CD Review state ────────────────────────────────────────────────────
-    private List<InfraReview> _infraReviews = new();
-    private bool _infraLoading;
-    private string? _infraError;
-    private string? _infraDisabledMessage;
-    private InfraReview? _infraSelected;
 
     // ── Incidents state ───────────────────────────────────────────────────────
     private List<IncidentEntry> _incidents = new();
@@ -139,6 +133,7 @@ public partial class AzureDashboard
         await LoadReportAsync();
         _ = LoadIncidentsAsync();
         _ = LoadStatusAsync();
+        _ = LoadHistoryAsync();
     }
 
     private ValueTask OnLocationChanging(LocationChangingContext context)
@@ -217,7 +212,7 @@ public partial class AzureDashboard
             if (_hub?.State == HubConnectionState.Connected)
                 await WaitForRefreshCompletionAsync(_refreshCts!.Token);
             else
-                await WaitForRefreshCompletionWithFallbackAsync(_refreshCts!.Token);
+                await WaitForRefreshCompletionAsync(_refreshCts!.Token, delayMs: 1500);
 
             await LoadReportAsync();
             if (!_refreshCts.Token.IsCancellationRequested)
@@ -253,22 +248,11 @@ public partial class AzureDashboard
         StateHasChanged();
     }
 
-    private async Task WaitForRefreshCompletionAsync(CancellationToken ct)
+    private async Task WaitForRefreshCompletionAsync(CancellationToken ct, int delayMs = 2000)
     {
         while (_refreshing && !ct.IsCancellationRequested)
         {
-            await Task.Delay(2000, ct);
-            if (!_refreshing)
-                break;
-        }
-        ct.ThrowIfCancellationRequested();
-    }
-
-    private async Task WaitForRefreshCompletionWithFallbackAsync(CancellationToken ct)
-    {
-        while (_refreshing && !ct.IsCancellationRequested)
-        {
-            await Task.Delay(1500, ct);
+            await Task.Delay(delayMs, ct);
             if (!_refreshing)
                 break;
         }
@@ -492,55 +476,6 @@ public partial class AzureDashboard
         }).ToList() ?? new();
 
     // ── Chart helpers ─────────────────────────────────────────────────────────
-
-    // ── CI/CD Review helpers ──────────────────────────────────────────────────
-    private async Task LoadInfraReviewAsync()
-    {
-        _infraLoading = true;
-        _infraError = null;
-        _infraDisabledMessage = null;
-        StateHasChanged();
-        try
-        {
-            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var resp = await Http.GetAsync("/api/infra/cicd-review");
-            var json = await resp.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-
-            if (doc.RootElement.TryGetProperty("disabled", out var dis) && dis.GetBoolean())
-            {
-                _infraDisabledMessage = doc.RootElement.TryGetProperty("message", out var msg)
-                    ? msg.GetString() : "GitHub PAT is not configured.";
-                _infraReviews = new();
-            }
-            else if (doc.RootElement.TryGetProperty("reviews", out var rev))
-            {
-                _infraReviews = rev.Deserialize<List<InfraReview>>(opts) ?? new();
-            }
-        }
-        catch (Exception ex)
-        {
-            _infraError = ex.Message;
-        }
-        finally
-        {
-            _infraLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task RescanInfraAsync()
-    {
-        await Http.PostAsync("/api/infra/cicd-review/refresh", null);
-        _infraReviews = new();
-        _infraSelected = null;
-        await LoadInfraReviewAsync();
-    }
-
-    private void ToggleInfraDetail(InfraReview review)
-    {
-        _infraSelected = _infraSelected?.RepoName == review.RepoName ? null : review;
-    }
 
     private record HealthCheckResult(
         string Status,
