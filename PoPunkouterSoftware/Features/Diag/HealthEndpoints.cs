@@ -5,7 +5,7 @@ internal static class HealthEndpoints
     internal static WebApplication MapHealthEndpoints(this WebApplication app)
     {
         // ─── Health — probes all external connections ──────────────────────────
-        app.MapGet("/api/health", async (IHttpClientFactory httpClientFactory, IConfiguration config, IWebHostEnvironment env) =>
+        app.MapGet("/health", async (IHttpClientFactory httpClientFactory, IConfiguration config, IWebHostEnvironment env) =>
         {
             var client = httpClientFactory.CreateClient("health");
             var checks = new Dictionary<string, object>();

@@ -26,7 +26,7 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // ─── Azure Key Vault — default to shared PoShared vault unless overridden ───
-    var kvUriStr = builder.Configuration["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
+    var kvUriStr = builder.Configuration["KeyVault:Uri"] ?? builder.Configuration["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
     if (!string.IsNullOrWhiteSpace(kvUriStr))
     {
         try
@@ -50,6 +50,7 @@ try
     var aiConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
     // CorrelationId enricher requires IHttpContextAccessor
     builder.Services.AddHttpContextAccessor();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Host.UseSerilog((ctx, services, cfg) =>
     {
         try
@@ -81,9 +82,11 @@ try
 
     // ─── .NET 10 TimeProvider abstraction — enables testable time ────────────
     builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     // ─── OpenTelemetry + Azure Monitor (only when connection string is present) ──
     var otelBuilder = builder.Services.AddOpenTelemetry();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     if (!string.IsNullOrWhiteSpace(aiConnectionString))
     {
         otelBuilder.UseAzureMonitor(o => o.ConnectionString = aiConnectionString);
@@ -91,6 +94,7 @@ try
 
     // ─── OpenAPI / Scalar ────────────────────────────────────────────
     builder.Services.AddOpenApi();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     builder.WebHost.UseStaticWebAssets();
 
@@ -98,8 +102,11 @@ try
         .AddInteractiveWebAssemblyComponents();
 
     builder.Services.AddRadzenComponents();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddScoped<DialogService>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddScoped<NotificationService>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 
     // ─── CORS — origins loaded from configuration ─────────────────────
@@ -137,18 +144,26 @@ try
     // and endpoint reuses the same credential chain walk instead of re-initialising
     // DefaultAzureCredential on every scan or control action.
     builder.Services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSingleton<ArmClient>(sp =>
         new ArmClient(sp.GetRequiredService<TokenCredential>()));
 
     builder.Services.AddSingleton<AzureReportStore>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddTransient<AzureReportService>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSingleton<ServicePingerService>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<ServicePingerService>());
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSignalR();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSingleton<IncidentService>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     // ─── In-process memory cache (GitHub activity + AI fix plans) ────────────
     builder.Services.AddMemoryCache();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
     // ─── HTTP client for GitHub API ───────────────────────────────────
     var ghPat = builder.Configuration["GitHub:PersonalAccessToken"];
@@ -167,6 +182,8 @@ try
         .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(60));
 
     var app = builder.Build();
+
+app.UseExceptionHandler();
 
     // ─── Startup configuration health-checks (non-fatal, informational) ──────
     var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
