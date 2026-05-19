@@ -8,24 +8,16 @@ using Radzen.Blazor;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-#pragma warning disable CS0414 // Blazor fields read by .razor markup; compiler sees only the .cs file
 
 namespace PoPunkouterSoftware.Client.Components.Pages;
 
+#pragma warning disable CS0414 // assigned but value never used — write-only loading state
 public partial class AzureDashboard
 {
     private AzureReport? report;
     private List<WebService> services = new();
     private List<SafeToRemoveItem> safeToRemove = new();
-    private bool _isStale;          // true when report is > 2h old — shows banner
     private int _selectedTabIndex = 0;
-
-    private async Task ScrollTabsIntoView()
-    {
-        await JS.InvokeVoidAsync("eval",
-            "document.getElementById('detail-tabs')?.scrollIntoView({behavior:'smooth',block:'start'})");
-    }
-
     private bool _loading = true;
     private string? _loadError;
 
@@ -33,20 +25,6 @@ public partial class AzureDashboard
 
     private IEnumerable<WebService> SortedServices =>
         services.OrderBy(s => s.HttpStatus == "active" ? 0 : 1).ThenBy(s => s.FriendlyName ?? s.Name);
-
-    private List<PortfolioRollup> PortfolioByEnvironment =>
-        ConsolidatedServices
-            .GroupBy(s => s.Environment)
-            .Select(g => new PortfolioRollup(g.Key, g.Count(), g.Count(x => x.HttpStatus != "active"), Math.Round(g.Average(x => x.HealthScore), 1)))
-            .OrderByDescending(r => r.Apps)
-            .ToList();
-
-    private List<PortfolioRollup> PortfolioByPlatform =>
-        ConsolidatedServices
-            .GroupBy(s => s.ResourceTypeSummary)
-            .Select(g => new PortfolioRollup(g.Key, g.Count(), g.Count(x => x.HttpStatus != "active"), Math.Round(g.Average(x => x.HealthScore), 1)))
-            .OrderByDescending(r => r.Apps)
-            .ToList();
 
     private List<PriorityQueueItem> PriorityQueue => BuildPriorityQueue(report, ConsolidatedServices, safeToRemove);
 
@@ -62,10 +40,6 @@ public partial class AzureDashboard
     private CancellationTokenSource? _refreshCts;
     private IDisposable? _locationChangingRegistration;
     private const int RefreshTimeoutSeconds = 120;
-
-    private string LastRefreshTime => report?.GeneratedAt is DateTime dt
-        ? " · Last updated " + FormatAge(DateTime.UtcNow - dt)
-        : "";
 
     private static string FormatAge(TimeSpan age)
     {
@@ -166,9 +140,6 @@ public partial class AzureDashboard
 
             services = report.WebServices?.Services ?? new List<WebService>();
             safeToRemove = BuildSafeToRemove(report);
-
-            if (report.GeneratedAt is DateTime gen && (DateTime.UtcNow - gen).TotalHours > 2 && !_refreshing)
-                _isStale = true;  // show banner; user must click Refresh to re-scan
         }
         catch (Exception ex)
         {
@@ -188,7 +159,6 @@ public partial class AzureDashboard
     private async Task RefreshAsync()
     {
         _refreshing = true;
-        _isStale = false;
         _progressPercent = 0;
         _progressStep = "Starting…";
         // Keep the previous report in view during the scan — do not null it here.

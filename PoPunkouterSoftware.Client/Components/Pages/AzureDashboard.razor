@@ -1,6 +1,4 @@
-@page "/admin"
 @page "/azure"
-@page "/timebased"
 @rendermode WasmRenderModes.Interactive
 @using System.Text.Json
 @using System.Text.Json.Serialization
@@ -12,7 +10,7 @@
 @inject NotificationService NotificationService
 @inject NavigationManager NavManager
 
-<PageTitle>Po Software — Admin Dashboard</PageTitle>
+<PageTitle>Po Software — Azure Monitor</PageTitle>
 
 <div class="app-page">
 
@@ -522,19 +520,6 @@ else
             @* ── Trends & History tab ───────────────────────────────────────────── *@
             <RadzenTabsItem Text="Trends &amp; History">
 
-    @* ── Header *@
-    <section class="app-section app-hero" style="padding-bottom:1rem">
-        <div>
-            <span class="app-eyebrow">Internal diagnostics</span>
-            <h1 class="app-hero-title" style="font-size:clamp(1.6rem,3vw,2.2rem)">Time-Based Trends</h1>
-            <p class="app-hero-copy">
-                Complete analysis from the latest Azure subscription scan · Last scan <strong>@ScanAge</strong>
-                @if (report?.GeneratedAt is DateTime trendsDt)
-                { <span> · @trendsDt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span> }
-            </p>
-        </div>
-    </section>
-
     @* ── Web Traffic chart *@
     @if (WebTrafficByService.Count > 0)
     {
@@ -804,7 +789,7 @@ else
                         </div>
                     </RadzenTabsItem>
                 }
-                <RadzenTabsItem Text="@($"🌐 Services ({TotalCount})")">
+                <RadzenTabsItem Text="@($"Services ({TotalCount})")">
                     <div style="overflow-x:auto;margin-top:.75rem">
                         <RadzenDataGrid Data="@AllServices" TItem="WebService"
                                         AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu"

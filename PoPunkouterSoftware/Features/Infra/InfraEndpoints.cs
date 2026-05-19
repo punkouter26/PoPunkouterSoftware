@@ -107,7 +107,7 @@ internal static class InfraEndpoints
                 {
                     var repoName = repo["name"]?.GetValue<string>() ?? "";
                     var fullName = repo["full_name"]?.GetValue<string>() ?? "";
-                    var owner = fullName.Contains('/') ? fullName.Split('/')[0] : "punkouter26";
+                    var owner = fullName.Split('/')[0];
                     var defaultBranch = repo["default_branch"]?.GetValue<string>() ?? "main";
                     var isPrivate = repo["private"]?.GetValue<bool>() ?? false;
                     var repoUrl = repo["html_url"]?.GetValue<string>();

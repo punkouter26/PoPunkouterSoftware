@@ -145,6 +145,7 @@ try
 
     builder.Services.AddSingleton<AzureReportStore>();
     builder.Services.AddTransient<AzureReportService>();
+    builder.Services.AddTransient<DowntimeDiagnosisService>();
     builder.Services.AddSingleton<ServicePingerService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<ServicePingerService>());
     builder.Services.AddSignalR();

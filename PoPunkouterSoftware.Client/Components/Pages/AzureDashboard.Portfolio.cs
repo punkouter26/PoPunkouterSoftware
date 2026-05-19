@@ -39,8 +39,6 @@ public partial class AzureDashboard
         string? Command
     );
 
-    private record PortfolioRollup(string Dimension, int Apps, int Broken, double AvgHealth);
-
     // ── Label / badge helpers ─────────────────────────────────────────────────
     private static string TypeLabel(string? t) => t switch
     {

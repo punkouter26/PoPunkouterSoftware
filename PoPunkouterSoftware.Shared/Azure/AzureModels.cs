@@ -80,7 +80,6 @@ public record FreeTierInfo
 {
     public List<FreeTierItem> OnFree { get; init; } = new();
     public List<FreeTierItem> CanGoFree { get; init; } = new();
-    public List<FreeTierItem>? NoFreeTier { get; init; }
 }
 
 public record FreeTierItem
