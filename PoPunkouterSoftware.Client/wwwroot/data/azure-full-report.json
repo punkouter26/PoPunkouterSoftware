@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-05-18T20:45:11.9219632Z",
+  "generatedAt": "2026-05-19T21:06:34.5723138Z",
   "subscription": {
     "name": "Punkouter26"
   },
   "webServices": {
-    "total": 19,
+    "total": 20,
     "byStatus": {
-      "active": 8,
-      "broken": 11,
+      "active": 0,
+      "broken": 20,
       "other": 0
     },
     "services": [
@@ -24,14 +24,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 1920,
-          "error": null,
-          "isAzureErrorPage": false
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 1951,
-          "http5xx": 45,
-          "averageResponseTime": 54.5
+          "requests": 2022,
+          "http5xx": 46,
+          "averageResponseTime": 55.5
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -52,14 +52,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 1771,
-          "error": "Azure error page",
-          "isAzureErrorPage": true
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 88,
-          "http5xx": 0,
-          "averageResponseTime": 5.4
+          "requests": 386,
+          "http5xx": 76,
+          "averageResponseTime": 52.9
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -74,20 +74,20 @@
         "resourceType": "Microsoft.Web/sites",
         "kind": "app,linux",
         "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
-        "httpStatus": "active",
+        "httpStatus": "broken",
         "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
-          "success": true,
-          "responseTime": 826,
-          "error": null,
-          "isAzureErrorPage": false
+          "success": false,
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 777,
+          "requests": 867,
           "http5xx": 0,
-          "averageResponseTime": 21.6
+          "averageResponseTime": 21.8
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -108,14 +108,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 1748,
-          "error": "Azure error page",
-          "isAzureErrorPage": true
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 167,
+          "requests": 174,
           "http5xx": 0,
-          "averageResponseTime": 85
+          "averageResponseTime": 185.1
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -136,14 +136,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 1115,
-          "error": "Azure error page",
-          "isAzureErrorPage": true
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 505,
+          "requests": 714,
           "http5xx": 0,
-          "averageResponseTime": 285.8
+          "averageResponseTime": 289.3
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -158,20 +158,20 @@
         "resourceType": "Microsoft.Web/sites",
         "kind": "app,linux",
         "url": "https://pomarriedlife-api.azurewebsites.net",
-        "httpStatus": "active",
+        "httpStatus": "broken",
         "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
-          "success": true,
-          "responseTime": 804,
-          "error": null,
-          "isAzureErrorPage": false
+          "success": false,
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 1880,
+          "requests": 1989,
           "http5xx": 33,
-          "averageResponseTime": 216.2
+          "averageResponseTime": 226.5
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -192,14 +192,42 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 1177,
-          "error": null,
-          "isAzureErrorPage": false
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 451,
-          "http5xx": 1,
-          "averageResponseTime": 16
+          "requests": 827,
+          "http5xx": 2,
+          "averageResponseTime": 15.7
+        },
+        "freeTierCheck": {
+          "isOnFreeTier": false,
+          "isOnPaidTier": false,
+          "canGoFree": true
+        }
+      },
+      {
+        "name": "app-pomemevideo",
+        "friendlyName": "PoMemeVideo",
+        "resourceGroup": "PoMemeVideo",
+        "resourceType": "Microsoft.Web/sites",
+        "kind": "app,linux,container",
+        "url": "https://app-pomemevideo.azurewebsites.net",
+        "httpStatus": "broken",
+        "platformState": "Running",
+        "description": null,
+        "appServicePlan": null,
+        "connectivity": {
+          "success": false,
+          "responseTime": 390,
+          "error": "Azure error page",
+          "isAzureErrorPage": true
+        },
+        "metrics7Days": {
+          "requests": 0,
+          "http5xx": 0,
+          "averageResponseTime": 0
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -214,20 +242,20 @@
         "resourceType": "Microsoft.Web/sites",
         "kind": "app,linux",
         "url": "https://polocalcompare-appservice-dev.azurewebsites.net",
-        "httpStatus": "active",
+        "httpStatus": "broken",
         "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
-          "success": true,
-          "responseTime": 869,
-          "error": null,
-          "isAzureErrorPage": false
+          "success": false,
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 3088,
-          "http5xx": 152,
-          "averageResponseTime": 110.5
+          "requests": 3453,
+          "http5xx": 150,
+          "averageResponseTime": 64.4
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -242,20 +270,20 @@
         "resourceType": "Microsoft.Web/sites",
         "kind": "app,linux",
         "url": "https://pocouplequiz-app.azurewebsites.net",
-        "httpStatus": "active",
+        "httpStatus": "broken",
         "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
-          "success": true,
-          "responseTime": 868,
-          "error": null,
-          "isAzureErrorPage": false
+          "success": false,
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 711,
+          "requests": 819,
           "http5xx": 3,
-          "averageResponseTime": 202.9
+          "averageResponseTime": 219.4
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -276,14 +304,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 1177,
-          "error": null,
-          "isAzureErrorPage": false
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 1209,
-          "http5xx": 3,
-          "averageResponseTime": 194.1
+          "requests": 1233,
+          "http5xx": 4,
+          "averageResponseTime": 223.8
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -304,14 +332,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 1113,
-          "error": "Azure error page",
-          "isAzureErrorPage": true
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 323,
+          "requests": 598,
           "http5xx": 0,
-          "averageResponseTime": 18.3
+          "averageResponseTime": 46.4
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -327,19 +355,19 @@
         "kind": "app,linux",
         "url": "https://app-polinks.azurewebsites.net",
         "httpStatus": "broken",
-        "platformState": "Stopped",
+        "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 341,
-          "error": null,
-          "isAzureErrorPage": false
+          "responseTime": 15010,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 0,
-          "http5xx": 0,
-          "averageResponseTime": 0
+          "requests": 237,
+          "http5xx": 39,
+          "averageResponseTime": 65.2
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -360,14 +388,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 803,
-          "error": "Azure error page",
-          "isAzureErrorPage": true
+          "responseTime": 15010,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 0,
-          "http5xx": 0,
-          "averageResponseTime": 0
+          "requests": 186,
+          "http5xx": 169,
+          "averageResponseTime": 37.5
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -382,20 +410,20 @@
         "resourceType": "Microsoft.Web/sites",
         "kind": "app,linux",
         "url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
-        "httpStatus": "active",
+        "httpStatus": "broken",
         "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
-          "success": true,
-          "responseTime": 1117,
-          "error": null,
-          "isAzureErrorPage": false
+          "success": false,
+          "responseTime": 15010,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 572,
+          "requests": 578,
           "http5xx": 0,
-          "averageResponseTime": 107.1
+          "averageResponseTime": 107.6
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -410,20 +438,20 @@
         "resourceType": "Microsoft.Web/sites",
         "kind": "app,linux",
         "url": "https://ponovaweight-app.azurewebsites.net",
-        "httpStatus": "active",
+        "httpStatus": "broken",
         "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
-          "success": true,
-          "responseTime": 1284,
-          "error": null,
-          "isAzureErrorPage": false
+          "success": false,
+          "responseTime": 15023,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 1192,
+          "requests": 992,
           "http5xx": 0,
-          "averageResponseTime": 48.5
+          "averageResponseTime": 66.5
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -438,20 +466,20 @@
         "resourceType": "Microsoft.Web/sites",
         "kind": "app,linux",
         "url": "https://app-pojoker.azurewebsites.net",
-        "httpStatus": "active",
+        "httpStatus": "broken",
         "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
-          "success": true,
-          "responseTime": 1205,
-          "error": null,
-          "isAzureErrorPage": false
+          "success": false,
+          "responseTime": 15011,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 445,
+          "requests": 958,
           "http5xx": 0,
-          "averageResponseTime": 19.7
+          "averageResponseTime": 35
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -466,20 +494,20 @@
         "resourceType": "Microsoft.Web/sites",
         "kind": "app,linux",
         "url": "https://po-issues.azurewebsites.net",
-        "httpStatus": "active",
+        "httpStatus": "broken",
         "platformState": "Running",
         "description": null,
         "appServicePlan": null,
         "connectivity": {
-          "success": true,
-          "responseTime": 878,
-          "error": null,
-          "isAzureErrorPage": false
+          "success": false,
+          "responseTime": 15010,
+          "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
+          "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 1257,
-          "http5xx": 12,
-          "averageResponseTime": 15.3
+          "requests": 500,
+          "http5xx": 0,
+          "averageResponseTime": 115.7
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -500,7 +528,7 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15018,
+          "responseTime": 15010,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
@@ -528,14 +556,14 @@
         "appServicePlan": null,
         "connectivity": {
           "success": false,
-          "responseTime": 15017,
+          "responseTime": 15010,
           "error": "The request was canceled due to the configured HttpClient.Timeout of 15 seconds elapsing.",
           "isAzureErrorPage": null
         },
         "metrics7Days": {
-          "requests": 753,
+          "requests": 1128,
           "http5xx": 2,
-          "averageResponseTime": 233.5
+          "averageResponseTime": 34.7
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -546,13 +574,13 @@
     ]
   },
   "cost": {
-    "totalCost30Days": 20.18,
-    "totalFormatted": "$20.18",
+    "totalCost30Days": 20.6055,
+    "totalFormatted": "$20.61",
     "note": null,
     "topCostDrivers": [
       {
         "name": "Azure App Service (poshared)",
-        "cost": 14.4875
+        "cost": 14.8615
       },
       {
         "name": "SQL Database (poshared)",
@@ -560,11 +588,11 @@
       },
       {
         "name": "Foundry Models (poshared)",
-        "cost": 1.2726
+        "cost": 1.3212
       },
       {
         "name": "Key Vault (poshared)",
-        "cost": 0.4667
+        "cost": 0.4867
       },
       {
         "name": "Foundry Tools (poshared)",
@@ -572,11 +600,11 @@
       },
       {
         "name": "Storage (pomarriedlifegoogle)",
-        "cost": 0.0925
+        "cost": 0.0757
       },
       {
         "name": "Storage (polinks)",
-        "cost": 0.066
+        "cost": 0.0658
       },
       {
         "name": "Azure App Service (pocouplequiz)",
@@ -587,12 +615,12 @@
         "cost": 0.0009
       },
       {
-        "name": "Bandwidth (pomarriedlifegoogle)",
+        "name": "Storage (polocalcompare)",
         "cost": 0.0005
       },
       {
-        "name": "Storage (polocalcompare)",
-        "cost": 0.0005
+        "name": "Bandwidth (pomarriedlifegoogle)",
+        "cost": 0.0004
       },
       {
         "name": "Storage (pocouplequiz)",
@@ -605,10 +633,6 @@
       {
         "name": "Storage (poface)",
         "cost": 0.0003
-      },
-      {
-        "name": "Storage (powatch)",
-        "cost": 0.0002
       },
       {
         "name": "Storage (porepolinetracker)",
@@ -628,6 +652,10 @@
       },
       {
         "name": "Bandwidth (pocouplequiz)",
+        "cost": 0.0001
+      },
+      {
+        "name": "Bandwidth (pomarriedlife)",
         "cost": 0.0001
       }
     ]
@@ -789,6 +817,15 @@
         "recommendation": "F1 provides 60 CPU-min/day."
       },
       {
+        "name": "app-pomemevideo",
+        "label": "App Service",
+        "currentSku": "app,linux,container",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "resourceGroup": "PoMemeVideo",
+        "recommendation": "F1 provides 60 CPU-min/day."
+      },
+      {
         "name": "app-polinks",
         "label": "App Service",
         "currentSku": "app,linux",
@@ -833,218 +870,18 @@
         "resourceGroup": "PoTraffic",
         "recommendation": "F1 provides 60 CPU-min/day."
       }
-    ],
-    "noFreeTier": [
-      {
-        "name": "kv-poshared",
-        "label": "Key Vault",
-        "currentSku": "unknown",
-        "freeSku": null,
-        "freeSkuLabel": "~$0.03 per 10k ops",
-        "resourceGroup": "PoShared",
-        "recommendation": "Consolidate vaults when possible."
-      },
-      {
-        "name": "poappideinsights8f9c9a4e",
-        "label": "Application Insights",
-        "currentSku": "web",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB/month free ingestion",
-        "resourceGroup": "PoShared",
-        "recommendation": "Enable adaptive sampling to stay under 5 GB/month."
-      },
-      {
-        "name": "stpocouplequizapp",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoCoupleQuiz",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stporepolinetracker",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoRepoLineTracker",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stposeereview",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoSeeReview",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stpopunkoutersoftware",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoPunkouterSoftware",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "pomarriedlifestorage",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoMarriedLife",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "poissuestbl6824",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoIssues",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stpojoker26",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoJoker",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stponovaweight",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoNovaWeight",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "pofacedevsa",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoFace",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stlzwajfaczgake",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoRobotStocks",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "powatchsa",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoWatch",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stpohappytrump2jr7zl",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoHappyTrump",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "st5ln5hfdrvof5u",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoMiniGames",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "polocalcomparedevsa",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoLocalCompare",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stpofunquiz26",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoFunQuiz",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stporedoimage26",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoRedoImage",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stpolinksdev01",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoLinks",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "storagezizogpdhpyiwo",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoFunQuiz",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "potrafficstorage",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoTraffic",
-        "recommendation": "Use LRS for lowest cost."
-      },
-      {
-        "name": "stpotaggame26",
-        "label": "Storage Account",
-        "currentSku": "Standard_LRS",
-        "freeSku": null,
-        "freeSkuLabel": "5 GB Blob free/month (12 mo)",
-        "resourceGroup": "PoTagGame",
-        "recommendation": "Use LRS for lowest cost."
-      }
     ]
   },
   "allResourceSummary": {
-    "total": 47,
+    "total": 49,
     "byType": {
       "workspaces": 1,
       "vaults": 1,
       "components": 1,
-      "storageAccounts": 20,
+      "storageAccounts": 21,
       "userAssignedIdentities": 3,
       "serverFarms": 1,
-      "sites": 19,
+      "sites": 20,
       "accounts": 1
     },
     "resourcesByType": {
@@ -1158,6 +995,12 @@
           "sku": "Standard_LRS"
         },
         {
+          "name": "stpomemevideo",
+          "resourceGroup": "PoMemeVideo",
+          "location": "westus2",
+          "sku": "Standard_LRS"
+        },
+        {
           "name": "stponovaweight",
           "resourceGroup": "PoNovaWeight",
           "location": "westus2",
@@ -1250,6 +1093,12 @@
         {
           "name": "app-polinks",
           "resourceGroup": "PoLinks",
+          "location": "westus2",
+          "sku": null
+        },
+        {
+          "name": "app-pomemevideo",
+          "resourceGroup": "PoMemeVideo",
           "location": "westus2",
           "sku": null
         },
@@ -1353,7 +1202,7 @@
       "name": "app-popunkoutersoftware",
       "url": "https://app-popunkoutersoftware.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1361,7 +1210,7 @@
       "name": "poredoimage-web",
       "url": "https://poredoimage-web.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1369,7 +1218,7 @@
       "name": "PoRobotStocks-PoRobotStocks-web",
       "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1377,7 +1226,7 @@
       "name": "PoTagGame-Server",
       "url": "https://potaggame-server.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1385,7 +1234,7 @@
       "name": "poface-dev-web",
       "url": "https://poface-dev-web.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1393,7 +1242,7 @@
       "name": "pomarriedlife-api",
       "url": "https://pomarriedlife-api.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1401,7 +1250,15 @@
       "name": "app-pohappytrump-2jr7zldry26xa",
       "url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
+      "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
+      "error": null
+    },
+    {
+      "name": "app-pomemevideo",
+      "url": "https://app-pomemevideo.azurewebsites.net",
+      "expiry": "2026-11-01",
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1409,7 +1266,7 @@
       "name": "PoLocalCompare-AppService-dev",
       "url": "https://polocalcompare-appservice-dev.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1417,7 +1274,7 @@
       "name": "pocouplequiz-app",
       "url": "https://pocouplequiz-app.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1425,7 +1282,7 @@
       "name": "app-poseereview",
       "url": "https://app-poseereview.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1433,7 +1290,7 @@
       "name": "app-pofunquiz-zizogpdhpyiwo",
       "url": "https://app-pofunquiz-zizogpdhpyiwo.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1441,7 +1298,7 @@
       "name": "app-polinks",
       "url": "https://app-polinks.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1449,7 +1306,7 @@
       "name": "app-porepolinetracker",
       "url": "https://app-porepolinetracker.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1457,7 +1314,7 @@
       "name": "app-5ln5hfdrvof5u",
       "url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1465,7 +1322,7 @@
       "name": "ponovaweight-app",
       "url": "https://ponovaweight-app.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1473,7 +1330,7 @@
       "name": "app-pojoker",
       "url": "https://app-pojoker.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1481,7 +1338,7 @@
       "name": "po-issues",
       "url": "https://po-issues.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1489,7 +1346,7 @@
       "name": "potraffic-api",
       "url": "https://potraffic-api.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1497,7 +1354,7 @@
       "name": "app-powatch",
       "url": "https://app-powatch.azurewebsites.net",
       "expiry": "2026-11-01",
-      "daysLeft": 167,
+      "daysLeft": 166,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     }
@@ -1507,15 +1364,11 @@
       "name": "app-5ln5hfdrvof5u",
       "friendlyName": "PoMiniGames",
       "resourceGroup": "PoMiniGames",
-      "issueCount": 2,
+      "issueCount": 1,
       "issues": [
         {
           "severity": "low",
           "issue": "HTTP/2 disabled"
-        },
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
         }
       ]
     },
@@ -1523,27 +1376,18 @@
       "name": "app-pofunquiz-zizogpdhpyiwo",
       "friendlyName": "PoFunQuiz",
       "resourceGroup": "PoFunQuiz",
-      "issueCount": 1,
-      "issues": [
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
-        }
-      ]
+      "issueCount": 0,
+      "issues": []
     },
     {
       "name": "app-pohappytrump-2jr7zldry26xa",
       "friendlyName": "PoHappyTrump",
       "resourceGroup": "PoHappyTrump",
-      "issueCount": 2,
+      "issueCount": 1,
       "issues": [
         {
           "severity": "low",
           "issue": "HTTP/2 disabled"
-        },
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
         }
       ]
     },
@@ -1551,51 +1395,39 @@
       "name": "app-pojoker",
       "friendlyName": "PoJoker",
       "resourceGroup": "PoJoker",
-      "issueCount": 1,
-      "issues": [
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
-        }
-      ]
+      "issueCount": 0,
+      "issues": []
     },
     {
       "name": "app-polinks",
       "friendlyName": "PoLinks",
       "resourceGroup": "PoLinks",
-      "issueCount": 1,
-      "issues": [
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
-        }
-      ]
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "name": "app-pomemevideo",
+      "friendlyName": "PoMemeVideo",
+      "resourceGroup": "PoMemeVideo",
+      "issueCount": 0,
+      "issues": []
     },
     {
       "name": "app-popunkoutersoftware",
       "friendlyName": "PoPunkouterSoftware",
       "resourceGroup": "PoPunkouterSoftware",
-      "issueCount": 1,
-      "issues": [
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
-        }
-      ]
+      "issueCount": 0,
+      "issues": []
     },
     {
       "name": "app-porepolinetracker",
       "friendlyName": "PoRepoLineTracker",
       "resourceGroup": "PoRepoLineTracker",
-      "issueCount": 2,
+      "issueCount": 1,
       "issues": [
         {
           "severity": "low",
           "issue": "HTTP/2 disabled"
-        },
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
         }
       ]
     },
@@ -1603,13 +1435,8 @@
       "name": "app-poseereview",
       "friendlyName": "PoSeeReview",
       "resourceGroup": "PoSeeReview",
-      "issueCount": 1,
-      "issues": [
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
-        }
-      ]
+      "issueCount": 0,
+      "issues": []
     },
     {
       "name": "app-powatch",
@@ -1698,13 +1525,8 @@
       "name": "poredoimage-web",
       "friendlyName": "PoRedoImage",
       "resourceGroup": "PoRedoImage",
-      "issueCount": 1,
-      "issues": [
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
-        }
-      ]
+      "issueCount": 0,
+      "issues": []
     },
     {
       "name": "PoRobotStocks-PoRobotStocks-web",
@@ -1890,6 +1712,16 @@
       "issues": []
     },
     {
+      "name": "stpomemevideo",
+      "resourceGroup": "PoMemeVideo",
+      "sku": "Standard_LRS",
+      "publicBlobAccess": false,
+      "httpsOnly": true,
+      "minTls": "TLS1_2",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
       "name": "stpofunquiz26",
       "resourceGroup": "PoFunQuiz",
       "sku": "Standard_LRS",
@@ -1960,18 +1792,18 @@
     {
       "name": "poappideinsights8f9c9a4e",
       "resourceGroup": "PoShared",
-      "requests7Days": 19729,
-      "failedRequests7Days": 1005,
-      "exceptions7Days": 3031
+      "requests7Days": 25124,
+      "failedRequests7Days": 1068,
+      "exceptions7Days": 3970
     }
   ],
   "zombieApps": [
     {
-      "name": "app-porepolinetracker",
-      "resourceGroup": "PoRepoLineTracker",
+      "name": "app-pomemevideo",
+      "resourceGroup": "PoMemeVideo",
       "httpStatus": "broken",
       "platformState": "Running",
-      "recommendation": "az webapp stop --name \u0022app-porepolinetracker\u0022 --resource-group \u0022PoRepoLineTracker\u0022"
+      "recommendation": "az webapp stop --name \u0022app-pomemevideo\u0022 --resource-group \u0022PoMemeVideo\u0022"
     },
     {
       "name": "potraffic-api",
@@ -2054,60 +1886,64 @@
       },
       {
         "date": "2026-05-18",
-        "cost": 0.5766
+        "cost": 0.8953
+      },
+      {
+        "date": "2026-05-19",
+        "cost": 0.54
       }
     ],
-    "projectedMonthTotal": 22.16,
-    "projectedFormatted": "$22.16"
+    "projectedMonthTotal": 22.4,
+    "projectedFormatted": "$22.40"
   },
   "stepTimings": [
     {
       "step": "Diagnosing downtime",
-      "elapsedMs": 30602
+      "elapsedMs": 125050
     },
     {
       "step": "Testing connectivity",
-      "elapsedMs": 15022
+      "elapsedMs": 15025
     },
     {
       "step": "Fetching metrics (7 days)",
-      "elapsedMs": 3685
+      "elapsedMs": 4724
     },
     {
       "step": "Fetching App Insights metrics",
-      "elapsedMs": 3479
-    },
-    {
-      "step": "Discovering web services",
-      "elapsedMs": 2755
+      "elapsedMs": 4625
     },
     {
       "step": "Fetching cost data",
-      "elapsedMs": 2559
+      "elapsedMs": 3192
     },
     {
-      "step": "Calculating burn rate",
-      "elapsedMs": 2271
+      "step": "Discovering web services",
+      "elapsedMs": 2243
     },
     {
       "step": "Checking configuration drift",
-      "elapsedMs": 1888
+      "elapsedMs": 2223
+    },
+    {
+      "step": "Calculating burn rate",
+      "elapsedMs": 1779
     },
     {
       "step": "Scanning orphaned resources",
-      "elapsedMs": 1103
+      "elapsedMs": 1139
     },
     {
       "step": "Checking SSL certificates",
-      "elapsedMs": 628
+      "elapsedMs": 620
     },
     {
       "step": "Scanning storage accounts",
-      "elapsedMs": 532
+      "elapsedMs": 571
     },
     {
       "step": "Loading all resources",
-      "elapsedMs": 433
+      "elapsedMs": 463
     },
     {
       "step": "Diffing apps.json",
@@ -2148,94 +1984,27 @@
       "planSku": "B2",
       "planStopped": false,
       "recentDeployments": [],
-      "recentActivity": [
-        {
-          "operationName": "Restart Web App",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T23:40:32.5409223-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "RestartWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T23:40:32-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Restart Web App",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T23:40:30.7440446-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "RestartWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T23:40:30-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T23:39:07.5665827-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T23:39:07.1759638-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Start Web App",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T23:38:44.4559825-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "StartWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T23:38:44-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Start Web App",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T23:38:43.1278217-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "StartWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T23:38:43-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T23:38:37.9440735-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T23:38:37.7409304-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        }
-      ],
+      "recentActivity": [],
       "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://poredoimage-web.scm.azurewebsites.net/api/logstream"
+    },
+    {
+      "name": "PoRobotStocks-PoRobotStocks-web",
+      "friendlyName": "PoRobotStocks",
+      "resourceGroup": "PoRobotStocks",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://PoRobotStocks-PoRobotStocks-web.scm.azurewebsites.net/api/logstream"
     },
     {
       "name": "PoTagGame-Server",
@@ -2274,6 +2043,24 @@
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://poface-dev-web.scm.azurewebsites.net/api/logstream"
     },
     {
+      "name": "pomarriedlife-api",
+      "friendlyName": "PoMarriedLife",
+      "resourceGroup": "PoMarriedLife",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://pomarriedlife-api.scm.azurewebsites.net/api/logstream"
+    },
+    {
       "name": "app-pohappytrump-2jr7zldry26xa",
       "friendlyName": "PoHappyTrump",
       "resourceGroup": "PoHappyTrump",
@@ -2287,52 +2074,63 @@
       "planSku": "B2",
       "planStopped": false,
       "recentDeployments": [],
-      "recentActivity": [
-        {
-          "operationName": "Update web sites config",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T17:08:38.2239889-04:00",
-          "caller": "44b259c0-9dc0-4d6c-9613-5743497a26d0",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T17:08:38-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T17:08:36.4427288-04:00",
-          "caller": "44b259c0-9dc0-4d6c-9613-5743497a26d0",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T17:08:36-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T17:08:33.7845717-04:00",
-          "caller": "44b259c0-9dc0-4d6c-9613-5743497a26d0",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T17:08:33.0189779-04:00",
-          "caller": "44b259c0-9dc0-4d6c-9613-5743497a26d0",
-          "level": "Informational"
-        }
-      ],
+      "recentActivity": [],
       "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-pohappytrump-2jr7zldry26xa.scm.azurewebsites.net/api/logstream"
+    },
+    {
+      "name": "app-pomemevideo",
+      "friendlyName": "PoMemeVideo",
+      "resourceGroup": "PoMemeVideo",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-pomemevideo.scm.azurewebsites.net/api/logstream"
+    },
+    {
+      "name": "PoLocalCompare-AppService-dev",
+      "friendlyName": "PoLocalCompare",
+      "resourceGroup": "PoLocalCompare",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://PoLocalCompare-AppService-dev.scm.azurewebsites.net/api/logstream"
+    },
+    {
+      "name": "pocouplequiz-app",
+      "friendlyName": "PoCoupleQuiz",
+      "resourceGroup": "PoCoupleQuiz",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://pocouplequiz-app.scm.azurewebsites.net/api/logstream"
     },
     {
       "name": "app-poseereview",
@@ -2366,113 +2164,7 @@
       "planSku": "B2",
       "planStopped": false,
       "recentDeployments": [],
-      "recentActivity": [
-        {
-          "operationName": "Update web sites config",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T11:00:30.6883495-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T11:00:30-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T11:00:29.4852405-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T11:00:29-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T11:00:17.0890996-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T11:00:15.8391205-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T22:26:57.6333039-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T22:26:57-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T22:26:56.5083197-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T22:26:56-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T22:26:53.7829787-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T22:26:52.8454872-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T17:08:37.6296338-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-17T17:08:37-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Started",
-          "eventTimestamp": "2026-05-17T17:08:36.1140096-04:00",
-          "caller": "4537f441-34af-442a-ad07-f329b9407d38",
-          "level": "Informational"
-        }
-      ],
+      "recentActivity": [],
       "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-pofunquiz-zizogpdhpyiwo.scm.azurewebsites.net/api/logstream"
     },
@@ -2491,8 +2183,8 @@
       "planStopped": false,
       "recentDeployments": [],
       "recentActivity": [],
-      "likelyCause": "App Service is stopped",
-      "suggestedFix": "az webapp start --name \u0022app-polinks\u0022 --resource-group \u0022PoLinks\u0022"
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-polinks.scm.azurewebsites.net/api/logstream"
     },
     {
       "name": "app-porepolinetracker",
@@ -2508,115 +2200,81 @@
       "planSku": "B2",
       "planStopped": false,
       "recentDeployments": [],
-      "recentActivity": [
-        {
-          "operationName": "Update website",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:47:46.4257084-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update website",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:37:59.1339497-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:37:59-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T00:37:44-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update website",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T00:37:43.9618443-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:32:18.116526-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T00:32:17.9134032-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update website",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:30:17.6118137-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:30:16-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "UpdateWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T00:30:04-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update website",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T00:30:03.1733988-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:26:37.1152311-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-05-18T00:26:36.6777229-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Start Web App",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:26:32.7325388-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "StartWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-05-18T00:26:32-04:00",
-          "caller": null,
-          "level": "Informational"
-        }
-      ],
+      "recentActivity": [],
       "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-porepolinetracker.scm.azurewebsites.net/api/logstream"
+    },
+    {
+      "name": "app-5ln5hfdrvof5u",
+      "friendlyName": "PoMiniGames",
+      "resourceGroup": "PoMiniGames",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-5ln5hfdrvof5u.scm.azurewebsites.net/api/logstream"
+    },
+    {
+      "name": "ponovaweight-app",
+      "friendlyName": "PoNovaWeight",
+      "resourceGroup": "PoNovaWeight",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://ponovaweight-app.scm.azurewebsites.net/api/logstream"
+    },
+    {
+      "name": "app-pojoker",
+      "friendlyName": "PoJoker",
+      "resourceGroup": "PoJoker",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-pojoker.scm.azurewebsites.net/api/logstream"
+    },
+    {
+      "name": "po-issues",
+      "friendlyName": "PoIssues",
+      "resourceGroup": "PoIssues",
+      "httpStatus": "broken",
+      "availabilityState": "Normal",
+      "usageState": "Normal",
+      "isSuspended": false,
+      "suspendedTill": null,
+      "planName": "asp-poshared-linux",
+      "planStatus": "Ready",
+      "planSku": "B2",
+      "planStopped": false,
+      "recentDeployments": [],
+      "recentActivity": [],
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://po-issues.scm.azurewebsites.net/api/logstream"
     },
     {
       "name": "potraffic-api",

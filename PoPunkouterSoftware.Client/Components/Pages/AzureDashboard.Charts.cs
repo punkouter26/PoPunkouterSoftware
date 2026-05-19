@@ -63,15 +63,30 @@ public partial class AzureDashboard
             })
             .ToList();
 
+    private static string HumanizeResourceType(string type) => type switch
+    {
+        "storageAccounts"        => "Storage Accounts",
+        "sites"                  => "App Services",
+        "userAssignedIdentities" => "Managed Identities",
+        "workspaces"             => "Log Analytics",
+        "vaults"                 => "Key Vaults",
+        "components"             => "App Insights",
+        "serverFarms"            => "App Service Plans",
+        "accounts"               => "Cognitive Services",
+        "servers"                => "SQL Servers",
+        "databases"              => "SQL Databases",
+        _                        => type,
+    };
+
     private List<ChartPoint> ResourceTypeChartData =>
         report?.AllResourceSummary?.ByType
             .OrderByDescending(kv => kv.Value).Take(10)
-            .Select(kv => new ChartPoint(kv.Key, kv.Value)).ToList() ?? new();
+            .Select(kv => new ChartPoint(HumanizeResourceType(kv.Key), kv.Value)).ToList() ?? new();
 
     private List<ChartPoint> ResourceTypeTableData =>
         report?.AllResourceSummary?.ByType
             .OrderByDescending(kv => kv.Value)
-            .Select(kv => new ChartPoint(kv.Key, kv.Value)).ToList() ?? new();
+            .Select(kv => new ChartPoint(HumanizeResourceType(kv.Key), kv.Value)).ToList() ?? new();
 
     private List<ChartPoint> CostByRgData
     {

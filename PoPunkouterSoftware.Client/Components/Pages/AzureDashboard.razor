@@ -183,9 +183,16 @@ else
                     <div class="app-kicker">Performance</div>
                     <h3 class="app-card-title rz-mb-1">App Response Times</h3>
                     <p class="app-note rz-mb-2">Probe response time (ms), slowest first. &lt;1 000ms good · &gt;3 000ms critical.</p>
+                    @{
+                        var allTimedOut = ResponseTimeBarData.Count > 0 && ResponseTimeBarData.All(p => p.Value >= 14000);
+                    }
                     @if (ResponseTimeBarData.Count == 0)
                     {
                         <div class="app-callout info">No response time data — services may not yet have been probed.</div>
+                    }
+                    else if (allTimedOut)
+                    {
+                        <div class="app-callout danger">All @ResponseTimeBarData.Count services are timing out at the 15-second probe limit. No meaningful response time differential to display — investigate service availability.</div>
                     }
                     else
                     {
@@ -376,9 +383,10 @@ else
                     <p class="app-note rz-mb-2">Services with misconfigurations, ranked by issue count and severity.</p>
                     @{
                         var driftItems   = currentReport.ConfigDrift ?? new();
+                        var driftWithIssues = driftItems.Where(d => d.IssueCount > 0).OrderByDescending(d => d.IssueCount).ToList();
                         var criticalDrift = driftItems.Count(d => d.Issues?.Any(i => i.Severity is "critical" or "high") == true);
                     }
-                    @if (driftItems.Count == 0)
+                    @if (driftWithIssues.Count == 0)
                     {
                         <div class="app-callout success">No configuration drift detected across all services.</div>
                     }
@@ -389,7 +397,7 @@ else
                             <div class="app-callout danger rz-mb-2"><strong>@criticalDrift service(s)</strong> have high/critical severity issues.</div>
                         }
                         <div class="app-table-frame" style="max-height:340px;overflow-y:auto">
-                            <RadzenDataGrid Data="@driftItems.OrderByDescending(d => d.IssueCount).ToList()"
+                            <RadzenDataGrid Data="@driftWithIssues"
                                             TItem="ConfigDriftItem" AllowSorting="true" AllowPaging="false">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="ConfigDriftItem" Property="FriendlyName" Title="Service" Width="160px">
@@ -432,24 +440,22 @@ else
                     <p class="app-note rz-mb-2">Pass/fail per account: public blob access, HTTPS-only, and minimum TLS version.</p>
                     @{
                         var storageItems  = currentReport.StorageInventory ?? new();
-                        var insecureCount = storageItems.Count(s => s.PublicBlobAccess || !s.HttpsOnly || s.MinTls is "TLS1_0" or "TLS1_1");
+                        var insecureItems = storageItems.Where(s => s.PublicBlobAccess || !s.HttpsOnly || s.MinTls is "TLS1_0" or "TLS1_1").OrderByDescending(s => s.IssueCount).ToList();
+                        var insecureCount = insecureItems.Count;
                     }
                     @if (storageItems.Count == 0)
                     {
                         <div class="app-callout info">No storage accounts found in the report.</div>
                     }
+                    else if (insecureCount == 0)
+                    {
+                        <div class="app-callout success">All @storageItems.Count storage accounts pass security checks.</div>
+                    }
                     else
                     {
-                        @if (insecureCount > 0)
-                        {
-                            <div class="app-callout warning rz-mb-2"><strong>@insecureCount account(s)</strong> have security misconfigurations.</div>
-                        }
-                        else
-                        {
-                            <div class="app-callout success rz-mb-2">All @storageItems.Count storage accounts pass security checks.</div>
-                        }
+                        <div class="app-callout warning rz-mb-2"><strong>@insecureCount of @storageItems.Count account(s)</strong> have security misconfigurations.</div>
                         <div class="app-table-frame" style="max-height:310px;overflow-y:auto">
-                            <RadzenDataGrid Data="@storageItems.OrderByDescending(s => s.IssueCount).ToList()"
+                            <RadzenDataGrid Data="@insecureItems"
                                             TItem="StorageItem" AllowSorting="true" AllowPaging="false">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="StorageItem" Property="Name" Title="Account" Width="150px" />
@@ -475,45 +481,6 @@ else
         </RadzenRow>
     </section>
 
-    <!-- ── Viz 10 : Free Tier Savings Opportunities ── -->
-    <section class="app-section">
-        <div class="app-card">
-            <div class="app-kicker">Savings</div>
-            <h3 class="app-card-title rz-mb-1">Free Tier Savings Opportunities</h3>
-            <p class="app-note rz-mb-2">
-                Services on paid tiers that can migrate to Free tier.
-                Already on free: <strong>@(currentReport.FreeTier?.OnFree.Count ?? 0)</strong> services.
-            </p>
-            @{
-                var canGoFreeItems = currentReport.FreeTier?.CanGoFree ?? new();
-            }
-            @if (canGoFreeItems.Count == 0)
-            {
-                <div class="app-callout success">No additional services identified as candidates for the Free tier.</div>
-            }
-            else
-            {
-                <div class="app-callout warning rz-mb-3"><strong>@canGoFreeItems.Count service(s)</strong> can be scaled to Free tier to reduce costs.</div>
-                <RadzenRow>
-                    @foreach (var item in canGoFreeItems)
-                    {
-                        <RadzenColumn SizeXS="12" SizeMD="6" SizeLG="4" class="rz-mb-2">
-                            <div class="app-card" style="border-left:3px solid var(--rz-warning);padding:.75rem 1rem">
-                                <strong>@item.Label</strong>
-                                <div class="app-note rz-my-1">
-                                    <RadzenBadge Text="@item.CurrentSku" BadgeStyle="BadgeStyle.Warning" IsPill="true" />
-                                    <span style="margin:0 .4rem">→</span>
-                                    <RadzenBadge Text="@(item.FreeSku ?? "Free")" BadgeStyle="BadgeStyle.Success" IsPill="true" />
-                                </div>
-                                @if (!string.IsNullOrEmpty(item.Recommendation)) { <div class="app-meta-line">@item.Recommendation</div> }
-                                @if (!string.IsNullOrEmpty(item.ResourceGroup))   { <div class="app-meta-line">RG: @item.ResourceGroup</div> }
-                            </div>
-                        </RadzenColumn>
-                    }
-                </RadzenRow>
-            }
-        </div>
-    </section>
 
             </RadzenTabsItem>
 
