@@ -972,3 +972,39 @@ a {
         transform: translateY(0);
     }
 }
+/* ── Navigation additions (Phase 4) ── */
+.mock-data-banner {
+    background: #b8860b;
+    color: #fff;
+    padding: 0.3rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.05em;
+}
+
+.app-shell-toggler {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    margin-left: auto;
+}
+
+.app-shell-toggler span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--app-text);
+    border-radius: 2px;
+}
+
+@media (max-width: 640px) {
+    .app-shell-toggler { display: flex; }
+    .app-shell-nav { display: none; width: 100%; flex-direction: column; padding-bottom: 0.75rem; }
+    .app-shell-nav.open { display: flex; }
+    .app-shell-bar { flex-wrap: wrap; }
+}
