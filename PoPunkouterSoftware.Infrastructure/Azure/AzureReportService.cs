@@ -58,8 +58,9 @@ public class AzureReportService
         _downtimeDiagnosis = downtimeDiagnosis;
     }
 
-    // ── Public entry point ────────────────────────────────────────────────────
+    #region Public Entry Point
 
+    /// <summary>Main orchestrator: discovers services, tests connectivity, fetches metrics, costs, and performs comprehensive Azure health analysis.</summary>
     public async Task<AzureReport> RunAsync(IProgress<(string Step, int Percent)>? progress = null, CancellationToken ct = default)
     {
         var stepTimings = new List<StepTimingEntry>();
@@ -231,7 +232,9 @@ public class AzureReportService
         return report;
     }
 
-    // ── Step 1: Discover web services ─────────────────────────────────────────
+    #endregion
+
+    #region Step 1: Discover Web Services
 
     private async Task<List<RawService>> DiscoverWebServicesAsync(SubscriptionResource sub, CancellationToken ct)
     {
@@ -299,7 +302,9 @@ public class AzureReportService
         return list;
     }
 
-    // ── Step 2: HTTP connectivity tests ───────────────────────────────────────
+    #endregion
+
+    #region Step 2: Test HTTP Connectivity
 
     private async Task<List<RawService>> TestConnectivityAsync(List<RawService> services, CancellationToken ct)
     {
@@ -339,7 +344,9 @@ public class AzureReportService
         }
     }
 
-    // ── Step 3: All ARM resources ──────────────────────────────────────────────
+    #endregion
+
+    #region Step 3: Load All ARM Resources
 
     private static async Task<List<GenericResourceData>> GetAllResourcesAsync(SubscriptionResource sub, CancellationToken ct)
     {
@@ -349,7 +356,9 @@ public class AzureReportService
         return list;
     }
 
-    // ── Step 4: 7-day metrics ─────────────────────────────────────────────────
+    #endregion
+
+    #region Step 4: Fetch Metrics (7 Days)
 
     private async Task<Dictionary<string, MetricsInfo>> GetMetricsAsync(
         List<RawService> services, TokenCredential cred, CancellationToken ct)
@@ -419,6 +428,11 @@ public class AzureReportService
     }
 
     // ── Step 5: 30-day cost via Cost Management REST ───────────────────────────
+        #endregion
+
+        #region Step 5: Fetch Cost Data (30 Days)
+
+        /// <summary>Fetches 30-day usage and cost from the Cost Management API; calculates monthly burn rate.</summary>
 
     private async Task<CostInfo> GetCostAsync(string subscriptionId, string? armToken, CancellationToken ct)
     {
@@ -495,7 +509,9 @@ public class AzureReportService
         }
     }
 
-    // ── Step 6: SSL cert expiry ────────────────────────────────────────────────
+    #endregion
+
+    #region Step 6: Check SSL Certificate Expiry
 
     private async Task<List<SslEntry>> CheckSslAsync(List<RawService> services, CancellationToken ct)
     {
@@ -545,7 +561,9 @@ public class AzureReportService
         return (await Task.WhenAll(tasks)).ToList();
     }
 
-    // ── Step 7: Config drift ───────────────────────────────────────────────────
+    #endregion
+
+    #region Step 7: Detect Configuration Drift
 
     private async Task<List<ConfigDriftItem>> GetConfigDriftAsync(
         List<RawService> services, ArmClient arm, CancellationToken ct)
@@ -602,7 +620,9 @@ public class AzureReportService
         return results.OfType<ConfigDriftItem>().OrderBy(x => x.Name).ToList();
     }
 
-    // ── Step 8: Storage inventory ─────────────────────────────────────────────
+    #endregion
+
+    #region Step 8: Inventory Storage Accounts
 
     private async Task<List<StorageItem>> GetStorageInventoryAsync(
         List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
@@ -683,7 +703,9 @@ public class AzureReportService
         return results;
     }
 
-    // ── Step 9: Free-tier analysis ────────────────────────────────────────────
+    #endregion
+
+    #region Step 9: Analyze Free-Tier Usage
 
     private static FreeTierInfo AnalyzeFreeTiers(List<GenericResourceData> resources)
     {
@@ -721,6 +743,10 @@ public class AzureReportService
         return new FreeTierInfo { OnFree = onFree, CanGoFree = canGoFree };
     }
 
+    #endregion
+
+    #region Step 10: Detect Zombie Applications
+
     private static FreeTierCheckInfo? CheckFreeTierForService(string typeKey, string? sku)
     {
         if (!FreeTierMap.TryGetValue(typeKey, out var info))
@@ -734,8 +760,6 @@ public class AzureReportService
             CanGoFree = info.FreeSku is not null && !isOnFree,
         };
     }
-
-    // ── Step 10: Zombie detection ─────────────────────────────────────────────
 
     private static List<ZombieApp> DetectZombies(List<RawService> services, Dictionary<string, MetricsInfo> metricsMap)
         => services
@@ -760,8 +784,11 @@ public class AzureReportService
             })
             .ToList();
 
-    // ── Step 11: apps.json diff ───────────────────────────────────────────────
+    #endregion
 
+    #region Step 11: Compare Against Apps.json Snapshot
+
+    /// <summary>Diffs current discovered services against the snapshot stored in apps.json.</summary>
     private async Task<AppsJsonDiffInfo?> DiffAppsJsonAsync(List<RawService> services, CancellationToken ct)
     {
         try
@@ -796,7 +823,9 @@ public class AzureReportService
         }
     }
 
-    // ── New: Orphaned resources ───────────────────────────────────────────────
+    #endregion
+
+    #region Step 12: Identify Orphaned Resources
 
     private async Task<List<OrphanedResource>> GetOrphanedResourcesAsync(
         List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
@@ -916,7 +945,9 @@ public class AzureReportService
         return orphans;
     }
 
-    // ── New: Monthly burn rate (daily granularity) ────────────────────────────
+    #endregion
+
+    #region Step 13: Compute Monthly Burn Rate
 
     private async Task<BurnRateInfo?> GetBurnRateAsync(
         string subscriptionId, string? armToken, CancellationToken ct)
@@ -992,7 +1023,11 @@ public class AzureReportService
         }
     }
 
-    // ── Shared: Cost Management HTTP helper with 429 retry ───────────────────
+    #endregion
+
+    #region Step 14: Fetch Application Insights Metrics
+
+    /// <summary>Retrieves request rates, exception rates, and performance metrics from Application Insights.</summary>
 
     private async Task<string?> PostCostManagementWithRetryAsync(
         string url, string body, string? armToken, CancellationToken ct)
@@ -1113,7 +1148,9 @@ public class AzureReportService
         return results.OfType<AppInsightsMetric>().OrderBy(x => x.Name).ToList();
     }
 
-    // ── Item 1: Report Delta ──────────────────────────────────────────────────
+    #endregion
+
+    #region Supporting Helpers: Delta Computation
 
     private static ReportDelta? ComputeDelta(AzureReport current, AzureReport? previous)
     {
@@ -1143,7 +1180,9 @@ public class AzureReportService
         };
     }
 
-    // ── Name helpers ──────────────────────────────────────────────────────────
+    #endregion
+
+    #region Supporting Helpers: Name Formatting
 
     private static string GetCanonicalName(string name)
     {
@@ -1176,7 +1215,9 @@ public class AzureReportService
     private static string ShortType(string? t)
         => t?.Split('/').LastOrDefault() ?? t ?? "Unknown";
 
-    // ── Free-tier knowledge base ──────────────────────────────────────────────
+    #endregion
+
+    #region Supporting Helpers: Free-Tier Knowledge Base
 
     private record FreeTierEntry(string Label, string? FreeSku, string FreeSkuLabel, string[] PaidSkus, string Note);
 
@@ -1199,4 +1240,6 @@ public class AzureReportService
         ["Microsoft.ServiceBus/namespaces"] = new("Service Bus", null, "No free tier — Basic ~$0.05/M ops", ["Basic", "Standard", "Premium"], "Use Basic if only simple queues needed."),
         ["Microsoft.SignalRService/SignalR"] = new("SignalR", "Free", "Free (20 connections)", ["Standard"], "Free tier: 20 concurrent connections."),
     };
+
+    #endregion
 }

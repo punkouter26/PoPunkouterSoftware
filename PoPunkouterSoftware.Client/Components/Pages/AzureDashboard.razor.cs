@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
+using PoPunkouterSoftware.Client.Components.Pages.Models;
 using PoPunkouterSoftware.Shared.Azure;
 using Radzen;
 using Radzen.Blazor;
@@ -14,6 +16,8 @@ namespace PoPunkouterSoftware.Client.Components.Pages;
 #pragma warning disable CS0414 // assigned but value never used — write-only loading state
 public partial class AzureDashboard
 {
+    [Inject] private IWebAssemblyHostEnvironment? HostEnvironment { get; set; }
+
     private AzureReport? report;
     private List<WebService> services = new();
     private List<SafeToRemoveItem> safeToRemove = new();
@@ -40,6 +44,7 @@ public partial class AzureDashboard
     private CancellationTokenSource? _refreshCts;
     private IDisposable? _locationChangingRegistration;
     private const int RefreshTimeoutSeconds = 120;
+    private bool ShowAdvancedDiagnostics => string.Equals(HostEnvironment?.Environment, "Development", StringComparison.OrdinalIgnoreCase);
 
     private static string FormatAge(TimeSpan age)
     {

@@ -144,6 +144,37 @@ public class ConfigEndpointTests
         var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("apiBase").GetString().Should().EndWith("/api");
     }
+
+    [Fact]
+    public async Task GetConfig_TestEnvironment_EnablesGuestLogin()
+    {
+        var json = await _client.GetStringAsync("/api/config");
+        var doc = JsonDocument.Parse(json);
+
+        doc.RootElement.GetProperty("guestLoginEnabled").GetBoolean().Should().BeTrue();
+        doc.RootElement.GetProperty("isProduction").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetConfig_WithoutMicrosoftClientId_DisablesOAuthFlag()
+    {
+        var json = await _client.GetStringAsync("/api/config");
+        var doc = JsonDocument.Parse(json);
+
+        doc.RootElement.GetProperty("microsoftOAuthEnabled").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetConfig_ReturnsModelCatalog_ForAllThreeCategories()
+    {
+        var json = await _client.GetStringAsync("/api/config");
+        var doc = JsonDocument.Parse(json);
+        var modelCatalog = doc.RootElement.GetProperty("modelCatalog");
+
+        modelCatalog.GetProperty("remote").GetArrayLength().Should().BeGreaterThan(0);
+        modelCatalog.GetProperty("browser").GetArrayLength().Should().BeGreaterThan(0);
+        modelCatalog.GetProperty("ollama").GetArrayLength().Should().BeGreaterThan(0);
+    }
 }
 
 // ─── DiagReport endpoint ──────────────────────────────────────────────────────

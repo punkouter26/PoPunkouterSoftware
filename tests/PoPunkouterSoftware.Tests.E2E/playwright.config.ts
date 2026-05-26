@@ -3,6 +3,10 @@ import * as path from 'path';
 
 const isDev = process.env['ASPNETCORE_ENVIRONMENT'] !== 'Production';
 const baseURL = process.env['BASE_URL'] ?? 'http://127.0.0.1:5000';
+const dotnetCommand = process.env['DOTNET_PATH']
+  ?? (process.platform === 'win32'
+    ? '"C:\\Program Files\\dotnet\\x64\\dotnet.exe"'
+    : 'dotnet');
 
 // If BASE_URL is already set (server managed externally), skip the webServer block.
 // Otherwise Playwright starts (and stops) the Blazor API server automatically.
@@ -25,7 +29,7 @@ export default defineConfig({
   // Auto-start the Blazor server when no external BASE_URL is provided.
   // Set reuseExistingServer:true so a manually-started server is reused.
   webServer: externalServer ? undefined : {
-    command: `dotnet run --project ${path.resolve(__dirname, '../../PoPunkouterSoftware/PoPunkouterSoftware.csproj')} --no-build`,
+    command: `${dotnetCommand} run --project ${path.resolve(__dirname, '../../PoPunkouterSoftware/PoPunkouterSoftware.csproj')} --no-build`,
     url: baseURL,
     reuseExistingServer: true,
     timeout: 60_000,

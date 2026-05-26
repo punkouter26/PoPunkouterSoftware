@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using PoPunkouterSoftware.Client;
 using Radzen;
 
 // SOLID: Single Responsibility — this file only wires WASM DI and starts the host.
@@ -20,5 +21,6 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddRadzenComponents();
 builder.Services.AddScoped<DialogService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<PoAppSession>();
 
 await builder.Build().RunAsync();

@@ -25,8 +25,8 @@ else if (!string.IsNullOrWhiteSpace(_loadError))
 {
     <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true" class="rz-my-4">
         <div><strong>Azure dashboard load failed.</strong></div>
-        <div style="margin-top:.35rem">@_loadError</div>
-        <div style="margin-top:.75rem">
+        <div class="app-mt-35">@_loadError</div>
+        <div class="app-mt-75">
             <RadzenButton Text="Retry" Icon="refresh" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(async () => await LoadReportAsync())" />
         </div>
     </RadzenAlert>
@@ -64,10 +64,17 @@ else
                     <RadzenStack Orientation="Orientation.Horizontal" Gap="6px">
                         <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh from Azure")" Icon="refresh"
                                       ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
-                                      Disabled="@_refreshing" Click="RefreshAsync" />                        <RadzenButton Text="Download JSON" Icon="download" ButtonStyle="ButtonStyle.Light"
-                                      Variant="Variant.Outlined" Size="ButtonSize.Small"
-                                      Disabled="@(report == null)" Click="DownloadReportAsync"
-                                      title="Download the full Azure report as JSON for sharing with AI tools or debugging" />                        @if (_refreshing)
+                                      Disabled="@_refreshing" Click="RefreshAsync" />
+                        <details class="app-overflow-menu">
+                            <summary class="app-overflow-trigger" title="More actions">More</summary>
+                            <div class="app-overflow-panel">
+                                <RadzenButton Text="Download JSON" Icon="download" ButtonStyle="ButtonStyle.Light"
+                                              Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                              Disabled="@(report == null)" Click="DownloadReportAsync"
+                                              title="Download the full Azure report as JSON for sharing with AI tools or debugging" />
+                            </div>
+                        </details>
+                        @if (_refreshing)
                         {
                             <RadzenButton Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
                                           Click="CancelRefreshAsync" />
@@ -83,7 +90,7 @@ else
         <section class="app-section">
             <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" class="rz-mb-1" Style="height:22px" />
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="6px" class="rz-mb-2">
-                <RadzenIcon Icon="sync" Style="font-size:1rem;animation:spin 1.4s linear infinite" />
+                <RadzenIcon Icon="sync" class="app-progress-icon" />
                 <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary">@_progressStep</RadzenText>
             </RadzenStack>
         </section>
@@ -104,14 +111,12 @@ else
                 {
                     <span><strong>Config:</strong> @_criticalDriftCount service(s) have high/critical severity drift. </span>
                 }
-                <span class="app-note">Details in the Overview tab below.</span>
+                <span class="app-note">Details are shown in the sections below.</span>
             </RadzenAlert>
         </section>
     }
 
-    <RadzenTabs>
-        <Tabs>
-            <RadzenTabsItem Text="Overview">
+    @* Flattened top-level content: Overview and Trends are now sequential sections. *@
 
     <!-- ── KPI Strip ── -->
     <section class="app-section">
@@ -128,7 +133,7 @@ else
         <RadzenRow Gap="1rem">
             <!-- Viz 1: Fleet Health Donut -->
             <RadzenColumn SizeXS="12" SizeMD="4">
-                <div class="app-card" style="height:100%">
+                <div class="app-card app-fill">
                     <div class="app-kicker">Fleet Health</div>
                     <h3 class="app-card-title rz-mb-1">Service Status Overview</h3>
                     <p class="app-note rz-mb-2">Active / Broken / Other across all @total web services.</p>
@@ -148,7 +153,7 @@ else
 
             <!-- Viz 2: Cost Breakdown Bar Chart -->
             <RadzenColumn SizeXS="12" SizeMD="8">
-                <div class="app-card" style="height:100%">
+                <div class="app-card app-fill">
                     <div class="app-kicker">Cost Breakdown</div>
                     <h3 class="app-card-title rz-mb-1">Top Cost Drivers — 30 Days</h3>
                     <p class="app-note rz-mb-2">
@@ -179,7 +184,7 @@ else
         <RadzenRow Gap="1rem">
             <!-- Viz 4: App Response Time Distribution -->
             <RadzenColumn SizeXS="12" SizeMD="6">
-                <div class="app-card" style="height:100%">
+                <div class="app-card app-fill">
                     <div class="app-kicker">Performance</div>
                     <h3 class="app-card-title rz-mb-1">App Response Times</h3>
                     <p class="app-note rz-mb-2">Probe response time (ms), slowest first. &lt;1 000ms good · &gt;3 000ms critical.</p>
@@ -208,7 +213,7 @@ else
 
             <!-- Viz 5: 7-Day Error Rate -->
             <RadzenColumn SizeXS="12" SizeMD="6">
-                <div class="app-card" style="height:100%">
+                <div class="app-card app-fill">
                     <div class="app-kicker">Reliability</div>
                     <h3 class="app-card-title rz-mb-1">7-Day 5xx Error Counts</h3>
                     <p class="app-note rz-mb-2">HTTP 5xx server errors per app over the past 7 days. Zero is ideal.</p>
@@ -235,7 +240,7 @@ else
         <RadzenRow Gap="1rem">
             <!-- Viz 6: Resource Inventory Donut + Drill-down -->
             <RadzenColumn SizeXS="12" SizeMD="6">
-                <div class="app-card" style="height:100%">
+                <div class="app-card app-fill">
                     <div class="app-kicker">Inventory</div>
                     <h3 class="app-card-title rz-mb-1">Resource Inventory by Type</h3>
                     <p class="app-note rz-mb-2">
@@ -251,7 +256,7 @@ else
                             </RadzenChart>
                         </RadzenColumn>
                         <RadzenColumn SizeXS="12" SizeMD="6">
-                            <div class="app-table-frame" style="max-height:230px;overflow-y:auto">
+                            <div class="app-table-frame app-overflow-y-230">
                                 <RadzenDataGrid Data="@ResourceTypeTableData" TItem="ChartPoint"
                                                 AllowSorting="true" AllowPaging="false"
                                                 RowClick="@(args => SelectResourceType(args.Data?.Label ?? ""))">
@@ -293,7 +298,7 @@ else
 
             <!-- Viz 7: Zombie & Orphaned Savings -->
             <RadzenColumn SizeXS="12" SizeMD="6">
-                <div class="app-card" style="height:100%">
+                <div class="app-card app-fill">
                     <div class="app-kicker">Waste</div>
                     <h3 class="app-card-title rz-mb-1">Zombie Apps &amp; Orphaned Resources</h3>
                     <p class="app-note rz-mb-2">Zero-traffic broken apps and unattached resources with estimated monthly cost.</p>
@@ -313,7 +318,7 @@ else
                     }
                     else
                     {
-                        <div class="app-dashboard-summary rz-mb-3" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
+                        <div class="app-dashboard-summary rz-mb-3 app-grid-metrics-110">
                             <div class="app-metric-card"><strong>@zombies.Count</strong><span class="app-note">Zombie apps</span></div>
                             <div class="app-metric-card"><strong>@orphaned.Count</strong><span class="app-note">Orphaned</span></div>
                             @if (totalWaste > 0)
@@ -324,7 +329,7 @@ else
                         @if (zombies.Count > 0)
                         {
                             <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">Zombie Apps</RadzenText>
-                            <div class="app-table-frame" style="max-height:180px;overflow-y:auto;margin-bottom:.75rem">
+                            <div class="app-table-frame app-overflow-y-180 rz-mb-3">
                                 <RadzenDataGrid Data="@zombies" TItem="ZombieApp" AllowPaging="false" AllowSorting="true">
                                     <Columns>
                                         <RadzenDataGridColumn TItem="ZombieApp" Property="Name" Title="App" />
@@ -341,7 +346,7 @@ else
                         @if (orphaned.Count > 0)
                         {
                             <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">Orphaned Resources</RadzenText>
-                            <div class="app-table-frame" style="max-height:180px;overflow-y:auto">
+                            <div class="app-table-frame app-overflow-y-180">
                                 <RadzenDataGrid Data="@orphaned" TItem="OrphanedResource" AllowPaging="false" AllowSorting="true">
                                     <Columns>
                                         <RadzenDataGridColumn TItem="OrphanedResource" Property="Name" Title="Name" />
@@ -377,7 +382,7 @@ else
         <RadzenRow Gap="1rem">
             <!-- Viz 8: Config Drift Severity Matrix -->
             <RadzenColumn SizeXS="12" SizeMD="6">
-                <div class="app-card" style="height:100%">
+                <div class="app-card app-fill">
                     <div class="app-kicker">Compliance</div>
                     <h3 class="app-card-title rz-mb-1">Config Drift</h3>
                     <p class="app-note rz-mb-2">Services with misconfigurations, ranked by issue count and severity.</p>
@@ -396,7 +401,7 @@ else
                         {
                             <div class="app-callout danger rz-mb-2"><strong>@criticalDrift service(s)</strong> have high/critical severity issues.</div>
                         }
-                        <div class="app-table-frame" style="max-height:340px;overflow-y:auto">
+                        <div class="app-table-frame app-overflow-y-340">
                             <RadzenDataGrid Data="@driftWithIssues"
                                             TItem="ConfigDriftItem" AllowSorting="true" AllowPaging="false">
                                 <Columns>
@@ -434,7 +439,7 @@ else
 
             <!-- Viz 9: Storage Security Scorecard -->
             <RadzenColumn SizeXS="12" SizeMD="6">
-                <div class="app-card" style="height:100%">
+                <div class="app-card app-fill">
                     <div class="app-kicker">Security</div>
                     <h3 class="app-card-title rz-mb-1">Storage Security Scorecard</h3>
                     <p class="app-note rz-mb-2">Pass/fail per account: public blob access, HTTPS-only, and minimum TLS version.</p>
@@ -454,7 +459,7 @@ else
                     else
                     {
                         <div class="app-callout warning rz-mb-2"><strong>@insecureCount of @storageItems.Count account(s)</strong> have security misconfigurations.</div>
-                        <div class="app-table-frame" style="max-height:310px;overflow-y:auto">
+                        <div class="app-table-frame app-overflow-y-310">
                             <RadzenDataGrid Data="@insecureItems"
                                             TItem="StorageItem" AllowSorting="true" AllowPaging="false">
                                 <Columns>
@@ -482,10 +487,7 @@ else
     </section>
 
 
-            </RadzenTabsItem>
-
-            @* ── Trends & History tab ───────────────────────────────────────────── *@
-            <RadzenTabsItem Text="Trends &amp; History">
+    @* ── Trends & History ───────────────────────────────────────────────────── *@
 
     @* ── Web Traffic chart *@
     @if (WebTrafficByService.Count > 0)
@@ -525,7 +527,7 @@ else
         <section class="app-section">
             <div class="app-kicker">Trending over time</div>
             <h2 class="app-section-heading">Scan History Charts</h2>
-            <div class="app-grid" style="grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:1.5rem">
+            <div class="app-grid app-grid-auto-420">
                 <div class="app-card">
                     <div class="app-card-header"><span class="material-symbols-outlined">show_chart</span> Service Status Over Time</div>
                     <RadzenChart Style="height:260px">
@@ -560,7 +562,7 @@ else
                 }
                 @if (TrackedServiceNames.Count > 0)
                 {
-                    <div class="app-card" style="grid-column:1/-1">
+                    <div class="app-card app-grid-span-all">
                         <div class="app-card-header"><span class="material-symbols-outlined">timeline</span> Response Time per Service (active services)</div>
                         <RadzenChart Style="height:300px">
                             @foreach (var svcName in TrackedServiceNames)
@@ -757,7 +759,7 @@ else
                     </RadzenTabsItem>
                 }
                 <RadzenTabsItem Text="@($"Services ({TotalCount})")">
-                    <div style="overflow-x:auto;margin-top:.75rem">
+                    <div class="app-overflow-top">
                         <RadzenDataGrid Data="@AllServices" TItem="WebService"
                                         AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu"
                                         PageSize="50" AllowPaging="@(TotalCount > 50)"
@@ -797,7 +799,7 @@ else
                 @if (report?.SslExpiry?.Count > 0)
                 {
                     <RadzenTabsItem Text="@($"🔒 SSL ({report.SslExpiry.Count})")">
-                        <div style="overflow-x:auto;margin-top:.75rem">
+                        <div class="app-overflow-top">
                             <RadzenDataGrid Data="@report!.SslExpiry" TItem="SslEntry" AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="SslEntry" Property="Name" Title="Service" Width="180px" />
@@ -831,7 +833,7 @@ else
                 @if (report?.StorageInventory?.Count > 0)
                 {
                     <RadzenTabsItem Text="@($"🗄️ Storage ({report.StorageInventory.Count})")">
-                        <div style="overflow-x:auto;margin-top:.75rem">
+                        <div class="app-overflow-top">
                             <RadzenDataGrid Data="@report!.StorageInventory" TItem="StorageItem" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="StorageItem" Property="Name" Title="Account" Width="200px" />
@@ -850,7 +852,7 @@ else
                 @if (report?.OrphanedResources?.Count > 0)
                 {
                     <RadzenTabsItem Text="@($"🗑️ Orphaned ({report.OrphanedResources.Count})")">
-                        <div style="overflow-x:auto;margin-top:.75rem">
+                        <div class="app-overflow-top">
                             <RadzenDataGrid Data="@report!.OrphanedResources" TItem="OrphanedResource" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="OrphanedResource" Property="Name" Title="Resource" Width="180px" />
@@ -867,7 +869,7 @@ else
                 @if (report?.AppInsightsMetrics?.Count > 0)
                 {
                     <RadzenTabsItem Text="@($"📊 App Insights ({report.AppInsightsMetrics.Count})")">
-                        <div style="overflow-x:auto;margin-top:.75rem">
+                        <div class="app-overflow-top">
                             <RadzenDataGrid Data="@report!.AppInsightsMetrics" TItem="AppInsightsMetric" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="AppInsightsMetric" Property="Name" Title="Resource" Width="200px" />
@@ -883,7 +885,7 @@ else
                 @if (report?.AllResourceSummary is { } allRes2 && allRes2.Total > 0)
                 {
                     <RadzenTabsItem Text="@($"📦 All Resources ({allRes2.Total})")">
-                        <div class="app-grid" style="grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:1.5rem;margin-top:.75rem">
+                        <div class="app-grid app-grid-auto-380 app-mt-75">
                             <div class="app-card">
                                 <div class="app-card-header">Resources by type</div>
                                 <RadzenChart Style="height:300px">
@@ -919,7 +921,7 @@ else
                 @if (report?.ZombieApps?.Count > 0)
                 {
                     <RadzenTabsItem Text="@($"🧟 Zombies ({report.ZombieApps.Count})")">
-                        <div style="overflow-x:auto;margin-top:.75rem">
+                        <div class="app-overflow-top">
                             <RadzenDataGrid Data="@report!.ZombieApps" TItem="ZombieApp" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="ZombieApp" Property="Name" Title="App" Width="180px" />
@@ -936,49 +938,56 @@ else
                 {
                     <RadzenTabsItem Text="🔄 Delta">
                         <div style="margin-top:.75rem">
-                            <div class="app-grid metrics" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:1rem">
+                            <div class="app-grid metrics app-grid-metrics-160 app-mb-1">
                                 <div class="app-stat"><span class="app-stat-label">Previous scan</span><span class="app-stat-value" style="font-size:1rem">@rptDelta.PreviousGeneratedAt.Value.ToLocalTime().ToString("MM/dd HH:mm")</span></div>
                                 <div class="app-stat"><span class="app-stat-label">Broken services delta</span><span class="app-stat-value" style="color:@(rptDelta.BrokenServicesDelta > 0 ? "var(--rz-danger)" : rptDelta.BrokenServicesDelta < 0 ? "var(--rz-success)" : "inherit")">@(rptDelta.BrokenServicesDelta > 0 ? "+" : "")@rptDelta.BrokenServicesDelta</span></div>
                                 <div class="app-stat"><span class="app-stat-label">Cost delta</span><span class="app-stat-value" style="color:@(rptDelta.CostDelta > 0 ? "var(--rz-warning)" : "var(--rz-success)")">@(rptDelta.CostDelta > 0 ? "+" : "")$@(rptDelta.CostDelta?.ToString("F2") ?? "—")</span></div>
                             </div>
-                            @if (rptDelta.NewBrokenServices.Count > 0) { <div class="app-card rz-mb-3" style="border-left:4px solid var(--rz-danger)"><div class="app-card-header" style="color:var(--rz-danger)">Newly broken</div>@foreach (var s in rptDelta.NewBrokenServices) { <div class="app-note">@s</div> }</div> }
-                            @if (rptDelta.RecoveredServices.Count > 0) { <div class="app-card rz-mb-3" style="border-left:4px solid var(--rz-success)"><div class="app-card-header" style="color:var(--rz-success)">Recovered</div>@foreach (var s in rptDelta.RecoveredServices) { <div class="app-note">@s</div> }</div> }
-                            @if (rptDelta.NewOrphanedResources.Count > 0) { <div class="app-card rz-mb-3" style="border-left:4px solid var(--rz-warning)"><div class="app-card-header" style="color:var(--rz-warning)">New orphaned resources</div>@foreach (var s in rptDelta.NewOrphanedResources) { <div class="app-note">@s</div> }</div> }
+                            @if (rptDelta.NewBrokenServices.Count > 0) { <div class="app-card rz-mb-3 app-border-left-danger"><div class="app-card-header app-tone-danger">Newly broken</div>@foreach (var s in rptDelta.NewBrokenServices) { <div class="app-note">@s</div> }</div> }
+                            @if (rptDelta.RecoveredServices.Count > 0) { <div class="app-card rz-mb-3 app-border-left-success"><div class="app-card-header app-tone-success">Recovered</div>@foreach (var s in rptDelta.RecoveredServices) { <div class="app-note">@s</div> }</div> }
+                            @if (rptDelta.NewOrphanedResources.Count > 0) { <div class="app-card rz-mb-3 app-border-left-warning"><div class="app-card-header app-tone-warning">New orphaned resources</div>@foreach (var s in rptDelta.NewOrphanedResources) { <div class="app-note">@s</div> }</div> }
                         </div>
                     </RadzenTabsItem>
                 }
-                @if (report?.StepTimings?.Count > 0)
+                @if ((ShowAdvancedDiagnostics && report?.StepTimings?.Count > 0) ||
+                     (report?.AppsJsonDiff is { } apjDiff && (apjDiff.NewApps.Count + apjDiff.RemovedApps.Count + apjDiff.UpdatedApps.Count) > 0))
                 {
-                    <RadzenTabsItem Text="@($"⏱️ Timings ({report.StepTimings.Count})")">
-                        <div class="app-card" style="margin-top:.75rem">
-                            <RadzenChart Style="height:300px">
-                                <RadzenBarSeries TItem="StepTimingEntry" Data="@(report!.StepTimings.OrderByDescending(t => t.ElapsedMs).ToList())" CategoryProperty="Step" ValueProperty="ElapsedMs" Title="Duration (ms)"><RadzenSeriesDataLabels Visible="false" /></RadzenBarSeries>
-                                <RadzenCategoryAxis><RadzenAxisTitle Text="Step" /></RadzenCategoryAxis>
-                                <RadzenValueAxis FormatString="{0}ms"><RadzenAxisTitle Text="Duration (ms)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
-                            </RadzenChart>
-                            <div style="overflow-x:auto;margin-top:1rem">
-                                <RadzenDataGrid Data="@(report!.StepTimings.OrderByDescending(t => t.ElapsedMs).ToList())" TItem="StepTimingEntry" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
-                                    <Columns>
-                                        <RadzenDataGridColumn TItem="StepTimingEntry" Property="Step" Title="Step" />
-                                        <RadzenDataGridColumn TItem="StepTimingEntry" Property="ElapsedMs" Title="Duration" Width="120px" TextAlign="TextAlign.Right"><Template Context="t"><span style="@(t.ElapsedMs > 5000 ? "color:var(--rz-warning)" : "")">@t.ElapsedMs ms</span></Template></RadzenDataGridColumn>
-                                    </Columns>
-                                </RadzenDataGrid>
-                            </div>
-                        </div>
-                    </RadzenTabsItem>
-                }
-                @if (report?.AppsJsonDiff is { } apjDiff && (apjDiff.NewApps.Count + apjDiff.RemovedApps.Count + apjDiff.UpdatedApps.Count) > 0)
-                {
-                    <RadzenTabsItem Text="📋 Apps.json Diff">
-                        <div style="margin-top:.75rem">
-                            <div class="app-grid metrics" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:1rem">
-                                <div class="app-stat"><span class="app-stat-label">In apps.json</span><span class="app-stat-value">@apjDiff.CurrentCount</span></div>
-                                <div class="app-stat"><span class="app-stat-label">Discovered in Azure</span><span class="app-stat-value">@apjDiff.DiscoveredCount</span></div>
-                                <div class="app-stat"><span class="app-stat-label">New in Azure</span><span class="app-stat-value" style="color:var(--rz-success)">@apjDiff.NewApps.Count</span></div>
-                                <div class="app-stat"><span class="app-stat-label">Removed from Azure</span><span class="app-stat-value" style="color:var(--rz-danger)">@apjDiff.RemovedApps.Count</span></div>
-                            </div>
-                            @if (apjDiff.NewApps.Count > 0) { <div class="app-card rz-mb-3" style="border-left:4px solid var(--rz-success)"><div class="app-card-header" style="color:var(--rz-success)">New apps discovered in Azure (not in apps.json)</div>@foreach (var a in apjDiff.NewApps) { <div class="app-note rz-mt-1">@a</div> }</div> }
-                            @if (apjDiff.RemovedApps.Count > 0) { <div class="app-card rz-mb-3" style="border-left:4px solid var(--rz-danger)"><div class="app-card-header" style="color:var(--rz-danger)">In apps.json but not found in Azure</div>@foreach (var a in apjDiff.RemovedApps) { <div class="app-note rz-mt-1">@a</div> }</div> }
+                    <RadzenTabsItem Text="🛠️ Advanced">
+                        <div class="app-tab-pane app-mt-75">
+                            @if (ShowAdvancedDiagnostics && report?.StepTimings?.Count > 0)
+                            {
+                                <div class="app-card">
+                                    <div class="app-card-header">Step Timings</div>
+                                    <RadzenChart Style="height:300px">
+                                        <RadzenBarSeries TItem="StepTimingEntry" Data="@(report!.StepTimings.OrderByDescending(t => t.ElapsedMs).ToList())" CategoryProperty="Step" ValueProperty="ElapsedMs" Title="Duration (ms)"><RadzenSeriesDataLabels Visible="false" /></RadzenBarSeries>
+                                        <RadzenCategoryAxis><RadzenAxisTitle Text="Step" /></RadzenCategoryAxis>
+                                        <RadzenValueAxis FormatString="{0}ms"><RadzenAxisTitle Text="Duration (ms)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
+                                    </RadzenChart>
+                                    <div class="app-overflow-top-1">
+                                        <RadzenDataGrid Data="@(report!.StepTimings.OrderByDescending(t => t.ElapsedMs).ToList())" TItem="StepTimingEntry" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                            <Columns>
+                                                <RadzenDataGridColumn TItem="StepTimingEntry" Property="Step" Title="Step" />
+                                                <RadzenDataGridColumn TItem="StepTimingEntry" Property="ElapsedMs" Title="Duration" Width="120px" TextAlign="TextAlign.Right"><Template Context="t"><span class="@(t.ElapsedMs > 5000 ? "app-tone-warning" : string.Empty)">@t.ElapsedMs ms</span></Template></RadzenDataGridColumn>
+                                            </Columns>
+                                        </RadzenDataGrid>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (report?.AppsJsonDiff is { } apjDiff2 && (apjDiff2.NewApps.Count + apjDiff2.RemovedApps.Count + apjDiff2.UpdatedApps.Count) > 0)
+                            {
+                                <div class="app-card">
+                                    <div class="app-card-header">Apps.json Diff</div>
+                                    <div class="app-grid metrics app-grid-metrics-150 app-mb-1">
+                                        <div class="app-stat"><span class="app-stat-label">In apps.json</span><span class="app-stat-value">@apjDiff2.CurrentCount</span></div>
+                                        <div class="app-stat"><span class="app-stat-label">Discovered in Azure</span><span class="app-stat-value">@apjDiff2.DiscoveredCount</span></div>
+                                        <div class="app-stat"><span class="app-stat-label">New in Azure</span><span class="app-stat-value app-tone-success">@apjDiff2.NewApps.Count</span></div>
+                                        <div class="app-stat"><span class="app-stat-label">Removed from Azure</span><span class="app-stat-value app-tone-danger">@apjDiff2.RemovedApps.Count</span></div>
+                                    </div>
+                                    @if (apjDiff2.NewApps.Count > 0) { <div class="app-card rz-mb-3 app-border-left-success"><div class="app-card-header app-tone-success">New apps discovered in Azure (not in apps.json)</div>@foreach (var a in apjDiff2.NewApps) { <div class="app-note rz-mt-1">@a</div> }</div> }
+                                    @if (apjDiff2.RemovedApps.Count > 0) { <div class="app-card rz-mb-3 app-border-left-danger"><div class="app-card-header app-tone-danger">In apps.json but not found in Azure</div>@foreach (var a in apjDiff2.RemovedApps) { <div class="app-note rz-mt-1">@a</div> }</div> }
+                                </div>
+                            }
                         </div>
                     </RadzenTabsItem>
                 }
@@ -986,9 +995,7 @@ else
         </RadzenTabs>
     </section>
 
-            </RadzenTabsItem>
-        </Tabs>
-    </RadzenTabs>
 }
 
 </div>
+

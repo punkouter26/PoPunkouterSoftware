@@ -4,8 +4,9 @@
 @using System.Text.Json.Serialization
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
+@inject PoAppSession AppSession
 
-<PageTitle>Po Software — Portfolio</PageTitle>
+<PageTitle>PoPunkouterSoftware - Portfolio</PageTitle>
 
 <div class="app-page">
     <section class="app-section app-hero app-glow">
@@ -16,6 +17,48 @@
                 A one-person product studio shipping AI-driven apps on Azure with a stronger focus on live operations,
                 usable diagnostics, and portfolio quality instead of demo-only surfaces.
             </p>
+
+            <div class="app-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start;">
+                <div class="app-card app-surface-soft" style="box-shadow:none;">
+                    <div class="app-kicker">Access</div>
+                    <h2 class="app-card-title">Login</h2>
+                    @if (_session?.IsAuthenticated == true)
+                    {
+                        <p class="app-note" data-testid="session-status">Signed in as <strong>@_session.DisplayName</strong>.</p>
+                        <div class="app-chip-row">
+                            <RadzenButton Text="Open Lobby" Icon="groups" ButtonStyle="ButtonStyle.Primary" Click="@(() => NavigationManager.NavigateTo("/lobby"))" data-testid="open-lobby-button" />
+                            <RadzenButton Text="Logout" Icon="logout" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" Click="LogoutAsync" data-testid="logout-button" />
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="app-note">Guest access persists in LocalStorage for refresh-safe local development and E2E flows.</p>
+                        <div class="app-chip-row">
+                            <RadzenButton Text="Guest Login" Icon="person" ButtonStyle="ButtonStyle.Primary" Disabled="@(!_config.GuestLoginEnabled)" Click="GuestLoginAsync" data-testid="guest-login-button" />
+                            <RadzenButton Text="Microsoft OAuth" Icon="badge" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" Disabled="@(!_config.MicrosoftOAuthEnabled)" Click="MicrosoftLoginAsync" data-testid="microsoft-login-button" />
+                        </div>
+                        @if (!_config.GuestLoginEnabled)
+                        {
+                            <p class="app-note rz-mt-2">Guest login is hidden in production.</p>
+                        }
+                    }
+                </div>
+
+                <div class="app-card app-surface-soft" style="box-shadow:none;" data-testid="model-selector-card">
+                    <div class="app-kicker">AI models</div>
+                    <h2 class="app-card-title">Select a model</h2>
+                    <RadzenDropDown TValue="string"
+                                    Data="@_modelOptions"
+                                    TextProperty="Label"
+                                    ValueProperty="Id"
+                                    GroupProperty="Category"
+                                    Placeholder="Choose a model"
+                                    Style="width:100%;"
+                                    data-testid="model-selector"
+                                    @bind-Value="_selectedModelId" />
+                    <p class="app-note rz-mt-2">Remote, browser, and Ollama models are separated so local-only options stay local.</p>
+                </div>
+            </div>
 
 
             <div class="app-chip-row">
@@ -73,7 +116,7 @@
                     var live = GetLiveStatus(app.Url);
 
                     var cardBorder = isActive ? "var(--app-accent-strong)" : (live?.HttpStatus == "broken" ? "var(--rz-danger)" : "var(--app-border-strong)");
-                    <RadzenCard class="app-card app-glow" Style="@($"display:flex;flex-direction:column;gap:1rem;border-left:4px solid {cardBorder}")">  
+                    <RadzenCard class="app-card app-glow" Style="@($"display:flex;flex-direction:column;gap:1rem;border-left:4px solid {cardBorder}")">
                         <div class="app-status-row">
                             <div>
                                 <div class="app-kicker">App</div>
@@ -201,11 +244,33 @@
     private Dictionary<string, WebService> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, GitHubActivity> _ghActivity = new(StringComparer.OrdinalIgnoreCase);
     private bool _ghLoaded;
+    private AppConfigResponse _config = AppConfigResponse.Empty;
+    private PoUserSession? _session;
+    private string? _selectedModelId;
+    private List<ModelOption> _modelOptions = new();
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadConfigAsync();
+        _session = await AppSession.GetAsync();
         await ReloadAppsAsync();
         await Task.WhenAll(LoadLiveStatusAsync(), LoadGitHubActivityAsync());
+    }
+
+    private async Task LoadConfigAsync()
+    {
+        try
+        {
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            _config = await Http.GetFromJsonAsync<AppConfigResponse>("/api/config", opts) ?? AppConfigResponse.Empty;
+            _modelOptions = _config.ModelCatalog.ToOptions();
+            _selectedModelId ??= _modelOptions.FirstOrDefault()?.Id;
+        }
+        catch
+        {
+            _config = AppConfigResponse.Empty;
+            _modelOptions = new();
+        }
     }
 
     private async Task ReloadAppsAsync()
@@ -316,6 +381,39 @@
             NavigationManager.NavigateTo(url, forceLoad: true);
     }
 
+    private async Task GuestLoginAsync()
+    {
+        var guestId = Random.Shared.Next(1000, 9999);
+        _session = new PoUserSession(
+            LoginMode: "Guest",
+            DisplayName: $"GUEST{guestId}",
+            Email: $"guest{guestId}@local.dev",
+            IsGuest: true,
+            IsAuthenticated: true,
+            Status: "LOGGED IN");
+
+        await AppSession.SaveAsync(_session);
+    }
+
+    private async Task MicrosoftLoginAsync()
+    {
+        _session = new PoUserSession(
+            LoginMode: "Microsoft",
+            DisplayName: "MICROSOFT USER",
+            Email: "microsoft.user@tenant.local",
+            IsGuest: false,
+            IsAuthenticated: true,
+            Status: "LOGGED IN");
+
+        await AppSession.SaveAsync(_session);
+    }
+
+    private async Task LogoutAsync()
+    {
+        _session = null;
+        await AppSession.ClearAsync();
+    }
+
     private int CountRecentRepos(int days) =>
         _ghActivity.Values.Count(gh => gh.LastCommitDate is DateTime lastCommit && (DateTime.UtcNow - lastCommit).TotalDays <= days);
 
@@ -352,6 +450,35 @@
 
     // ── Local models ─────────────────────────────────────────────────
     private class AppsWrapper { public List<AppModel> Apps { get; set; } = new(); }
+
+    private sealed record AppConfigResponse(
+        [property: JsonPropertyName("apiBase")] string ApiBase,
+        [property: JsonPropertyName("isMockMode")] bool IsMockMode,
+        [property: JsonPropertyName("isProduction")] bool IsProduction,
+        [property: JsonPropertyName("guestLoginEnabled")] bool GuestLoginEnabled,
+        [property: JsonPropertyName("microsoftOAuthEnabled")] bool MicrosoftOAuthEnabled,
+        [property: JsonPropertyName("modelCatalog")] ModelCatalog ModelCatalog)
+    {
+        public static AppConfigResponse Empty { get; } = new("", false, false, true, false, new ModelCatalog([], [], []));
+    }
+
+    private sealed record ModelCatalog(
+        [property: JsonPropertyName("remote")] List<ModelCatalogItem> Remote,
+        [property: JsonPropertyName("browser")] List<ModelCatalogItem> Browser,
+        [property: JsonPropertyName("ollama")] List<ModelCatalogItem> Ollama)
+    {
+        public List<ModelOption> ToOptions() =>
+            Remote.Select(item => new ModelOption(item.Id, item.Label, "Remote"))
+                .Concat(Browser.Select(item => new ModelOption(item.Id, item.Label, "Browser")))
+                .Concat(Ollama.Select(item => new ModelOption(item.Id, item.Label, "Ollama")))
+                .ToList();
+    }
+
+    private sealed record ModelCatalogItem(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("label")] string Label);
+
+    private sealed record ModelOption(string Id, string Label, string Category);
 
     public class AppModel
     {

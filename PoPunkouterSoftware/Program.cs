@@ -244,10 +244,31 @@ try
     // isMockMode=true tells the UI to display the "MOCK DATA" banner (rule 10).
     // Activated when ASPNETCORE_ENVIRONMENT is "Testing" (integration / E2E test runs).
     app.MapGet("/api/config",
-        (HttpContext ctx, IWebHostEnvironment env) => Results.Ok(new
+        (HttpContext ctx, IWebHostEnvironment env, IConfiguration config) => Results.Ok(new
         {
             apiBase = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api",
             isMockMode = env.IsEnvironment("Testing"),
+            isProduction = env.IsProduction(),
+            guestLoginEnabled = !env.IsProduction(),
+            microsoftOAuthEnabled = !string.IsNullOrWhiteSpace(config["Authentication:Microsoft:ClientId"]),
+            modelCatalog = new
+            {
+                remote = new[]
+                {
+                    new { id = "azure-gpt-4o", label = "Azure OpenAI GPT-4o" },
+                    new { id = "azure-gpt-4.1-mini", label = "Azure OpenAI GPT-4.1 Mini" }
+                },
+                browser = new[]
+                {
+                    new { id = "browser-summarizer", label = "Browser Summarizer" },
+                    new { id = "browser-writer", label = "Browser Writer" }
+                },
+                ollama = new[]
+                {
+                    new { id = "ollama-llama3.1", label = "Ollama llama3.1" },
+                    new { id = "ollama-qwen2.5", label = "Ollama qwen2.5" }
+                }
+            }
         }))
         .WithName("GetConfig").WithTags("Config");
 

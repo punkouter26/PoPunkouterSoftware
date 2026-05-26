@@ -8,5 +8,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>NU1902;NU1903;NU1904</WarningsNotAsErrors>
     <RootNamespace>$(MSBuildProjectName.Replace('-', '_'))</RootNamespace>
+    <!-- Git-driven semantic versioning from tags (for example: v1.2.3) -->
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerAutoIncrement>patch</MinVerAutoIncrement>
+    <MinVerDefaultPreReleaseIdentifiers>preview.0</MinVerDefaultPreReleaseIdentifiers>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsTestProject)' != 'true'">
+    <PackageReference Include="MinVer" PrivateAssets="All" />
+  </ItemGroup>
 </Project>

@@ -170,16 +170,6 @@ public record ZombieApp
     public string? Recommendation { get; init; }
 }
 
-public record SafeToRemoveItem
-{
-    public string Name { get; init; } = "";
-    public string Source { get; init; } = "";
-    public string Reason { get; init; } = "";
-    public string Confidence { get; init; } = "";
-    public string? Command { get; init; }
-    public string? Saving { get; init; }
-}
-
 public record OrphanedResource
 {
     public string Name { get; init; } = "";
