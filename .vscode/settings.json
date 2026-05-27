@@ -1,5 +1,8 @@
 {
     "livePreview.defaultPreviewPath": "/index.html",
+    "dotnet.dotnetPath": "C:\\Program Files\\dotnet\\x64\\dotnet.exe",
+    "csharp.dotnetPath": "C:\\Program Files\\dotnet\\x64\\dotnet.exe",
+    "omnisharp.dotNetPath": "C:\\Program Files\\dotnet\\x64\\dotnet.exe",
     "dotnetAcquisitionExtension.existingDotnetPath": [
         {
             "extensionId": "ms-dotnettools.csdevkit",

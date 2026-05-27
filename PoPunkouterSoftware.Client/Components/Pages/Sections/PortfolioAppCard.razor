@@ -7,7 +7,7 @@
             <div class="app-kicker">App</div>
             <h3 class="app-card-title">@App.Name</h3>
         </div>
-        <RadzenBadge Text="@(App.Status ?? "unknown")" IsPill="true" BadgeStyle="@(IsActive ? BadgeStyle.Success : BadgeStyle.Light)" />
+        <RadzenBadge Text="@DisplayStatus" IsPill="true" BadgeStyle="@StatusBadgeStyle" />
     </div>
 
     @if (Live is not null)
@@ -112,7 +112,20 @@
     [Parameter] public EventCallback<string> OpenAppRequested { get; set; }
     [Parameter] public EventCallback OpenAdminRequested { get; set; }
 
-    private bool IsActive => App.Status?.Equals("active", StringComparison.OrdinalIgnoreCase) == true;
+    private string DisplayStatus =>
+        !string.IsNullOrWhiteSpace(Live?.HttpStatus)
+            ? Live!.HttpStatus
+            : (App.Status ?? "unknown");
+
+    private bool IsActive => DisplayStatus.Equals("active", StringComparison.OrdinalIgnoreCase);
+
+    private BadgeStyle StatusBadgeStyle => DisplayStatus.ToLowerInvariant() switch
+    {
+        "active" => BadgeStyle.Success,
+        "broken" => BadgeStyle.Danger,
+        "unreachable" => BadgeStyle.Danger,
+        _ => BadgeStyle.Light,
+    };
 
     private BadgeStyle HttpBadgeStyle => Live?.HttpStatus switch
     {

@@ -213,8 +213,17 @@
     private int CountTrackedRepos() =>
         filteredApps.Count(a => !string.IsNullOrWhiteSpace(a.GithubRepo) && _ghActivity.ContainsKey(a.GithubRepo));
 
+    private string ResolveAppStatus(AppModel app)
+    {
+        var live = GetLiveStatus(app.Url);
+        if (!string.IsNullOrWhiteSpace(live?.HttpStatus))
+            return live!.HttpStatus;
+
+        return app.Status ?? "unknown";
+    }
+
     private int CountAppsByStatus(string status) =>
-        filteredApps.Count(a => string.Equals(a.Status, status, StringComparison.OrdinalIgnoreCase));
+        filteredApps.Count(a => string.Equals(ResolveAppStatus(a), status, StringComparison.OrdinalIgnoreCase));
 
     private string AverageResponseLabel
     {
