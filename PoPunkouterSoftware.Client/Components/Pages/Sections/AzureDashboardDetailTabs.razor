@@ -1,0 +1,398 @@
+@using PoPunkouterSoftware.Shared.Azure
+@using Radzen
+@using Radzen.Blazor
+
+@if (Report is { } report)
+{
+    <section class="app-section app-detail-tabs">
+        <div class="app-kicker">Analysis</div>
+        <h2 class="app-section-heading">Full Report Details</h2>
+        <RadzenTabs>
+            <Tabs>
+                @if (report.DowntimeDiagnoses?.Count > 0)
+                {
+                    <RadzenTabsItem Text="@($"🔍 Downtime ({report.DowntimeDiagnoses.Count})")">
+                        <div class="app-mt-75">
+                            @foreach (var diag in report.DowntimeDiagnoses.OrderBy(d => d.FriendlyName ?? d.Name))
+                            {
+                                var causeColor = diag.LikelyCause.Contains("quota", StringComparison.OrdinalIgnoreCase) ? "var(--rz-warning)"
+                                    : diag.LikelyCause.Contains("stopped", StringComparison.OrdinalIgnoreCase) ? "var(--rz-danger)"
+                                    : diag.LikelyCause.Contains("failed", StringComparison.OrdinalIgnoreCase) ? "var(--rz-danger)"
+                                    : "var(--rz-info)";
+                                <div class="app-card rz-mb-4 app-detail-incident" style="border-left:4px solid @causeColor">
+                                    <div class="app-detail-row">
+                                        <div>
+                                            <span class="app-detail-title">@(diag.FriendlyName ?? diag.Name)</span>
+                                            <span class="app-note rz-ml-2 app-note-inline">@diag.ResourceGroup</span>
+                                        </div>
+                                        <div class="app-badge-cluster">
+                                            <span class="app-badge app-http-badge" style="@HttpStatusBadgeStyle(diag.HttpStatus)">@diag.HttpStatus</span>
+                                            @if (diag.UsageState == "Exceeded" || diag.IsSuspended) { <span class="app-badge app-badge-warning">QUOTA EXCEEDED</span> }
+                                            @if (diag.PlanStopped) { <span class="app-badge app-badge-danger">PLAN STOPPED</span> }
+                                        </div>
+                                    </div>
+                                    <div class="app-card app-detail-cause" style="background:color-mix(in srgb,@causeColor 8%,transparent)">
+                                        <div class="app-detail-label" style="color:@causeColor">Likely Cause</div>
+                                        <div class="app-detail-body">@diag.LikelyCause</div>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(diag.SuggestedFix))
+                                    {
+                                        <div class="app-detail-block">
+                                            <div class="app-detail-label">Suggested Fix</div>
+                                            @if (diag.SuggestedFix.TrimStart().StartsWith("az "))
+                                            {
+                                                <code class="app-detail-code">@diag.SuggestedFix</code>
+                                            }
+                                            else
+                                            {
+                                                <span class="app-detail-body">@diag.SuggestedFix</span>
+                                            }
+                                        </div>
+                                    }
+                                    <div class="app-detail-meta">
+                                        @if (diag.AvailabilityState is not null) { <div><span class="app-note">Availability:</span> <strong style="color:@(diag.AvailabilityState == "Normal" ? "var(--rz-success)" : "var(--rz-danger)")">@diag.AvailabilityState</strong></div> }
+                                        @if (diag.UsageState is not null) { <div><span class="app-note">Usage:</span> <strong style="color:@(diag.UsageState == "Normal" ? "var(--rz-success)" : "var(--rz-warning)")">@diag.UsageState</strong></div> }
+                                        @if (diag.PlanName is not null) { <div><span class="app-note">Plan:</span> <strong>@diag.PlanName</strong>@(diag.PlanSku is not null ? $" ({diag.PlanSku})" : "") - <span style="color:@(diag.PlanStopped ? "var(--rz-danger)" : "var(--rz-success)")">@(diag.PlanStatus ?? "-")</span></div> }
+                                        @if (diag.SuspendedTill.HasValue) { <div><span class="app-note">Suspended till:</span> <strong style="color:var(--rz-warning)">@diag.SuspendedTill.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</strong></div> }
+                                    </div>
+                                    @if (diag.RecentDeployments.Count > 0)
+                                    {
+                                        <div class="app-detail-block">
+                                            <div class="app-detail-label">Recent Deployments</div>
+                                            <div class="app-detail-table-wrap">
+                                                <table class="app-detail-table">
+                                                    <thead><tr><th>Status</th><th>Time</th><th>Author</th><th>Message</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach (var dep in diag.RecentDeployments)
+                                                        {
+                                                            <tr>
+                                                                <td>
+                                                                    <span style="font-weight:700;color:@(dep.StatusCode == 4 ? "var(--rz-success)" : dep.StatusCode == 3 ? "var(--rz-danger)" : "var(--rz-warning)")">@(dep.StatusText ?? "-")</span>
+                                                                    @if (dep.Active == true) { <span class="app-note rz-ml-1">(active)</span> }
+                                                                </td>
+                                                                <td class="app-nowrap">@(dep.DeployedAt?.ToLocalTime().ToString("MM/dd HH:mm") ?? "-")</td>
+                                                                <td>@(dep.Author ?? "-")</td>
+                                                                <td class="app-break">@if (dep.Message is { Length: > 0 } msg) { <span>@(msg.Length > 120 ? msg[..120] + "..." : msg)</span> }</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (diag.RecentActivity.Count > 0)
+                                    {
+                                        <div class="app-detail-block">
+                                            <div class="app-detail-label">Activity Log (48h)</div>
+                                            <div class="app-detail-table-wrap">
+                                                <table class="app-detail-table">
+                                                    <thead><tr><th>Time</th><th>Operation</th><th>Status</th><th>Caller</th><th>Level</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach (var ev in diag.RecentActivity)
+                                                        {
+                                                            <tr>
+                                                                <td class="app-nowrap">@(ev.EventTimestamp?.ToLocalTime().ToString("MM/dd HH:mm") ?? "-")</td>
+                                                                <td>@(ev.OperationName ?? "-")</td>
+                                                                <td><span style="color:@(ev.Status == "Succeeded" ? "var(--rz-success)" : ev.Status == "Failed" ? "var(--rz-danger)" : "inherit")">@(ev.Status ?? "-")</span></td>
+                                                                <td class="app-break">@(ev.Caller ?? "-")</td>
+                                                                <td>@(ev.Level ?? "-")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </RadzenTabsItem>
+                }
+
+                <RadzenTabsItem Text="@($"Services ({TotalCount})")">
+                    <div class="app-overflow-top">
+                        <RadzenDataGrid Data="@AllServices" TItem="WebService" AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu" PageSize="50" AllowPaging="@(TotalCount > 50)" GridLines="DataGridGridLines.Horizontal" Style="width:100%;min-width:900px">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="WebService" Property="FriendlyName" Title="Name" Width="180px">
+                                    <Template Context="svc"><span style="font-weight:600">@(svc.FriendlyName ?? svc.Name)</span></Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="WebService" Property="HttpStatus" Title="Status" Width="110px">
+                                    <Template Context="svc"><span class="app-badge app-http-badge" style="@HttpStatusBadgeStyle(svc.HttpStatus)">@svc.HttpStatus</span></Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="WebService" Property="PlatformState" Title="Platform" Width="100px" />
+                                <RadzenDataGridColumn TItem="WebService" Title="Response" Width="100px" TextAlign="TextAlign.Right">
+                                    <Template Context="svc">@if (svc.Connectivity?.ResponseTime > 0) { <span>@svc.Connectivity.ResponseTime ms</span> } else { <span class="app-note">-</span> }</Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="WebService" Title="Req 7d" Width="90px" TextAlign="TextAlign.Right">
+                                    <Template Context="svc">@(svc.Metrics7Days?.Requests is int r ? r.ToString("N0") : "-")</Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="WebService" Title="5xx 7d" Width="80px" TextAlign="TextAlign.Right">
+                                    <Template Context="svc"><span style="@(svc.Metrics7Days?.Http5xx > 0 ? "color:var(--rz-danger)" : "")">@(svc.Metrics7Days?.Http5xx is int e && e > 0 ? e.ToString("N0") : "-")</span></Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="WebService" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                                <RadzenDataGridColumn TItem="WebService" Property="ResourceType" Title="Type" Width="160px" />
+                                <RadzenDataGridColumn TItem="WebService" Property="AppServicePlan" Title="Plan" Width="130px"><Template Context="svc">@(svc.AppServicePlan ?? "-")</Template></RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="WebService" Title="URL" Width="240px"><Template Context="svc">@if (!string.IsNullOrEmpty(svc.Url)) { <a href="@svc.Url" target="_blank" rel="noopener noreferrer" class="app-link app-link-break">@svc.Url</a> }</Template></RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="WebService" Title="Error" Width="200px"><Template Context="svc">@if (!string.IsNullOrEmpty(svc.Connectivity?.Error)) { <span class="app-note app-badge-xs">@svc.Connectivity.Error</span> }</Template></RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    </div>
+                </RadzenTabsItem>
+
+                @if (report.SslExpiry?.Count > 0)
+                {
+                    <RadzenTabsItem Text="@($"🔒 SSL ({report.SslExpiry.Count})")">
+                        <div class="app-overflow-top">
+                            <RadzenDataGrid Data="@report.SslExpiry" TItem="SslEntry" AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="SslEntry" Property="Name" Title="Service" Width="180px" />
+                                    <RadzenDataGridColumn TItem="SslEntry" Title="Status" Width="140px"><Template Context="e"><span class="app-badge app-http-badge" style="@SslBadgeStyle(e)">@SslLabel(e)</span></Template></RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="SslEntry" Property="Expiry" Title="Expiry" Width="160px" />
+                                    <RadzenDataGridColumn TItem="SslEntry" Property="Subject" Title="Subject" />
+                                    <RadzenDataGridColumn TItem="SslEntry" Property="Url" Title="URL"><Template Context="e">@if (!string.IsNullOrEmpty(e.Url)) { <a href="@e.Url" target="_blank" rel="noopener noreferrer" class="app-link app-link-break">@e.Url</a> }</Template></RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="SslEntry" Property="Error" Title="Error"><Template Context="e">@(e.Error ?? "-")</Template></RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
+                        </div>
+                    </RadzenTabsItem>
+                }
+
+                @if (report.ConfigDrift?.Count > 0)
+                {
+                    <RadzenTabsItem Text="@($"⚙️ Config Drift ({report.ConfigDrift.Count})")">
+                        <div class="app-mt-75">
+                            @foreach (var cdItem in report.ConfigDrift.OrderByDescending(i => i.IssueCount))
+                            {
+                                <div class="app-card rz-mb-3">
+                                    <div class="app-detail-row">
+                                        <div><span style="font-weight:600">@(cdItem.FriendlyName ?? cdItem.Name)</span><span class="app-note rz-ml-2">@cdItem.ResourceGroup</span></div>
+                                        <span class="app-badge app-badge-warning">@cdItem.IssueCount issue@(cdItem.IssueCount != 1 ? "s" : "")</span>
+                                    </div>
+                                    @if (cdItem.Issues?.Count > 0)
+                                    {
+                                        <ul class="app-detail-list">
+                                            @foreach (var issue in cdItem.Issues)
+                                            {
+                                                <li style="@SeverityStyle(issue.Severity)"><strong>[@issue.Severity]</strong> @issue.Issue</li>
+                                            }
+                                        </ul>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </RadzenTabsItem>
+                }
+
+                @if (report.StorageInventory?.Count > 0)
+                {
+                    <RadzenTabsItem Text="@($"🗄️ Storage ({report.StorageInventory.Count})")">
+                        <div class="app-overflow-top">
+                            <RadzenDataGrid Data="@report.StorageInventory" TItem="StorageItem" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="StorageItem" Property="Name" Title="Account" Width="200px" />
+                                    <RadzenDataGridColumn TItem="StorageItem" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                                    <RadzenDataGridColumn TItem="StorageItem" Property="Sku" Title="SKU" Width="100px" />
+                                    <RadzenDataGridColumn TItem="StorageItem" Title="HTTPS Only" Width="100px" TextAlign="TextAlign.Center"><Template Context="s"><span style="color:@(s.HttpsOnly ? "var(--rz-success)" : "var(--rz-danger)")">@(s.HttpsOnly ? "✓" : "✗")</span></Template></RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="StorageItem" Title="Public Blob" Width="100px" TextAlign="TextAlign.Center"><Template Context="s"><span style="color:@(s.PublicBlobAccess ? "var(--rz-danger)" : "var(--rz-success)")">@(s.PublicBlobAccess ? "YES" : "No")</span></Template></RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="StorageItem" Property="MinTls" Title="Min TLS" Width="90px" />
+                                    <RadzenDataGridColumn TItem="StorageItem" Property="IssueCount" Title="Issues" Width="80px" TextAlign="TextAlign.Right"><Template Context="s"><span style="color:@(s.IssueCount > 0 ? "var(--rz-warning)" : "inherit")">@s.IssueCount</span></Template></RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="StorageItem" Title="Issue Details"><Template Context="s">@if (s.Issues?.Count > 0) { <span class="app-badge-xs">@string.Join("; ", s.Issues.Select(i => $"[{i.Severity}] {i.Issue}"))</span> }</Template></RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
+                        </div>
+                    </RadzenTabsItem>
+                }
+
+                @if (report.OrphanedResources?.Count > 0)
+                {
+                    <RadzenTabsItem Text="@($"🗑️ Orphaned ({report.OrphanedResources.Count})")">
+                        <div class="app-overflow-top">
+                            <RadzenDataGrid Data="@report.OrphanedResources" TItem="OrphanedResource" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="OrphanedResource" Property="Name" Title="Resource" Width="180px" />
+                                    <RadzenDataGridColumn TItem="OrphanedResource" Property="Type" Title="Type" Width="180px" />
+                                    <RadzenDataGridColumn TItem="OrphanedResource" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                                    <RadzenDataGridColumn TItem="OrphanedResource" Property="Reason" Title="Reason" />
+                                    <RadzenDataGridColumn TItem="OrphanedResource" Property="EstimatedMonthlyCost" Title="Est. Cost/mo" Width="120px"><Template Context="r">@(r.EstimatedMonthlyCost ?? "-")</Template></RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="OrphanedResource" Property="Command" Title="Remove command"><Template Context="r">@if (!string.IsNullOrEmpty(r.Command)) { <code class="app-inline-code">@r.Command</code> }</Template></RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
+                        </div>
+                    </RadzenTabsItem>
+                }
+
+                @if (report.AppInsightsMetrics?.Count > 0)
+                {
+                    <RadzenTabsItem Text="@($"📊 App Insights ({report.AppInsightsMetrics.Count})")">
+                        <div class="app-overflow-top">
+                            <RadzenDataGrid Data="@report.AppInsightsMetrics" TItem="AppInsightsMetric" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="AppInsightsMetric" Property="Name" Title="Resource" Width="200px" />
+                                    <RadzenDataGridColumn TItem="AppInsightsMetric" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                                    <RadzenDataGridColumn TItem="AppInsightsMetric" Property="Requests7Days" Title="Requests 7d" Width="120px" TextAlign="TextAlign.Right"><Template Context="m">@(m.Requests7Days?.ToString("N0") ?? "-")</Template></RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="AppInsightsMetric" Property="FailedRequests7Days" Title="Failed 7d" Width="100px" TextAlign="TextAlign.Right"><Template Context="m"><span style="color:@(m.FailedRequests7Days > 0 ? "var(--rz-danger)" : "inherit")">@(m.FailedRequests7Days?.ToString("N0") ?? "-")</span></Template></RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="AppInsightsMetric" Property="Exceptions7Days" Title="Exceptions 7d" Width="120px" TextAlign="TextAlign.Right"><Template Context="m"><span style="color:@(m.Exceptions7Days > 0 ? "var(--rz-warning)" : "inherit")">@(m.Exceptions7Days?.ToString("N0") ?? "-")</span></Template></RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
+                        </div>
+                    </RadzenTabsItem>
+                }
+
+                @if (report.AllResourceSummary is { } allRes2 && allRes2.Total > 0)
+                {
+                    <RadzenTabsItem Text="@($"📦 All Resources ({allRes2.Total})")">
+                        <div class="app-grid app-grid-auto-380 app-mt-75">
+                            <div class="app-card">
+                                <div class="app-card-header">Resources by type</div>
+                                <RadzenChart Style="height:300px">
+                                    <RadzenDonutSeries TItem="KeyValuePair<string, int>" Data="@(allRes2.ByType.OrderByDescending(kv => kv.Value).Take(12).ToList())" CategoryProperty="Key" ValueProperty="Value" InnerRadius="70" />
+                                </RadzenChart>
+                            </div>
+                            <div class="app-card app-overflow-top">
+                                <div class="app-card-header">Type breakdown</div>
+                                <RadzenDataGrid Data="@(allRes2.ByType.OrderByDescending(kv => kv.Value).ToList())" TItem="KeyValuePair<string, int>" AllowSorting="true" PageSize="20" AllowPaging="@(allRes2.ByType.Count > 20)" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                    <Columns>
+                                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Property="Key" Title="Type" />
+                                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Property="Value" Title="Count" Width="80px" TextAlign="TextAlign.Right" />
+                                    </Columns>
+                                </RadzenDataGrid>
+                            </div>
+                        </div>
+                        @foreach (var grp in allRes2.ResourcesByType.OrderBy(kv => kv.Key))
+                        {
+                            <div class="app-card rz-mt-3">
+                                <div class="app-card-header">@grp.Key <span class="app-note rz-ml-1">(@grp.Value.Count)</span></div>
+                                <RadzenDataGrid Data="@grp.Value" TItem="ResourceDetail" AllowSorting="true" PageSize="10" AllowPaging="@(grp.Value.Count > 10)" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                    <Columns>
+                                        <RadzenDataGridColumn TItem="ResourceDetail" Property="Name" Title="Name" />
+                                        <RadzenDataGridColumn TItem="ResourceDetail" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                                        <RadzenDataGridColumn TItem="ResourceDetail" Property="Location" Title="Location" Width="120px" />
+                                        <RadzenDataGridColumn TItem="ResourceDetail" Property="Sku" Title="SKU" Width="100px"><Template Context="r">@(r.Sku ?? "-")</Template></RadzenDataGridColumn>
+                                    </Columns>
+                                </RadzenDataGrid>
+                            </div>
+                        }
+                    </RadzenTabsItem>
+                }
+
+                @if (report.ZombieApps?.Count > 0)
+                {
+                    <RadzenTabsItem Text="@($"🧟 Zombies ({report.ZombieApps.Count})")">
+                        <div class="app-overflow-top">
+                            <RadzenDataGrid Data="@report.ZombieApps" TItem="ZombieApp" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="ZombieApp" Property="Name" Title="App" Width="180px" />
+                                    <RadzenDataGridColumn TItem="ZombieApp" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                                    <RadzenDataGridColumn TItem="ZombieApp" Property="HttpStatus" Title="HTTP Status" Width="120px" />
+                                    <RadzenDataGridColumn TItem="ZombieApp" Property="PlatformState" Title="Platform" Width="110px" />
+                                    <RadzenDataGridColumn TItem="ZombieApp" Property="Recommendation" Title="Recommendation" />
+                                </Columns>
+                            </RadzenDataGrid>
+                        </div>
+                    </RadzenTabsItem>
+                }
+
+                @if (report.Delta is { } rptDelta && rptDelta.PreviousGeneratedAt is not null)
+                {
+                    <RadzenTabsItem Text="🔄 Delta">
+                        <div class="app-mt-75">
+                            <div class="app-grid metrics app-grid-metrics-160 app-mb-1">
+                                <div class="app-stat"><span class="app-stat-label">Previous scan</span><span class="app-stat-value app-detail-stat">@rptDelta.PreviousGeneratedAt.Value.ToLocalTime().ToString("MM/dd HH:mm")</span></div>
+                                <div class="app-stat"><span class="app-stat-label">Broken services delta</span><span class="app-stat-value" style="color:@(rptDelta.BrokenServicesDelta > 0 ? "var(--rz-danger)" : rptDelta.BrokenServicesDelta < 0 ? "var(--rz-success)" : "inherit")">@(rptDelta.BrokenServicesDelta > 0 ? "+" : "")@rptDelta.BrokenServicesDelta</span></div>
+                                <div class="app-stat"><span class="app-stat-label">Cost delta</span><span class="app-stat-value" style="color:@(rptDelta.CostDelta > 0 ? "var(--rz-warning)" : "var(--rz-success)")">@(rptDelta.CostDelta > 0 ? "+" : "")$@(rptDelta.CostDelta?.ToString("F2") ?? "-")</span></div>
+                            </div>
+                            @if (rptDelta.NewBrokenServices.Count > 0) { <div class="app-card rz-mb-3 app-border-left-danger"><div class="app-card-header app-tone-danger">Newly broken</div>@foreach (var s in rptDelta.NewBrokenServices) { <div class="app-note">@s</div> }</div> }
+                            @if (rptDelta.RecoveredServices.Count > 0) { <div class="app-card rz-mb-3 app-border-left-success"><div class="app-card-header app-tone-success">Recovered</div>@foreach (var s in rptDelta.RecoveredServices) { <div class="app-note">@s</div> }</div> }
+                            @if (rptDelta.NewOrphanedResources.Count > 0) { <div class="app-card rz-mb-3 app-border-left-warning"><div class="app-card-header app-tone-warning">New orphaned resources</div>@foreach (var s in rptDelta.NewOrphanedResources) { <div class="app-note">@s</div> }</div> }
+                        </div>
+                    </RadzenTabsItem>
+                }
+
+                @if ((ShowAdvancedDiagnostics && report.StepTimings?.Count > 0) || (report.AppsJsonDiff is { } apjDiff && (apjDiff.NewApps.Count + apjDiff.RemovedApps.Count + apjDiff.UpdatedApps.Count) > 0))
+                {
+                    <RadzenTabsItem Text="🛠️ Advanced">
+                        <div class="app-tab-pane app-mt-75">
+                            @if (ShowAdvancedDiagnostics && report.StepTimings?.Count > 0)
+                            {
+                                <div class="app-card">
+                                    <div class="app-card-header">Step Timings</div>
+                                    <RadzenChart Style="height:300px">
+                                        <RadzenBarSeries TItem="StepTimingEntry" Data="@(report.StepTimings.OrderByDescending(t => t.ElapsedMs).ToList())" CategoryProperty="Step" ValueProperty="ElapsedMs" Title="Duration (ms)"><RadzenSeriesDataLabels Visible="false" /></RadzenBarSeries>
+                                        <RadzenCategoryAxis><RadzenAxisTitle Text="Step" /></RadzenCategoryAxis>
+                                        <RadzenValueAxis FormatString="{0}ms"><RadzenAxisTitle Text="Duration (ms)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
+                                    </RadzenChart>
+                                    <div class="app-overflow-top-1">
+                                        <RadzenDataGrid Data="@(report.StepTimings.OrderByDescending(t => t.ElapsedMs).ToList())" TItem="StepTimingEntry" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                            <Columns>
+                                                <RadzenDataGridColumn TItem="StepTimingEntry" Property="Step" Title="Step" />
+                                                <RadzenDataGridColumn TItem="StepTimingEntry" Property="ElapsedMs" Title="Duration" Width="120px" TextAlign="TextAlign.Right"><Template Context="t"><span class="@(t.ElapsedMs > 5000 ? "app-tone-warning" : string.Empty)">@t.ElapsedMs ms</span></Template></RadzenDataGridColumn>
+                                            </Columns>
+                                        </RadzenDataGrid>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (report.AppsJsonDiff is { } apjDiff2 && (apjDiff2.NewApps.Count + apjDiff2.RemovedApps.Count + apjDiff2.UpdatedApps.Count) > 0)
+                            {
+                                <div class="app-card">
+                                    <div class="app-card-header">Apps.json Diff</div>
+                                    <div class="app-grid metrics app-grid-metrics-150 app-mb-1">
+                                        <div class="app-stat"><span class="app-stat-label">In apps.json</span><span class="app-stat-value">@apjDiff2.CurrentCount</span></div>
+                                        <div class="app-stat"><span class="app-stat-label">Discovered in Azure</span><span class="app-stat-value">@apjDiff2.DiscoveredCount</span></div>
+                                        <div class="app-stat"><span class="app-stat-label">New in Azure</span><span class="app-stat-value app-tone-success">@apjDiff2.NewApps.Count</span></div>
+                                        <div class="app-stat"><span class="app-stat-label">Removed from Azure</span><span class="app-stat-value app-tone-danger">@apjDiff2.RemovedApps.Count</span></div>
+                                    </div>
+                                    @if (apjDiff2.NewApps.Count > 0) { <div class="app-card rz-mb-3 app-border-left-success"><div class="app-card-header app-tone-success">New apps discovered in Azure (not in apps.json)</div>@foreach (var a in apjDiff2.NewApps) { <div class="app-note rz-mt-1">@a</div> }</div> }
+                                    @if (apjDiff2.RemovedApps.Count > 0) { <div class="app-card rz-mb-3 app-border-left-danger"><div class="app-card-header app-tone-danger">In apps.json but not found in Azure</div>@foreach (var a in apjDiff2.RemovedApps) { <div class="app-note rz-mt-1">@a</div> }</div> }
+                                </div>
+                            }
+                        </div>
+                    </RadzenTabsItem>
+                }
+            </Tabs>
+        </RadzenTabs>
+    </section>
+}
+
+@code {
+    [Parameter] public AzureReport? Report { get; set; }
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public bool ShowAdvancedDiagnostics { get; set; }
+
+    private IEnumerable<WebService> AllServices =>
+        (Report?.WebServices?.Services ?? new List<WebService>())
+            .OrderBy(s => s.HttpStatus == "active" ? 0 : s.HttpStatus == "broken" ? 1 : 2)
+            .ThenBy(s => s.FriendlyName ?? s.Name);
+
+    private static string HttpStatusBadgeStyle(string status) => status switch
+    {
+        "active" => "background:var(--rz-success);color:#fff",
+        "broken" => "background:var(--rz-danger);color:#fff",
+        "unreachable" => "background:var(--rz-warning);color:#fff",
+        _ => "background:var(--rz-base-300);color:var(--rz-text-color)",
+    };
+
+    private static string SslBadgeStyle(SslEntry e) => (e.DaysLeft ?? 999) switch
+    {
+        <= 0 => "background:var(--rz-danger);color:#fff",
+        <= 14 => "background:var(--rz-danger);color:#fff",
+        <= 30 => "background:var(--rz-warning);color:#fff",
+        _ => "background:var(--rz-success);color:#fff",
+    };
+
+    private static string SslLabel(SslEntry e) => e.DaysLeft switch
+    {
+        null => "unknown",
+        <= 0 => "EXPIRED",
+        <= 14 => $"{e.DaysLeft}d CRITICAL",
+        <= 30 => $"{e.DaysLeft}d WARNING",
+        _ => $"{e.DaysLeft}d OK",
+    };
+
+    private static string SeverityStyle(string sev) => sev.ToLowerInvariant() switch
+    {
+        "critical" or "high" => "color:var(--rz-danger)",
+        "medium" or "warning" => "color:var(--rz-warning)",
+        _ => "color:var(--rz-text-disabled-color)",
+    };
+}

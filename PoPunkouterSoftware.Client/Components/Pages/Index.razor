@@ -4,7 +4,6 @@
 @using System.Text.Json.Serialization
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
-@inject PoAppSession AppSession
 
 <PageTitle>PoPunkouterSoftware - Portfolio</PageTitle>
 
@@ -17,49 +16,6 @@
                 A one-person product studio shipping AI-driven apps on Azure with a stronger focus on live operations,
                 usable diagnostics, and portfolio quality instead of demo-only surfaces.
             </p>
-
-            <div class="app-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start;">
-                <div class="app-card app-surface-soft" style="box-shadow:none;">
-                    <div class="app-kicker">Access</div>
-                    <h2 class="app-card-title">Login</h2>
-                    @if (_session?.IsAuthenticated == true)
-                    {
-                        <p class="app-note" data-testid="session-status">Signed in as <strong>@_session.DisplayName</strong>.</p>
-                        <div class="app-chip-row">
-                            <RadzenButton Text="Open Lobby" Icon="groups" ButtonStyle="ButtonStyle.Primary" Click="@(() => NavigationManager.NavigateTo("/lobby"))" data-testid="open-lobby-button" />
-                            <RadzenButton Text="Logout" Icon="logout" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" Click="LogoutAsync" data-testid="logout-button" />
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="app-note">Guest access persists in LocalStorage for refresh-safe local development and E2E flows.</p>
-                        <div class="app-chip-row">
-                            <RadzenButton Text="Guest Login" Icon="person" ButtonStyle="ButtonStyle.Primary" Disabled="@(!_config.GuestLoginEnabled)" Click="GuestLoginAsync" data-testid="guest-login-button" />
-                            <RadzenButton Text="Microsoft OAuth" Icon="badge" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" Disabled="@(!_config.MicrosoftOAuthEnabled)" Click="MicrosoftLoginAsync" data-testid="microsoft-login-button" />
-                        </div>
-                        @if (!_config.GuestLoginEnabled)
-                        {
-                            <p class="app-note rz-mt-2">Guest login is hidden in production.</p>
-                        }
-                    }
-                </div>
-
-                <div class="app-card app-surface-soft" style="box-shadow:none;" data-testid="model-selector-card">
-                    <div class="app-kicker">AI models</div>
-                    <h2 class="app-card-title">Select a model</h2>
-                    <RadzenDropDown TValue="string"
-                                    Data="@_modelOptions"
-                                    TextProperty="Label"
-                                    ValueProperty="Id"
-                                    GroupProperty="Category"
-                                    Placeholder="Choose a model"
-                                    Style="width:100%;"
-                                    data-testid="model-selector"
-                                    @bind-Value="_selectedModelId" />
-                    <p class="app-note rz-mt-2">Remote, browser, and Ollama models are separated so local-only options stay local.</p>
-                </div>
-            </div>
-
 
             <div class="app-chip-row">
                 <RadzenBadge Text="C# / .NET 10" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
@@ -112,125 +68,14 @@
             <div class="app-grid cards">
                 @foreach (var app in filteredApps)
                 {
-                    var isActive = app.Status?.ToLower() == "active";
                     var live = GetLiveStatus(app.Url);
-
-                    var cardBorder = isActive ? "var(--app-accent-strong)" : (live?.HttpStatus == "broken" ? "var(--rz-danger)" : "var(--app-border-strong)");
-                    <RadzenCard class="app-card app-glow" Style="@($"display:flex;flex-direction:column;gap:1rem;border-left:4px solid {cardBorder}")">
-                        <div class="app-status-row">
-                            <div>
-                                <div class="app-kicker">App</div>
-                                <h3 class="app-card-title">@app.Name</h3>
-                            </div>
-                            <RadzenBadge Text="@(app.Status ?? "unknown")" IsPill="true"
-                                         BadgeStyle="@(isActive ? BadgeStyle.Success : BadgeStyle.Light)" />
-                        </div>
-
-                        @if (live is not null)
-                        {
-                            <div class="app-chip-row">
-                                <RadzenBadge Text="@($"HTTP: {live.HttpStatus.ToUpper()}")" IsPill="true"
-                                             BadgeStyle="@(live.HttpStatus == "active" ? BadgeStyle.Success : live.HttpStatus == "broken" ? BadgeStyle.Danger : BadgeStyle.Warning)" />
-                                @if (!string.IsNullOrEmpty(live.PlatformState))
-                                {
-                                    <RadzenBadge Text="@($"Platform: {live.PlatformState}")" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
-                                }
-                                @if ((live.Connectivity?.ResponseTime ?? 0) > 0)
-                                {
-                                    var rt = live.Connectivity!.ResponseTime;
-                                    var isTimeout = rt >= 15000;
-                                    <RadzenBadge Text="@(isTimeout ? "TIMEOUT" : $"{rt} ms")" BadgeStyle="@(isTimeout ? BadgeStyle.Danger : rt < 1000 ? BadgeStyle.Success : BadgeStyle.Warning)" Variant="Variant.Flat" IsPill="true" />
-                                }
-                            </div>
-                        }
-
-                        <p class="app-card-copy rz-mb-0">@app.Description</p>
-
-                        @if (app.Technologies?.Any() == true)
-                        {
-                            <div class="app-chip-row">
-                                @foreach (var tech in app.Technologies)
-                                {
-                                    <RadzenBadge Text="@tech" BadgeStyle="BadgeStyle.Light" Variant="Variant.Flat" IsPill="true" />
-                                }
-                            </div>
-                        }
-
-                        @if (!string.IsNullOrEmpty(app.GithubRepo))
-                        {
-                        if (_ghActivity.TryGetValue(app.GithubRepo, out var gh))
-                        {
-                            <div class="app-card app-surface-soft" style="padding:.85rem;box-shadow:none;">
-                                <div class="app-kicker">GitHub activity</div>
-                                <div class="app-status-row">
-                                    <a class="app-inline-link" href="@($"https://github.com/{app.GithubRepo}")" target="_blank" rel="noopener noreferrer">
-                                        @app.GithubRepo
-                                    </a>
-                                    @if (gh.LastCommitDate.HasValue)
-                                    {
-                                        var daysAgo = (int)(DateTime.UtcNow - gh.LastCommitDate.Value).TotalDays;
-                                        var label = daysAgo == 0 ? "today" : daysAgo == 1 ? "1d ago" : $"{daysAgo}d ago";
-                                        <span class="app-note" title="Last commit @gh.LastCommitDate.Value.ToString("yyyy-MM-dd")">Last commit: @label</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="app-note">No commits found</span>
-                                    }
-                                </div>
-
-                                <div class="app-status-row rz-mt-1">
-                                    @if (gh.WeeklyCommits?.Length > 0)
-                                    {
-                                        <svg class="app-mini-chart" width="56" height="16" viewBox="0 0 56 16" title="8-week commit activity">
-                                            @{ var max = gh.WeeklyCommits.Max(); }
-                                            @for (int wi = 0; wi < gh.WeeklyCommits.Length; wi++)
-                                            {
-                                                var h = max > 0 ? (int)(gh.WeeklyCommits[wi] * 14.0 / max) : 0;
-                                                var x = wi * 7;
-                                                var y = 14 - h;
-                                                <rect x="@x" y="@y" width="5" height="@(h + 1)"
-                                                      fill="@(gh.WeeklyCommits[wi] > 0 ? "var(--app-accent-strong)" : "rgba(255,255,255,0.16)")"
-                                                      rx="1" />
-                                            }
-                                        </svg>
-                                    }
-                                    @if (gh.HealthScore > 0)
-                                    {
-                                        var scoreStyle = gh.HealthScore >= 70 ? BadgeStyle.Success : gh.HealthScore >= 40 ? BadgeStyle.Warning : BadgeStyle.Danger;
-                                        <RadzenBadge Text="@($"Health {gh.HealthScore}/100")" IsPill="true"
-                                                     BadgeStyle="@scoreStyle" Variant="Variant.Flat"
-                                                     title="Score: commit recency + activity + README + description + license" />
-                                    }
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="app-card app-surface-soft" style="padding:.85rem;box-shadow:none;">
-                                <div class="app-kicker">GitHub activity</div>
-                                <div class="app-status-row">
-                                    <a class="app-inline-link" href="@($"https://github.com/{app.GithubRepo}")" target="_blank" rel="noopener noreferrer">@app.GithubRepo</a>
-                                    <span class="app-note">@(_ghLoaded ? "Activity unavailable" : "Loading…")</span>
-                                </div>
-                            </div>
-                        }
-                        }
-
-                        <div class="app-actions">
-                            <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small"
-                                          ButtonStyle="ButtonStyle.Primary"
-                                          Disabled="@(string.IsNullOrEmpty(app.Url))"
-                                          Click="@(() => OpenApp(app.Url))" />
-                            <RadzenButton Text="Azure" Icon="cloud" Size="ButtonSize.Small"
-                                          ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
-                                          Click="@(() => NavigationManager.NavigateTo("/admin"))"
-                                          title="View this service in the Azure Dashboard" />
-                            <RadzenButton Text="Trends" Icon="show_chart" Size="ButtonSize.Small"
-                                          ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
-                                          Click="@(() => NavigationManager.NavigateTo("/admin"))"
-                                          title="View scan history and cost trends" />
-                        </div>
-                    </RadzenCard>
+                    _ghActivity.TryGetValue(app.GithubRepo ?? string.Empty, out var gh);
+                    <PortfolioAppCard App="app"
+                                      Live="live"
+                                      GitHub="gh"
+                                      GitHubLoaded="_ghLoaded"
+                                      OpenAppRequested="OpenApp"
+                                      OpenAdminRequested="OpenAdmin" />
                 }
             </div>
         }
@@ -244,33 +89,11 @@
     private Dictionary<string, WebService> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, GitHubActivity> _ghActivity = new(StringComparer.OrdinalIgnoreCase);
     private bool _ghLoaded;
-    private AppConfigResponse _config = AppConfigResponse.Empty;
-    private PoUserSession? _session;
-    private string? _selectedModelId;
-    private List<ModelOption> _modelOptions = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadConfigAsync();
-        _session = await AppSession.GetAsync();
         await ReloadAppsAsync();
         await Task.WhenAll(LoadLiveStatusAsync(), LoadGitHubActivityAsync());
-    }
-
-    private async Task LoadConfigAsync()
-    {
-        try
-        {
-            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            _config = await Http.GetFromJsonAsync<AppConfigResponse>("/api/config", opts) ?? AppConfigResponse.Empty;
-            _modelOptions = _config.ModelCatalog.ToOptions();
-            _selectedModelId ??= _modelOptions.FirstOrDefault()?.Id;
-        }
-        catch
-        {
-            _config = AppConfigResponse.Empty;
-            _modelOptions = new();
-        }
     }
 
     private async Task ReloadAppsAsync()
@@ -381,38 +204,8 @@
             NavigationManager.NavigateTo(url, forceLoad: true);
     }
 
-    private async Task GuestLoginAsync()
-    {
-        var guestId = Random.Shared.Next(1000, 9999);
-        _session = new PoUserSession(
-            LoginMode: "Guest",
-            DisplayName: $"GUEST{guestId}",
-            Email: $"guest{guestId}@local.dev",
-            IsGuest: true,
-            IsAuthenticated: true,
-            Status: "LOGGED IN");
+    private void OpenAdmin() => NavigationManager.NavigateTo("/azure");
 
-        await AppSession.SaveAsync(_session);
-    }
-
-    private async Task MicrosoftLoginAsync()
-    {
-        _session = new PoUserSession(
-            LoginMode: "Microsoft",
-            DisplayName: "MICROSOFT USER",
-            Email: "microsoft.user@tenant.local",
-            IsGuest: false,
-            IsAuthenticated: true,
-            Status: "LOGGED IN");
-
-        await AppSession.SaveAsync(_session);
-    }
-
-    private async Task LogoutAsync()
-    {
-        _session = null;
-        await AppSession.ClearAsync();
-    }
 
     private int CountRecentRepos(int days) =>
         _ghActivity.Values.Count(gh => gh.LastCommitDate is DateTime lastCommit && (DateTime.UtcNow - lastCommit).TotalDays <= days);
@@ -448,50 +241,4 @@
         }
     }
 
-    // ── Local models ─────────────────────────────────────────────────
-    private class AppsWrapper { public List<AppModel> Apps { get; set; } = new(); }
-
-    private sealed record AppConfigResponse(
-        [property: JsonPropertyName("apiBase")] string ApiBase,
-        [property: JsonPropertyName("isMockMode")] bool IsMockMode,
-        [property: JsonPropertyName("isProduction")] bool IsProduction,
-        [property: JsonPropertyName("guestLoginEnabled")] bool GuestLoginEnabled,
-        [property: JsonPropertyName("microsoftOAuthEnabled")] bool MicrosoftOAuthEnabled,
-        [property: JsonPropertyName("modelCatalog")] ModelCatalog ModelCatalog)
-    {
-        public static AppConfigResponse Empty { get; } = new("", false, false, true, false, new ModelCatalog([], [], []));
-    }
-
-    private sealed record ModelCatalog(
-        [property: JsonPropertyName("remote")] List<ModelCatalogItem> Remote,
-        [property: JsonPropertyName("browser")] List<ModelCatalogItem> Browser,
-        [property: JsonPropertyName("ollama")] List<ModelCatalogItem> Ollama)
-    {
-        public List<ModelOption> ToOptions() =>
-            Remote.Select(item => new ModelOption(item.Id, item.Label, "Remote"))
-                .Concat(Browser.Select(item => new ModelOption(item.Id, item.Label, "Browser")))
-                .Concat(Ollama.Select(item => new ModelOption(item.Id, item.Label, "Ollama")))
-                .ToList();
-    }
-
-    private sealed record ModelCatalogItem(
-        [property: JsonPropertyName("id")] string Id,
-        [property: JsonPropertyName("label")] string Label);
-
-    private sealed record ModelOption(string Id, string Label, string Category);
-
-    public class AppModel
-    {
-        public string Name { get; set; } = "";
-        public string Status { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string Url { get; set; } = "";
-        public List<string>? Technologies { get; set; }
-        public string? GithubRepo { get; set; }
-    }
-
-    private record GitHubActivity(
-        [property: JsonPropertyName("lastCommitDate")] DateTime? LastCommitDate,
-        [property: JsonPropertyName("weeklyCommits")] int[]? WeeklyCommits,
-        [property: JsonPropertyName("healthScore")] int HealthScore);
 }

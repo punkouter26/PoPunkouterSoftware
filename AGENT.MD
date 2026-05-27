@@ -16,9 +16,8 @@ PoPunkouterSoftware is a .NET 10 Blazor Web App with a server host and a WebAsse
 - Use strongly typed models for Table Storage entities.
 
 ## Project Boundaries
-- `PoPunkouterSoftware.Domain`: core rules and abstractions.
 - `PoPunkouterSoftware.Infrastructure`: cloud/integration adapters.
-- `PoPunkouterSoftware.Shared`: models shared by server and client.
+- `PoPunkouterSoftware.Shared`: contracts, shared models, and cross-project value types.
 - `PoPunkouterSoftware`: server host and API endpoints.
 - `PoPunkouterSoftware.Client`: Blazor WASM UI.
 - `tests/*`: unit, integration, and E2E suites.

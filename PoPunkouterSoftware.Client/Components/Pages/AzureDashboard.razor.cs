@@ -41,6 +41,8 @@ public partial class AzureDashboard
     private bool _refreshing;
     private int _progressPercent;
     private string _progressStep = "";
+    private bool _refreshFailed;
+    private string? _refreshFailureMessage;
     private CancellationTokenSource? _refreshCts;
     private IDisposable? _locationChangingRegistration;
     private const int RefreshTimeoutSeconds = 120;
@@ -164,6 +166,8 @@ public partial class AzureDashboard
     private async Task RefreshAsync()
     {
         _refreshing = true;
+        _refreshFailed = false;
+        _refreshFailureMessage = null;
         _progressPercent = 0;
         _progressStep = "Starting…";
         // Keep the previous report in view during the scan — do not null it here.
@@ -190,7 +194,9 @@ public partial class AzureDashboard
                 await WaitForRefreshCompletionAsync(_refreshCts!.Token, delayMs: 1500);
 
             await LoadReportAsync();
-            if (!_refreshCts.Token.IsCancellationRequested)
+            if (_refreshFailed)
+                NotificationService.Notify(NotificationSeverity.Error, "Refresh failed", _refreshFailureMessage ?? "Refresh failed. Check logs for details.");
+            else if (!_refreshCts.Token.IsCancellationRequested)
                 NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure report refreshed successfully.");
         }
         catch (OperationCanceledException)
@@ -257,6 +263,11 @@ public partial class AzureDashboard
                     _progressPercent = pct.GetInt32();
                 if (root.TryGetProperty("step", out var step))
                     _progressStep = step.GetString() ?? "";
+                if (root.TryGetProperty("error", out var err) && err.ValueKind == JsonValueKind.String)
+                {
+                    _refreshFailed = true;
+                    _refreshFailureMessage = err.GetString();
+                }
                 bool done = root.TryGetProperty("done", out var d) && d.GetBoolean();
                 if (done)
                     _refreshing = false;
@@ -413,7 +424,7 @@ public partial class AzureDashboard
     private static double CalcUptime(List<StatusSample> samples)
     {
         if (samples.Count == 0)
-            return 100.0;
+            return 0.0;
         var up = samples.Count(s => s.Status == "active");
         return (double)up / samples.Count * 100.0;
     }

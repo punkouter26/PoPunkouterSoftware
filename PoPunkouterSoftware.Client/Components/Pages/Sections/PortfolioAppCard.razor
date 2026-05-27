@@ -1,0 +1,140 @@
+@using PoPunkouterSoftware.Shared.Azure
+@using Radzen
+
+<RadzenCard class="app-card app-glow app-portfolio-card" Style="@CardStyle">
+    <div class="app-status-row">
+        <div>
+            <div class="app-kicker">App</div>
+            <h3 class="app-card-title">@App.Name</h3>
+        </div>
+        <RadzenBadge Text="@(App.Status ?? "unknown")" IsPill="true" BadgeStyle="@(IsActive ? BadgeStyle.Success : BadgeStyle.Light)" />
+    </div>
+
+    @if (Live is not null)
+    {
+        <div class="app-chip-row">
+            <RadzenBadge Text="@($"HTTP: {Live.HttpStatus.ToUpper()}")" IsPill="true" BadgeStyle="@HttpBadgeStyle" />
+            @if (!string.IsNullOrEmpty(Live.PlatformState))
+            {
+                <RadzenBadge Text="@($"Platform: {Live.PlatformState}")" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
+            }
+            @if ((Live.Connectivity?.ResponseTime ?? 0) > 0)
+            {
+                var rt = Live.Connectivity!.ResponseTime;
+                var isTimeout = rt >= 15000;
+                <RadzenBadge Text="@(isTimeout ? "TIMEOUT" : $"{rt} ms")" BadgeStyle="@(isTimeout ? BadgeStyle.Danger : rt < 1000 ? BadgeStyle.Success : BadgeStyle.Warning)" Variant="Variant.Flat" IsPill="true" />
+            }
+        </div>
+    }
+
+    <p class="app-card-copy rz-mb-0">@App.Description</p>
+
+    @if (App.Technologies?.Any() == true)
+    {
+        <div class="app-chip-row">
+            @foreach (var tech in App.Technologies)
+            {
+                <RadzenBadge Text="@tech" BadgeStyle="BadgeStyle.Light" Variant="Variant.Flat" IsPill="true" />
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(App.GithubRepo))
+    {
+        @if (GitHub is not null)
+        {
+            <div class="app-card app-surface-soft app-portfolio-github-card">
+                <div class="app-kicker">GitHub activity</div>
+                <div class="app-status-row">
+                    <a class="app-inline-link" href="@($"https://github.com/{App.GithubRepo}")" target="_blank" rel="noopener noreferrer">
+                        @App.GithubRepo
+                    </a>
+                    @if (GitHub.LastCommitDate.HasValue)
+                    {
+                        var daysAgo = (int)(DateTime.UtcNow - GitHub.LastCommitDate.Value).TotalDays;
+                        var label = daysAgo == 0 ? "today" : daysAgo == 1 ? "1d ago" : $"{daysAgo}d ago";
+                        <span class="app-note" title="Last commit @GitHub.LastCommitDate.Value.ToString("yyyy-MM-dd")">Last commit: @label</span>
+                    }
+                    else
+                    {
+                        <span class="app-note">No commits found</span>
+                    }
+                </div>
+
+                <div class="app-status-row rz-mt-1">
+                    @if (GitHub.WeeklyCommits?.Length > 0)
+                    {
+                        <svg class="app-mini-chart" width="56" height="16" viewBox="0 0 56 16" title="8-week commit activity">
+                            @{ var max = GitHub.WeeklyCommits.Max(); }
+                            @for (int wi = 0; wi < GitHub.WeeklyCommits.Length; wi++)
+                            {
+                                var h = max > 0 ? (int)(GitHub.WeeklyCommits[wi] * 14.0 / max) : 0;
+                                var x = wi * 7;
+                                var y = 14 - h;
+                                <rect x="@x" y="@y" width="5" height="@(h + 1)"
+                                      fill="@(GitHub.WeeklyCommits[wi] > 0 ? "var(--app-accent-strong)" : "rgba(255,255,255,0.16)")"
+                                      rx="1" />
+                            }
+                        </svg>
+                    }
+                    @if (GitHub.HealthScore > 0)
+                    {
+                        var scoreStyle = GitHub.HealthScore >= 70 ? BadgeStyle.Success : GitHub.HealthScore >= 40 ? BadgeStyle.Warning : BadgeStyle.Danger;
+                        <RadzenBadge Text="@($"Health {GitHub.HealthScore}/100")" IsPill="true" BadgeStyle="@scoreStyle" Variant="Variant.Flat" title="Score: commit recency + activity + README + description + license" />
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="app-card app-surface-soft app-portfolio-github-card">
+                <div class="app-kicker">GitHub activity</div>
+                <div class="app-status-row">
+                    <a class="app-inline-link" href="@($"https://github.com/{App.GithubRepo}")" target="_blank" rel="noopener noreferrer">@App.GithubRepo</a>
+                    <span class="app-note">@(GitHubLoaded ? "Activity unavailable" : "Loading...")</span>
+                </div>
+            </div>
+        }
+    }
+
+    <div class="app-actions">
+        <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Disabled="@(string.IsNullOrEmpty(App.Url))" Click="OnOpenAppClicked" />
+        <RadzenButton Text="Azure" Icon="cloud" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" Click="OnOpenAdminClicked" title="View this service in the Azure Dashboard" />
+        <RadzenButton Text="Trends" Icon="show_chart" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" Click="OnOpenAdminClicked" title="View scan history and cost trends" />
+    </div>
+</RadzenCard>
+
+@code {
+    [Parameter, EditorRequired] public AppModel App { get; set; } = default!;
+    [Parameter] public WebService? Live { get; set; }
+    [Parameter] public GitHubActivity? GitHub { get; set; }
+    [Parameter] public bool GitHubLoaded { get; set; }
+    [Parameter] public EventCallback<string> OpenAppRequested { get; set; }
+    [Parameter] public EventCallback OpenAdminRequested { get; set; }
+
+    private bool IsActive => App.Status?.Equals("active", StringComparison.OrdinalIgnoreCase) == true;
+
+    private BadgeStyle HttpBadgeStyle => Live?.HttpStatus switch
+    {
+        "active" => BadgeStyle.Success,
+        "broken" => BadgeStyle.Danger,
+        _ => BadgeStyle.Warning,
+    };
+
+    private string CardStyle
+    {
+        get
+        {
+            var cardBorder = IsActive ? "var(--app-accent-strong)" : (Live?.HttpStatus == "broken" ? "var(--rz-danger)" : "var(--app-border-strong)");
+            return $"display:flex;flex-direction:column;gap:1rem;border-left:4px solid {cardBorder}";
+        }
+    }
+
+    private async Task OnOpenAppClicked()
+    {
+        if (!string.IsNullOrWhiteSpace(App.Url))
+            await OpenAppRequested.InvokeAsync(App.Url);
+    }
+
+    private Task OnOpenAdminClicked() => OpenAdminRequested.InvokeAsync();
+}

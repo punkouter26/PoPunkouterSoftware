@@ -5,15 +5,15 @@
   <ItemGroup>
     <!-- Blazor / UI -->
     <PackageVersion Include="Azure.Monitor.Query" Version="1.7.1" />
-    <PackageVersion Include="Azure.Data.Tables" Version="12.9.1" />
-    <PackageVersion Include="Azure.ResourceManager" Version="1.13.0" />
-    <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.3.0" />
-    <PackageVersion Include="Azure.ResourceManager.AppService" Version="1.2.0" />
-    <PackageVersion Include="Azure.ResourceManager.Resources" Version="1.9.0" />
+    <PackageVersion Include="Azure.Data.Tables" Version="12.11.0" />
+    <PackageVersion Include="Azure.ResourceManager" Version="1.14.0" />
+    <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.5.0" />
+    <PackageVersion Include="Azure.ResourceManager.AppService" Version="1.4.1" />
+    <PackageVersion Include="Azure.ResourceManager.Resources" Version="1.11.2" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.8" />
-    <PackageVersion Include="Radzen.Blazor" Version="10.4.3" />
+    <PackageVersion Include="Radzen.Blazor" Version="10.4.5" />
     <!-- Structured Logging (Serilog) — AppInsights sink removed; OTel Azure Monitor is the sole telemetry pipeline -->
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Enrichers.CorrelationId" Version="3.0.1" />
@@ -28,15 +28,15 @@
     <!-- Azure Key Vault & Identity -->
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.1" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
-    <PackageVersion Include="MinVer" Version="6.0.0" />
+    <PackageVersion Include="MinVer" Version="7.0.0" />
     <!-- Testing -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageVersion Include="Testcontainers" Version="4.4.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageVersion Include="Testcontainers" Version="4.12.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.8" />
-    <PackageVersion Include="Testcontainers.Azurite" Version="4.4.0" />
-    <PackageVersion Include="FluentAssertions" Version="7.0.0" />
+    <PackageVersion Include="Testcontainers.Azurite" Version="4.12.0" />
+    <PackageVersion Include="FluentAssertions" Version="8.10.0" />
   </ItemGroup>
 </Project>

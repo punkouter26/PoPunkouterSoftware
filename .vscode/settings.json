@@ -1,3 +1,13 @@
 {
-    "livePreview.defaultPreviewPath": "/index.html"
+    "livePreview.defaultPreviewPath": "/index.html",
+    "dotnetAcquisitionExtension.existingDotnetPath": [
+        {
+            "extensionId": "ms-dotnettools.csdevkit",
+            "path": "C:\\Program Files\\dotnet\\x64\\dotnet.exe"
+        },
+        {
+            "extensionId": "ms-dotnettools.csharp",
+            "path": "C:\\Program Files\\dotnet\\x64\\dotnet.exe"
+        }
+    ]
 }

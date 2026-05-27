@@ -21,7 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PoPunkouterSoftware.Domain\PoPunkouterSoftware.Domain.csproj" />
     <ProjectReference Include="..\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
   </ItemGroup>
 

@@ -64,17 +64,12 @@ internal static class DiagEndpoints
                     _ = hubCtx.Clients.All.SendAsync("RefreshProgress",
                         new { step = p.Step, percent = p.Percent, done = false });
                 });
-                bool lockReleased = false;
+                string? terminalError = null;
                 try
                 {
                     var report = await azureService.RunAsync(progress, ct);
-                    session.Lock.Release();
-                    lockReleased = true;
 
                     await store.SaveAsync(report, ct);
-
-                    await hubCtx.Clients.All.SendAsync("RefreshProgress",
-                        new { step = "Done", percent = 100, done = true }, ct);
 
                     try
                     {
@@ -96,17 +91,28 @@ internal static class DiagEndpoints
                 }
                 catch (OperationCanceledException)
                 {
-                    if (!lockReleased)
-                        session.Lock.Release();
-                    session.SetActiveCts(null);
+                    terminalError = "Refresh cancelled or timed out.";
                     logger.LogWarning("Refresh cancelled or timed out");
                 }
                 catch (Exception ex)
                 {
-                    if (!lockReleased)
-                        session.Lock.Release();
-                    session.SetActiveCts(null);
+                    terminalError = "Refresh failed. Check server logs for details.";
                     logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
+                }
+                finally
+                {
+                    session.SetActiveCts(null);
+                    session.Lock.Release();
+                    try
+                    {
+                        await hubCtx.Clients.All.SendAsync("RefreshProgress",
+                            new { step = terminalError is null ? "Done" : "Failed", percent = 100, done = true, error = terminalError },
+                            CancellationToken.None);
+                    }
+                    catch (Exception hubEx)
+                    {
+                        logger.LogWarning(hubEx, "Failed to broadcast terminal refresh status");
+                    }
                 }
             });
 

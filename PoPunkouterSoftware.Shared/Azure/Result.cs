@@ -1,6 +1,6 @@
 using System;
 
-namespace PoPunkouterSoftware.Domain.Azure;
+namespace PoPunkouterSoftware.Shared.Azure;
 
 /// <summary>
 /// Represents the result of an operation, with success or error information.

@@ -40,7 +40,7 @@ try
         catch (Exception ex)
         {
             // Non-fatal: Key Vault unavailable without managed identity / az login
-            Log.Warning(ex, "Key Vault at {Uri} could not be reached — continuing without it", kvUriStr);
+            Log.Warning("Key Vault at {Uri} could not be reached — continuing without it. Reason: {Reason}", kvUriStr, ex.Message);
         }
     }
 
@@ -103,6 +103,7 @@ try
     builder.Services.AddRadzenComponents();
     builder.Services.AddScoped<DialogService>();
     builder.Services.AddScoped<NotificationService>();
+    builder.Services.AddScoped<PoPunkouterSoftware.Client.PoAppSession>();
 
 
     // ─── CORS — origins loaded from configuration ─────────────────────
@@ -251,6 +252,7 @@ try
             isProduction = env.IsProduction(),
             guestLoginEnabled = !env.IsProduction(),
             microsoftOAuthEnabled = !string.IsNullOrWhiteSpace(config["Authentication:Microsoft:ClientId"]),
+            managementActionsEnabled = config.GetValue<bool>("FeatureFlags:EnableManagementActions", env.IsDevelopment() || env.IsEnvironment("Testing")),
             modelCatalog = new
             {
                 remote = new[]

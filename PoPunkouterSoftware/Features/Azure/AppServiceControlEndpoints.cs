@@ -22,11 +22,18 @@ internal static class AppServiceControlEndpoints
             string name,
             ArmClient client,
             IConfiguration config,
+            IWebHostEnvironment env,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
             try
             {
+                if (!IsManagementActionAllowed(config, env))
+                    return Results.Problem("Management actions are disabled.", statusCode: 403);
+
+                if (!HasPoPrefix(resourceGroup))
+                    return Results.BadRequest(new { error = "Resource group must start with Po prefix." });
+
                 var subscriptionId = config["Azure:SubscriptionId"];
                 if (string.IsNullOrWhiteSpace(subscriptionId))
                     return Results.Problem("Azure:SubscriptionId is not configured.", statusCode: 503);
@@ -52,11 +59,18 @@ internal static class AppServiceControlEndpoints
             string planName,
             ArmClient client,
             IConfiguration config,
+            IWebHostEnvironment env,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
             try
             {
+                if (!IsManagementActionAllowed(config, env))
+                    return Results.Problem("Management actions are disabled.", statusCode: 403);
+
+                if (!HasPoPrefix(resourceGroup))
+                    return Results.BadRequest(new { error = "Resource group must start with Po prefix." });
+
                 var subscriptionId = config["Azure:SubscriptionId"];
                 if (string.IsNullOrWhiteSpace(subscriptionId))
                     return Results.Problem("Azure:SubscriptionId is not configured.", statusCode: 503);
@@ -85,4 +99,10 @@ internal static class AppServiceControlEndpoints
 
         return app;
     }
+
+    private static bool IsManagementActionAllowed(IConfiguration config, IWebHostEnvironment env) =>
+        config.GetValue<bool>("FeatureFlags:EnableManagementActions", env.IsDevelopment() || env.IsEnvironment("Testing"));
+
+    private static bool HasPoPrefix(string value) =>
+        value.StartsWith("Po", StringComparison.OrdinalIgnoreCase);
 }

@@ -65,21 +65,29 @@ internal static class HealthEndpoints
                         }
                     }
 
-                    using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                    var tsResp = await client.GetAsync(probeUrl, cts2.Token);
-                    // 2xx/3xx = healthy. 4xx = service is reachable but auth/config is wrong (degraded).
-                    // Exception: Azurite (dev) returns 400 for unauthenticated GET — treat as healthy.
-                    // 5xx or network error = unreachable.
-                    var (tsStatus, tsHealthy) = (int)tsResp.StatusCode switch
+                    if (string.IsNullOrWhiteSpace(probeUrl))
                     {
-                        >= 200 and < 400 => ("reachable", true),
-                        400 when isDevStorage => ("reachable", true),   // Azurite 400 = running, no auth needed
-                        >= 400 and < 500 => ("degraded", false),
-                        _ => ("unreachable", false),
-                    };
-                    if (!tsHealthy)
                         allHealthy = false;
-                    checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode, note = isDevStorage ? "Azurite" : (string?)null };
+                        checks["TableStorage"] = new { status = "invalid-config", error = "AzureTableStorage endpoint could not be resolved." };
+                    }
+                    else
+                    {
+                        using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                        var tsResp = await client.GetAsync(probeUrl, cts2.Token);
+                        // 2xx/3xx = healthy. 4xx = service is reachable but auth/config is wrong (degraded).
+                        // Exception: Azurite (dev) returns 400 for unauthenticated GET — treat as healthy.
+                        // 5xx or network error = unreachable.
+                        var (tsStatus, tsHealthy) = (int)tsResp.StatusCode switch
+                        {
+                            >= 200 and < 400 => ("reachable", true),
+                            400 when isDevStorage => ("reachable", true),   // Azurite 400 = running, no auth needed
+                            >= 400 and < 500 => ("degraded", false),
+                            _ => ("unreachable", false),
+                        };
+                        if (!tsHealthy)
+                            allHealthy = false;
+                        checks["TableStorage"] = new { status = tsStatus, httpStatus = (int)tsResp.StatusCode, note = isDevStorage ? "Azurite" : (string?)null };
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -111,6 +119,9 @@ internal static class HealthEndpoints
         })
         .WithName("GetHealth")
         .WithTags("Health");
+
+        // Backward-compatible alias used by tests and external tooling.
+        app.MapGet("/api/health", () => Results.Redirect("/health", permanent: false));
 
         // Lightweight platform probe — does not call external dependencies.
         app.MapGet("/healthz", () => Results.Ok(new

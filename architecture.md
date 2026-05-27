@@ -18,12 +18,11 @@ This file is the canonical architecture record for PoPunkouterSoftware. Treat it
 
 ## Architecture Style
 - Onion Architecture with physical project separation:
-  - Domain: business rules and core abstractions.
   - Infrastructure: external systems and adapters.
-  - Shared: contracts/models shared between server and WASM client.
+  - Shared: contracts, shared models, and lightweight cross-project value types.
   - Web host: API endpoints and Blazor hosting shell.
   - Client: Blazor WASM UI.
-- Dependency direction must point inward to domain abstractions.
+- Dependency direction must keep browser-only and server-only concerns out of shared contracts.
 - Prefer SOLID and explicit interfaces at boundaries.
 
 ## UI and Client Rules
@@ -48,7 +47,7 @@ This file is the canonical architecture record for PoPunkouterSoftware. Treat it
 - If Azure CLI auth is available, prefer Key Vault to mirror production behavior.
 
 ## Azure and Storage
-- Managed identity in Punkouter26 resource group.
+- Managed identity in PoPunkouter26 resource group.
 - Table Storage DTOs should be strongly typed (`ITableEntity`).
 - Environment switching:
   - Local: Azurite via Docker/well-known local connection string.

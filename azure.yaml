@@ -1,6 +1,6 @@
-name: popunkoutersoftware
+name: PoPunkouterSoftware
 metadata:
-  template: popunkoutersoftware-appservice
+  template: PoPunkouterSoftware-appservice
 services:
   web:
     project: ./PoPunkouterSoftware

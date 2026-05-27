@@ -1,9 +1,9 @@
-using PoPunkouterSoftware.Domain.Azure;
+using PoPunkouterSoftware.Shared.Azure;
 
 namespace PoPunkouterSoftware.Tests.Unit;
 
 // SOLID: Single Responsibility — each test class focuses on one behaviour of Result<T>.
-// Target: Domain layer logic — no I/O, no external dependencies.
+// Target: shared result carrier logic — no I/O, no external dependencies.
 
 public class Result_SuccessTests
 {

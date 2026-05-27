@@ -2,7 +2,6 @@ using Azure.Data.Tables;
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using PoPunkouterSoftware.Domain.Azure;
 using PoPunkouterSoftware.Shared.Azure;
 using System.IO.Compression;
 using System.Text;
@@ -228,7 +227,7 @@ public class AzureReportStore
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Table Storage unavailable — report will fall back to file");
+            _logger.LogWarning("Table Storage unavailable — report will fall back to file. Reason: {Reason}", ex.Message);
             return null;
         }
         finally

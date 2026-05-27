@@ -19,10 +19,8 @@
     <PackageReference Include="FluentAssertions" />
     <!-- Access internals -->
     <ProjectReference Include="..\..\PoPunkouterSoftware\PoPunkouterSoftware.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\..\PoPunkouterSoftware.Client\PoAppSession.cs" Link="PoAppSession.cs" />
+    <ProjectReference Include="..\..\PoPunkouterSoftware.Client\PoPunkouterSoftware.Client.csproj" />
+    <ProjectReference Include="..\..\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

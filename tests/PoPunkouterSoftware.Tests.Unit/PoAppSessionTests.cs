@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.JSInterop;
 using PoPunkouterSoftware.Client;
+using PoPunkouterSoftware.Shared.Session;
 
 namespace PoPunkouterSoftware.Tests.Unit;
 
