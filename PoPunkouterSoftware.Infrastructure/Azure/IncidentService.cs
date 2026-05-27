@@ -1,3 +1,4 @@
+using Azure;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
@@ -97,7 +98,7 @@ public sealed class IncidentService
             return;
         try
         {
-            await tableClient.CreateIfNotExistsAsync(ct);
+            await EnsureTableExistsAsync(tableClient, ct);
 
             foreach (var inc in incidents)
             {
@@ -135,6 +136,7 @@ public sealed class IncidentService
 
         try
         {
+            await EnsureTableExistsAsync(tableClient, ct);
             var entries = new List<IncidentEntry>();
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>(
@@ -156,6 +158,11 @@ public sealed class IncidentService
             }
 
             return entries;
+        }
+        catch (RequestFailedException ex) when (IsTableMissing(ex))
+        {
+            await EnsureTableExistsAsync(tableClient, ct);
+            return new List<IncidentEntry>();
         }
         catch (Exception ex)
         {
@@ -206,4 +213,12 @@ public sealed class IncidentService
             _logger.LogWarning(ex, "Incident webhook POST failed");
         }
     }
+
+    private async Task EnsureTableExistsAsync(TableClient tableClient, CancellationToken ct)
+    {
+        await tableClient.CreateIfNotExistsAsync(ct);
+    }
+
+    private static bool IsTableMissing(RequestFailedException ex) =>
+        ex.Status == 404 && string.Equals(ex.ErrorCode, "TableNotFound", StringComparison.OrdinalIgnoreCase);
 }

@@ -1,3 +1,4 @@
+using Azure;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
@@ -57,6 +58,11 @@ public class AzureReportStore
 
             var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
             return Result<AzureReport?>.Success(report);
+        }
+        catch (RequestFailedException ex) when (IsTableMissing(ex))
+        {
+            await RecoverMissingTableAsync(ct);
+            return Result<AzureReport?>.Success(null);
         }
         catch (Exception ex)
         {
@@ -131,6 +137,11 @@ public class AzureReportStore
             }
             return Result<List<AzureReport>>.Success(results);
         }
+        catch (RequestFailedException ex) when (IsTableMissing(ex))
+        {
+            await RecoverMissingTableAsync(ct);
+            return Result<List<AzureReport>>.Success(results);
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not load AzureReport history from Table Storage");
@@ -158,6 +169,11 @@ public class AzureReportStore
                 var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
                 return Result<AzureReport?>.Success(report);
             }
+        }
+        catch (RequestFailedException ex) when (IsTableMissing(ex))
+        {
+            await RecoverMissingTableAsync(ct);
+            return Result<AzureReport?>.Success(null);
         }
         catch (Exception ex)
         {
@@ -202,27 +218,7 @@ public class AzureReportStore
             if (_cachedClient is not null)
                 return _cachedClient;
 
-            var tableName = _config["AzureTableStorage:TableName"] ?? DefaultTableName;
-            var connectionString = _config["AzureTableStorage:ConnectionString"];
-
-            TableServiceClient serviceClient;
-
-            if (!string.IsNullOrWhiteSpace(connectionString))
-            {
-                serviceClient = new TableServiceClient(connectionString);
-            }
-            else
-            {
-                var endpoint = _config["AzureTableStorage:Endpoint"];
-                if (string.IsNullOrWhiteSpace(endpoint))
-                    return null;
-
-                serviceClient = new TableServiceClient(new Uri(endpoint), new DefaultAzureCredential());
-            }
-
-            var tableClient = serviceClient.GetTableClient(tableName);
-            await tableClient.CreateIfNotExistsAsync(ct);
-            _cachedClient = tableClient;
+            _cachedClient = await CreateTableClientAsync(ct);
             return _cachedClient;
         }
         catch (Exception ex)
@@ -235,4 +231,52 @@ public class AzureReportStore
             _clientLock.Release();
         }
     }
+
+    private async Task<TableClient?> CreateTableClientAsync(CancellationToken ct)
+    {
+        var tableName = _config["AzureTableStorage:TableName"] ?? DefaultTableName;
+        var connectionString = _config["AzureTableStorage:ConnectionString"];
+
+        TableServiceClient serviceClient;
+
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            serviceClient = new TableServiceClient(connectionString);
+        }
+        else
+        {
+            var endpoint = _config["AzureTableStorage:Endpoint"];
+            if (string.IsNullOrWhiteSpace(endpoint))
+                return null;
+
+            serviceClient = new TableServiceClient(new Uri(endpoint), new DefaultAzureCredential());
+        }
+
+        var tableClient = serviceClient.GetTableClient(tableName);
+        await tableClient.CreateIfNotExistsAsync(ct);
+        return tableClient;
+    }
+
+    private async Task RecoverMissingTableAsync(CancellationToken ct)
+    {
+        _logger.LogInformation("Azure report table was missing. Recreating it so reads can continue without file-only fallback.");
+
+        await _clientLock.WaitAsync(ct);
+        try
+        {
+            _cachedClient = await CreateTableClientAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _cachedClient = null;
+            _logger.LogWarning(ex, "Could not recreate missing Azure report table");
+        }
+        finally
+        {
+            _clientLock.Release();
+        }
+    }
+
+    private static bool IsTableMissing(RequestFailedException ex) =>
+        ex.Status == 404 && string.Equals(ex.ErrorCode, "TableNotFound", StringComparison.OrdinalIgnoreCase);
 }
