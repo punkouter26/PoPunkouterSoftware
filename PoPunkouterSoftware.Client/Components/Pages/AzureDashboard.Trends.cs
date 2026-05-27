@@ -8,6 +8,8 @@ namespace PoPunkouterSoftware.Client.Components.Pages;
 // Uses the shared `report` field and `_history` loaded alongside the main report.
 public partial class AzureDashboard
 {
+    private const int HistoryWindowDays = 30;
+
     // ── State ──────────────────────────────────────────────────────────────────
     private List<HistorySummary> _history = new();
 
@@ -52,35 +54,52 @@ public partial class AzureDashboard
             .ToList();
 
     // ── History chart data ─────────────────────────────────────────────────────
-    private bool HasHistory => _history.Count > 1;
+    private bool HasHistory => HistoryWindow.Count > 1;
+
+    private List<HistorySummary> HistoryWindow
+    {
+        get
+        {
+            var cutoffUtc = DateTime.UtcNow.AddDays(-HistoryWindowDays);
+
+            return _history
+                .Where(h => h.GeneratedAt != DateTime.MinValue && h.GeneratedAt >= cutoffUtc)
+                .GroupBy(h => h.GeneratedAt.ToLocalTime().Date)
+                .Select(g => g.OrderByDescending(x => x.GeneratedAt).First())
+                .OrderBy(h => h.GeneratedAt)
+                .ToList();
+        }
+    }
+
+    private static string ToChartDateLabel(DateTime utcDateTime) =>
+        utcDateTime.ToLocalTime().ToString("MMM dd");
 
     private List<StatusHistPoint> ServiceStatusHistory =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue)
+        HistoryWindow
             .Select(h => new StatusHistPoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 h.ActiveServices,
                 h.BrokenServices))
             .ToList();
 
     private List<TimePoint> CostHistory =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue && h.TotalCost30Days > 0)
+        HistoryWindow
+            .Where(h => h.TotalCost30Days > 0)
             .Select(h => new TimePoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 Math.Round(h.TotalCost30Days, 2)))
             .ToList();
 
     private List<TimePoint> AvgResponseHistory =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue && h.AvgResponseTimeMs > 0)
+        HistoryWindow
+            .Where(h => h.AvgResponseTimeMs > 0)
             .Select(h => new TimePoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 Math.Round(h.AvgResponseTimeMs, 0)))
             .ToList();
 
     private List<string> TrackedServiceNames =>
-        _history
+        HistoryWindow
             .SelectMany(h => h.Services
                 .Where(s => s.HttpStatus == "active")
                 .Select(s => s.Name))
@@ -92,51 +111,49 @@ public partial class AzureDashboard
             .ToList();
 
     private List<ServiceTimePoint> GetServiceResponseHistory(string name) =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue)
+        HistoryWindow
             .Select(h => new ServiceTimePoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 h.Services.FirstOrDefault(s => s.Name == name)?.ResponseTimeMs ?? 0))
             .Where(p => p.ResponseMs > 0)
             .ToList();
 
     private List<TimePoint> Errors5xxHistory =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue)
+        HistoryWindow
             .Select(h => new TimePoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 h.Total5xxErrors))
             .ToList();
 
     private List<TimePoint> UptimePctHistory =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue && h.TotalServices > 0)
+        HistoryWindow
+            .Where(h => h.TotalServices > 0)
             .Select(h => new TimePoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 Math.Round(h.ActiveServices / (double)h.TotalServices * 100, 1)))
             .ToList();
 
     private List<DeltaPoint> BrokenDeltaHistory =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue && h.BrokenDelta.HasValue)
+        HistoryWindow
+            .Where(h => h.BrokenDelta.HasValue)
             .Select(h => new DeltaPoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 h.BrokenDelta!.Value))
             .ToList();
 
     private List<TimePoint> ResourceCountHistory =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue && h.TotalResources > 0)
+        HistoryWindow
+            .Where(h => h.TotalResources > 0)
             .Select(h => new TimePoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 h.TotalResources))
             .ToList();
 
     private List<TimePoint> ScanDurationHistory =>
-        _history
-            .Where(h => h.GeneratedAt != DateTime.MinValue && h.ScanDurationMs > 0)
+        HistoryWindow
+            .Where(h => h.ScanDurationMs > 0)
             .Select(h => new TimePoint(
-                h.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm"),
+                ToChartDateLabel(h.GeneratedAt),
                 (double)h.ScanDurationMs))
             .ToList();
 

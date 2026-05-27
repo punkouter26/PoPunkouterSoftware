@@ -533,7 +533,7 @@ else
                     <RadzenChart Style="height:260px">
                         <RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Active" Title="Active" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
                         <RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Broken" Title="Broken" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
-                        <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                        <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                         <RadzenValueAxis><RadzenAxisTitle Text="Services" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                         <RadzenLegend Visible="true" />
                     </RadzenChart>
@@ -544,7 +544,7 @@ else
                         <div class="app-card-header"><span class="material-symbols-outlined">payments</span> 30-Day Cost Over Time</div>
                         <RadzenChart Style="height:260px">
                             <RadzenLineSeries TItem="TimePoint" Data="@CostHistory" CategoryProperty="Label" ValueProperty="Value" Title="Cost ($)" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
-                            <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                            <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                             <RadzenValueAxis FormatString="${0:F2}"><RadzenAxisTitle Text="USD (30d)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                         </RadzenChart>
                     </div>
@@ -555,7 +555,7 @@ else
                         <div class="app-card-header"><span class="material-symbols-outlined">speed</span> Avg Response Time Over Time</div>
                         <RadzenChart Style="height:260px">
                             <RadzenLineSeries TItem="TimePoint" Data="@AvgResponseHistory" CategoryProperty="Label" ValueProperty="Value" Title="Avg ms" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
-                            <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                            <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                             <RadzenValueAxis FormatString="{0}ms"><RadzenAxisTitle Text="Response (ms)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                         </RadzenChart>
                     </div>
@@ -570,7 +570,7 @@ else
                                 var pts = GetServiceResponseHistory(svcName);
                                 <RadzenLineSeries TItem="ServiceTimePoint" Data="@pts" CategoryProperty="Label" ValueProperty="ResponseMs" Title="@svcName" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
                             }
-                            <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                            <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                             <RadzenValueAxis FormatString="{0}ms"><RadzenAxisTitle Text="Response (ms)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                             <RadzenLegend Visible="true" />
                         </RadzenChart>
@@ -582,7 +582,7 @@ else
                         <div class="app-card-header"><span class="material-symbols-outlined">error</span> Total 5xx Errors Over Time</div>
                         <RadzenChart Style="height:260px">
                             <RadzenLineSeries TItem="TimePoint" Data="@Errors5xxHistory" CategoryProperty="Label" ValueProperty="Value" Title="5xx errors" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
-                            <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                            <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                             <RadzenValueAxis><RadzenAxisTitle Text="Total 5xx errors" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                         </RadzenChart>
                     </div>
@@ -593,7 +593,7 @@ else
                         <div class="app-card-header"><span class="material-symbols-outlined">check_circle</span> Uptime % Over Time</div>
                         <RadzenChart Style="height:260px">
                             <RadzenLineSeries TItem="TimePoint" Data="@UptimePctHistory" CategoryProperty="Label" ValueProperty="Value" Title="Uptime %" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
-                            <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                            <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                             <RadzenValueAxis Min="0" Max="100" FormatString="{0}%"><RadzenAxisTitle Text="Uptime %" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                         </RadzenChart>
                     </div>
@@ -604,7 +604,7 @@ else
                         <div class="app-card-header"><span class="material-symbols-outlined">trending_down</span> Broken Services Delta Over Time</div>
                         <RadzenChart Style="height:260px">
                             <RadzenBarSeries TItem="DeltaPoint" Data="@BrokenDeltaHistory" CategoryProperty="Label" ValueProperty="Delta" Title="Delta"><RadzenSeriesDataLabels Visible="false" /></RadzenBarSeries>
-                            <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                            <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                             <RadzenValueAxis><RadzenAxisTitle Text="Change in broken services" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                         </RadzenChart>
                     </div>
@@ -615,7 +615,7 @@ else
                         <div class="app-card-header"><span class="material-symbols-outlined">inventory_2</span> Total Resource Count Over Time</div>
                         <RadzenChart Style="height:260px">
                             <RadzenLineSeries TItem="TimePoint" Data="@ResourceCountHistory" CategoryProperty="Label" ValueProperty="Value" Title="Resources" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
-                            <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                            <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                             <RadzenValueAxis><RadzenAxisTitle Text="Resource count" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                         </RadzenChart>
                     </div>
@@ -626,7 +626,7 @@ else
                         <div class="app-card-header"><span class="material-symbols-outlined">timer</span> Scan Duration Over Time</div>
                         <RadzenChart Style="height:260px">
                             <RadzenLineSeries TItem="TimePoint" Data="@ScanDurationHistory" CategoryProperty="Label" ValueProperty="Value" Title="Duration" Smooth="true"><RadzenSeriesDataLabels Visible="false" /></RadzenLineSeries>
-                            <RadzenCategoryAxis><RadzenAxisTitle Text="Scan time" /></RadzenCategoryAxis>
+                            <RadzenCategoryAxis><RadzenAxisTitle Text="Date (last 30 days)" /></RadzenCategoryAxis>
                             <RadzenValueAxis FormatString="{0}ms"><RadzenAxisTitle Text="Total scan (ms)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
                         </RadzenChart>
                     </div>
