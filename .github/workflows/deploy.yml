@@ -39,6 +39,14 @@ jobs:
     # Pin to the production environment so its protection rules / approval gates apply.
     environment: production
     steps:
+      # Fail fast — if the production environment is missing AZURE_APP_NAME, abort
+      # BEFORE we waste minutes on restore/build/publish for a deploy we cannot run.
+      - name: Validate deploy targets
+        if: vars.AZURE_APP_NAME == ''
+        run: |
+          echo "::error title=Missing AZURE_APP_NAME::The 'production' GitHub Environment is missing the AZURE_APP_NAME variable. Set it in Settings → Environments → production → Variables (e.g. value: app-popunkoutersoftware)."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -65,12 +73,6 @@ jobs:
 
       - name: Publish
         run: dotnet publish PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish --nologo
-
-      - name: Validate deploy targets
-        if: vars.AZURE_APP_NAME == ''
-        run: |
-          echo "::error::Missing AZURE_APP_NAME environment variable. Configure the 'production' environment with the AZURE_APP_NAME variable."
-          exit 1
 
       # NOTE: 'secrets' is intentionally NOT referenced in any 'if:' expression —
       # GitHub Actions blocks it there to avoid leaking secret existence.
