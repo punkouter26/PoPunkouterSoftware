@@ -52,7 +52,7 @@
             </div>
         </div>
 
-        @if (apps == null)
+        @if (apps == null || !_liveStatusLoaded)
         {
             <div class="app-card">
                 <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-2" />
@@ -74,6 +74,7 @@
                                       Live="live"
                                       GitHub="gh"
                                       GitHubLoaded="_ghLoaded"
+                                      AzureDataLoaded="_liveStatusLoaded"
                                       OpenAppRequested="OpenApp"
                                       OpenAdminRequested="OpenAdmin" />
                 }
@@ -89,6 +90,7 @@
     private Dictionary<string, WebService> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, GitHubActivity> _ghActivity = new(StringComparer.OrdinalIgnoreCase);
     private bool _ghLoaded;
+    private bool _liveStatusLoaded;
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,6 +129,11 @@
             await InvokeAsync(StateHasChanged);
         }
         catch { /* non-fatal — live status is optional */ }
+        finally
+        {
+            _liveStatusLoaded = true;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadGitHubActivityAsync()
@@ -174,21 +181,23 @@
         filteredApps = (apps ?? Enumerable.Empty<AppModel>())
             .Where(a =>
             {
-                // When live data has not loaded yet, show all apps so the portfolio
-                // is never empty on first render.
-                if (_liveByUrl.Count == 0) return true;
+                // When live data has not loaded yet, defer to loading state.
+                if (_liveByUrl.Count == 0) return false;
 
                 var live = GetLiveStatus(a.Url);
 
-                // No matching live entry — hide (service not tracked in Azure report).
-                if (live is null) return false;
-
                 // Azure error/splash page — hide (not a real app response).
-                if (live.Connectivity?.IsAzureErrorPage == true) return false;
+                if (live?.Connectivity?.IsAzureErrorPage == true) return false;
 
-                // Show the app regardless of live HttpStatus (broken, unreachable, active).
-                // Hiding broken apps makes the portfolio appear empty during an outage,
-                // which is worse UX than showing a broken badge.
+                // Has a live match — show regardless of status (active/broken/unreachable).
+                if (live is not null) return true;
+
+                // No live match. If this is an App Service, it's a ghost — hide it.
+                // Static Web Apps are not discovered by the Azure scanner yet, so keep those.
+                var isAppService = a.Technologies?.Any(t => t.Contains("App Service", StringComparison.OrdinalIgnoreCase)) == true;
+                if (isAppService) return false;
+
+                // Static Web Apps or other non-App-Service types — keep but will show "unverified".
                 return true;
             })
             .GroupBy(a => a.Name, StringComparer.OrdinalIgnoreCase)

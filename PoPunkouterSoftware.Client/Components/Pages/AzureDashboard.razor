@@ -646,48 +646,33 @@ else
         </div>
     }
 
-    @* ── Burn rate daily costs *@
-    @if (report?.BurnRate?.DailyCosts?.Count > 0)
+    <!-- ── Fleet Diagnosis ── -->
+    @if (report?.DowntimeDiagnoses?.Count > 0)
     {
+        var diags = report.DowntimeDiagnoses;
+        var allSameCause = diags.Count > 1 && diags.Select(d => d.LikelyCause).Distinct().Count() == 1;
+        var fleetPattern = allSameCause ? diags.First().LikelyCause : null;
         <section class="app-section">
-            <div class="app-kicker">Cost</div>
-            <h2 class="app-section-heading">Daily Burn Rate (Last 30 Days)</h2>
-            <div class="app-card">
-                <RadzenChart Style="height:260px">
-                    <RadzenBarSeries TItem="DailyCostEntry" Data="@report.BurnRate.DailyCosts"
-                                     CategoryProperty="Date" ValueProperty="Cost" Title="Daily cost ($)">
-                        <RadzenSeriesDataLabels Visible="false" />
-                    </RadzenBarSeries>
-                    <RadzenCategoryAxis><RadzenAxisTitle Text="Date" /></RadzenCategoryAxis>
-                    <RadzenValueAxis FormatString="${0:F2}"><RadzenAxisTitle Text="USD" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
-                </RadzenChart>
-                <p class="app-note rz-mt-2 rz-mb-0">
-                    Projected this month: <strong>@(report.BurnRate.ProjectedFormatted ?? $"${report.BurnRate.ProjectedMonthTotal:F2}")</strong>
-                </p>
+            <div class="app-callout info">
+                @if (allSameCause && !string.IsNullOrEmpty(fleetPattern))
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px" class="rz-mb-1">
+                        <span style="font-size:1.25rem">💡</span>
+                        <strong>@diags.Count/@diags.Count broken apps show the same pattern:</strong>
+                    </RadzenStack>
+                    <div class="rz-mb-2">@fleetPattern</div>
+                    <RadzenButton Text="View Fleet Logs" Icon="visibility" ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small"
+                                  Click="@(() => { _selectedTabIndex = 0; })" />
+                }
+                else
+                {
+                    <span>@diags.Count services need attention. Details below.</span>
+                }
             </div>
         </section>
     }
 
-    @* ── Cost drivers *@
-    @if (report?.Cost?.TopCostDrivers?.Count > 0)
-    {
-        <section class="app-section">
-            <div class="app-kicker">Cost</div>
-            <h2 class="app-section-heading">Top Cost Drivers</h2>
-            <div class="app-card">
-                <RadzenChart Style="height:260px">
-                    <RadzenBarSeries TItem="CostDriver" Data="@report.Cost.TopCostDrivers"
-                                     CategoryProperty="Name" ValueProperty="Cost" Title="Cost ($)">
-                        <RadzenSeriesDataLabels Visible="false" />
-                    </RadzenBarSeries>
-                    <RadzenCategoryAxis><RadzenAxisTitle Text="Resource" /></RadzenCategoryAxis>
-                    <RadzenValueAxis FormatString="${0:F2}"><RadzenAxisTitle Text="USD (30d)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
-                </RadzenChart>
-            </div>
-        </section>
-    }
-
-    <AzureDashboardDetailTabs Report="report" TotalCount="TotalCount" ShowAdvancedDiagnostics="ShowAdvancedDiagnostics" />
+    <AzureDashboardDetailTabs Report="report" TotalCount="TotalCount" ShowAdvancedDiagnostics="ShowAdvancedDiagnostics" @bind-SelectedTabIndex="_selectedTabIndex" />
 
 }
 

@@ -109,13 +109,14 @@
     [Parameter] public WebService? Live { get; set; }
     [Parameter] public GitHubActivity? GitHub { get; set; }
     [Parameter] public bool GitHubLoaded { get; set; }
+    [Parameter] public bool AzureDataLoaded { get; set; }
     [Parameter] public EventCallback<string> OpenAppRequested { get; set; }
     [Parameter] public EventCallback OpenAdminRequested { get; set; }
 
     private string DisplayStatus =>
         !string.IsNullOrWhiteSpace(Live?.HttpStatus)
             ? Live!.HttpStatus
-            : (App.Status ?? "unknown");
+            : AzureDataLoaded ? "unverified" : (App.Status ?? "unknown");
 
     private bool IsActive => DisplayStatus.Equals("active", StringComparison.OrdinalIgnoreCase);
 
@@ -124,6 +125,7 @@
         "active" => BadgeStyle.Success,
         "broken" => BadgeStyle.Danger,
         "unreachable" => BadgeStyle.Danger,
+        "unverified" => BadgeStyle.Info,
         _ => BadgeStyle.Light,
     };
 
