@@ -72,8 +72,11 @@ jobs:
           echo "::error::Missing AZURE_APP_NAME environment variable. Configure the 'production' environment with the AZURE_APP_NAME variable."
           exit 1
 
+      # NOTE: 'secrets' is intentionally NOT referenced in any 'if:' expression —
+      # GitHub Actions blocks it there to avoid leaking secret existence.
+      # azure/login will fail with a clear error if the production environment
+      # is misconfigured (missing AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID).
       - name: Azure Login (OIDC)
-        if: secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != ''
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
