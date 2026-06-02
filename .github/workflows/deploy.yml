@@ -1,106 +1,88 @@
 name: Deploy to Azure App Service
 
+# Trigger only on push to master and manual dispatch.
+# Pull-request builds are handled by a separate lightweight CI workflow (ci.yml).
 on:
   push:
     branches: [master]
-  pull_request:
-    branches: [master]
   workflow_dispatch:
 
+# Cancel in-progress runs of the same workflow on the same ref.
 concurrency:
-  group: deploy-popunkoutersoftware-${{ github.event_name }}-${{ github.ref }}
+  group: deploy-popunkoutersoftware-${{ github.ref }}
   cancel-in-progress: true
 
+# Minimum scopes for OIDC deployment; everything else is denied.
 permissions:
   id-token: write
   contents: read
 
+# All values come from the GitHub Environment "production" — never hardcode.
+# Required environment secrets/vars (configure in Settings → Environments → production):
+#   AZURE_CLIENT_ID            (secret) — User-assigned MI for OIDC
+#   AZURE_TENANT_ID            (secret)
+#   AZURE_SUBSCRIPTION_ID      (secret)
+#   AZURE_APP_NAME             (variable) — e.g. app-popunkoutersoftware
+#   AZURE_WEBAPP_SLOT          (variable, optional) — default 'production'
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  APP_NAME: app-popunkoutersoftware
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_NOLOGO: 'true'
+  # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 keeps Azure actions on the maintained Node 24 runtime.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   build-and-deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
-    timeout-minutes: 30
-    env:
-      HAS_OIDC: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
-      HAS_AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS != '' }}
+    timeout-minutes: 20
+    # Pin to the production environment so its protection rules / approval gates apply.
+    environment: production
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v5
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          dotnet-version: '10.0.x'
+          fetch-depth: 0   # full history so MinVer can compute the version from tags
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
-          restore-keys: nuget-
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
 
       - name: Restore
-        run: dotnet restore PoPunkouterSoftware.sln
+        run: dotnet restore PoPunkouterSoftware.sln --nologo
 
       - name: Build
-        run: dotnet build PoPunkouterSoftware.sln -c Release --no-restore
+        run: dotnet build PoPunkouterSoftware.sln -c Release --no-restore --nologo
 
       - name: Publish
-        run: dotnet publish PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish
+        run: dotnet publish PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish --nologo
+
+      - name: Validate deploy targets
+        if: vars.AZURE_APP_NAME == ''
+        run: |
+          echo "::error::Missing AZURE_APP_NAME environment variable. Configure the 'production' environment with the AZURE_APP_NAME variable."
+          exit 1
 
       - name: Azure Login (OIDC)
-        if: ${{ env.HAS_OIDC == 'true' }}
-        uses: azure/login@v3
+        if: secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != ''
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Azure Login (Service Principal JSON)
-        if: ${{ env.HAS_OIDC != 'true' && env.HAS_AZURE_CREDENTIALS == 'true' }}
-        uses: azure/login@v3
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Validate Azure auth secrets
-        if: ${{ env.HAS_OIDC != 'true' && env.HAS_AZURE_CREDENTIALS != 'true' }}
-        run: |
-          echo "::error::Missing Azure auth secrets. Configure either OIDC secrets (AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID) or AZURE_CREDENTIALS."
-          exit 1
-
       - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:
-          app-name: ${{ env.APP_NAME }}
+          app-name: ${{ vars.AZURE_APP_NAME }}
+          slot-name: ${{ vars.AZURE_WEBAPP_SLOT || 'production' }}
           package: ./publish
-
-  build-only:
-    name: Build (PR)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v5
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
-          restore-keys: nuget-
-
-      - name: Restore
-        run: dotnet restore PoPunkouterSoftware.sln
-
-      - name: Build
-        run: dotnet build PoPunkouterSoftware.sln -c Release --no-restore
-

@@ -127,3 +127,18 @@ tests/PoPunkouterSoftware.Tests.E2E/.playwright/
 # macOS extended attributes
 *.AppleDouble
 *.LSOverride
+# Windows thumbnail cache and shell metadata
+Thumbs.db
+ehthumbs.db
+ehthumbs_view.db
+Desktop.ini
+# Vim / Emacs swap / backup files
+*.swp
+*.swo
+*~
+# VS Code workspace file (per-user, contains absolute paths)
+*.code-workspace
+# .NET process / dump artifacts
+*.dmp
+*.stackdump
+core.*
