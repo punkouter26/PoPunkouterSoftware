@@ -49,7 +49,7 @@ internal static class DiagEndpoints
 
         app.MapPost("/api/diag/refresh",
             (IServiceScopeFactory scopeFactory, IWebHostEnvironment env, ILogger<Program> logger,
-             Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Features.Azure.RefreshHub> hubCtx,
+             Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Infrastructure.RefreshHub> hubCtx,
              RefreshSessionManager session) =>
         {
             if (!session.Lock.Wait(0))

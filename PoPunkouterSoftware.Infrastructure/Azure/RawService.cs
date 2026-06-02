@@ -22,6 +22,8 @@ internal record RawService
     public FreeTierCheckInfo? FreeTierCheck { get; init; }
     public string HttpStatus { get; init; } = "unknown";
     public string? Kind { get; init; }
+    public string? AppServicePlan { get; init; }
+    public string? AppServicePlanSku { get; init; }
 
     public WebService ToWebService() => new()
     {
@@ -36,5 +38,8 @@ internal record RawService
         Connectivity = Connectivity,
         Metrics7Days = Metrics7Days,
         FreeTierCheck = FreeTierCheck,
+        AppServicePlan = AppServicePlan,
+        AppServicePlanSku = AppServicePlanSku,
+        ResourceId = ResourceId,
     };
 }

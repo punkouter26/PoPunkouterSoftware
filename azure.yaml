@@ -1,8 +1,0 @@
-name: PoPunkouterSoftware
-metadata:
-  template: PoPunkouterSoftware-appservice
-services:
-  web:
-    project: ./PoPunkouterSoftware
-    language: dotnet
-    host: appservice

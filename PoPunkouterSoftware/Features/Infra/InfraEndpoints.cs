@@ -82,7 +82,7 @@ internal static class InfraEndpoints
                     message = "GitHub CI/CD review requires authentication. Either:\n" +
                                "• Run 'gh auth login' locally (uses gh CLI token automatically), or\n" +
                                "• Add a PAT to Key Vault as PoPunkouterSoftware--GitHub--PersonalAccessToken.",
-                    reviews = Array.Empty<InfraReview>(),
+                    reviews = new List<InfraReview>(),
                 });
             }
 
@@ -116,6 +116,19 @@ internal static class InfraEndpoints
                     {
                         var review = await ScanRepoAsync(
                             http, owner, repoName, defaultBranch, isPrivate, repoUrl, logger, ct);
+
+                        var (wfStatus, wfConclusion, wfCompleted, wfUrl, wfName) =
+                            await FetchLatestWorkflowRunAsync(http, fullName, defaultBranch, ct);
+
+                        review = review with
+                        {
+                            LatestWorkflowRunStatus = wfStatus,
+                            LatestWorkflowRunConclusion = wfConclusion,
+                            LatestWorkflowRunCompletedAt = wfCompleted,
+                            LatestWorkflowRunUrl = wfUrl,
+                            LatestWorkflowRunName = wfName,
+                        };
+
                         reviews.Add(review);
                     }
                     catch (Exception ex)
@@ -544,6 +557,43 @@ internal static class InfraEndpoints
             // gh not installed or PATH issue — silently ignore
             logger.LogDebug(ex, "InfraEndpoints: gh CLI not available");
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Fetches the most recent workflow run status/conclusion for a given GitHub repo and branch.
+    /// </summary>
+    private static async Task<(string? status, string? conclusion, DateTime? completedAt, string? runUrl, string? runName)>
+        FetchLatestWorkflowRunAsync(HttpClient http, string fullName, string defaultBranch, CancellationToken ct)
+    {
+        try
+        {
+            var url = $"https://api.github.com/repos/{fullName}/actions/runs?branch={Uri.EscapeDataString(defaultBranch)}&per_page=1";
+            var resp = await http.GetAsync(url, ct);
+            if (!resp.IsSuccessStatusCode)
+                return (null, null, null, null, null);
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+
+            if (!doc.RootElement.TryGetProperty("workflow_runs", out var runs) || runs.GetArrayLength() == 0)
+                return (null, null, null, null, null);
+
+            var run = runs[0];
+            var st = run.TryGetProperty("status", out var statusEl) ? statusEl.GetString() : null;
+            var conc = run.TryGetProperty("conclusion", out var concEl) ? concEl.GetString() : null;
+            var hu = run.TryGetProperty("html_url", out var urlEl) ? urlEl.GetString() : null;
+            var rn = run.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
+
+            DateTime? comp = run.TryGetProperty("updated_at", out var ua)
+                && ua.ValueKind == JsonValueKind.String
+                && DateTime.TryParse(ua.GetString(), out var dt) ? dt : null;
+
+            return (st, conc, comp, hu, rn);
+        }
+        catch
+        {
+            return (null, null, null, null, null);
         }
     }
 }

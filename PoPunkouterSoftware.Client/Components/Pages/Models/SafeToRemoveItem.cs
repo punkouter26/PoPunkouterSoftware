@@ -11,5 +11,4 @@ public record SafeToRemoveItem
     public string Reason { get; init; } = "";
     public string Confidence { get; init; } = "";
     public string? Command { get; init; }
-    public string? Saving { get; init; }
 }

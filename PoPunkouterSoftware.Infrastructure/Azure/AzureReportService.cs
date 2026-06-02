@@ -37,6 +37,7 @@ public class AzureReportService
     private readonly ArmClient _arm;
     private readonly TokenCredential _credential;
     private readonly DowntimeDiagnosisService _downtimeDiagnosis;
+    private readonly PlanRecommendationService _planRecommendation;
 
     public AzureReportService(
         ILogger<AzureReportService> logger,
@@ -46,7 +47,8 @@ public class AzureReportService
         AzureReportStore repository,
         ArmClient arm,
         TokenCredential credential,
-        DowntimeDiagnosisService downtimeDiagnosis)
+        DowntimeDiagnosisService downtimeDiagnosis,
+        PlanRecommendationService planRecommendation)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
@@ -56,6 +58,7 @@ public class AzureReportService
         _arm = arm;
         _credential = credential;
         _downtimeDiagnosis = downtimeDiagnosis;
+        _planRecommendation = planRecommendation;
     }
 
     #region Public Entry Point
@@ -107,9 +110,22 @@ public class AzureReportService
         var subscriptionId = subscription.Data.SubscriptionId!;
         _logger.LogInformation("Subscription: {Name} ({Id})", subscription.Data.DisplayName, subscriptionId);
 
+        // Acquire ARM token early — shared across cost, plan resolution, and diagnosis steps
+        string? armToken = null;
+        try
+        {
+            armToken = (await cred.GetTokenAsync(
+                new TokenRequestContext(["https://management.azure.com/.default"]), ct)).Token;
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Could not obtain ARM token — cost/plan/diagnosis will be unavailable"); }
+
         Report("Discovering web services…", 15, subscription.Data.DisplayName);
         var rawServices = await RunTimedStepAsync("Discovering web services", () => DiscoverWebServicesAsync(subscription, ct));
         _logger.LogInformation("Discovered {Count} web services", rawServices.Count);
+
+        // Resolve App Service Plans (name + SKU) for each discovered site
+        Report("Resolving App Service Plans…", 20);
+        rawServices = await RunTimedStepAsync("Resolving App Service Plans", () => ResolveAppServicePlansAsync(rawServices, armToken, ct));
 
         Report("Testing connectivity…", 28, $"{rawServices.Count} services found");
         var connectedSvcs = await RunTimedStepAsync("Testing connectivity", () => TestConnectivityAsync(rawServices, ct));
@@ -121,14 +137,7 @@ public class AzureReportService
         Report("Fetching metrics (7 days)…", 45, $"{allResources.Count} resources");
         var metricsMap = await RunTimedStepAsync("Fetching metrics (7 days)", () => GetMetricsAsync(connectedSvcs, cred, ct));
 
-        // Acquire one ARM token shared across all Cost Management calls to avoid extra roundtrips
-        string? armToken = null;
-        try
-        {
-            armToken = (await cred.GetTokenAsync(
-                new TokenRequestContext(["https://management.azure.com/.default"]), ct)).Token;
-        }
-        catch (Exception ex) { _logger.LogWarning(ex, "Could not obtain ARM token — cost/burn-rate will be unavailable"); }
+        // (ARM token already acquired above)
 
         Report("Fetching cost data…", 53);
         var costInfo = await RunTimedStepAsync("Fetching cost data", () => GetCostAsync(subscriptionId, armToken, ct));
@@ -164,9 +173,29 @@ public class AzureReportService
                 && s.ResourceId is not null)
             .ToList();
 
+        // Build GitHub workflow run correlation map for broken services
+        var gitHubRuns = new Dictionary<string, GitHubWorkflowRun>(StringComparer.OrdinalIgnoreCase);
+        var infraReviews = await LoadInfraReviewsForCorrelationAsync(connectedSvcs, ct);
+        foreach (var svc in brokenAppServices)
+        {
+            var matched = MatchServiceToInfraReview(svc, infraReviews);
+            if (matched is not null)
+            {
+                gitHubRuns[svc.Name] = new GitHubWorkflowRun
+                {
+                    ServiceName = svc.Name,
+                    RunUrl = matched.LatestWorkflowRunUrl,
+                    Status = matched.LatestWorkflowRunStatus,
+                    Conclusion = matched.LatestWorkflowRunConclusion,
+                    CompletedAt = matched.LatestWorkflowRunCompletedAt,
+                    RunName = matched.LatestWorkflowRunName,
+                };
+            }
+        }
+
         Report("Diagnosing downtime causes…", 90, $"{brokenAppServices.Count} broken/unreachable services");
         var downtimeDiags = brokenAppServices.Count > 0
-            ? await RunTimedStepAsync("Diagnosing downtime", () => _downtimeDiagnosis.DiagnoseAsync(brokenAppServices, subscriptionId, armToken, ct))
+            ? await RunTimedStepAsync("Diagnosing downtime", () => _downtimeDiagnosis.DiagnoseAsync(brokenAppServices, subscriptionId, armToken, appInsights, gitHubRuns, ct))
             : new List<ServiceDowntimeDiagnosis>();
 
         var servicesList = connectedSvcs.Select(s =>
@@ -183,6 +212,12 @@ public class AzureReportService
         var broken = servicesList.Count(s => s.HttpStatus == "broken");
         var other = servicesList.Count(s => s.HttpStatus != "active" && s.HttpStatus != "broken");
 
+        var webServices = servicesList.Select(s => s.ToWebService()).ToList();
+
+        Report("Generating plan recommendations…", 93);
+        var planRecommendations = _planRecommendation.Analyze(webServices, downtimeDiags, configDrift);
+        _logger.LogInformation("Generated {Count} plan recommendations", planRecommendations.Count);
+
         var report = new AzureReport
         {
             GeneratedAt = DateTime.UtcNow,
@@ -191,7 +226,7 @@ public class AzureReportService
             {
                 Total = servicesList.Count,
                 ByStatus = new ByStatusInfo { Active = active, Broken = broken, Other = other },
-                Services = servicesList.Select(s => s.ToWebService()).ToList(),
+                Services = webServices,
             },
             Cost = costInfo,
             FreeTier = freeTier,
@@ -223,6 +258,7 @@ public class AzureReportService
             BurnRate = burnRate,
             StepTimings = stepTimings.OrderByDescending(x => x.ElapsedMs).ToList(),
             DowntimeDiagnoses = downtimeDiags,
+            PlanRecommendations = planRecommendations,
         };
 
         var delta = ComputeDelta(report, previousReport);
@@ -300,6 +336,106 @@ public class AzureReportService
         }
 
         return list;
+    }
+
+    #endregion
+
+    #region Step 1b: Resolve App Service Plans (name + SKU)
+
+    private async Task<List<RawService>> ResolveAppServicePlansAsync(
+        List<RawService> services, string? armToken, CancellationToken ct)
+    {
+        if (armToken is null)
+            return services;
+
+        var sites = services
+            .Where(s => s.ResourceTypeRaw == "Microsoft.Web/sites" && s.ResourceId is not null)
+            .ToList();
+
+        if (sites.Count == 0)
+            return services;
+
+        var client = _httpClientFactory.CreateClient();
+        var planSkus = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        using var gate = new SemaphoreSlim(6);
+        var tasks = sites.Select(async svc =>
+        {
+            await gate.WaitAsync(ct);
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(15));
+
+                using var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://management.azure.com{svc.ResourceId}?api-version=2023-12-01");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
+                using var resp = await client.SendAsync(req, cts.Token);
+
+                if (!resp.IsSuccessStatusCode)
+                    return ((RawService?)null, (string?)null, (string?)null);
+
+                var json = await resp.Content.ReadAsStringAsync(cts.Token);
+                var doc = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("properties", out var props))
+                    return ((RawService?)null, (string?)null, (string?)null);
+
+                var serverFarmId = props.TryGetProperty("serverFarmId", out var sfId) ? sfId.GetString() : null;
+                if (serverFarmId is null)
+                    return ((RawService?)null, (string?)null, (string?)null);
+
+                var planName = serverFarmId.Split('/').LastOrDefault();
+                if (planName is null)
+                    return ((RawService?)null, (string?)null, (string?)null);
+
+                string? planSku = null;
+                if (!planSkus.TryGetValue(serverFarmId, out planSku))
+                {
+                    try
+                    {
+                        using var planReq = new HttpRequestMessage(HttpMethod.Get,
+                            $"https://management.azure.com{serverFarmId}?api-version=2023-12-01");
+                        planReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
+                        using var planResp = await client.SendAsync(planReq, cts.Token);
+
+                        if (planResp.IsSuccessStatusCode)
+                        {
+                            var planJson = await planResp.Content.ReadAsStringAsync(cts.Token);
+                            var planDoc = JsonDocument.Parse(planJson);
+                            if (planDoc.RootElement.TryGetProperty("sku", out var sku))
+                                planSku = sku.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
+                        }
+                    }
+                    catch { /* plan fetch failed — leave SKU null */ }
+
+                    planSkus[serverFarmId] = planSku ?? "";
+                }
+
+                return (svc, planName, planSku);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Plan resolution failed for {Name}", svc.Name);
+                return ((RawService?)null, (string?)null, (string?)null);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var (svc, planName, planSku) in results)
+        {
+            if (svc is null || planName is null)
+                continue;
+
+            var idx = services.FindIndex(s => s.ResourceId == svc.ResourceId);
+            if (idx >= 0)
+                services[idx] = services[idx] with { AppServicePlan = planName, AppServicePlanSku = planSku };
+        }
+
+        return services;
     }
 
     #endregion
@@ -388,7 +524,7 @@ public class AzureReportService
             {
                 var response = await metricsClient.QueryResourceAsync(
                     svc.ResourceId!,
-                    new[] { "Requests", "Http5Xx", "AverageResponseTime" },
+                    ["Requests", "Http5Xx", "AverageResponseTime"],
                     new MetricsQueryOptions { TimeRange = new QueryTimeRange(start, end), Granularity = TimeSpan.FromDays(1) },
                     ct);
 
@@ -1240,6 +1376,173 @@ public class AzureReportService
         ["Microsoft.ServiceBus/namespaces"] = new("Service Bus", null, "No free tier — Basic ~$0.05/M ops", ["Basic", "Standard", "Premium"], "Use Basic if only simple queues needed."),
         ["Microsoft.SignalRService/SignalR"] = new("SignalR", "Free", "Free (20 connections)", ["Standard"], "Free tier: 20 concurrent connections."),
     };
+
+    #endregion
+
+    #region Supporting Helpers: GitHub Workflow Correlation
+
+    private async Task<List<InfraReview>> LoadInfraReviewsForCorrelationAsync(
+        List<RawService> services, CancellationToken ct)
+    {
+        try
+        {
+            var pat = _config["GitHub:PersonalAccessToken"];
+            if (string.IsNullOrWhiteSpace(pat))
+            {
+                // Try gh CLI token
+                try
+                {
+                    using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "gh",
+                        Arguments = "auth token",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        CreateNoWindow = true,
+                    });
+                    if (proc is not null)
+                    {
+                        var token = (await proc.StandardOutput.ReadToEndAsync(ct)).Trim();
+                        if (!string.IsNullOrWhiteSpace(token))
+                            pat = token;
+                    }
+                }
+                catch { /* gh not available */ }
+            }
+
+            if (string.IsNullOrWhiteSpace(pat))
+                return [];
+
+            var http = _httpClientFactory.CreateClient("github");
+            http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", pat);
+
+            return await FetchInfraReviewsAsync(http, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "GitHub workflow correlation skipped");
+            return [];
+        }
+    }
+
+    private async Task<List<InfraReview>> FetchInfraReviewsAsync(HttpClient http, CancellationToken ct)
+    {
+        var reviews = new List<InfraReview>();
+        var page = 1;
+
+        while (true)
+        {
+            var url = $"https://api.github.com/user/repos?visibility=all&affiliation=owner&per_page=100&page={page}";
+            var resp = await http.GetAsync(url, ct);
+            if (!resp.IsSuccessStatusCode)
+                break;
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                break;
+
+            var repos = doc.RootElement.EnumerateArray().ToList();
+            if (repos.Count == 0)
+                break;
+
+            foreach (var repo in repos)
+            {
+                var fullName = repo.GetProperty("full_name").GetString() ?? "";
+                var repoUrl = repo.TryGetProperty("html_url", out var hu) ? hu.GetString() : null;
+                var defaultBranch = repo.TryGetProperty("default_branch", out var db) ? db.GetString() ?? "main" : "main";
+
+                var (runStatus, runConclusion, runCompleted, runUrl, runName) =
+                    await FetchLatestWorkflowRunAsync(http, fullName, defaultBranch, ct);
+
+                reviews.Add(new InfraReview
+                {
+                    RepoName = repo.TryGetProperty("name", out var rn) ? rn.GetString() ?? "" : "",
+                    RepoUrl = repoUrl,
+                    DefaultBranch = defaultBranch,
+                    LatestWorkflowRunStatus = runStatus,
+                    LatestWorkflowRunConclusion = runConclusion,
+                    LatestWorkflowRunCompletedAt = runCompleted,
+                    LatestWorkflowRunUrl = runUrl,
+                    LatestWorkflowRunName = runName,
+                });
+            }
+
+            if (repos.Count < 100)
+                break;
+
+            page++;
+        }
+
+        return reviews;
+    }
+
+    private async Task<(string? status, string? conclusion, DateTime? completedAt, string? runUrl, string? runName)>
+        FetchLatestWorkflowRunAsync(HttpClient http, string fullName, string defaultBranch, CancellationToken ct)
+    {
+        try
+        {
+            var url = $"https://api.github.com/repos/{fullName}/actions/runs?branch={Uri.EscapeDataString(defaultBranch)}&per_page=1";
+            var resp = await http.GetAsync(url, ct);
+            if (!resp.IsSuccessStatusCode)
+                return (null, null, null, null, null);
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+
+            if (!doc.RootElement.TryGetProperty("workflow_runs", out var runs) || runs.GetArrayLength() == 0)
+                return (null, null, null, null, null);
+
+            var run = runs[0];
+            var status = run.TryGetProperty("status", out var st) ? st.GetString() : null;
+            var conclusion = run.TryGetProperty("conclusion", out var conc) ? conc.GetString() : null;
+            var runUrl = run.TryGetProperty("html_url", out var hu) ? hu.GetString() : null;
+            var runName = run.TryGetProperty("name", out var rn) ? rn.GetString() : null;
+
+            DateTime? completedAt = run.TryGetProperty("updated_at", out var ua)
+                && ua.ValueKind == JsonValueKind.String
+                && DateTime.TryParse(ua.GetString(), out var dt) ? dt : null;
+
+            return (status, conclusion, completedAt, runUrl, runName);
+        }
+        catch
+        {
+            return (null, null, null, null, null);
+        }
+    }
+
+    private static InfraReview? MatchServiceToInfraReview(RawService svc, List<InfraReview> reviews)
+    {
+        if (reviews.Count == 0)
+            return null;
+
+        // Direct match: repo name == service name
+        var direct = reviews.FirstOrDefault(r =>
+            r.RepoName.Equals(svc.Name, StringComparison.OrdinalIgnoreCase));
+        if (direct is not null)
+            return direct;
+
+        // Fuzzy match: service name contains repo name or vice versa
+        var fuzzy = reviews.FirstOrDefault(r =>
+            svc.Name.Contains(r.RepoName, StringComparison.OrdinalIgnoreCase) ||
+            r.RepoName.Contains(svc.Name, StringComparison.OrdinalIgnoreCase));
+        if (fuzzy is not null)
+            return fuzzy;
+
+        // Match by resource group name containing repo name
+        var byRg = reviews.FirstOrDefault(r =>
+            !string.IsNullOrEmpty(svc.ResourceGroup) &&
+            svc.ResourceGroup.Contains(r.RepoName, StringComparison.OrdinalIgnoreCase));
+        if (byRg is not null)
+            return byRg;
+
+        // Match by friendly name
+        var byFriendly = reviews.FirstOrDefault(r =>
+            !string.IsNullOrEmpty(svc.FriendlyName) &&
+            (svc.FriendlyName.Contains(r.RepoName, StringComparison.OrdinalIgnoreCase) ||
+             r.RepoName.Contains(svc.FriendlyName, StringComparison.OrdinalIgnoreCase)));
+        return byFriendly;
+    }
 
     #endregion
 }

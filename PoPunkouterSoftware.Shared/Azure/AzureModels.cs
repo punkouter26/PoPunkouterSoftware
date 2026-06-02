@@ -24,6 +24,8 @@ public record AzureReport
     public ReportDelta? Delta { get; init; }
     /// <summary>Root-cause analysis for each broken or unreachable App Service.</summary>
     public List<ServiceDowntimeDiagnosis>? DowntimeDiagnoses { get; init; }
+    /// <summary>Plan tier recommendations for each analysed service — upgrade/downgrade/keep.</summary>
+    public List<PlanRecommendation> PlanRecommendations { get; init; } = new();
 }
 
 public record SubscriptionInfo { public string Name { get; init; } = ""; }
@@ -48,8 +50,11 @@ public record WebService
     public string HttpStatus { get; init; } = "";
     public string? PlatformState { get; init; }
     public string? Description { get; init; }
+    public string? ResourceId { get; init; }
     /// <summary>App Service Plan name — populated if service is a Microsoft.Web/sites resource.</summary>
     public string? AppServicePlan { get; init; }
+    /// <summary>App Service Plan SKU — e.g. F1, B2, S1. Resolved from the serverFarm resource.</summary>
+    public string? AppServicePlanSku { get; init; }
     public ConnectivityInfo? Connectivity { get; init; }
     public MetricsInfo? Metrics7Days { get; init; }
     public FreeTierCheckInfo? FreeTierCheck { get; init; }
@@ -245,8 +250,6 @@ public record StatusSample
 public record InfraReview
 {
     public string RepoName { get; init; } = "";
-    /// <summary>Matched friendly app name from apps.json (if found).</summary>
-    public string? AppName { get; init; }
     public string? DefaultBranch { get; init; }
     public bool IsPrivate { get; init; }
     public string? RepoUrl { get; init; }
@@ -259,6 +262,16 @@ public record InfraReview
     public DateTime ScannedAt { get; init; }
     /// <summary>Non-null when scanning failed for this repo (permissions, rate limit, etc.).</summary>
     public string? Error { get; init; }
+    /// <summary>Status of the most recent GitHub Actions workflow run (completed, in_progress, etc.).</summary>
+    public string? LatestWorkflowRunStatus { get; init; }
+    /// <summary>Conclusion of the most recent GitHub Actions workflow run (success, failure, cancelled).</summary>
+    public string? LatestWorkflowRunConclusion { get; init; }
+    /// <summary>When the most recent GitHub Actions workflow run completed.</summary>
+    public DateTime? LatestWorkflowRunCompletedAt { get; init; }
+    /// <summary>URL to the most recent GitHub Actions workflow run.</summary>
+    public string? LatestWorkflowRunUrl { get; init; }
+    /// <summary>Display title of the most recent workflow run.</summary>
+    public string? LatestWorkflowRunName { get; init; }
 }
 
 /// <summary>Summary of a single GitHub Actions workflow file.</summary>
@@ -314,6 +327,22 @@ public record ServiceDowntimeDiagnosis
     public List<ActivityLogEntry> RecentActivity { get; init; } = new();
     public string LikelyCause { get; init; } = "Unknown";
     public string? SuggestedFix { get; init; }
+    /// <summary>App Insights 7-day exception count for this service.</summary>
+    public int? AppInsightsExceptions7Days { get; init; }
+    /// <summary>App Insights 7-day failed request count for this service.</summary>
+    public int? AppInsightsFailedRequests7Days { get; init; }
+    /// <summary>URL to the latest GitHub Actions workflow run for this service's repo.</summary>
+    public string? GitHubWorkflowRunUrl { get; init; }
+    /// <summary>Latest GitHub Actions workflow run status (completed, in_progress, etc.).</summary>
+    public string? GitHubWorkflowStatus { get; init; }
+    /// <summary>Latest GitHub Actions workflow run conclusion (success, failure, cancelled, etc.).</summary>
+    public string? GitHubWorkflowConclusion { get; init; }
+    /// <summary>When the latest GitHub workflow run completed.</summary>
+    public DateTime? GitHubWorkflowCompletedAt { get; init; }
+    /// <summary>Kudu process diagnostics — list of running processes or error.</summary>
+    public string? KuduProcesses { get; init; }
+    /// <summary>True when the Kudu SCM site was reachable.</summary>
+    public bool KuduReachable { get; init; }
 }
 
 /// <summary>One entry from the Kudu/ARM deployment history of an App Service.</summary>
@@ -379,4 +408,26 @@ public record IncidentEntry
     public DateTime OccurredAt { get; init; }
     public string? PreviousStatus { get; init; }
     public string? CurrentStatus { get; init; }
+}
+
+// ─── Plan recommendation ────────────────────────────────────────────────────
+
+/// <summary>Recommendation for whether a service should change its App Service Plan tier.</summary>
+public record PlanRecommendation
+{
+    public string ServiceName { get; init; } = "";
+    public string? FriendlyName { get; init; }
+    public string? ResourceGroup { get; init; }
+    public string? CurrentPlanName { get; init; }
+    public string CurrentPlanSku { get; init; } = "Unknown";
+    public string RecommendedPlanSku { get; init; } = "";
+    public string Action { get; init; } = "keep"; // upgrade | downgrade | keep
+    public string Reason { get; init; } = "";
+    public string? MonthlyCostImpact { get; init; }
+    public string Priority { get; init; } = "low"; // high | medium | low
+    public List<string> Triggers { get; init; } = new();
+    /// <summary>Estimated monthly cost of the recommended plan.</summary>
+    public string? RecommendedMonthlyCost { get; init; }
+    /// <summary>Estimated monthly cost of the current plan.</summary>
+    public string? CurrentMonthlyCost { get; init; }
 }

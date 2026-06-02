@@ -7,28 +7,46 @@ namespace PoPunkouterSoftware.Infrastructure.Azure;
 
 /// <summary>
 /// Diagnoses the root cause of downtime for broken or unreachable App Services
-/// by inspecting ARM state, App Service Plan status, recent deployments, and
-/// the Azure Activity Log. Extracted from <see cref="AzureReportService"/> to
-/// keep that class focused on orchestration.
+/// by inspecting ARM state, App Service Plan status, recent deployments, the
+/// Azure Activity Log, App Insights exceptions, Kudu diagnostics, and GitHub
+/// workflow run correlation.
 /// </summary>
-public class DowntimeDiagnosisService
+public class DowntimeDiagnosisService(
+    ILogger<DowntimeDiagnosisService> logger,
+    IHttpClientFactory httpClientFactory)
 {
-    private readonly ILogger<DowntimeDiagnosisService> _logger;
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public DowntimeDiagnosisService(
-        ILogger<DowntimeDiagnosisService> logger,
-        IHttpClientFactory httpClientFactory)
-    {
-        _logger = logger;
-        _httpClientFactory = httpClientFactory;
-    }
+    private readonly ILogger<DowntimeDiagnosisService> _logger = logger;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
     internal async Task<List<ServiceDowntimeDiagnosis>> DiagnoseAsync(
-        List<RawService> brokenServices, string subscriptionId, string? armToken, CancellationToken ct)
+        List<RawService> brokenServices,
+        string subscriptionId,
+        string? armToken,
+        List<AppInsightsMetric>? appInsightsMetrics,
+        Dictionary<string, GitHubWorkflowRun>? gitHubRuns,
+        CancellationToken ct)
     {
         if (armToken is null)
             return [];
+
+        var appInsightsByName = (appInsightsMetrics ?? [])
+            .GroupBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        // Match App Insights components to services by fuzzy name matching
+        var appInsightsByService = new Dictionary<string, AppInsightsMetric>(StringComparer.OrdinalIgnoreCase);
+        foreach (var svc in brokenServices)
+        {
+            if (appInsightsByName.TryGetValue(svc.Name, out var direct))
+                appInsightsByService[svc.Name] = direct;
+            else if (appInsightsByName.Any(kv =>
+                svc.Name.Contains(kv.Key, StringComparison.OrdinalIgnoreCase) ||
+                kv.Key.Contains(svc.Name, StringComparison.OrdinalIgnoreCase)))
+                appInsightsByService[svc.Name] = appInsightsByName.First(kv =>
+                    svc.Name.Contains(kv.Key, StringComparison.OrdinalIgnoreCase) ||
+                    kv.Key.Contains(svc.Name, StringComparison.OrdinalIgnoreCase)).Value;
+        }
+
         var client = _httpClientFactory.CreateClient();
         using var gate = new SemaphoreSlim(4);
 
@@ -38,7 +56,7 @@ public class DowntimeDiagnosisService
             try
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(TimeSpan.FromSeconds(25));
+                cts.CancelAfter(TimeSpan.FromSeconds(30));
                 var tok = cts.Token;
 
                 string? availState = null, usageState = null, serverFarmId = null;
@@ -193,7 +211,43 @@ public class DowntimeDiagnosisService
                 }
                 catch (Exception ex) { _logger.LogDebug(ex, "Activity log fetch failed for {Name}", svc.Name); }
 
-                // Determine most likely cause + suggested fix
+                // 5 — Kudu SCM diagnostics: process list
+                string? kuduProcesses = null;
+                bool kuduReachable = false;
+                try
+                {
+                    var scmUrl = $"https://{svc.Name}.scm.azurewebsites.net/api/processes";
+                    using var kuduReq = new HttpRequestMessage(HttpMethod.Get, scmUrl);
+                    kuduReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
+                    using var kuduResp = await client.SendAsync(kuduReq, tok);
+                    if (kuduResp.IsSuccessStatusCode)
+                    {
+                        kuduReachable = true;
+                        var procJson = await kuduResp.Content.ReadAsStringAsync(tok);
+                        var procDoc = JsonDocument.Parse(procJson);
+                        if (procDoc.RootElement.ValueKind == JsonValueKind.Array)
+                        {
+                            var procs = procDoc.RootElement.EnumerateArray()
+                                .Select(p => p.TryGetProperty("process_name", out var pn) ? pn.GetString() : null)
+                                .Where(pn => pn is not null)
+                                .Take(10)
+                                .ToList();
+                            kuduProcesses = procs.Count > 0
+                                ? string.Join(", ", procs)
+                                : "No processes running (crash loop or never started)";
+                        }
+                    }
+                }
+                catch (Exception ex) { _logger.LogDebug(ex, "Kudu SCM fetch failed for {Name}", svc.Name); }
+
+                // 6 — App Insights exception correlation
+                appInsightsByService.TryGetValue(svc.Name, out var aiMetrics);
+
+                // 7 — GitHub workflow run correlation
+                GitHubWorkflowRun? ghRun = null;
+                gitHubRuns?.TryGetValue(svc.Name, out ghRun);
+
+                // ── Determine most likely cause + suggested fix ──────────────
                 string likelyCause;
                 string? suggestedFix;
 
@@ -223,6 +277,13 @@ public class DowntimeDiagnosisService
                         ? (msg.Length > 250 ? msg[..250] + "…" : msg)
                         : "Check Kudu deployment logs for the error details.";
                 }
+                else if (ghRun?.Conclusion == "failure")
+                {
+                    likelyCause = $"Recent GitHub Actions workflow run failed — deployment may not have reached Azure";
+                    suggestedFix = ghRun.RunUrl is not null
+                        ? $"Review the failed workflow run: {ghRun.RunUrl}"
+                        : "Check GitHub Actions for the latest run details.";
+                }
                 else if (availState is not null && availState != "Normal")
                 {
                     likelyCause = $"Azure platform reports availability state: {availState}";
@@ -237,6 +298,13 @@ public class DowntimeDiagnosisService
                         + (stopEvent.EventTimestamp.HasValue ? $" at {stopEvent.EventTimestamp.Value.ToUniversalTime():yyyy-MM-dd HH:mm} UTC" : "");
                     suggestedFix = $"az webapp start --name \"{svc.Name}\" --resource-group \"{svc.ResourceGroup}\"";
                 }
+                else if (aiMetrics is { Exceptions7Days: > 0 })
+                {
+                    likelyCause = $"Application error — {aiMetrics.Exceptions7Days} exceptions and {aiMetrics.FailedRequests7Days ?? 0} failed requests in 7 days"
+                        + (kuduProcesses is not null ? $" (Kudu processes: {kuduProcesses})" : "");
+                    suggestedFix = $"Investigate the top exception types in Application Insights for '{aiMetrics.Name}'. "
+                        + "Common causes: connection string issues, missing Key Vault secrets, startup race conditions, or unhandled exceptions.";
+                }
                 else if (svc.HttpStatus == "unreachable")
                 {
                     likelyCause = "App is unreachable — TCP connection failed or DNS not resolving";
@@ -244,8 +312,16 @@ public class DowntimeDiagnosisService
                 }
                 else
                 {
-                    likelyCause = "No obvious infrastructure cause found — likely an application-level error (crash loop, bad startup config, or missing secrets)";
-                    suggestedFix = $"Check Application Insights for exceptions or stream live logs at: https://{svc.Name}.scm.azurewebsites.net/api/logstream";
+                    var extraInfo = "";
+                    if (kuduProcesses is not null)
+                        extraInfo = $" Kudu processes: {kuduProcesses}.";
+                    if (aiMetrics is { Exceptions7Days: 0, FailedRequests7Days: 0 })
+                        extraInfo += " No App Insights exceptions. Kudu is reachable — check startup logs at the SCM site.";
+
+                    likelyCause = "No obvious infrastructure cause found — likely an application-level error (crash loop, bad startup config, or missing secrets)" + extraInfo;
+                    suggestedFix = kuduReachable
+                        ? $"Check Kudu logs at: https://{svc.Name}.scm.azurewebsites.net/api/logstream"
+                        : $"Check Application Insights for exceptions or stream live logs at: https://{svc.Name}.scm.azurewebsites.net/api/logstream";
                 }
 
                 return new ServiceDowntimeDiagnosis
@@ -266,6 +342,14 @@ public class DowntimeDiagnosisService
                     RecentActivity = activityLog,
                     LikelyCause = likelyCause,
                     SuggestedFix = suggestedFix,
+                    AppInsightsExceptions7Days = aiMetrics?.Exceptions7Days,
+                    AppInsightsFailedRequests7Days = aiMetrics?.FailedRequests7Days,
+                    GitHubWorkflowRunUrl = ghRun?.RunUrl,
+                    GitHubWorkflowStatus = ghRun?.Status,
+                    GitHubWorkflowConclusion = ghRun?.Conclusion,
+                    GitHubWorkflowCompletedAt = ghRun?.CompletedAt,
+                    KuduProcesses = kuduProcesses,
+                    KuduReachable = kuduReachable,
                 };
             }
             catch (Exception ex)
@@ -289,4 +373,18 @@ public class DowntimeDiagnosisService
 
         return (await Task.WhenAll(tasks)).ToList();
     }
+}
+
+/// <summary>
+/// Per-service GitHub workflow run correlation data, produced by
+/// the CI/CD review endpoint and consumed by the downtime diagnosis.
+/// </summary>
+public record GitHubWorkflowRun
+{
+    public string ServiceName { get; init; } = "";
+    public string? RunUrl { get; init; }
+    public string? Status { get; init; }
+    public string? Conclusion { get; init; }
+    public DateTime? CompletedAt { get; init; }
+    public string? RunName { get; init; }
 }
