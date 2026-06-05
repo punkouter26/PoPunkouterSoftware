@@ -15,9 +15,10 @@
     --app-danger-soft: #ff8a8a;
     --app-shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.32);
     --app-shadow-md: 0 16px 36px rgba(0, 0, 0, 0.22);
-    --app-radius-xl: 28px;
-    --app-radius-lg: 20px;
-    --app-radius-md: 14px;
+    /* 2026 Design Tokens: Consistent 4px increments for border radius */
+    --app-radius-xl: 16px;
+    --app-radius-lg: 12px;
+    --app-radius-md: 8px;
     --app-content-width: 1280px;
     --app-headline-font: "Aptos Display", "Segoe UI Variable Display", "Bahnschrift", "Trebuchet MS", sans-serif;
     --app-body-font: "Aptos", "Segoe UI Variable Text", "Segoe UI", sans-serif;

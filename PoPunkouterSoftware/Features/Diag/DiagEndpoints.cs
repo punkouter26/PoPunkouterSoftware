@@ -137,12 +137,14 @@ internal static class DiagEndpoints
         // ── Az CLI login status ──────────────────────────────────────────────
         app.MapGet("/api/diag/az-status", async (HttpContext ctx) =>
         {
-            // az is a .cmd batch on Windows; resolve without cmd.exe wrapper
+            // az.cmd is a batch file on Windows; must run through cmd.exe
             var azExe = OperatingSystem.IsWindows() ? "az.cmd" : "az";
             try
             {
-                var psi = new ProcessStartInfo(azExe, "account show --output json")
+                var psi = new ProcessStartInfo
                 {
+                    FileName = OperatingSystem.IsWindows() ? "cmd.exe" : azExe,
+                    Arguments = OperatingSystem.IsWindows() ? $"/c {azExe} account show --output json" : $"account show --output json",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

@@ -76,7 +76,8 @@
                                       GitHubLoaded="_ghLoaded"
                                       AzureDataLoaded="_liveStatusLoaded"
                                       OpenAppRequested="OpenApp"
-                                      OpenAdminRequested="OpenAdmin" />
+                                      OpenAdminRequested="OpenAdmin"
+                                      OpenTrendsRequested="OpenTrends" />
                 }
             </div>
         }
@@ -214,6 +215,8 @@
     }
 
     private void OpenAdmin() => NavigationManager.NavigateTo("/azure");
+
+    private void OpenTrends(string serviceName) => NavigationManager.NavigateTo($"/azure?tab=trends&service={Uri.EscapeDataString(serviceName)}");
 
 
     private int CountRecentRepos(int days) =>
