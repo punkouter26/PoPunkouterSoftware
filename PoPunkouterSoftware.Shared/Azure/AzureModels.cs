@@ -21,6 +21,7 @@ public record AzureReport
     public List<OrphanedResource>? OrphanedResources { get; init; }
     public BurnRateInfo? BurnRate { get; init; }
     public List<StepTimingEntry>? StepTimings { get; init; }
+    public List<AppServicePlanInventoryEntry> AppServicePlanInventory { get; init; } = new();
     public ReportDelta? Delta { get; init; }
     /// <summary>Root-cause analysis for each broken or unreachable App Service.</summary>
     public List<ServiceDowntimeDiagnosis>? DowntimeDiagnoses { get; init; }
@@ -111,6 +112,17 @@ public record ResourceDetail
     public string? ResourceGroup { get; init; }
     public string? Location { get; init; }
     public string? Sku { get; init; }
+    public string? Type { get; init; }
+}
+
+public record AppServicePlanInventoryEntry
+{
+    public string Name { get; init; } = "";
+    public string? ResourceGroup { get; init; }
+    public string? Location { get; init; }
+    public string? Sku { get; init; }
+    public int AppCount { get; init; }
+    public string? Type { get; init; }
 }
 
 public record SslEntry

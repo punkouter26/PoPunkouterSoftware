@@ -11,6 +11,7 @@ public partial class AzureDashboard
     // ── Chart records ─────────────────────────────────────────────────────────
     private record ChartPoint(string Label, double Value);
     private record DailyCostChartPoint(string Date, double Cost);
+    private record PlanUsagePoint(string Plan, int Apps, int Requests, int Errors);
 
     // ── Fleet health donut ────────────────────────────────────────────────────
     private List<ChartPoint> FleetHealthDonutData
@@ -61,6 +62,30 @@ public partial class AzureDashboard
                 var lbl = s.FriendlyName ?? s.Name;
                 return new ChartPoint(lbl.Length > 28 ? lbl[..25] + "…" : lbl, s.Metrics7Days!.Http5xx);
             })
+            .ToList();
+
+    private List<PlanUsagePoint> PlanUsageByPlan =>
+        services
+            .GroupBy(s => string.IsNullOrWhiteSpace(s.AppServicePlan)
+                ? "Unassigned plan"
+                : $"{s.AppServicePlan} ({s.AppServicePlanSku ?? "SKU unknown"})")
+            .Select(g => new PlanUsagePoint(
+                g.Key.Length > 36 ? g.Key[..33] + "…" : g.Key,
+                g.Count(),
+                g.Sum(s => s.Metrics7Days?.Requests ?? 0),
+                g.Sum(s => s.Metrics7Days?.Http5xx ?? 0)))
+            .OrderByDescending(p => p.Requests)
+            .Take(8)
+            .ToList();
+
+    private List<ChartPoint> TopAppRequestChartData =>
+        services
+            .Where(s => (s.Metrics7Days?.Requests ?? 0) > 0)
+            .OrderByDescending(s => s.Metrics7Days!.Requests)
+            .Take(10)
+            .Select(s => new ChartPoint(
+                (s.FriendlyName ?? s.Name).Length > 30 ? (s.FriendlyName ?? s.Name)[..27] + "…" : (s.FriendlyName ?? s.Name),
+                s.Metrics7Days!.Requests))
             .ToList();
 
     private static string HumanizeResourceType(string type) => type switch

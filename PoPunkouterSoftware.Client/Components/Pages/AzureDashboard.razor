@@ -519,6 +519,53 @@ else
                 </p>
             </div>
         </section>
+
+        <section class="app-section">
+            <div class="app-kicker">Capacity</div>
+            <h2 class="app-section-heading">App Service Plan Usage & Top Requesters</h2>
+            <RadzenRow Gap="1rem">
+                <RadzenColumn SizeXS="12" SizeMD="6">
+                    <div class="app-card app-fill">
+                        <div class="app-card-header"><span class="material-symbols-outlined">groups</span> Plan usage by App Service Plan</div>
+                        <p class="app-note rz-mb-2">Aggregated request volume and app counts by plan tier to highlight shared-resource pressure.</p>
+                        @if (PlanUsageByPlan.Count == 0)
+                        {
+                            <div class="app-callout info">No App Service Plan metadata is available in the current report.</div>
+                        }
+                        else
+                        {
+                            <RadzenChart Style="height:280px">
+                                <RadzenBarSeries TItem="PlanUsagePoint" Data="@PlanUsageByPlan" CategoryProperty="Plan" ValueProperty="Requests" Title="7d requests" />
+                                <RadzenBarSeries TItem="PlanUsagePoint" Data="@PlanUsageByPlan" CategoryProperty="Plan" ValueProperty="Apps" Title="Apps on plan" />
+                                <RadzenCategoryAxis><RadzenAxisTitle Text="Plan" /></RadzenCategoryAxis>
+                                <RadzenValueAxis><RadzenAxisTitle Text="Requests / Apps" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
+                                <RadzenLegend Visible="true" />
+                            </RadzenChart>
+                        }
+                    </div>
+                </RadzenColumn>
+
+                <RadzenColumn SizeXS="12" SizeMD="6">
+                    <div class="app-card app-fill">
+                        <div class="app-card-header"><span class="material-symbols-outlined">trending_up</span> Top 10 apps by request volume</div>
+                        <p class="app-note rz-mb-2">A clearer view of which applications drive the busiest traffic on the shared plan.</p>
+                        @if (TopAppRequestChartData.Count == 0)
+                        {
+                            <div class="app-callout info">No request-volume data is available for individual apps.</div>
+                        }
+                        else
+                        {
+                            <RadzenChart Style="height:280px">
+                                <RadzenBarSeries TItem="ChartPoint" Data="@TopAppRequestChartData" CategoryProperty="Label" ValueProperty="Value" Title="Requests (7d)" />
+                                <RadzenCategoryAxis><RadzenAxisTitle Text="Application" /></RadzenCategoryAxis>
+                                <RadzenValueAxis><RadzenAxisTitle Text="Requests (7d)" /><RadzenGridLines Visible="true" /></RadzenValueAxis>
+                                <RadzenLegend Visible="false" />
+                            </RadzenChart>
+                        }
+                    </div>
+                </RadzenColumn>
+            </RadzenRow>
+        </section>
     }
 
     @* ── Time-series charts *@

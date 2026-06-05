@@ -218,6 +218,17 @@ public class AzureReportService
         var planRecommendations = _planRecommendation.Analyze(webServices, downtimeDiags, configDrift);
         _logger.LogInformation("Generated {Count} plan recommendations", planRecommendations.Count);
 
+        var appServicePlanInventory = AppServicePlanInventory.BuildPoSharedPlanInventory(
+            allResources.Select(r => new ResourceDetail
+            {
+                Name = r.Name,
+                ResourceGroup = r.Id?.ResourceGroupName,
+                Location = r.Location.Name,
+                Sku = r.Sku?.Name?.ToString(),
+                Type = r.ResourceType.ToString(),
+            }),
+            webServices);
+
         var report = new AzureReport
         {
             GeneratedAt = DateTime.UtcNow,
@@ -246,6 +257,7 @@ public class AzureReportService
                             ResourceGroup = r.Id?.ResourceGroupName,
                             Location = r.Location.Name,
                             Sku = r.Sku?.Name?.ToString(),
+                            Type = r.ResourceType.ToString(),
                         }).OrderBy(x => x.Name).ToList()),
             },
             SslExpiry = sslExpiry,
@@ -257,6 +269,7 @@ public class AzureReportService
             OrphanedResources = orphaned,
             BurnRate = burnRate,
             StepTimings = stepTimings.OrderByDescending(x => x.ElapsedMs).ToList(),
+            AppServicePlanInventory = appServicePlanInventory,
             DowntimeDiagnoses = downtimeDiags,
             PlanRecommendations = planRecommendations,
         };
