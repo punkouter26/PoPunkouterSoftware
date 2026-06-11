@@ -1,16 +1,19 @@
 @using PoPunkouterSoftware.Shared.Azure
 @using Radzen
 @using Radzen.Blazor
+@using Microsoft.JSInterop
+@using PoPunkouterSoftware.Client.Components.Pages.Models
+@inject IJSRuntime JS
 
 @if (Report is { } report)
 {
     <section class="app-section app-detail-tabs">
         <div class="app-kicker">Analysis</div>
         <h2 class="app-section-heading">Full Report Details</h2>
-        <RadzenTabs @bind-SelectedIndex="SelectedTabIndex">
+        <RadzenTabs SelectedIndex="SelectedTabIndex" SelectedIndexChanged="OnSelectedIndexChanged">
             <Tabs>
-                @* ── Tab 1: Health (Downtime + Services + Zombies + Delta) ── *@
-                <RadzenTabsItem Text="🩺 Health">
+                @* ── Tab 1: Health & Services (Downtime + Services + Delta) ── *@
+                <RadzenTabsItem Text="🩺 Health & Services">
                     @* Downtime diagnosis — compact table, expandable details *@
                     @if (report.DowntimeDiagnoses?.Count > 0)
                     {
@@ -33,11 +36,11 @@
                                                     <div class="app-detail-label">Suggested Fix</div>
                                                     @if (diag.SuggestedFix.TrimStart().StartsWith("az "))
                                                     {
-                                                        <code class="app-detail-code">@diag.SuggestedFix</code>
+                                                        <code class="app-detail-code app-copy-click" @onclick="@(() => CopyText(diag.SuggestedFix))" title="Click to copy suggested fix">@diag.SuggestedFix</code>
                                                     }
                                                     else
                                                     {
-                                                        <span class="app-detail-body">@diag.SuggestedFix</span>
+                                                        <span class="app-detail-body app-copy-click" @onclick="@(() => CopyText(diag.SuggestedFix))" title="Click to copy suggested fix">@diag.SuggestedFix</span>
                                                     }
                                                 </div>
                                             }
@@ -123,7 +126,7 @@
                     <div class="app-card rz-mb-3">
                         <div class="app-card-header">Services</div>
                         <div class="app-overflow-top">
-                            <RadzenDataGrid Data="@AllServices" TItem="WebService" AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu" PageSize="50" AllowPaging="@(TotalCount > 50)" GridLines="DataGridGridLines.Horizontal" Style="width:100%;min-width:900px">
+                            <RadzenDataGrid Data="@AllServices" TItem="WebService" AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu" PageSize="50" AllowPaging="@(TotalCount > 50)" AllowVirtualization="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%;min-width:900px;height:450px">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="WebService" Property="FriendlyName" Title="Name" Width="180px">
                                         <Template Context="svc"><span style="font-weight:600">@(svc.FriendlyName ?? svc.Name)</span></Template>
@@ -148,7 +151,55 @@
                         </div>
                     </div>
 
-                    @* Zombies (compact, only if > 0) *@
+                    @* Delta (if available) *@
+                    @if (report.Delta is { } rptDelta && rptDelta.PreviousGeneratedAt is not null)
+                    {
+                        <div class="app-card rz-mb-3">
+                            <div class="app-card-header">Scan Delta</div>
+                            <div class="app-grid metrics app-grid-metrics-160 app-mb-1">
+                                <div class="app-stat"><span class="app-stat-label">Previous scan</span><span class="app-stat-value app-detail-stat">@rptDelta.PreviousGeneratedAt.Value.ToLocalTime().ToString("MM/dd HH:mm")</span></div>
+                                <div class="app-stat"><span class="app-stat-label">Broken services delta</span><span class="app-stat-value" style="color:@(rptDelta.BrokenServicesDelta > 0 ? "var(--rz-danger)" : rptDelta.BrokenServicesDelta < 0 ? "var(--rz-success)" : "inherit")">@(rptDelta.BrokenServicesDelta > 0 ? "+" : "")@rptDelta.BrokenServicesDelta</span></div>
+                                <div class="app-stat"><span class="app-stat-label">Cost delta</span><span class="app-stat-value" style="color:@(rptDelta.CostDelta > 0 ? "var(--rz-warning)" : "var(--rz-success)")">@(rptDelta.CostDelta > 0 ? "+" : "")$@(rptDelta.CostDelta?.ToString("F2") ?? "-")</span></div>
+                            </div>
+                            @if (rptDelta.NewBrokenServices.Count > 0) { <div class="app-card rz-mb-3 app-border-left-danger"><div class="app-card-header app-tone-danger">Newly broken</div>@foreach (var s in rptDelta.NewBrokenServices) { <div class="app-note">@s</div> }</div> }
+                            @if (rptDelta.RecoveredServices.Count > 0) { <div class="app-card rz-mb-3 app-border-left-success"><div class="app-card-header app-tone-success">Recovered</div>@foreach (var s in rptDelta.RecoveredServices) { <div class="app-note">@s</div> }</div> }
+                            @if (rptDelta.NewOrphanedResources.Count > 0) { <div class="app-card rz-mb-3 app-border-left-warning"><div class="app-card-header app-tone-warning">New orphaned resources</div>@foreach (var s in rptDelta.NewOrphanedResources) { <div class="app-note">@s</div> }</div> }
+                        </div>
+                    }
+                </RadzenTabsItem>
+
+                @* ── Tab 2: Waste & Cleanup (Safe To Remove + Zombie Apps + Orphaned + AI Spend + Log Analytics Cap) ── *@
+                <RadzenTabsItem Text="🧹 Waste & Cleanup">
+                    <div class="app-card rz-mb-3">
+                        <div class="app-card-header"><span class="material-symbols-outlined">delete_sweep</span> Safe To Remove Scanner</div>
+                        <p class="app-note rz-mb-2">Review-only cleanup queue for dead apps, empty plans, orphaned resources, duplicate AI services, and log cost risks.</p>
+                        @if (CleanupCandidates.Count == 0)
+                        {
+                            <div class="app-callout success">No cleanup candidates detected in the latest scan.</div>
+                        }
+                        else
+                        {
+                            <div class="app-table-frame app-overflow-y-310">
+                                <RadzenDataGrid Data="@CleanupCandidates" TItem="SafeToRemoveItem" AllowSorting="true" AllowPaging="false">
+                                    <Columns>
+                                        <RadzenDataGridColumn TItem="SafeToRemoveItem" Property="Name" Title="Resource" />
+                                        <RadzenDataGridColumn TItem="SafeToRemoveItem" Property="Type" Title="Type" Width="130px" />
+                                        <RadzenDataGridColumn TItem="SafeToRemoveItem" Property="Confidence" Title="Confidence" Width="115px">
+                                            <Template Context="item">
+                                                <RadzenBadge Text="@item.Confidence" IsPill="true" BadgeStyle="@ConfidenceBadge(item.Confidence)" />
+                                            </Template>
+                                        </RadzenDataGridColumn>
+                                        <RadzenDataGridColumn TItem="SafeToRemoveItem" Property="EstimatedMonthlyCost" Title="Cost" Width="110px">
+                                            <Template Context="item">@(item.EstimatedMonthlyCost ?? "-")</Template>
+                                        </RadzenDataGridColumn>
+                                        <RadzenDataGridColumn TItem="SafeToRemoveItem" Property="Reason" Title="Why flagged" />
+                                    </Columns>
+                                </RadzenDataGrid>
+                            </div>
+                        }
+                    </div>
+
+                    @* Zombie Apps *@
                     @if (report.ZombieApps?.Count > 0)
                     {
                         <div class="app-card rz-mb-3">
@@ -167,31 +218,109 @@
                         </div>
                     }
 
-                    @* Delta (if available) *@
-                    @if (report.Delta is { } rptDelta && rptDelta.PreviousGeneratedAt is not null)
+                    @* Orphaned Resources *@
+                    @if (report.OrphanedResources?.Count > 0)
                     {
                         <div class="app-card rz-mb-3">
-                            <div class="app-card-header">Scan Delta</div>
-                            <div class="app-grid metrics app-grid-metrics-160 app-mb-1">
-                                <div class="app-stat"><span class="app-stat-label">Previous scan</span><span class="app-stat-value app-detail-stat">@rptDelta.PreviousGeneratedAt.Value.ToLocalTime().ToString("MM/dd HH:mm")</span></div>
-                                <div class="app-stat"><span class="app-stat-label">Broken services delta</span><span class="app-stat-value" style="color:@(rptDelta.BrokenServicesDelta > 0 ? "var(--rz-danger)" : rptDelta.BrokenServicesDelta < 0 ? "var(--rz-success)" : "inherit")">@(rptDelta.BrokenServicesDelta > 0 ? "+" : "")@rptDelta.BrokenServicesDelta</span></div>
-                                <div class="app-stat"><span class="app-stat-label">Cost delta</span><span class="app-stat-value" style="color:@(rptDelta.CostDelta > 0 ? "var(--rz-warning)" : "var(--rz-success)")">@(rptDelta.CostDelta > 0 ? "+" : "")$@(rptDelta.CostDelta?.ToString("F2") ?? "-")</span></div>
+                            <div class="app-card-header">Orphaned Resources</div>
+                            <div class="app-table-frame app-overflow-y-230">
+                                <RadzenDataGrid Data="@report.OrphanedResources" TItem="OrphanedResource" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                    <Columns>
+                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="Name" Title="Resource" Width="180px" />
+                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="Type" Title="Type" Width="180px" />
+                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="ResourceGroup" Title="Resource Group" Width="160px" />
+                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="Reason" Title="Reason" />
+                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="EstimatedMonthlyCost" Title="Est. Cost/mo" Width="120px"><Template Context="r">@(r.EstimatedMonthlyCost ?? "-")</Template></RadzenDataGridColumn>
+                                    </Columns>
+                                </RadzenDataGrid>
                             </div>
-                            @if (rptDelta.NewBrokenServices.Count > 0) { <div class="app-card rz-mb-3 app-border-left-danger"><div class="app-card-header app-tone-danger">Newly broken</div>@foreach (var s in rptDelta.NewBrokenServices) { <div class="app-note">@s</div> }</div> }
-                            @if (rptDelta.RecoveredServices.Count > 0) { <div class="app-card rz-mb-3 app-border-left-success"><div class="app-card-header app-tone-success">Recovered</div>@foreach (var s in rptDelta.RecoveredServices) { <div class="app-note">@s</div> }</div> }
-                            @if (rptDelta.NewOrphanedResources.Count > 0) { <div class="app-card rz-mb-3 app-border-left-warning"><div class="app-card-header app-tone-warning">New orphaned resources</div>@foreach (var s in rptDelta.NewOrphanedResources) { <div class="app-note">@s</div> }</div> }
                         </div>
                     }
+
+                    @* AI Spend Monitor & Log Analytics Cap *@
+                    <RadzenRow Gap="1rem">
+                        <RadzenColumn SizeXS="12" SizeMD="6">
+                            <div class="app-card app-fill">
+                                <div class="app-card-header"><span class="material-symbols-outlined">psychology</span> AI Services Spend Monitor</div>
+                                <p class="app-note rz-mb-2">Tracks Azure AI accounts, paid SKUs, model deployments, and matching cost-driver rows.</p>
+                                @if (AiServices.Count == 0)
+                                {
+                                    <div class="app-callout info">No Azure AI / Cognitive Services accounts found in this scan.</div>
+                                }
+                                else
+                                {
+                                    <div class="app-dashboard-summary rz-mb-3 app-grid-metrics-110">
+                                        <div class="app-metric-card"><strong>@AiServices.Count</strong><span class="app-note">AI accounts</span></div>
+                                        <div class="app-metric-card"><strong>@AiServices.Sum(a => a.DeploymentCount)</strong><span class="app-note">Deployments</span></div>
+                                        <div class="app-metric-card"><strong>@AiCostDriversSum.ToString("$0.00")</strong><span class="app-note">Matched cost</span></div>
+                                    </div>
+                                    <div class="app-table-frame app-overflow-y-260">
+                                        <RadzenDataGrid Data="@AiServices" TItem="AiServiceInventoryItem" AllowSorting="true" AllowPaging="false">
+                                            <Columns>
+                                                <RadzenDataGridColumn TItem="AiServiceInventoryItem" Property="Name" Title="Account" />
+                                                <RadzenDataGridColumn TItem="AiServiceInventoryItem" Property="Sku" Title="SKU" Width="70px" />
+                                                <RadzenDataGridColumn TItem="AiServiceInventoryItem" Property="DeploymentCount" Title="Deploys" Width="85px" TextAlign="TextAlign.Right" />
+                                                <RadzenDataGridColumn TItem="AiServiceInventoryItem" Property="RiskLevel" Title="Risk" Width="90px">
+                                                    <Template Context="ai">
+                                                        <RadzenBadge Text="@ai.RiskLevel" IsPill="true" BadgeStyle="@RiskBadge(ai.RiskLevel)" />
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn TItem="AiServiceInventoryItem" Property="Recommendation" Title="Recommendation" />
+                                            </Columns>
+                                        </RadzenDataGrid>
+                                    </div>
+                                }
+                            </div>
+                        </RadzenColumn>
+
+                        <RadzenColumn SizeXS="12" SizeMD="6">
+                            <div class="app-card app-fill">
+                                <div class="app-card-header"><span class="material-symbols-outlined">query_stats</span> Log Analytics Cleanup</div>
+                                <p class="app-note rz-mb-2">Checks workspace retention, daily ingestion caps, and related cost-driver rows.</p>
+                                @if (LogAnalyticsWorkspaces.Count == 0)
+                                {
+                                    <div class="app-callout info">No Log Analytics workspaces found in this scan.</div>
+                                }
+                                else
+                                {
+                                    <div class="app-dashboard-summary rz-mb-3 app-grid-metrics-110">
+                                        <div class="app-metric-card"><strong>@LogAnalyticsWorkspaces.Count</strong><span class="app-note">Workspaces</span></div>
+                                        <div class="app-metric-card"><strong>@LogAnalyticsWorkspaces.Count(w => w.RiskLevel == "cost")</strong><span class="app-note">Needs cap</span></div>
+                                        <div class="app-metric-card"><strong>@LogAnalyticsCostDriversSum.ToString("$0.00")</strong><span class="app-note">Matched cost</span></div>
+                                    </div>
+                                    <div class="app-table-frame app-overflow-y-260">
+                                        <RadzenDataGrid Data="@LogAnalyticsWorkspaces" TItem="LogAnalyticsWorkspaceItem" AllowSorting="true" AllowPaging="false">
+                                            <Columns>
+                                                <RadzenDataGridColumn TItem="LogAnalyticsWorkspaceItem" Property="Name" Title="Workspace" />
+                                                <RadzenDataGridColumn TItem="LogAnalyticsWorkspaceItem" Property="RetentionInDays" Title="Retention" Width="95px">
+                                                    <Template Context="workspace">@(workspace.RetentionInDays?.ToString() ?? "?") d</Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn TItem="LogAnalyticsWorkspaceItem" Property="DailyQuotaGb" Title="Daily Cap" Width="95px">
+                                                    <Template Context="workspace">@(workspace.DailyQuotaGb.HasValue ? $"{workspace.DailyQuotaGb:0.##} GB" : "none")</Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn TItem="LogAnalyticsWorkspaceItem" Property="RiskLevel" Title="Risk" Width="90px">
+                                                    <Template Context="workspace">
+                                                        <RadzenBadge Text="@workspace.RiskLevel" IsPill="true" BadgeStyle="@RiskBadge(workspace.RiskLevel)" />
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn TItem="LogAnalyticsWorkspaceItem" Property="Recommendation" Title="Recommendation" />
+                                            </Columns>
+                                        </RadzenDataGrid>
+                                    </div>
+                                }
+                            </div>
+                        </RadzenColumn>
+                    </RadzenRow>
                 </RadzenTabsItem>
 
-                @* ── Tab 2: Security (SSL + Storage) ── *@
+                @* ── Tab 3: Security (SSL + Storage) ── *@
                 <RadzenTabsItem Text="🔒 Security">
                     @if (report.SslExpiry?.Count > 0)
                     {
                         <div class="app-card rz-mb-3">
                             <div class="app-card-header">SSL Certificates</div>
                             <div class="app-overflow-top">
-                                <RadzenDataGrid Data="@report.SslExpiry" TItem="SslEntry" AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                <RadzenDataGrid Data="@report.SslExpiry" TItem="SslEntry" AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.SimpleWithMenu" AllowVirtualization="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%;height:350px">
                                     <Columns>
                                         <RadzenDataGridColumn TItem="SslEntry" Property="Name" Title="Service" Width="180px" />
                                         <RadzenDataGridColumn TItem="SslEntry" Title="Status" Width="140px"><Template Context="e"><span class="app-badge app-http-badge" style="@SslBadgeStyle(e)">@SslLabel(e)</span></Template></RadzenDataGridColumn>
@@ -206,33 +335,24 @@
                     @if (report.StorageInventory?.Count > 0)
                     {
                         var storageItems = report.StorageInventory;
-                        var insecureItems = storageItems.Where(s => s.PublicBlobAccess || !s.HttpsOnly || s.MinTls is "TLS1_0" or "TLS1_1").ToList();
                         <div class="app-card rz-mb-3">
                             <div class="app-card-header">Storage Security</div>
-                            @if (insecureItems.Count > 0)
-                            {
-                                <div class="app-callout warning rz-mb-2"><strong>@insecureItems.Count of @storageItems.Count account(s)</strong> have security misconfigurations.</div>
-                                <div class="app-table-frame app-overflow-y-310">
-                                    <RadzenDataGrid Data="@insecureItems" TItem="StorageItem" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
-                                        <Columns>
-                                            <RadzenDataGridColumn TItem="StorageItem" Property="Name" Title="Account" Width="150px" />
-                                            <RadzenDataGridColumn TItem="StorageItem" Title="Public Blobs" Width="105px" TextAlign="TextAlign.Center"><Template Context="s">@(s.PublicBlobAccess ? "🔴" : "🟢")</Template></RadzenDataGridColumn>
-                                            <RadzenDataGridColumn TItem="StorageItem" Title="HTTPS" Width="70px" TextAlign="TextAlign.Center"><Template Context="s">@(s.HttpsOnly ? "🟢" : "🔴")</Template></RadzenDataGridColumn>
-                                            <RadzenDataGridColumn TItem="StorageItem" Property="MinTls" Title="Min TLS" Width="90px" TextAlign="TextAlign.Center"><Template Context="s"><RadzenBadge Text="@(s.MinTls ?? "?")" IsPill="true" BadgeStyle="@(s.MinTls is "TLS1_0" or "TLS1_1" ? BadgeStyle.Danger : BadgeStyle.Success)" /></Template></RadzenDataGridColumn>
-                                            <RadzenDataGridColumn TItem="StorageItem" Property="Sku" Title="SKU" Width="100px" />
-                                        </Columns>
-                                    </RadzenDataGrid>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="app-callout success">All @storageItems.Count storage accounts pass security checks.</div>
-                            }
+                            <div class="app-table-frame app-overflow-y-310">
+                                <RadzenDataGrid Data="@storageItems" TItem="StorageItem" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
+                                    <Columns>
+                                        <RadzenDataGridColumn TItem="StorageItem" Property="Name" Title="Account" Width="150px" />
+                                        <RadzenDataGridColumn TItem="StorageItem" Title="Public Blobs" Width="105px" TextAlign="TextAlign.Center"><Template Context="s">@(s.PublicBlobAccess ? "🔴" : "🟢")</Template></RadzenDataGridColumn>
+                                        <RadzenDataGridColumn TItem="StorageItem" Title="HTTPS" Width="70px" TextAlign="TextAlign.Center"><Template Context="s">@(s.HttpsOnly ? "🟢" : "🔴")</Template></RadzenDataGridColumn>
+                                        <RadzenDataGridColumn TItem="StorageItem" Property="MinTls" Title="Min TLS" Width="90px" TextAlign="TextAlign.Center"><Template Context="s"><RadzenBadge Text="@(s.MinTls ?? "?")" IsPill="true" BadgeStyle="@(s.MinTls is "TLS1_0" or "TLS1_1" ? BadgeStyle.Danger : BadgeStyle.Success)" /></Template></RadzenDataGridColumn>
+                                        <RadzenDataGridColumn TItem="StorageItem" Property="Sku" Title="SKU" Width="100px" />
+                                    </Columns>
+                                </RadzenDataGrid>
+                            </div>
                         </div>
                     }
                 </RadzenTabsItem>
 
-                @* ── Tab 3: Config (Drift + App Insights) ── *@
+                @* ── Tab 4: Config (Drift + App Insights) ── *@
                 <RadzenTabsItem Text="⚙️ Config">
                     @if (report.ConfigDrift?.Count > 0)
                     {
@@ -301,7 +421,7 @@
                     }
                 </RadzenTabsItem>
 
-                @* ── Tab 4: Inventory (All Resources + Orphaned) ── *@
+                @* ── Tab 5: Inventory (All Resources) ── *@
                 <RadzenTabsItem Text="📦 Inventory">
                     @if (report.AllResourceSummary is { } allRes && allRes.Total > 0)
                     {
@@ -342,23 +462,6 @@
                             </div>
                         }
                     }
-                    @if (report.OrphanedResources?.Count > 0)
-                    {
-                        <div class="app-card rz-mb-3">
-                            <div class="app-card-header">Orphaned Resources</div>
-                            <div class="app-table-frame app-overflow-y-230">
-                                <RadzenDataGrid Data="@report.OrphanedResources" TItem="OrphanedResource" AllowSorting="true" GridLines="DataGridGridLines.Horizontal" Style="width:100%">
-                                    <Columns>
-                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="Name" Title="Resource" Width="180px" />
-                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="Type" Title="Type" Width="180px" />
-                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="ResourceGroup" Title="Resource Group" Width="160px" />
-                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="Reason" Title="Reason" />
-                                        <RadzenDataGridColumn TItem="OrphanedResource" Property="EstimatedMonthlyCost" Title="Est. Cost/mo" Width="120px"><Template Context="r">@(r.EstimatedMonthlyCost ?? "-")</Template></RadzenDataGridColumn>
-                                    </Columns>
-                                </RadzenDataGrid>
-                            </div>
-                        </div>
-                    }
                 </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>
@@ -371,6 +474,18 @@
     [Parameter] public bool ShowAdvancedDiagnostics { get; set; }
     [Parameter] public int SelectedTabIndex { get; set; }
     [Parameter] public EventCallback<int> SelectedTabIndexChanged { get; set; }
+
+    [Parameter] public List<SafeToRemoveItem> CleanupCandidates { get; set; } = new();
+    [Parameter] public List<AiServiceInventoryItem> AiServices { get; set; } = new();
+    [Parameter] public List<LogAnalyticsWorkspaceItem> LogAnalyticsWorkspaces { get; set; } = new();
+    [Parameter] public double AiCostDriversSum { get; set; }
+    [Parameter] public double LogAnalyticsCostDriversSum { get; set; }
+
+    private async Task OnSelectedIndexChanged(int index)
+    {
+        SelectedTabIndex = index;
+        await SelectedTabIndexChanged.InvokeAsync(index);
+    }
 
     private IList<ServiceDowntimeDiagnosis> _expandedDiagnoses = new List<ServiceDowntimeDiagnosis>();
 
@@ -395,21 +510,38 @@
         _ => BadgeStyle.Info,
     };
 
+    private static BadgeStyle ConfidenceBadge(string? confidence) => confidence switch
+    {
+        "high" => BadgeStyle.Danger,
+        "medium" => BadgeStyle.Warning,
+        "low" => BadgeStyle.Info,
+        _ => BadgeStyle.Light,
+    };
+
+    private static BadgeStyle RiskBadge(string? risk) => risk switch
+    {
+        "cleanup" => BadgeStyle.Danger,
+        "cost" => BadgeStyle.Warning,
+        "watch" => BadgeStyle.Info,
+        "ok" => BadgeStyle.Success,
+        _ => BadgeStyle.Light,
+    };
+
     private static string SslBadgeStyle(SslEntry e) => (e.DaysLeft ?? 999) switch
     {
-        <= 0 => "background:var(--rz-danger);color:#fff",
+        <= 0  => "background:var(--rz-danger);color:#fff",
         <= 14 => "background:var(--rz-danger);color:#fff",
         <= 30 => "background:var(--rz-warning);color:#fff",
-        _ => "background:var(--rz-success);color:#fff",
+        _     => "background:var(--rz-success);color:#fff",
     };
 
     private static string SslLabel(SslEntry e) => e.DaysLeft switch
     {
-        null => "unknown",
-        <= 0 => "EXPIRED",
+        null  => "unknown",
+        <= 0  => "EXPIRED",
         <= 14 => $"{e.DaysLeft}d CRITICAL",
         <= 30 => $"{e.DaysLeft}d WARNING",
-        _ => $"{e.DaysLeft}d OK",
+        _     => $"{e.DaysLeft}d OK",
     };
 
     private static string CauseColor(string cause) => cause switch
@@ -419,4 +551,9 @@
         var c when c.Contains("failed", StringComparison.OrdinalIgnoreCase) => "var(--rz-danger)",
         _ => "var(--rz-info)",
     };
+
+    private async Task CopyText(string text)
+    {
+        await JS.InvokeVoidAsync("copyToClipboard", text);
+    }
 }

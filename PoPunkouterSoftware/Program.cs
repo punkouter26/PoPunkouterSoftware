@@ -25,6 +25,10 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
+    ThreadPool.SetMinThreads(
+        Math.Max(minWorkerThreads, builder.Configuration.GetValue("ThreadPool:MinWorkerThreads", 100)),
+        Math.Max(minCompletionPortThreads, builder.Configuration.GetValue("ThreadPool:MinCompletionPortThreads", 100)));
 
     // ─── Azure Key Vault — default to shared PoShared vault unless overridden ───
     var kvUriStr = builder.Configuration["KeyVault:Uri"] ?? builder.Configuration["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
@@ -253,6 +257,11 @@ try
             isProduction = env.IsProduction(),
             guestLoginEnabled = !env.IsProduction(),
             microsoftOAuthEnabled = !string.IsNullOrWhiteSpace(config["Authentication:Microsoft:ClientId"]),
+            aiIntegrationEnabled = config.GetValue<bool>("FeatureFlags:EnableAiIntegration"),
+            azureOpenAIConfigured =
+                !string.IsNullOrWhiteSpace(config["AzureOpenAI:Endpoint"]) &&
+                !string.IsNullOrWhiteSpace(config["AzureOpenAI:ApiKey"]) &&
+                !string.IsNullOrWhiteSpace(config["AzureOpenAI:DeploymentName"]),
             managementActionsEnabled = config.GetValue<bool>("FeatureFlags:EnableManagementActions", env.IsDevelopment() || env.IsEnvironment("Testing")),
             modelCatalog = new
             {
@@ -275,6 +284,13 @@ try
         .WithName("GetConfig").WithTags("Config");
 
     // ─── Feature slices ───────────────────────────────────────────────
+    app.MapGet("/favicon.ico", () => Results.Redirect("/images/favicon.ico", permanent: false))
+        .ExcludeFromDescription();
+    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow:\n", "text/plain"))
+        .ExcludeFromDescription();
+    app.MapGet("/robots{suffix}.txt", (string suffix) => Results.NoContent())
+        .ExcludeFromDescription();
+
     app.MapHealthEndpoints();
     app.MapDiagEndpoints();
     app.MapGitHubEndpoints();
@@ -286,6 +302,14 @@ try
     app.MapAppServiceControlEndpoints();
     app.MapNarrativeEndpoints();
     app.MapIncidentEndpoints();
+    app.MapFallback((HttpContext ctx) =>
+        Results.NotFound(new
+        {
+            status = 404,
+            path = ctx.Request.Path.Value,
+            message = "Route not found."
+        }))
+        .ExcludeFromDescription();
 
     app.Run();
 }

@@ -80,6 +80,8 @@ public partial class AzureDashboard
                 items.Add(new SafeToRemoveItem
                 {
                     Name = svc.Name,
+                    ResourceGroup = svc.ResourceGroup,
+                    Type = TypeLabel(svc.ResourceType),
                     Source = "Connectivity + Metrics",
                     Reason = string.Join(", ", reasons),
                     Confidence = broken ? "high" : "medium",
@@ -89,12 +91,76 @@ public partial class AzureDashboard
                 });
             }
         }
+
+        foreach (var orphan in r.OrphanedResources ?? new())
+        {
+            items.Add(new SafeToRemoveItem
+            {
+                Name = orphan.Name,
+                ResourceGroup = orphan.ResourceGroup,
+                Type = orphan.Type,
+                Source = "Orphaned resource scan",
+                Reason = orphan.Reason,
+                Confidence = orphan.EstimatedMonthlyCost?.Contains("Paid", StringComparison.OrdinalIgnoreCase) == true ? "high" : "medium",
+                EstimatedMonthlyCost = orphan.EstimatedMonthlyCost,
+                Command = orphan.Command,
+            });
+        }
+
+        foreach (var plan in r.AppServicePlanInventory.Where(p => p.AppCount == 0))
+        {
+            items.Add(new SafeToRemoveItem
+            {
+                Name = plan.Name,
+                ResourceGroup = plan.ResourceGroup,
+                Type = "App Service Plan",
+                Source = "Plan inventory",
+                Reason = $"No apps assigned (SKU: {plan.Sku ?? "unknown"})",
+                Confidence = "high",
+                EstimatedMonthlyCost = string.Equals(plan.Sku, "F1", StringComparison.OrdinalIgnoreCase) ? "$0/mo" : "Paid tier",
+                Command = $"az appservice plan delete --name \"{plan.Name}\" --resource-group \"{plan.ResourceGroup}\" --yes",
+            });
+        }
+
+        foreach (var ai in r.AiServicesInventory.Where(a => a.RiskLevel is "cleanup"))
+        {
+            items.Add(new SafeToRemoveItem
+            {
+                Name = ai.Name,
+                ResourceGroup = ai.ResourceGroup,
+                Type = "AI Services",
+                Source = "AI inventory",
+                Reason = ai.Recommendation,
+                Confidence = "medium",
+                EstimatedMonthlyCost = ai.Sku is "S0" ? "Usage-based S0" : null,
+                Command = $"az cognitiveservices account delete --name \"{ai.Name}\" --resource-group \"{ai.ResourceGroup}\"",
+            });
+        }
+
+        foreach (var workspace in r.LogAnalyticsInventory.Where(w => w.RiskLevel is "cost"))
+        {
+            items.Add(new SafeToRemoveItem
+            {
+                Name = workspace.Name,
+                ResourceGroup = workspace.ResourceGroup,
+                Type = "Log Analytics",
+                Source = "Log Analytics policy",
+                Reason = workspace.Recommendation,
+                Confidence = "medium",
+                EstimatedMonthlyCost = "Variable ingestion",
+                Command = null,
+            });
+        }
+
         items.Sort((a, b) =>
         {
             var o = new Dictionary<string, int> { ["high"] = 0, ["medium"] = 1, ["low"] = 2 };
             return o.GetValueOrDefault(a.Confidence) - o.GetValueOrDefault(b.Confidence);
         });
-        return items;
+        return items
+            .GroupBy(i => $"{i.Type}|{i.ResourceGroup}|{i.Name}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
     }
 
     // ── Consolidated portfolio building ───────────────────────────────────────

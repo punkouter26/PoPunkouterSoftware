@@ -231,11 +231,35 @@ public partial class AzureDashboard
 
     private async Task WaitForRefreshCompletionAsync(CancellationToken ct, int delayMs = 2000)
     {
+        var initialGeneratedAt = report?.GeneratedAt;
         while (_refreshing && !ct.IsCancellationRequested)
         {
             await Task.Delay(delayMs, ct);
             if (!_refreshing)
                 break;
+
+            if (_hub is null || _hub.State != HubConnectionState.Connected)
+            {
+                try
+                {
+                    var opts = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    var latest = await Http.GetFromJsonAsync<AzureReport>("/api/diag/report", opts, ct);
+                    if (latest is not null && latest.GeneratedAt != initialGeneratedAt)
+                    {
+                        _refreshing = false;
+                        _progressPercent = 100;
+                        _progressStep = "Done";
+                        break;
+                    }
+                }
+                catch
+                {
+                    // Non-fatal transient HTTP error during polling
+                }
+            }
         }
         ct.ThrowIfCancellationRequested();
     }
@@ -277,7 +301,14 @@ public partial class AzureDashboard
             InvokeAsync(StateHasChanged);
         });
 
-        await _hub.StartAsync();
+        try
+        {
+            await _hub.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"SignalR hub start connection error (refresh status updates will fall back to HTTP polling): {ex}");
+        }
     }
 
     public async ValueTask DisposeAsync()

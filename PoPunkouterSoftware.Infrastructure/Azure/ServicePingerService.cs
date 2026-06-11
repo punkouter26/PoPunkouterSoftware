@@ -21,6 +21,8 @@ public sealed class ServicePingerService : BackgroundService
     private readonly IMemoryCache _cache;
     private readonly ILogger<ServicePingerService> _logger;
     private readonly TimeSpan _interval;
+    private readonly bool _enabled;
+    private readonly int _maxConcurrency;
 
     // Per-service opt-out: populated by PingerEndpoints.ToggleService.
     // ConcurrentDictionary so the endpoint can write from a different thread safely.
@@ -38,10 +40,18 @@ public sealed class ServicePingerService : BackgroundService
         _cache = cache;
         _logger = logger;
         _interval = TimeSpan.FromMinutes(config.GetValue<int>("Pinger:IntervalMinutes", 10));
+        _enabled = config.GetValue("Pinger:Enabled", true);
+        _maxConcurrency = Math.Clamp(config.GetValue("Pinger:MaxConcurrency", 4), 1, 12);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!_enabled)
+        {
+            _logger.LogInformation("Pinger disabled by configuration.");
+            return;
+        }
+
         try
         {
             // Delay 30 s on startup so the app fully initialises before the first sweep.
@@ -72,17 +82,26 @@ public sealed class ServicePingerService : BackgroundService
         var client = _httpClientFactory.CreateClient("azure-probe");
         var results = new List<PingResult>();
 
-        foreach (var svc in services)
+        using var gate = new SemaphoreSlim(_maxConcurrency);
+        var tasks = services
+            .Where(s => !string.IsNullOrWhiteSpace(s.Url))
+            .Where(s => !_disabled.TryGetValue(s.Name, out var dis) || !dis)
+            .Select(async svc =>
         {
-            if (string.IsNullOrWhiteSpace(svc.Url))
-                continue;
-            if (_disabled.TryGetValue(svc.Name, out var dis) && dis)
-                continue;
+            await gate.WaitAsync(ct);
+            try
+            {
+                var result = await PingOneAsync(client, svc.Name, svc.FriendlyName, svc.Url!, ct);
+                _logger.LogDebug("Pinger: {Name} -> {Status} ({Ms} ms)", svc.Name, result.Status, result.ResponseTimeMs);
+                return result;
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
 
-            var result = await PingOneAsync(client, svc.Name, svc.FriendlyName, svc.Url, ct);
-            results.Add(result);
-            _logger.LogDebug("Pinger: {Name} → {Status} ({Ms} ms)", svc.Name, result.Status, result.ResponseTimeMs);
-        }
+        results.AddRange(await Task.WhenAll(tasks));
 
         _cache.Set(CacheKey, new PingerSnapshot(DateTime.UtcNow, results), TimeSpan.FromMinutes(30));
         _logger.LogInformation("Pinger sweep complete: {Total} services probed", results.Count);

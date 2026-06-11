@@ -52,25 +52,27 @@ test.describe('Azure Dashboard', () => {
     expect(bodyText).not.toContain('An unhandled exception occurred');
   });
 
-  test('WASM hydrates and renders Web Services tab', async ({ page }) => {
+  test('WASM hydrates and renders maintenance dashboard', async ({ page }) => {
     await page.goto('/azure');
-    const tab = page.getByRole('tab', { name: /Web Services/ });
-    await expect(tab).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: /Azure Cleanup & Weekly Health Report/ }))
+      .toBeVisible({ timeout: 20_000 });
   });
 
   test('all dashboard tabs are rendered', async ({ page }) => {
     await page.goto('/azure');
-    await page.getByRole('tab', { name: /Web Services/ }).waitFor({ timeout: 20_000 });
+    await page.getByRole('tab', { name: /Health/ }).waitFor({ timeout: 20_000 });
     const count = await page.getByRole('tab').count();
-    expect(count).toBeGreaterThanOrEqual(6);
+    expect(count).toBeGreaterThanOrEqual(4);
+    await expect(page.getByRole('tab', { name: /Security/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Config/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Inventory/ })).toBeVisible();
   });
 
-  test('clicking Cost tab shows cost data', async ({ page }) => {
+  test('cost and maintenance sections show data', async ({ page }) => {
     await page.goto('/azure');
-    await page.getByRole('tab', { name: /Web Services/ }).waitFor({ timeout: 20_000 });
-    await page.getByRole('tab', { name: /Cost/ }).click();
-    const content = await page.locator('[role="tabpanel"]').innerText();
-    expect(content.length).toBeGreaterThan(5);
+    await expect(page.getByRole('heading', { name: /Top Cost Drivers/ })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('30-day cost').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Azure Cleanup & Weekly Health Report/ })).toBeVisible();
   });
 });
 

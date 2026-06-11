@@ -15,6 +15,8 @@ public record AzureReport
     public List<SslEntry>? SslExpiry { get; init; }
     public List<ConfigDriftItem>? ConfigDrift { get; init; }
     public List<StorageItem>? StorageInventory { get; init; }
+    public List<AiServiceInventoryItem> AiServicesInventory { get; init; } = new();
+    public List<LogAnalyticsWorkspaceItem> LogAnalyticsInventory { get; init; } = new();
     public AppsJsonDiffInfo? AppsJsonDiff { get; init; }
     public List<AppInsightsMetric>? AppInsightsMetrics { get; init; }
     public List<ZombieApp>? ZombieApps { get; init; }
@@ -159,6 +161,32 @@ public record StorageItem
 }
 
 public record StorageIssue { public string Severity { get; init; } = ""; public string Issue { get; init; } = ""; }
+
+public record AiServiceInventoryItem
+{
+    public string Name { get; init; } = "";
+    public string? ResourceGroup { get; init; }
+    public string? Location { get; init; }
+    public string? Kind { get; init; }
+    public string? Sku { get; init; }
+    public string? Endpoint { get; init; }
+    public int DeploymentCount { get; init; }
+    public List<string> Deployments { get; init; } = new();
+    public string Recommendation { get; init; } = "";
+    public string RiskLevel { get; init; } = "watch";
+}
+
+public record LogAnalyticsWorkspaceItem
+{
+    public string Name { get; init; } = "";
+    public string? ResourceGroup { get; init; }
+    public string? Location { get; init; }
+    public string? Sku { get; init; }
+    public int? RetentionInDays { get; init; }
+    public double? DailyQuotaGb { get; init; }
+    public string Recommendation { get; init; } = "";
+    public string RiskLevel { get; init; } = "watch";
+}
 
 public record AppsJsonDiffInfo
 {

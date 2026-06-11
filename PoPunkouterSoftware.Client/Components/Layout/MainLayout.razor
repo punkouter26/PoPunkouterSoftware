@@ -2,12 +2,15 @@
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
 @inject PoAppSession AppSession
+@inject IJSRuntime JS
 
 <RadzenComponents />
 
+<canvas id="app-bg-canvas"></canvas>
+
 @if (_isMockMode)
 {
-    <div style="background:var(--rz-warning);color:#000;padding:.2rem .6rem;font-weight:600;font-size:.7rem;position:fixed;top:8px;right:8px;z-index:9999;border-radius:4px;letter-spacing:.04em;">
+    <div class="app-mock-data-warning">
         ⚠ MOCK DATA
     </div>
 }
@@ -27,7 +30,17 @@
             <div class="app-topbar-session">
                 @if (_session?.IsAuthenticated == true)
                 {
-                    <span class="app-topbar-session-pill">@_session.DisplayName @(_session.IsGuest ? "LOGGED IN" : _session.Status)</span>
+                    <span class="app-topbar-session-pill">
+                        @_session.DisplayName @(_session.IsGuest ? "LOGGED IN" : _session.Status)
+                        <button class="app-session-btn-logout" @onclick="LogoutAsync" title="Log Out">
+                            <span class="material-symbols-outlined">logout</span>
+                        </button>
+                    </span>
+                }
+                else if (_guestLoginEnabled)
+                {
+                    <RadzenButton Text="Guest Login" Icon="login" ButtonStyle="ButtonStyle.Secondary"
+                                  Size="ButtonSize.Small" Click="LoginAsGuestAsync" />
                 }
             </div>
         </nav>
@@ -43,6 +56,7 @@
 
 @code {
     private bool _isMockMode;
+    private bool _guestLoginEnabled;
     private PoUserSession? _session;
 
     protected override async Task OnInitializedAsync()
@@ -53,6 +67,7 @@
             // runs in "Testing" environment (integration / E2E test runs). Rule 10.
             var cfg = await Http.GetFromJsonAsync<ConfigResponse>("/api/config");
             _isMockMode = cfg?.IsMockMode ?? false;
+            _guestLoginEnabled = cfg?.GuestLoginEnabled ?? false;
         }
         catch
         {
@@ -69,6 +84,37 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initBackgroundCanvas");
+            await JS.InvokeVoidAsync("initNavbarScroll");
+        }
+    }
+
+    private async Task LoginAsGuestAsync()
+    {
+        var session = new PoUserSession(
+            LoginMode: "Guest",
+            DisplayName: "Guest User",
+            Email: "guest@punkouter.local",
+            IsGuest: true,
+            IsAuthenticated: true,
+            Status: "Active"
+        );
+        await AppSession.SaveAsync(session);
+        _session = session;
+        StateHasChanged();
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AppSession.ClearAsync();
+        _session = null;
+        StateHasChanged();
+    }
+
     private string NavClass(string href)
     {
         var current = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -78,5 +124,5 @@
     }
 
     // GoF: Value Object — immutable config response carrier.
-    private sealed record ConfigResponse(string ApiBase, bool IsMockMode);
+    private sealed record ConfigResponse(string ApiBase, bool IsMockMode, bool GuestLoginEnabled);
 }

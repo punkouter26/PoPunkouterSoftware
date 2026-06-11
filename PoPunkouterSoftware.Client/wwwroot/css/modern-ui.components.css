@@ -161,6 +161,26 @@
     gap: 0.9rem;
 }
 
+.app-list-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--app-border);
+    color: var(--app-text-muted);
+    line-height: 1.35;
+}
+
+.app-list-row:last-child {
+    border-bottom: 0;
+}
+
+.app-list-row .material-symbols-outlined {
+    flex: 0 0 auto;
+    font-size: 1rem;
+    color: var(--app-accent);
+}
+
 .app-toolbar {
     display: flex;
     align-items: center;
@@ -295,6 +315,27 @@
     border-radius: var(--app-radius-lg);
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid var(--app-border);
+}
+
+@media (max-width: 640px) {
+    .app-card:has(.rz-chart) {
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+
+    .app-card .rz-chart {
+        min-width: 560px;
+    }
+
+    .app-card .rz-chart svg text {
+        font-size: 10px;
+    }
+
+    .app-table-frame .rz-cell-data,
+    .app-table-frame .rz-column-title {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
 }
 
 .app-tab-pane {
@@ -742,3 +783,120 @@
     color: #fff !important;
 }
 
+/* Floating Navbar Transitions */
+.rz-header {
+    position: fixed !important;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(calc(var(--app-content-width) + 2rem), 96%) !important;
+    height: 64px !important;
+    border-radius: 999px;
+    border: 1px solid var(--app-border) !important;
+    background: rgba(10, 22, 33, 0.72) !important;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
+    z-index: 1000;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s !important;
+}
+.rz-header.nav-hidden {
+    transform: translate(-50%, -100px);
+}
+.rz-header.nav-scrolled {
+    background: rgba(7, 15, 23, 0.85) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45) !important;
+}
+.rz-body {
+    padding-top: 80px !important;
+}
+
+/* 3D Tilt Portfolio Card Overrides */
+.app-portfolio-card {
+    transform-style: preserve-3d;
+    transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s, box-shadow 0.3s;
+    position: relative;
+}
+.app-portfolio-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle 220px at var(--glow-x, 50%) var(--glow-y, 50%), rgba(141, 226, 197, 0.12), transparent 80%);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.app-portfolio-card:hover::before {
+    opacity: 1;
+}
+.app-portfolio-card:hover {
+    box-shadow: var(--app-shadow-lg) !important;
+    border-color: rgba(141, 226, 197, 0.3) !important;
+}
+
+/* Mini Chart SVG Glow effects */
+.app-mini-chart {
+    overflow: visible;
+}
+.app-mini-chart rect {
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), fill 0.3s;
+    transform-origin: bottom;
+}
+.app-mini-chart:hover rect {
+    transform: scaleY(1.3);
+    fill: var(--app-accent) !important;
+}
+
+/* One-tap Copy Clipboard Micro-Toast */
+.app-micro-toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translate(-50%, 20px);
+    background: rgba(18, 36, 50, 0.95);
+    border: 1px solid var(--app-accent-strong);
+    color: var(--app-text);
+    padding: 0.65rem 1.35rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    box-shadow: var(--app-shadow-lg);
+    backdrop-filter: blur(12px);
+    pointer-events: none;
+    z-index: 99999;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.app-micro-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* Click to Copy CLI interactive styles */
+.app-copy-click {
+    cursor: pointer;
+    position: relative;
+    padding-right: 2.2rem !important;
+    transition: var(--app-transition-smooth);
+}
+.app-copy-click:hover {
+    background: rgba(141, 226, 197, 0.08) !important;
+    border-color: rgba(141, 226, 197, 0.3) !important;
+}
+.app-copy-click::after {
+    content: "content_copy";
+    font-family: 'Material Symbols Outlined';
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%) scale(0.9);
+    font-size: 0.9rem;
+    opacity: 0.45;
+    color: var(--app-accent-strong);
+    transition: opacity 0.2s, transform 0.2s;
+}
+.app-copy-click:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}

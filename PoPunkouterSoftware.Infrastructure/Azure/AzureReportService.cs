@@ -151,6 +151,12 @@ public class AzureReportService
         Report("Scanning storage accounts…", 70);
         var storageInv = await RunTimedStepAsync("Scanning storage accounts", () => GetStorageInventoryAsync(allResources, armToken, ct));
 
+        Report("Scanning AI services…", 72);
+        var aiServicesInv = await RunTimedStepAsync("Scanning AI services", () => GetAiServicesInventoryAsync(allResources, armToken, ct));
+
+        Report("Scanning Log Analytics…", 73);
+        var logAnalyticsInv = await RunTimedStepAsync("Scanning Log Analytics", () => GetLogAnalyticsInventoryAsync(allResources, armToken, ct));
+
         Report("Analysing free tiers & zombies…", 74);
         var freeTier = AnalyzeFreeTiers(allResources);
         var zombies = DetectZombies(connectedSvcs, metricsMap);
@@ -263,6 +269,8 @@ public class AzureReportService
             SslExpiry = sslExpiry,
             ConfigDrift = configDrift,
             StorageInventory = storageInv,
+            AiServicesInventory = aiServicesInv,
+            LogAnalyticsInventory = logAnalyticsInv,
             AppsJsonDiff = appsDiff,
             AppInsightsMetrics = appInsights,
             ZombieApps = zombies,
@@ -850,6 +858,214 @@ public class AzureReportService
         var items = await Task.WhenAll(storages.Select(CheckOneAsync));
         results.AddRange(items.OfType<StorageItem>());
         return results;
+    }
+
+    #endregion
+
+    #region Step 8b: Inventory AI Services
+
+    private async Task<List<AiServiceInventoryItem>> GetAiServicesInventoryAsync(
+        List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
+    {
+        var accounts = allResources
+            .Where(r => r.ResourceType.ToString().Equals(
+                "Microsoft.CognitiveServices/accounts", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (accounts.Count == 0)
+            return [];
+
+        var client = _httpClientFactory.CreateClient();
+
+        async Task<AiServiceInventoryItem> InspectAsync(GenericResourceData account)
+        {
+            string? endpoint = null;
+            var deployments = new List<string>();
+
+            if (armToken is not null)
+            {
+                try
+                {
+                    using var req = new HttpRequestMessage(HttpMethod.Get,
+                        $"https://management.azure.com{account.Id}?api-version=2023-05-01");
+                    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
+                    using var resp = await client.SendAsync(req, ct);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var json = await resp.Content.ReadAsStringAsync(ct);
+                        using var doc = JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("properties", out var props)
+                            && props.TryGetProperty("endpoint", out var ep))
+                            endpoint = ep.GetString();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "AI service detail fetch failed for {Name}", account.Name);
+                }
+
+                try
+                {
+                    using var req = new HttpRequestMessage(HttpMethod.Get,
+                        $"https://management.azure.com{account.Id}/deployments?api-version=2023-05-01");
+                    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
+                    using var resp = await client.SendAsync(req, ct);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var json = await resp.Content.ReadAsStringAsync(ct);
+                        using var doc = JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("value", out var value)
+                            && value.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var deployment in value.EnumerateArray())
+                            {
+                                var name = deployment.TryGetProperty("name", out var nameEl)
+                                    ? nameEl.GetString()
+                                    : null;
+                                var model = deployment.TryGetProperty("properties", out var props)
+                                    && props.TryGetProperty("model", out var modelEl)
+                                    && modelEl.TryGetProperty("name", out var modelName)
+                                        ? modelName.GetString()
+                                        : null;
+                                deployments.Add(string.IsNullOrWhiteSpace(model) ? name ?? "deployment" : $"{name} ({model})");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "AI deployment fetch failed for {Name}", account.Name);
+                }
+            }
+
+            var sku = account.Sku?.Name?.ToString();
+            var kind = account.Kind;
+            var risk = "watch";
+            var recommendation = "Track usage and keep budget alerts enabled.";
+
+            if (string.Equals(sku, "S0", StringComparison.OrdinalIgnoreCase) && deployments.Count == 0)
+            {
+                risk = "cleanup";
+                recommendation = "S0 account has no deployments. Confirm it is unused, then delete or downgrade.";
+            }
+            else if (string.Equals(sku, "S0", StringComparison.OrdinalIgnoreCase))
+            {
+                risk = "cost";
+                recommendation = "Paid AI account. Review token/call volume and cap spend with Azure budgets.";
+            }
+            else if (string.Equals(sku, "F0", StringComparison.OrdinalIgnoreCase))
+            {
+                risk = "ok";
+                recommendation = "Free-tier account. Keep unless it duplicates another AI endpoint.";
+            }
+
+            return new AiServiceInventoryItem
+            {
+                Name = account.Name,
+                ResourceGroup = account.Id?.ResourceGroupName,
+                Location = account.Location.Name,
+                Kind = kind,
+                Sku = sku,
+                Endpoint = endpoint,
+                DeploymentCount = deployments.Count,
+                Deployments = deployments.OrderBy(x => x).ToList(),
+                Recommendation = recommendation,
+                RiskLevel = risk,
+            };
+        }
+
+        var results = await Task.WhenAll(accounts.Select(InspectAsync));
+        return results.OrderBy(x => x.RiskLevel).ThenBy(x => x.Name).ToList();
+    }
+
+    #endregion
+
+    #region Step 8c: Inventory Log Analytics
+
+    private async Task<List<LogAnalyticsWorkspaceItem>> GetLogAnalyticsInventoryAsync(
+        List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
+    {
+        var workspaces = allResources
+            .Where(r => r.ResourceType.ToString().Equals(
+                "Microsoft.OperationalInsights/workspaces", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (workspaces.Count == 0)
+            return [];
+
+        var client = _httpClientFactory.CreateClient();
+
+        async Task<LogAnalyticsWorkspaceItem> InspectAsync(GenericResourceData workspace)
+        {
+            string? sku = workspace.Sku?.Name?.ToString();
+            int? retention = null;
+            double? dailyQuota = null;
+
+            if (armToken is not null)
+            {
+                try
+                {
+                    using var req = new HttpRequestMessage(HttpMethod.Get,
+                        $"https://management.azure.com{workspace.Id}?api-version=2022-10-01");
+                    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
+                    using var resp = await client.SendAsync(req, ct);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var json = await resp.Content.ReadAsStringAsync(ct);
+                        using var doc = JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("properties", out var props))
+                        {
+                            if (props.TryGetProperty("retentionInDays", out var ret) && ret.ValueKind == JsonValueKind.Number)
+                                retention = ret.GetInt32();
+                            if (props.TryGetProperty("workspaceCapping", out var cap)
+                                && cap.TryGetProperty("dailyQuotaGb", out var quota)
+                                && quota.ValueKind == JsonValueKind.Number)
+                                dailyQuota = quota.GetDouble();
+                        }
+                        if (doc.RootElement.TryGetProperty("sku", out var skuEl)
+                            && skuEl.TryGetProperty("name", out var skuName))
+                            sku = skuName.GetString();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Log Analytics detail fetch failed for {Name}", workspace.Name);
+                }
+            }
+
+            var risk = "ok";
+            var recommendation = "Retention and cap look reasonable.";
+            if (dailyQuota is null or <= 0)
+            {
+                risk = "cost";
+                recommendation = "No daily ingestion cap is visible. Set a cap such as 0.5-1 GB/day for hobby apps.";
+            }
+            else if (retention is > 30)
+            {
+                risk = "cost";
+                recommendation = "Retention is above 30 days. Reduce to 7-14 days if long history is not needed.";
+            }
+            else if (retention is null)
+            {
+                risk = "watch";
+                recommendation = "Retention was not reported. Verify retention and daily cap in Azure.";
+            }
+
+            return new LogAnalyticsWorkspaceItem
+            {
+                Name = workspace.Name,
+                ResourceGroup = workspace.Id?.ResourceGroupName,
+                Location = workspace.Location.Name,
+                Sku = sku,
+                RetentionInDays = retention,
+                DailyQuotaGb = dailyQuota,
+                Recommendation = recommendation,
+                RiskLevel = risk,
+            };
+        }
+
+        var results = await Task.WhenAll(workspaces.Select(InspectAsync));
+        return results.OrderByDescending(x => x.RiskLevel == "cost").ThenBy(x => x.Name).ToList();
     }
 
     #endregion

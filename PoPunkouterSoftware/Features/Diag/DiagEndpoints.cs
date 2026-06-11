@@ -423,6 +423,7 @@ internal static class DiagEndpoints
         builder.AppendLine("  <style>");
         builder.AppendLine("    :root { color-scheme: dark; }");
         builder.AppendLine("    body { margin: 0; font-family: Segoe UI, Arial, sans-serif; background: #08121a; color: #edf6fb; }");
+        builder.AppendLine("    * { box-sizing: border-box; }");
         builder.AppendLine("    main { max-width: 1040px; margin: 0 auto; padding: 32px 20px 48px; }");
         builder.AppendLine("    h1, h2 { margin: 0 0 12px; }");
         builder.AppendLine("    p { color: #b8d0df; }");
@@ -433,10 +434,11 @@ internal static class DiagEndpoints
         builder.AppendLine("    .ok { color: #8de2c5; }");
         builder.AppendLine("    .warn { color: #f8c36b; }");
         builder.AppendLine("    table { width: 100%; border-collapse: collapse; margin-top: 8px; }");
-        builder.AppendLine("    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(173,196,212,0.16); }");
+        builder.AppendLine("    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(173,196,212,0.16); overflow-wrap: anywhere; word-break: break-word; }");
         builder.AppendLine("    th { width: 34%; color: #adc4d4; font-weight: 600; }");
         builder.AppendLine("    ul { margin: 8px 0 0; padding-left: 18px; }");
-        builder.AppendLine("    code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; }");
+        builder.AppendLine("    code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; overflow-wrap: anywhere; white-space: normal; }");
+        builder.AppendLine("    @media (max-width: 640px) { main { padding: 22px 12px 36px; } table, tbody, tr, th, td { display: block; width: 100%; } tr { padding: 8px 0; border-bottom: 1px solid rgba(173,196,212,0.16); } th, td { border-bottom: 0; padding: 4px 0; } th { color: #8de2c5; } .grid { grid-template-columns: minmax(0, 1fr); } }");
         builder.AppendLine("  </style>");
         builder.AppendLine("</head>");
         builder.AppendLine("<body>");

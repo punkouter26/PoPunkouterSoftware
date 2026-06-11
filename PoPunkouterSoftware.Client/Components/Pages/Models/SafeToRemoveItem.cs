@@ -7,8 +7,11 @@ namespace PoPunkouterSoftware.Client.Components.Pages.Models;
 public record SafeToRemoveItem
 {
     public string Name { get; init; } = "";
+    public string? ResourceGroup { get; init; }
+    public string Type { get; init; } = "";
     public string Source { get; init; } = "";
     public string Reason { get; init; } = "";
     public string Confidence { get; init; } = "";
+    public string? EstimatedMonthlyCost { get; init; }
     public string? Command { get; init; }
 }

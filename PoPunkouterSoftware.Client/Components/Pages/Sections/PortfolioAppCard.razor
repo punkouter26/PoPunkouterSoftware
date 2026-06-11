@@ -1,7 +1,8 @@
 @using PoPunkouterSoftware.Shared.Azure
 @using Radzen
+@inject IJSRuntime JS
 
-<RadzenCard class="app-card app-glow app-portfolio-card" Style="@CardStyle">
+<RadzenCard @ref="_cardRef" class="app-card app-glow app-portfolio-card" data-status="@DisplayStatus.ToLower()">
     <div class="app-status-row">
         <div>
             <div class="app-kicker">App</div>
@@ -98,13 +99,15 @@
     }
 
     <div class="app-actions">
-        <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Disabled="@(string.IsNullOrEmpty(App.Url))" Click="OnOpenAppClicked" />
-        <RadzenSplitButton Text="Azure" Icon="cloud" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined">
-            <ChildContent>
-                <RadzenButton Text="Dashboard" Icon="cloud" Click="OnOpenAdminClicked" />
-                <RadzenButton Text="Trends" Icon="show_chart" Click="OnOpenTrendsClicked" />
-            </ChildContent>
-        </RadzenSplitButton>
+        <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary"
+                      Disabled="@(string.IsNullOrEmpty(App.Url))" Click="OnOpenAppClicked"
+                      aria-label="@($"Open {App.Name} app")" title="@($"Open {App.Name} app")" />
+        <RadzenButton Text="Dashboard" Icon="cloud" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                      Variant="Variant.Outlined" Click="OnOpenAdminClicked"
+                      aria-label="Azure dashboard" title="Azure dashboard" />
+        <RadzenButton Text="Trends" Icon="show_chart" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                      Variant="Variant.Outlined" Click="OnOpenTrendsClicked"
+                      aria-label="Trends" title="Trends" />
     </div>
 </RadzenCard>
 
@@ -117,6 +120,8 @@
     [Parameter] public EventCallback<string> OpenAppRequested { get; set; }
     [Parameter] public EventCallback OpenAdminRequested { get; set; }
     [Parameter] public EventCallback<string> OpenTrendsRequested { get; set; }
+
+    private RadzenCard? _cardRef;
 
     private string DisplayStatus =>
         !string.IsNullOrWhiteSpace(Live?.HttpStatus)
@@ -141,12 +146,11 @@
         _ => BadgeStyle.Warning,
     };
 
-    private string CardStyle
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        get
+        if (firstRender && _cardRef is not null)
         {
-            var cardBorder = IsActive ? "var(--app-accent-strong)" : (Live?.HttpStatus == "broken" ? "var(--rz-danger)" : "var(--app-border-strong)");
-            return $"display:flex;flex-direction:column;gap:1rem;border-left:4px solid {cardBorder}";
+            await JS.InvokeVoidAsync("initTiltCard", _cardRef.Element);
         }
     }
 
