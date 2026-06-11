@@ -11,7 +11,7 @@ internal static class AiEndpointGuard
 
         var endpoint   = configuration["AzureOpenAI:Endpoint"];
         var apiKey     = configuration["AzureOpenAI:ApiKey"];
-        var deployment = configuration["AzureOpenAI:DeploymentName"] ?? "gpt-4o";
+        var deployment = configuration["AzureOpenAI:DeploymentName"] ?? "gpt-5.4-nano";
 
         if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
             return (Results.Ok(new { disabled = true, message = "Azure OpenAI is not configured. Add AzureOpenAI:Endpoint and AzureOpenAI:ApiKey to configuration or Key Vault." }), null);

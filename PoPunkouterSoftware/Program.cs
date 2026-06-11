@@ -258,8 +258,7 @@ try
             {
                 remote = new[]
                 {
-                    new { id = "azure-gpt-4o", label = "Azure OpenAI GPT-4o" },
-                    new { id = "azure-gpt-4.1-mini", label = "Azure OpenAI GPT-4.1 Mini" }
+                    new { id = "azure-gpt-5.4-nano", label = "Azure OpenAI GPT-5.4 Nano" }
                 },
                 browser = new[]
                 {
