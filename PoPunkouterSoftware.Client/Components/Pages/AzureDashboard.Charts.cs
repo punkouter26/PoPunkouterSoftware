@@ -144,19 +144,6 @@ public partial class AzureDashboard
         BurnRateChartData.Count > 20 ? 5 :
         BurnRateChartData.Count > 10 ? 3 : 1;
 
-    // ── Resource type drill-down (mutates state) ──────────────────────────────
-    private void SelectResourceType(string typeLabel)
-    {
-        if (_selectedResourceType == typeLabel)
-        {
-            _selectedResourceType = null;
-            _selectedResourceDetails = null;
-            return;
-        }
-        _selectedResourceType = typeLabel;
-        _selectedResourceDetails = report?.AllResourceSummary?.ResourcesByType.GetValueOrDefault(typeLabel);
-    }
-
     // ── CI/CD badge helpers ───────────────────────────────────────────────────
     private static BadgeStyle TargetBadge(string? target) => target switch
     {

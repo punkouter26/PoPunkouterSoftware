@@ -27,39 +27,26 @@ namespace PoPunkouterSoftware.Infrastructure.Azure;
 /// Works locally (via az login / VS login) and on Azure (via Managed Identity).
 /// Produces the same AzureReport structure consumed by AzureDashboard.razor.
 /// </summary>
-public class AzureReportService
+public class AzureReportService(
+    ILogger<AzureReportService> logger,
+    IHttpClientFactory httpClientFactory,
+    IWebHostEnvironment env,
+    IConfiguration config,
+    AzureReportStore repository,
+    ArmClient arm,
+    TokenCredential credential,
+    DowntimeDiagnosisService downtimeDiagnosis,
+    PlanRecommendationService planRecommendation)
 {
-    private readonly ILogger<AzureReportService> _logger;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IWebHostEnvironment _env;
-    private readonly IConfiguration _config;
-    private readonly AzureReportStore _repository;
-    private readonly ArmClient _arm;
-    private readonly TokenCredential _credential;
-    private readonly DowntimeDiagnosisService _downtimeDiagnosis;
-    private readonly PlanRecommendationService _planRecommendation;
-
-    public AzureReportService(
-        ILogger<AzureReportService> logger,
-        IHttpClientFactory httpClientFactory,
-        IWebHostEnvironment env,
-        IConfiguration config,
-        AzureReportStore repository,
-        ArmClient arm,
-        TokenCredential credential,
-        DowntimeDiagnosisService downtimeDiagnosis,
-        PlanRecommendationService planRecommendation)
-    {
-        _logger = logger;
-        _httpClientFactory = httpClientFactory;
-        _env = env;
-        _config = config;
-        _repository = repository;
-        _arm = arm;
-        _credential = credential;
-        _downtimeDiagnosis = downtimeDiagnosis;
-        _planRecommendation = planRecommendation;
-    }
+    private readonly ILogger<AzureReportService> _logger = logger;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
+    private readonly IWebHostEnvironment _env = env;
+    private readonly IConfiguration _config = config;
+    private readonly AzureReportStore _repository = repository;
+    private readonly ArmClient _arm = arm;
+    private readonly TokenCredential _credential = credential;
+    private readonly DowntimeDiagnosisService _downtimeDiagnosis = downtimeDiagnosis;
+    private readonly PlanRecommendationService _planRecommendation = planRecommendation;
 
     #region Public Entry Point
 

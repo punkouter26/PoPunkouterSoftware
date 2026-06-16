@@ -1,7 +1,6 @@
+/* Layout (display/flex/gap) inherited from global .app-portfolio-card in modern-ui.components.css.
+   This scoped sheet only adds the status-driven left border accent. */
 ::deep .app-portfolio-card {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
     border-left: 4px solid var(--app-border-strong);
 }
 ::deep .app-portfolio-card[data-status="active"] {

@@ -93,6 +93,12 @@ public sealed class ServicePingerService : BackgroundService
             {
                 var result = await PingOneAsync(client, svc.Name, svc.FriendlyName, svc.Url!, ct);
                 _logger.LogDebug("Pinger: {Name} -> {Status} ({Ms} ms)", svc.Name, result.Status, result.ResponseTimeMs);
+
+                // Metrics: per-service up/down gauge + response-time histogram so reachability
+                // and latency trends are alertable without parsing logs. (questions 4 & 6)
+                var serviceTag = new KeyValuePair<string, object?>("service", svc.Name);
+                Telemetry.PingerServiceUp.Record(result.Status == "reachable" ? 1 : 0, serviceTag);
+                Telemetry.PingerResponseTime.Record(result.ResponseTimeMs, serviceTag);
                 return result;
             }
             finally
@@ -104,6 +110,8 @@ public sealed class ServicePingerService : BackgroundService
         results.AddRange(await Task.WhenAll(tasks));
 
         _cache.Set(CacheKey, new PingerSnapshot(DateTime.UtcNow, results), TimeSpan.FromMinutes(30));
+        // Heartbeat: a flat sweep-counter rate means the background loop has silently died. (question 5)
+        Telemetry.PingerSweeps.Add(1);
         _logger.LogInformation("Pinger sweep complete: {Total} services probed", results.Count);
     }
 

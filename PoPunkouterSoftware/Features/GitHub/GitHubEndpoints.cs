@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using PoPunkouterSoftware.Infrastructure;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -45,7 +46,7 @@ internal static class GitHubEndpoints
 
             // ── Last commit ──────────────────────────────────────────────
             DateTime? lastCommitDate = null;
-            var commitsResp = await client.GetAsync(
+            var commitsResp = await GetTrackedAsync(client,
                 $"https://api.github.com/repos/{repo}/commits?per_page=1");
 
             if (commitsResp.IsSuccessStatusCode)
@@ -78,7 +79,7 @@ internal static class GitHubEndpoints
 
             // ── 8-week sparkline (participation stats) ───────────────────
             int[] weeklyCommits = Array.Empty<int>();
-            var statsResp = await client.GetAsync(
+            var statsResp = await GetTrackedAsync(client,
                 $"https://api.github.com/repos/{repo}/stats/participation");
 
             if (statsResp.IsSuccessStatusCode)
@@ -110,7 +111,7 @@ internal static class GitHubEndpoints
             int openIssues = 0;
             try
             {
-                var repoResp = await client.GetAsync($"https://api.github.com/repos/{repo}");
+                var repoResp = await GetTrackedAsync(client, $"https://api.github.com/repos/{repo}");
                 if (repoResp.IsSuccessStatusCode)
                 {
                     var repoJson = await repoResp.Content.ReadAsStringAsync();
@@ -120,7 +121,7 @@ internal static class GitHubEndpoints
                     openIssues = rd.RootElement.GetProperty("open_issues_count").GetInt32();
                 }
 
-                var readmeResp = await client.GetAsync($"https://api.github.com/repos/{repo}/readme");
+                var readmeResp = await GetTrackedAsync(client, $"https://api.github.com/repos/{repo}/readme");
                 hasReadme = readmeResp.IsSuccessStatusCode;
             }
             catch { /* non-fatal */ }
@@ -152,5 +153,20 @@ internal static class GitHubEndpoints
             logger.LogWarning(ex, "GitHub activity fetch failed for {Repo}", repo);
             return Results.Ok(new { lastCommitDate = (DateTime?)null, weeklyCommits = Array.Empty<int>(), healthScore = 0 });
         }
+    }
+
+    /// <summary>
+    /// GET wrapper that records a GitHub call metric (by status_class) and the remaining
+    /// rate-limit budget from the X-RateLimit-Remaining header. (question 9)
+    /// </summary>
+    private static async Task<HttpResponseMessage> GetTrackedAsync(HttpClient client, string url)
+    {
+        var resp = await client.GetAsync(url);
+        Telemetry.GitHubCalls.Add(1,
+            new KeyValuePair<string, object?>("status_class", Telemetry.StatusClass((int)resp.StatusCode)));
+        if (resp.Headers.TryGetValues("X-RateLimit-Remaining", out var values)
+            && long.TryParse(values.FirstOrDefault(), out var remaining))
+            Telemetry.GitHubRateLimitRemaining.Record(remaining);
+        return resp;
     }
 }

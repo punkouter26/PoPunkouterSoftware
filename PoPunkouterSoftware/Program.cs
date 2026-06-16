@@ -31,8 +31,10 @@ try
         Math.Max(minCompletionPortThreads, builder.Configuration.GetValue("ThreadPool:MinCompletionPortThreads", 100)));
 
     // ─── Azure Key Vault — default to shared PoShared vault unless overridden ───
+    // Skipped under the "Testing" environment so integration/E2E runs are hermetic
+    // and never bind to (or leak secrets from) the real shared vault.
     var kvUriStr = builder.Configuration["KeyVault:Uri"] ?? builder.Configuration["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
-    if (!string.IsNullOrWhiteSpace(kvUriStr))
+    if (!builder.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(kvUriStr))
     {
         try
         {
@@ -52,7 +54,12 @@ try
     // App Insights / Azure Monitor telemetry is handled exclusively by OpenTelemetry
     // (Azure.Monitor.OpenTelemetry.AspNetCore). The Serilog.Sinks.ApplicationInsights
     // package was removed to prevent duplicate traces/logs in Application Insights.
+    // Connection string is no longer committed to appsettings.json — it is supplied at
+    // runtime via the Key Vault secret 'ApplicationInsights--ConnectionString' (mapped to
+    // ApplicationInsights:ConnectionString) or the APPLICATIONINSIGHTS_CONNECTION_STRING env var.
     var aiConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+    if (string.IsNullOrWhiteSpace(aiConnectionString))
+        aiConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
     // CorrelationId enricher requires IHttpContextAccessor
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -90,7 +97,12 @@ try
     builder.Services.AddSingleton(TimeProvider.System);
 
     // ─── OpenTelemetry + Azure Monitor (only when connection string is present) ──
-    var otelBuilder = builder.Services.AddOpenTelemetry();
+    // Custom application metrics (RED on external dependencies + job heartbeats) are
+    // defined in PoPunkouterSoftware.Infrastructure.Telemetry and exported by registering
+    // the meter source here. They flow to Azure Monitor when a connection string is set;
+    // without one they are still recorded in-process (and harmless if never scraped).
+    var otelBuilder = builder.Services.AddOpenTelemetry()
+        .WithMetrics(m => m.AddMeter(PoPunkouterSoftware.Infrastructure.Telemetry.MeterName));
     if (!string.IsNullOrWhiteSpace(aiConnectionString))
     {
         otelBuilder.UseAzureMonitor(o => o.ConnectionString = aiConnectionString);
@@ -294,14 +306,9 @@ try
     app.MapHealthEndpoints();
     app.MapDiagEndpoints();
     app.MapGitHubEndpoints();
-    app.MapFixPlanEndpoints();
     app.MapInfraEndpoints();
-    // New feature endpoints
     app.MapHub<RefreshHub>("/hubs/refresh");
     app.MapPingerEndpoints();
-    app.MapAppServiceControlEndpoints();
-    app.MapNarrativeEndpoints();
-    app.MapIncidentEndpoints();
     app.MapFallback((HttpContext ctx) =>
         Results.NotFound(new
         {

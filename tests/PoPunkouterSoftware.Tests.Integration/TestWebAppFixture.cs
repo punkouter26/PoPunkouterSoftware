@@ -15,6 +15,10 @@ public class TestWebApp : WebApplicationFactory<Program>
         {
             cfg.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                // Disable Key Vault for hermetic tests. Program.cs checks "KeyVault:Uri"
+                // BEFORE "AzureKeyVaultUri", so both must be cleared or the real shared
+                // vault loads and leaks secrets (e.g. Authentication:Microsoft:ClientId).
+                ["KeyVault:Uri"] = "",
                 ["AzureKeyVaultUri"] = "",
                 ["ApplicationInsights:ConnectionString"] = "",
                 ["AzureTableStorage:ConnectionString"] = "",

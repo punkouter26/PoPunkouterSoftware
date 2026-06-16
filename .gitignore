@@ -142,3 +142,11 @@ Desktop.ini
 *.dmp
 *.stackdump
 core.*
+
+# Local tooling / report artifacts (generated, not source)
+.porun/
+TESTRESULTS/
+tests/PoPunkouterSoftware.Tests.E2E/test-results/
+# Stray local debug screenshots & docker logs at repo root
+/*.png
+/*.log

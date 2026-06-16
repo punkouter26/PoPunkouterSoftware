@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
+using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Shared.Azure;
 
@@ -52,8 +53,18 @@ internal static class DiagEndpoints
              Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Infrastructure.RefreshHub> hubCtx,
              RefreshSessionManager session) =>
         {
+            // Records one refresh-run sample tagged by outcome (success|failed|cancelled|collision).
+            static void RecordOutcome(string outcome) =>
+                Telemetry.RefreshRuns.Add(1, new KeyValuePair<string, object?>("outcome", outcome));
+
             if (!session.Lock.Wait(0))
+            {
+                // A refresh is already running — quantify collisions so we know if the lock is
+                // a frequent bottleneck rather than a rare race. (question 3)
+                RecordOutcome("collision");
+                logger.LogInformation("Refresh rejected — another refresh is already in progress (409).");
                 return Results.Problem(detail: "Refresh already in progress.", statusCode: 409);
+            }
 
             _ = Task.Run(async () =>
             {
@@ -93,16 +104,21 @@ internal static class DiagEndpoints
                     await File.WriteAllTextAsync(filePath, json, ct);
 
                     sw.Stop();
+                    // Metrics: a successful run with its wall-clock duration. (questions 1 & 2)
+                    RecordOutcome("success");
+                    Telemetry.RefreshDuration.Record(sw.Elapsed.TotalMilliseconds);
                     logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
                 }
                 catch (OperationCanceledException)
                 {
                     terminalError = "Refresh cancelled or timed out.";
+                    RecordOutcome("cancelled");
                     logger.LogWarning("Refresh cancelled or timed out");
                 }
                 catch (Exception ex)
                 {
                     terminalError = "Refresh failed. Check server logs for details.";
+                    RecordOutcome("failed");
                     logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
                 }
                 finally
@@ -218,97 +234,6 @@ internal static class DiagEndpoints
 
             return Results.Json(summaries);
         });
-
-        // ── Public status page data ───────────────────────────────────────────
-        // No auth required — only exposes HTTP status and response time.
-        app.MapGet("/api/status", async (AzureReportStore repository, IWebHostEnvironment env, CancellationToken ct) =>
-        {
-            // Build status page from history (newest first) — up to 30 samples per service
-            var historyResult = await repository.LoadHistoryAsync(maxEntries: 30, ct);
-            var history = historyResult.IsSuccess ? historyResult.Value ?? new() : new();
-
-            if (history.Count == 0)
-            {
-                // Fall back to latest report from Table Storage
-                var latestResult = await repository.LoadAsync(ct);
-                if (latestResult.IsSuccess && latestResult.Value is not null)
-                {
-                    history.Add(latestResult.Value);
-                }
-                else
-                {
-                    // Final fallback: load from local azure-full-report.json file
-                    var reportPath = Path.Combine(GetDataDir(env), "azure-full-report.json");
-                    if (File.Exists(reportPath))
-                    {
-                        try
-                        {
-                            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                            var json = await File.ReadAllTextAsync(reportPath, ct);
-                            var fileReport = JsonSerializer.Deserialize<AzureReport>(json, opts);
-                            if (fileReport is not null)
-                                history.Add(fileReport);
-                        }
-                        catch { /* ignore deserialization errors — return empty report below */ }
-                    }
-                }
-            }
-
-            if (history.Count == 0)
-                return Results.Ok(new StatusPageReport { GeneratedAt = DateTime.UtcNow });
-
-            // Build per-service entries from history
-            var serviceMap = new Dictionary<string, ServiceStatusEntry>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var report in history)
-            {
-                var reportTime = report.GeneratedAt ?? DateTime.UtcNow;
-                foreach (var svc in report.WebServices?.Services ?? new())
-                {
-                    var sample = new StatusSample
-                    {
-                        At = reportTime,
-                        Status = svc.HttpStatus ?? "unknown",
-                        ResponseTimeMs = svc.Connectivity?.ResponseTime > 0 ? svc.Connectivity.ResponseTime : null,
-                    };
-
-                    if (serviceMap.TryGetValue(svc.Name, out var existing))
-                    {
-                        // Append sample — list is already ordered newest first since history is newest first
-                        serviceMap[svc.Name] = existing with
-                        {
-                            Samples = existing.Samples.Append(sample).ToList()
-                        };
-                    }
-                    else
-                    {
-                        // First occurrence = most recent report = current status
-                        serviceMap[svc.Name] = new ServiceStatusEntry
-                        {
-                            Name = svc.Name,
-                            FriendlyName = svc.FriendlyName,
-                            Url = svc.Url,
-                            CurrentStatus = svc.HttpStatus ?? "unknown",
-                            ResponseTimeMs = svc.Connectivity?.ResponseTime > 0 ? svc.Connectivity.ResponseTime : null,
-                            Samples = new List<StatusSample> { sample },
-                        };
-                    }
-                }
-            }
-
-            var statusReport = new StatusPageReport
-            {
-                GeneratedAt = history[0].GeneratedAt ?? DateTime.UtcNow,
-                Services = serviceMap.Values
-                    .OrderByDescending(s => s.CurrentStatus == "active" ? 0 : 1)
-                    .ThenBy(s => s.FriendlyName ?? s.Name)
-                    .ToList(),
-            };
-
-            return Results.Ok(statusReport);
-        })
-        .WithName("GetStatusPage")
-        .WithTags("Status");
 
         return app;
     }

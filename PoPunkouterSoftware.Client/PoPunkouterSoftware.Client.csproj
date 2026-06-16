@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
-    <!-- TargetFramework, Nullable, ImplicitUsings, TreatWarningsAsErrors inherited from Directory.Build.props -->
     <RootNamespace>PoPunkouterSoftware.Client</RootNamespace>
     <AssemblyName>PoPunkouterSoftware.Client</AssemblyName>
     <!-- Static assets from this project are served by the host server project at build time -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
   </PropertyGroup>
 
   <ItemGroup>

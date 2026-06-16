@@ -76,6 +76,12 @@
         gap: 0.5rem;
     }
 
+    /* Dashboard KPI cards: 2-up in portrait without cramping the numbers. */
+    .app-dashboard-summary {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.5rem;
+    }
+
     .app-stat-value {
         font-size: clamp(1.4rem, 5vw, 2rem);
     }
@@ -156,26 +162,6 @@
     text-align: center;
     letter-spacing: 0.05em;
 }
-
-.app-shell-toggler {
-    display: none;
-    flex-direction: column;
-    gap: 5px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.4rem;
-    margin-left: auto;
-}
-
-.app-shell-toggler span {
-    display: block;
-    width: 22px;
-    height: 2px;
-    background: var(--app-text);
-    border-radius: 2px;
-}
-
 @media (max-width: 640px) {
     .app-shell-toggler { display: flex; }
     .app-shell-nav { display: none; width: 100%; flex-direction: column; padding-bottom: 0.75rem; }

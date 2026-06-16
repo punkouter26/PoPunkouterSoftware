@@ -256,34 +256,6 @@ public record ReportDelta
     public List<string> NewOrphanedResources { get; init; } = new();
 }
 
-// ─── Public Status Page models ────────────────────────────────────────────────
-
-/// <summary>Data contract for the public /status page — safe to expose without auth.</summary>
-public record StatusPageReport
-{
-    public DateTime GeneratedAt { get; init; }
-    public List<ServiceStatusEntry> Services { get; init; } = new();
-}
-
-public record ServiceStatusEntry
-{
-    public string Name { get; init; } = "";
-    public string? FriendlyName { get; init; }
-    public string? Url { get; init; }
-    /// <summary>Most recent HTTP status from the latest report: active | broken | unreachable | unknown</summary>
-    public string CurrentStatus { get; init; } = "unknown";
-    public int? ResponseTimeMs { get; init; }
-    /// <summary>Historical samples from stored report history (newest first).</summary>
-    public List<StatusSample> Samples { get; init; } = new();
-}
-
-public record StatusSample
-{
-    public DateTime At { get; init; }
-    public string Status { get; init; } = "unknown";
-    public int? ResponseTimeMs { get; init; }
-}
-
 // ─── CI/CD Infrastructure Review models ──────────────────────────────────────
 
 /// <summary>Infrastructure and CI/CD review result for one GitHub repository.</summary>

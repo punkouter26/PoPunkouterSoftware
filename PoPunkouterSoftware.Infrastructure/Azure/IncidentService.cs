@@ -11,27 +11,19 @@ namespace PoPunkouterSoftware.Infrastructure.Azure;
 /// Detects service health transitions after each report refresh and stores them in Table Storage.
 /// Optionally POSTs to a configured webhook URL on each new incident.
 /// </summary>
-public sealed class IncidentService
+public sealed class IncidentService(
+    AzureReportStore repository,
+    IConfiguration config,
+    IHttpClientFactory httpFactory,
+    ILogger<IncidentService> logger)
 {
-    private readonly AzureReportStore _repository;
-    private readonly IConfiguration _config;
-    private readonly IHttpClientFactory _httpFactory;
-    private readonly ILogger<IncidentService> _logger;
+    private readonly AzureReportStore _repository = repository;
+    private readonly IConfiguration _config = config;
+    private readonly IHttpClientFactory _httpFactory = httpFactory;
+    private readonly ILogger<IncidentService> _logger = logger;
 
     // Table Storage constants
     private const string PartitionKey = "incidents";
-
-    public IncidentService(
-        AzureReportStore repository,
-        IConfiguration config,
-        IHttpClientFactory httpFactory,
-        ILogger<IncidentService> logger)
-    {
-        _repository = repository;
-        _config = config;
-        _httpFactory = httpFactory;
-        _logger = logger;
-    }
 
     /// <summary>
     /// Compares <paramref name="current"/> report with the previous persisted report,

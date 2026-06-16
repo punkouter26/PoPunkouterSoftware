@@ -39,11 +39,11 @@
             <div class="app-grid metrics" style="min-width:min(100%, 520px);">
                 <div class="app-metric-card">
                     <strong>@filteredApps.Count</strong>
-                    <span class="app-note">Apps currently shown</span>
+                    <span class="app-note">Healthy apps shown</span>
                 </div>
                 <div class="app-metric-card">
-                    <strong>@CountAppsByStatus("active")</strong>
-                    <span class="app-note">Active portfolio items</span>
+                    <strong>@AverageResponseLabel</strong>
+                    <span class="app-note">Avg response time</span>
                 </div>
                 <div class="app-metric-card">
                     <strong>@CountTrackedRepos()</strong>
@@ -88,6 +88,7 @@
     // ── Apps ─────────────────────────────────────────────────────────
     private IEnumerable<AppModel>? apps;
     private List<AppModel> filteredApps = new();
+    private List<WebService> _activeServices = new();
     private Dictionary<string, WebService> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, GitHubActivity> _ghActivity = new(StringComparer.OrdinalIgnoreCase);
     private bool _ghLoaded;
@@ -126,6 +127,13 @@
             _liveByUrl = services
                 .Where(s => !string.IsNullOrEmpty(s.Url))
                 .ToDictionary(s => s.Url!, StringComparer.OrdinalIgnoreCase);
+            // Single source of truth for "active apps": the exact same predicate the Ops
+            // dashboard counts as Operational (ByStatusInfo.Active = HttpStatus == "active").
+            // Driving the home portfolio off this list keeps "Healthy apps shown" structurally
+            // in lockstep with the dashboard's "Operational" total — they cannot drift.
+            _activeServices = services
+                .Where(s => string.Equals(s.HttpStatus, "active", StringComparison.OrdinalIgnoreCase))
+                .ToList();
             ApplyDefaultSort();
             await InvokeAsync(StateHasChanged);
         }
@@ -139,7 +147,10 @@
 
     private async Task LoadGitHubActivityAsync()
     {
-        var repos = filteredApps
+        // Derive repos from the full inventory, not filteredApps: this runs concurrently
+        // with LoadLiveStatusAsync, so filteredApps is still empty here (the health filter
+        // hides everything until live status arrives). Using `apps` makes it timing-independent.
+        var repos = (apps ?? Enumerable.Empty<AppModel>())
             .Where(a => !string.IsNullOrEmpty(a.GithubRepo))
             .Select(a => a.GithubRepo!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -177,36 +188,40 @@
 
     private void ApplyDefaultSort()
     {
-        var statusRank = (AppModel a) => a.Status?.ToLower() switch { "active" => 0, "inactive" => 1, _ => 2 };
+        // Build the portfolio from the live Azure inventory — one card per active web
+        // service — so filteredApps.Count IS the dashboard's "Operational" count by
+        // construction. apps.json is now presentation metadata (description, tech,
+        // GitHub repo), matched onto the service by host; it no longer decides which
+        // apps appear, so the two totals stay in sync as the inventory changes.
+        var metaByHost = (apps ?? Enumerable.Empty<AppModel>())
+            .Select(a => (host: HostOf(a.Url), app: a))
+            .Where(x => x.host is not null)
+            .GroupBy(x => x.host!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().app, StringComparer.OrdinalIgnoreCase);
 
-        filteredApps = (apps ?? Enumerable.Empty<AppModel>())
-            .Where(a =>
+        filteredApps = _activeServices
+            .Select(s =>
             {
-                // When live data has not loaded yet, defer to loading state.
-                if (_liveByUrl.Count == 0) return false;
-
-                var live = GetLiveStatus(a.Url);
-
-                // Azure error/splash page — hide (not a real app response).
-                if (live?.Connectivity?.IsAzureErrorPage == true) return false;
-
-                // Has a live match — show regardless of status (active/broken/unreachable).
-                if (live is not null) return true;
-
-                // No live match. If this is an App Service, it's a ghost — hide it.
-                // Static Web Apps are not discovered by the Azure scanner yet, so keep those.
-                var isAppService = a.Technologies?.Any(t => t.Contains("App Service", StringComparison.OrdinalIgnoreCase)) == true;
-                if (isAppService) return false;
-
-                // Static Web Apps or other non-App-Service types — keep but will show "unverified".
-                return true;
+                var host = HostOf(s.Url);
+                var meta = host is not null && metaByHost.TryGetValue(host, out var m) ? m : null;
+                var name = meta?.Name
+                    ?? (string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName);
+                return new AppModel
+                {
+                    Name = name,
+                    Status = "active",
+                    Description = meta?.Description ?? "",
+                    Url = s.Url ?? meta?.Url ?? "",
+                    Technologies = meta?.Technologies,
+                    GithubRepo = meta?.GithubRepo,
+                };
             })
-            .GroupBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.OrderBy(statusRank).First())
-            .OrderBy(a => statusRank(a))
-            .ThenBy(a => a.Name)
+            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    private static string? HostOf(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host.ToLowerInvariant() : null;
 
     private void OpenApp(string url)
     {
@@ -224,18 +239,6 @@
 
     private int CountTrackedRepos() =>
         filteredApps.Count(a => !string.IsNullOrWhiteSpace(a.GithubRepo) && _ghActivity.ContainsKey(a.GithubRepo));
-
-    private string ResolveAppStatus(AppModel app)
-    {
-        var live = GetLiveStatus(app.Url);
-        if (!string.IsNullOrWhiteSpace(live?.HttpStatus))
-            return live!.HttpStatus;
-
-        return app.Status ?? "unknown";
-    }
-
-    private int CountAppsByStatus(string status) =>
-        filteredApps.Count(a => string.Equals(ResolveAppStatus(a), status, StringComparison.OrdinalIgnoreCase));
 
     private string AverageResponseLabel
     {
