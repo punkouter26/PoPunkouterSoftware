@@ -23,9 +23,7 @@
                 <a href="/" class="app-topbar-link @NavClass("/")">
                     <span class="material-symbols-outlined">home</span>Portfolio
                 </a>
-                <a href="/azure" class="app-topbar-link @NavClass("/azure")">
-                    <span class="material-symbols-outlined">cloud</span>Azure
-                </a>
+                @* /azure is a hidden page — reachable by direct URL only, no nav link. *@
             </div>
             <div class="app-topbar-session">
                 @if (_session?.IsAuthenticated == true)

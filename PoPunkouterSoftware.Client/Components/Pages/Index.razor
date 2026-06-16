@@ -75,9 +75,7 @@
                                       GitHub="gh"
                                       GitHubLoaded="_ghLoaded"
                                       AzureDataLoaded="_liveStatusLoaded"
-                                      OpenAppRequested="OpenApp"
-                                      OpenAdminRequested="OpenAdmin"
-                                      OpenTrendsRequested="OpenTrends" />
+                                      OpenAppRequested="OpenApp" />
                 }
             </div>
         }
@@ -228,11 +226,6 @@
         if (!string.IsNullOrWhiteSpace(url))
             NavigationManager.NavigateTo(url, forceLoad: true);
     }
-
-    private void OpenAdmin() => NavigationManager.NavigateTo("/azure");
-
-    private void OpenTrends(string serviceName) => NavigationManager.NavigateTo($"/azure?tab=trends&service={Uri.EscapeDataString(serviceName)}");
-
 
     private int CountRecentRepos(int days) =>
         _ghActivity.Values.Count(gh => gh.LastCommitDate is DateTime lastCommit && (DateTime.UtcNow - lastCommit).TotalDays <= days);

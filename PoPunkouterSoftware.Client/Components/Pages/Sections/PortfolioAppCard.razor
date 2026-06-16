@@ -102,12 +102,6 @@
         <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary"
                       Disabled="@(string.IsNullOrEmpty(App.Url))" Click="OnOpenAppClicked"
                       aria-label="@($"Open {App.Name} app")" title="@($"Open {App.Name} app")" />
-        <RadzenButton Text="Dashboard" Icon="cloud" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
-                      Variant="Variant.Outlined" Click="OnOpenAdminClicked"
-                      aria-label="Azure dashboard" title="Azure dashboard" />
-        <RadzenButton Text="Trends" Icon="show_chart" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
-                      Variant="Variant.Outlined" Click="OnOpenTrendsClicked"
-                      aria-label="Trends" title="Trends" />
     </div>
 </RadzenCard>
 
@@ -118,8 +112,6 @@
     [Parameter] public bool GitHubLoaded { get; set; }
     [Parameter] public bool AzureDataLoaded { get; set; }
     [Parameter] public EventCallback<string> OpenAppRequested { get; set; }
-    [Parameter] public EventCallback OpenAdminRequested { get; set; }
-    [Parameter] public EventCallback<string> OpenTrendsRequested { get; set; }
 
     private RadzenCard? _cardRef;
 
@@ -159,8 +151,4 @@
         if (!string.IsNullOrWhiteSpace(App.Url))
             await OpenAppRequested.InvokeAsync(App.Url);
     }
-
-    private Task OnOpenAdminClicked() => OpenAdminRequested.InvokeAsync();
-
-    private Task OnOpenTrendsClicked() => OpenTrendsRequested.InvokeAsync(App.Name);
 }
