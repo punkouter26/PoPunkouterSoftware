@@ -1,0 +1,598 @@
+{
+  "nodes": [
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "type": "file",
+      "name": "AzureReportStore.cs",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "summary": "Persistence layer that stores and retrieves Azure reports in Azure Table Storage, with gzip compression, history tracking, and automatic recovery of a missing table.",
+      "tags": ["service", "persistence", "azure-table-storage", "repository"],
+      "complexity": "complex",
+      "languageNotes": "Uses gzip compression to fit large JSON reports within Table Storage entity limits."
+    },
+    {
+      "id": "class:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:AzureReportStore",
+      "type": "class",
+      "name": "AzureReportStore",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "lineRange": [17, 282],
+      "summary": "Repository that compresses, saves, loads, and versions AzureReport snapshots in Azure Table Storage with resilient table-recreation handling.",
+      "tags": ["repository", "persistence", "azure-table-storage"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:LoadAsync",
+      "type": "function",
+      "name": "LoadAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "lineRange": [43, 72],
+      "summary": "Loads the latest stored AzureReport entity from Table Storage and decompresses it, returning a Result wrapping success or failure.",
+      "tags": ["persistence", "load", "azure-table-storage"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:SaveAsync",
+      "type": "function",
+      "name": "SaveAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "lineRange": [74, 113],
+      "summary": "Serializes and gzip-compresses an AzureReport and upserts it as the latest entity plus a timestamped history row.",
+      "tags": ["persistence", "save", "azure-table-storage"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:LoadHistoryAsync",
+      "type": "function",
+      "name": "LoadHistoryAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "lineRange": [115, 150],
+      "summary": "Loads up to a maximum number of historical report snapshots ordered by timestamp for trend analysis.",
+      "tags": ["persistence", "history", "azure-table-storage"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:LoadPreviousAsync",
+      "type": "function",
+      "name": "LoadPreviousAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "lineRange": [152, 184],
+      "summary": "Loads the second-most-recent report snapshot used to compute deltas against the current run.",
+      "tags": ["persistence", "history", "delta"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:GetTableClientAsync",
+      "type": "function",
+      "name": "GetTableClientAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "lineRange": [210, 233],
+      "summary": "Lazily creates and caches an Azure Table client from connection string or managed identity, ensuring the table exists.",
+      "tags": ["persistence", "azure-table-storage", "factory"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs",
+      "type": "file",
+      "name": "DowntimeDiagnosisService.cs",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs",
+      "summary": "Diagnoses why broken/inactive web services are down by correlating ARM deployments, activity-log stop events, App Insights metrics, and GitHub workflow runs into per-service diagnoses.",
+      "tags": ["service", "azure", "diagnostics", "correlation"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs:DowntimeDiagnosisService",
+      "type": "class",
+      "name": "DowntimeDiagnosisService",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs",
+      "lineRange": [14, 376],
+      "summary": "Service that produces root-cause downtime diagnoses for broken services by combining deployment, activity-log, metrics, and CI signals.",
+      "tags": ["service", "azure", "diagnostics"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs:DiagnoseAsync",
+      "type": "function",
+      "name": "DiagnoseAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs",
+      "lineRange": [21, 375],
+      "summary": "Concurrently analyzes each broken service, inspecting deployments and activity logs for stop events and correlating metrics and workflow runs to infer the downtime cause.",
+      "tags": ["azure", "diagnostics", "correlation", "concurrency"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "type": "file",
+      "name": "IncidentService.cs",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "summary": "Detects service status transitions between report runs, records incidents to Azure Table Storage, optionally posts a webhook notification, and loads recent incidents.",
+      "tags": ["service", "azure", "incident-detection", "persistence"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:IncidentService",
+      "type": "class",
+      "name": "IncidentService",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "lineRange": [14, 216],
+      "summary": "Records and retrieves service incident entries, detecting status changes across report history and notifying via webhook.",
+      "tags": ["service", "incident-detection", "azure-table-storage"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:DetectAndRecordAsync",
+      "type": "function",
+      "name": "DetectAndRecordAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "lineRange": [32, 120],
+      "summary": "Compares the current report's service statuses against history, records new incidents to Table Storage, and posts a webhook when configured.",
+      "tags": ["incident-detection", "persistence", "webhook"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:LoadRecentAsync",
+      "type": "function",
+      "name": "LoadRecentAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "lineRange": [123, 164],
+      "summary": "Queries recent incident entries from Table Storage, tolerating a missing table by creating it and returning an empty list.",
+      "tags": ["incident-detection", "load", "azure-table-storage"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:PostWebhookAsync",
+      "type": "function",
+      "name": "PostWebhookAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "lineRange": [192, 207],
+      "summary": "Serializes detected incidents and POSTs them to a configured webhook endpoint, logging on non-success.",
+      "tags": ["webhook", "notification", "incident-detection"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs",
+      "type": "file",
+      "name": "PlanRecommendationService.cs",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs",
+      "summary": "Analyzes services with their config drift and downtime diagnoses to produce prioritized App Service Plan upgrade/downgrade recommendations with cost estimates.",
+      "tags": ["service", "azure", "recommendations", "cost-optimization"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:PlanRecommendationService",
+      "type": "class",
+      "name": "PlanRecommendationService",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs",
+      "lineRange": [10, 206],
+      "summary": "Produces prioritized plan-change recommendations per service based on drift, downtime, custom-domain indicators, and SKU cost tables.",
+      "tags": ["service", "recommendations", "cost-optimization"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:Analyze",
+      "type": "function",
+      "name": "Analyze",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs",
+      "lineRange": [21, 58],
+      "summary": "Builds drift and diagnosis lookup maps and produces a priority-ordered list of plan recommendations across all services.",
+      "tags": ["recommendations", "analysis", "cost-optimization"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:AnalyzeService",
+      "type": "function",
+      "name": "AnalyzeService",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs",
+      "lineRange": [60, 200],
+      "summary": "Evaluates a single service's SKU, drift issues, downtime, and custom-domain needs to recommend a target plan with rationale and cost delta.",
+      "tags": ["recommendations", "analysis", "cost-optimization"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/RawService.cs",
+      "type": "file",
+      "name": "RawService.cs",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/RawService.cs",
+      "summary": "Internal record describing a discovered Azure service before enrichment, with a mapping helper to the public WebService model.",
+      "tags": ["data-model", "azure", "type-definition"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "type": "file",
+      "name": "ServicePingerService.cs",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "summary": "Background hosted service that periodically pings all known service URLs, records up/down telemetry, and caches the latest ping snapshot.",
+      "tags": ["service", "background-service", "health-check", "monitoring"],
+      "complexity": "complex",
+      "languageNotes": "Implements BackgroundService.ExecuteAsync for a recurring sweep with bounded concurrency."
+    },
+    {
+      "id": "class:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:ServicePingerService",
+      "type": "class",
+      "name": "ServicePingerService",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "lineRange": [15, 152],
+      "summary": "Hosted background service that sweeps service URLs on an interval, records pinger telemetry, and exposes the current snapshot plus per-service disable toggles.",
+      "tags": ["background-service", "health-check", "monitoring"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:ExecuteAsync",
+      "type": "function",
+      "name": "ExecuteAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "lineRange": [47, 70],
+      "summary": "Background loop that runs the ping sweep on a configured interval until cancellation.",
+      "tags": ["background-service", "loop", "monitoring"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:PingAllServicesAsync",
+      "type": "function",
+      "name": "PingAllServicesAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "lineRange": [72, 116],
+      "summary": "Loads services from the report store and pings each (excluding disabled ones) concurrently, recording telemetry and caching a snapshot.",
+      "tags": ["health-check", "concurrency", "monitoring"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:PingOneAsync",
+      "type": "function",
+      "name": "PingOneAsync",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "lineRange": [118, 141],
+      "summary": "Sends a single timed HTTP request to a service URL with a timeout and returns an up/down ping result.",
+      "tags": ["health-check", "http", "monitoring"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Configuration/AppKeyVaultSecretManager.cs",
+      "type": "file",
+      "name": "AppKeyVaultSecretManager.cs",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Configuration/AppKeyVaultSecretManager.cs",
+      "summary": "Custom Key Vault secret manager that filters to an app-specific prefix and strips it when mapping secret names to configuration keys.",
+      "tags": ["configuration", "key-vault", "security", "secrets"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:PoPunkouterSoftware.Infrastructure/PoPunkouterSoftware.Infrastructure.csproj",
+      "type": "config",
+      "name": "PoPunkouterSoftware.Infrastructure.csproj",
+      "filePath": "PoPunkouterSoftware.Infrastructure/PoPunkouterSoftware.Infrastructure.csproj",
+      "summary": "Project file for the Infrastructure library declaring Azure SDK, Table Storage, and related package references.",
+      "tags": ["configuration", "build-system", "dotnet", "project-file"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Telemetry.cs",
+      "type": "file",
+      "name": "Telemetry.cs",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Telemetry.cs",
+      "summary": "Static OpenTelemetry meter and instrument definitions (counters/histograms) for Azure OpenAI, GitHub, pinger, and refresh metrics.",
+      "tags": ["observability", "telemetry", "metrics", "opentelemetry"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:PoPunkouterSoftware.Infrastructure/Telemetry.cs:Telemetry",
+      "type": "class",
+      "name": "Telemetry",
+      "filePath": "PoPunkouterSoftware.Infrastructure/Telemetry.cs",
+      "lineRange": [17, 66],
+      "summary": "Central static holder of the application Meter and its counters/histograms plus a helper to bucket HTTP status codes.",
+      "tags": ["observability", "telemetry", "metrics"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs",
+      "type": "file",
+      "name": "AppServicePlanInventory.cs",
+      "filePath": "PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs",
+      "summary": "Shared helper that builds an inventory of PoShared App Service Plans, filtering server farms and counting hosted apps per plan.",
+      "tags": ["utility", "azure", "inventory", "shared"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs:BuildPoSharedPlanInventory",
+      "type": "function",
+      "name": "BuildPoSharedPlanInventory",
+      "filePath": "PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs",
+      "lineRange": [5, 32],
+      "summary": "Filters resources to PoShared server farms and projects each into an inventory entry annotated with the count of apps using that plan.",
+      "tags": ["azure", "inventory", "aggregation"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Shared/Azure/AzureModels.cs",
+      "type": "file",
+      "name": "AzureModels.cs",
+      "filePath": "PoPunkouterSoftware.Shared/Azure/AzureModels.cs",
+      "summary": "Shared record/DTO definitions for the entire Azure report domain (web services, metrics, cost, SSL, drift, inventories, diagnoses, recommendations) used across client and server.",
+      "tags": ["data-model", "type-definition", "azure", "shared"],
+      "complexity": "complex",
+      "languageNotes": "Large set of C# record types serving as the contract between report generation, persistence, and the dashboard UI."
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Shared/Azure/Result.cs",
+      "type": "file",
+      "name": "Result.cs",
+      "filePath": "PoPunkouterSoftware.Shared/Azure/Result.cs",
+      "summary": "Generic Result<T> type encapsulating success/failure with value, error message, and optional exception for explicit error handling.",
+      "tags": ["type-definition", "result-pattern", "error-handling", "shared"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:PoPunkouterSoftware.Shared/PoPunkouterSoftware.Shared.csproj",
+      "type": "config",
+      "name": "PoPunkouterSoftware.Shared.csproj",
+      "filePath": "PoPunkouterSoftware.Shared/PoPunkouterSoftware.Shared.csproj",
+      "summary": "Minimal project file for the Shared library containing cross-cutting models and result types.",
+      "tags": ["configuration", "build-system", "dotnet", "project-file"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Shared/Session/PoUserSession.cs",
+      "type": "file",
+      "name": "PoUserSession.cs",
+      "filePath": "PoPunkouterSoftware.Shared/Session/PoUserSession.cs",
+      "summary": "Minimal shared record modeling the persisted user session state.",
+      "tags": ["data-model", "session", "type-definition", "shared"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/_Imports.razor",
+      "type": "file",
+      "name": "_Imports.razor",
+      "filePath": "PoPunkouterSoftware/_Imports.razor",
+      "summary": "Global Razor using-directive file importing common namespaces for the server host's Razor components.",
+      "tags": ["blazor", "razor", "imports", "configuration"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/.azure/config",
+      "type": "file",
+      "name": "config",
+      "filePath": "PoPunkouterSoftware/.azure/config",
+      "summary": "Azure Developer CLI (azd) environment configuration file recording the active default Azure environment.",
+      "tags": ["configuration", "azure", "azd", "deployment"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/api.http",
+      "type": "file",
+      "name": "api.http",
+      "filePath": "PoPunkouterSoftware/api.http",
+      "summary": "REST Client request collection for manually exercising the application's diagnostic, health, GitHub, and Azure API endpoints during development.",
+      "tags": ["http", "api-testing", "development", "documentation"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/App.razor",
+      "type": "file",
+      "name": "App.razor",
+      "filePath": "PoPunkouterSoftware/App.razor",
+      "summary": "Root Blazor host document defining the HTML shell, head outlet, stylesheet links, and the Routes component with WebAssembly render mode.",
+      "tags": ["blazor", "entry-point", "host-page", "razor"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:AzureReportStore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:AzureReportStore",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:AzureReportStore",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:LoadAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:AzureReportStore",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:SaveAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:AzureReportStore",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:LoadHistoryAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:AzureReportStore",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:LoadPreviousAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:AzureReportStore",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs:GetTableClientAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs:DowntimeDiagnosisService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs:DowntimeDiagnosisService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs:DowntimeDiagnosisService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs:DiagnoseAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:IncidentService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:IncidentService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:IncidentService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:DetectAndRecordAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:IncidentService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:LoadRecentAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:IncidentService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs:PostWebhookAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:PlanRecommendationService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:PlanRecommendationService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:PlanRecommendationService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:Analyze",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:PlanRecommendationService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs:AnalyzeService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:ServicePingerService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:ServicePingerService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:ServicePingerService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:ExecuteAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:ServicePingerService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:PingAllServicesAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "class:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:ServicePingerService",
+      "target": "function:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs:PingOneAsync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Telemetry.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Telemetry.cs:Telemetry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Telemetry.cs",
+      "target": "class:PoPunkouterSoftware.Infrastructure/Telemetry.cs:Telemetry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs",
+      "target": "function:PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs:BuildPoSharedPlanInventory",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs",
+      "target": "function:PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs:BuildPoSharedPlanInventory",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "target": "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "target": "file:PoPunkouterSoftware.Infrastructure/Telemetry.cs",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "target": "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

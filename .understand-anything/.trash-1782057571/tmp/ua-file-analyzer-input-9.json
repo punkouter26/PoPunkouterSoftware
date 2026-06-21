@@ -1,0 +1,182 @@
+{
+  "projectRoot": "c:/Users/punko/Downloads/PO/PoPunkouterSoftware",
+  "batchFiles": [
+    {
+      "path": "PoPunkouterSoftware/Features/Azure/PingerEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Diag/DiagEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 408,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Diag/HealthEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 142,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Diag/RefreshSessionManager.cs",
+      "language": "csharp",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/GitHub/GitHubEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 172,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Infra/InfraEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 599,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Infrastructure/GlobalExceptionHandler.cs",
+      "language": "csharp",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Infrastructure/RefreshHub.cs",
+      "language": "csharp",
+      "sizeLines": 15,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Program.cs",
+      "language": "csharp",
+      "sizeLines": 330,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Properties/launchSettings.json",
+      "language": "json",
+      "sizeLines": 24,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware/Routes.razor",
+      "language": "razor",
+      "sizeLines": 12,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/package.json",
+      "language": "json",
+      "sizeLines": 21,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/playwright.config.ts",
+      "language": "typescript",
+      "sizeLines": 66,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/diag-api.spec.ts",
+      "language": "typescript",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/health.spec.ts",
+      "language": "typescript",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/static-openapi.spec.ts",
+      "language": "typescript",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tsconfig.json",
+      "language": "json",
+      "sizeLines": 11,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/ApiEndpointTests.cs",
+      "language": "csharp",
+      "sizeLines": 248,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/ApiSchemaContractTests.cs",
+      "language": "csharp",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/AzureReportStoreTests.cs",
+      "language": "csharp",
+      "sizeLines": 173,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/PoPunkouterSoftware.Tests.Integration.csproj",
+      "language": "csproj",
+      "sizeLines": 26,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/TestWebAppFixture.cs",
+      "language": "csharp",
+      "sizeLines": 32,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/AppServicePlanInventoryTests.cs",
+      "language": "csharp",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/GitHubActivityTests.cs",
+      "language": "csharp",
+      "sizeLines": 330,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/PoAppSessionTests.cs",
+      "language": "csharp",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "PoPunkouterSoftware/Features/Azure/PingerEndpoints.cs": [],
+    "PoPunkouterSoftware/Features/Diag/DiagEndpoints.cs": [],
+    "PoPunkouterSoftware/Features/Diag/HealthEndpoints.cs": [],
+    "PoPunkouterSoftware/Features/Diag/RefreshSessionManager.cs": [],
+    "PoPunkouterSoftware/Features/GitHub/GitHubEndpoints.cs": [],
+    "PoPunkouterSoftware/Features/Infra/InfraEndpoints.cs": [],
+    "PoPunkouterSoftware/Infrastructure/GlobalExceptionHandler.cs": [],
+    "PoPunkouterSoftware/Infrastructure/RefreshHub.cs": [],
+    "PoPunkouterSoftware/Program.cs": [],
+    "PoPunkouterSoftware/Properties/launchSettings.json": [],
+    "PoPunkouterSoftware/Routes.razor": [],
+    "tests/PoPunkouterSoftware.Tests.E2E/package.json": [],
+    "tests/PoPunkouterSoftware.Tests.E2E/playwright.config.ts": [],
+    "tests/PoPunkouterSoftware.Tests.E2E/tests/diag-api.spec.ts": [],
+    "tests/PoPunkouterSoftware.Tests.E2E/tests/health.spec.ts": [],
+    "tests/PoPunkouterSoftware.Tests.E2E/tests/static-openapi.spec.ts": [],
+    "tests/PoPunkouterSoftware.Tests.E2E/tsconfig.json": [],
+    "tests/PoPunkouterSoftware.Tests.Integration/ApiEndpointTests.cs": [],
+    "tests/PoPunkouterSoftware.Tests.Integration/ApiSchemaContractTests.cs": [],
+    "tests/PoPunkouterSoftware.Tests.Integration/AzureReportStoreTests.cs": [],
+    "tests/PoPunkouterSoftware.Tests.Integration/PoPunkouterSoftware.Tests.Integration.csproj": [],
+    "tests/PoPunkouterSoftware.Tests.Integration/TestWebAppFixture.cs": [],
+    "tests/PoPunkouterSoftware.Tests.Unit/AppServicePlanInventoryTests.cs": [],
+    "tests/PoPunkouterSoftware.Tests.Unit/GitHubActivityTests.cs": [],
+    "tests/PoPunkouterSoftware.Tests.Unit/PoAppSessionTests.cs": []
+  }
+}

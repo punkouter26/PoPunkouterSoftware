@@ -1,0 +1,2159 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 25,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": ".understand-anything/.understandignore",
+      "language": "unknown",
+      "fileCategory": "code",
+      "totalLines": 138,
+      "nonEmptyLines": 131,
+      "metrics": {}
+    },
+    {
+      "path": "Directory.Build.props",
+      "language": "props",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 20,
+      "metrics": {}
+    },
+    {
+      "path": "Directory.Packages.props",
+      "language": "props",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 42,
+      "metrics": {}
+    },
+    {
+      "path": "docs/ideas/config-inventory.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 39,
+      "nonEmptyLines": 29,
+      "sections": [
+        {
+          "heading": "Config Inventory — Azure Custom Config Audit Page",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Problem Statement",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Recommended Direction",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "Key Assumptions to Validate",
+          "level": 2,
+          "line": 20
+        },
+        {
+          "heading": "MVP Scope",
+          "level": 2,
+          "line": 25
+        },
+        {
+          "heading": "Not Doing (and Why)",
+          "level": 2,
+          "line": 30
+        },
+        {
+          "heading": "Open Questions",
+          "level": 2,
+          "line": 37
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "infra/bind-managed-identity.ps1",
+      "language": "powershell",
+      "fileCategory": "script",
+      "totalLines": 106,
+      "nonEmptyLines": 90,
+      "metrics": {}
+    },
+    {
+      "path": "infra/migrate-kv-prefix.ps1",
+      "language": "powershell",
+      "fileCategory": "script",
+      "totalLines": 101,
+      "nonEmptyLines": 86,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/_Imports.razor",
+      "language": "razor",
+      "fileCategory": "code",
+      "totalLines": 18,
+      "nonEmptyLines": 18,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Layout/MainLayout.razor",
+      "language": "razor",
+      "fileCategory": "code",
+      "totalLines": 126,
+      "nonEmptyLines": 114,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Layout/MainLayout.razor.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 39,
+      "nonEmptyLines": 35,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Charts.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 187,
+      "nonEmptyLines": 168,
+      "functions": [
+        {
+          "name": "HumanizeResourceType",
+          "startLine": 91,
+          "endLine": 104,
+          "params": [
+            "type"
+          ]
+        },
+        {
+          "name": "TargetBadge",
+          "startLine": 148,
+          "endLine": 158,
+          "params": [
+            "target"
+          ]
+        },
+        {
+          "name": "TriggerBadge",
+          "startLine": 160,
+          "endLine": 168,
+          "params": [
+            "trigger"
+          ]
+        },
+        {
+          "name": "InfraFileBadge",
+          "startLine": 170,
+          "endLine": 178,
+          "params": [
+            "fileType"
+          ]
+        },
+        {
+          "name": "ActionabilityBadge",
+          "startLine": 180,
+          "endLine": 186,
+          "params": [
+            "tier"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "AzureDashboard",
+          "startLine": 9,
+          "endLine": 187,
+          "methods": [
+            "HumanizeResourceType",
+            "TargetBadge",
+            "TriggerBadge",
+            "InfraFileBadge",
+            "ActionabilityBadge"
+          ],
+          "properties": [
+            "FleetHealthDonutData",
+            "CostDriversBarData",
+            "ResponseTimeBarData",
+            "ErrorRateBarData",
+            "PlanUsageByPlan",
+            "TopAppRequestChartData",
+            "ResourceTypeChartData",
+            "ResourceTypeTableData",
+            "CostByRgData",
+            "BurnRateChartData",
+            "StepTimingTotalMs",
+            "SlowestStepTiming",
+            "BurnRateLabelStep"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "AzureDashboard",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 5,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Operations.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 156,
+      "nonEmptyLines": 132,
+      "functions": [
+        {
+          "name": "ConfidenceRank",
+          "startLine": 56,
+          "endLine": 62,
+          "params": [
+            "confidence"
+          ]
+        },
+        {
+          "name": "ConfidenceBadge",
+          "startLine": 64,
+          "endLine": 70,
+          "params": [
+            "confidence"
+          ]
+        },
+        {
+          "name": "RiskBadge",
+          "startLine": 72,
+          "endLine": 79,
+          "params": [
+            "risk"
+          ]
+        },
+        {
+          "name": "BuildCostWatchItems",
+          "startLine": 81,
+          "endLine": 88,
+          "params": [
+            "area"
+          ]
+        },
+        {
+          "name": "BuildHealthReport",
+          "startLine": 90,
+          "endLine": 137,
+          "params": [
+            "current"
+          ]
+        },
+        {
+          "name": "ReportNeedsMaintenanceInventoryRefresh",
+          "startLine": 139,
+          "endLine": 155,
+          "params": [
+            "current"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "AzureDashboard",
+          "startLine": 7,
+          "endLine": 156,
+          "methods": [
+            "ConfidenceRank",
+            "ConfidenceBadge",
+            "RiskBadge",
+            "BuildCostWatchItems",
+            "BuildHealthReport",
+            "ReportNeedsMaintenanceInventoryRefresh"
+          ],
+          "properties": [
+            "CleanupCandidates",
+            "AiServices",
+            "LogAnalyticsWorkspaces",
+            "AiCostDrivers",
+            "LogAnalyticsCostDrivers",
+            "HealthReport",
+            "NeedsMaintenanceInventoryRefresh",
+            "MaintenanceInventoryRefreshReason"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "AzureDashboard",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "BuildCostWatchItems",
+          "callee": "report?.Cost?.TopCostDrivers\n            .Where(d => needles.Any(n => d.Name.Contains(n, StringComparison.OrdinalIgnoreCase)))\n            .OrderByDescending(d => d.Cost)\n            .Select(d => new CostWatchItem(d.Name, Math.Round(d.Cost, 2), area))\n            .ToList",
+          "lineNumber": 83
+        },
+        {
+          "caller": "BuildCostWatchItems",
+          "callee": "report?.Cost?.TopCostDrivers\n            .Where(d => needles.Any(n => d.Name.Contains(n, StringComparison.OrdinalIgnoreCase)))\n            .OrderByDescending(d => d.Cost)\n            .Select",
+          "lineNumber": 83
+        },
+        {
+          "caller": "BuildCostWatchItems",
+          "callee": "report?.Cost?.TopCostDrivers\n            .Where(d => needles.Any(n => d.Name.Contains(n, StringComparison.OrdinalIgnoreCase)))\n            .OrderByDescending",
+          "lineNumber": 83
+        },
+        {
+          "caller": "BuildCostWatchItems",
+          "callee": "report?.Cost?.TopCostDrivers\n            .Where",
+          "lineNumber": 83
+        },
+        {
+          "caller": "BuildCostWatchItems",
+          "callee": "needles.Any",
+          "lineNumber": 84
+        },
+        {
+          "caller": "BuildCostWatchItems",
+          "callee": "d.Name.Contains",
+          "lineNumber": 84
+        },
+        {
+          "caller": "BuildCostWatchItems",
+          "callee": "new CostWatchItem",
+          "lineNumber": 86
+        },
+        {
+          "caller": "BuildCostWatchItems",
+          "callee": "Math.Round",
+          "lineNumber": 86
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "new HealthReportCard",
+          "lineNumber": 94
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "current.AppServicePlanInventory\n            .Count",
+          "lineNumber": 97
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "string.Equals",
+          "lineNumber": 98
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "string.Equals",
+          "lineNumber": 99
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "current.AppServicePlanInventory.Count",
+          "lineNumber": 102
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "current.AiServicesInventory.Count",
+          "lineNumber": 103
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "current.AiServicesInventory.Count",
+          "lineNumber": 104
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "current.LogAnalyticsInventory.Count",
+          "lineNumber": 105
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "new List<string>",
+          "lineNumber": 109
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "recommendations.Add",
+          "lineNumber": 111
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "recommendations.Add",
+          "lineNumber": 113
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "recommendations.Add",
+          "lineNumber": 115
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "recommendations.Add",
+          "lineNumber": 117
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "recommendations.Add",
+          "lineNumber": 119
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "recommendations.Add",
+          "lineNumber": 121
+        },
+        {
+          "caller": "BuildHealthReport",
+          "callee": "new HealthReportCard",
+          "lineNumber": 127
+        },
+        {
+          "caller": "ReportNeedsMaintenanceInventoryRefresh",
+          "callee": "TimeSpan.FromHours",
+          "lineNumber": 144
+        },
+        {
+          "caller": "ReportNeedsMaintenanceInventoryRefresh",
+          "callee": "current.AllResourceSummary?.ResourcesByType.Values.SelectMany(x => x).ToList",
+          "lineNumber": 147
+        },
+        {
+          "caller": "ReportNeedsMaintenanceInventoryRefresh",
+          "callee": "current.AllResourceSummary?.ResourcesByType.Values.SelectMany",
+          "lineNumber": 147
+        },
+        {
+          "caller": "ReportNeedsMaintenanceInventoryRefresh",
+          "callee": "resources.Any",
+          "lineNumber": 148
+        },
+        {
+          "caller": "ReportNeedsMaintenanceInventoryRefresh",
+          "callee": "string.Equals",
+          "lineNumber": 149
+        },
+        {
+          "caller": "ReportNeedsMaintenanceInventoryRefresh",
+          "callee": "string.Equals",
+          "lineNumber": 150
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 6,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Portfolio.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 381,
+      "nonEmptyLines": 348,
+      "functions": [
+        {
+          "name": "TypeLabel",
+          "startLine": 44,
+          "endLine": 50,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "HttpBadgeStyle",
+          "startLine": 52,
+          "endLine": 57,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "BuildSafeToRemove",
+          "startLine": 60,
+          "endLine": 164,
+          "params": [
+            "r"
+          ]
+        },
+        {
+          "name": "BuildConsolidatedServices",
+          "startLine": 167,
+          "endLine": 238,
+          "params": [
+            "r"
+          ]
+        },
+        {
+          "name": "BuildPriorityQueue",
+          "startLine": 240,
+          "endLine": 313,
+          "params": [
+            "r",
+            "consolidated",
+            "safe"
+          ]
+        },
+        {
+          "name": "IsAnomalous",
+          "startLine": 316,
+          "endLine": 324,
+          "params": [
+            "service",
+            "medianReq",
+            "medianRt"
+          ]
+        },
+        {
+          "name": "Median",
+          "startLine": 326,
+          "endLine": 333,
+          "params": [
+            "values"
+          ]
+        },
+        {
+          "name": "Median",
+          "startLine": 335,
+          "endLine": 335,
+          "params": [
+            "values"
+          ]
+        },
+        {
+          "name": "CanonicalAppKey",
+          "startLine": 337,
+          "endLine": 341,
+          "params": [
+            "friendly",
+            "name"
+          ]
+        },
+        {
+          "name": "InferEnvironment",
+          "startLine": 343,
+          "endLine": 351,
+          "params": [
+            "resourceGroup",
+            "name"
+          ]
+        },
+        {
+          "name": "InferOwner",
+          "startLine": 353,
+          "endLine": 359,
+          "params": [
+            "resourceGroup",
+            "name"
+          ]
+        },
+        {
+          "name": "InferCriticality",
+          "startLine": 361,
+          "endLine": 369,
+          "params": [
+            "resourceGroup",
+            "name"
+          ]
+        },
+        {
+          "name": "ToActionability",
+          "startLine": 371,
+          "endLine": 380,
+          "params": [
+            "status",
+            "http5xx7d",
+            "req7d"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "AzureDashboard",
+          "startLine": 9,
+          "endLine": 381,
+          "methods": [
+            "TypeLabel",
+            "HttpBadgeStyle",
+            "BuildSafeToRemove",
+            "BuildConsolidatedServices",
+            "BuildPriorityQueue",
+            "IsAnomalous",
+            "Median",
+            "Median",
+            "CanonicalAppKey",
+            "InferEnvironment",
+            "InferOwner",
+            "InferCriticality",
+            "ToActionability"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "AzureDashboard",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "TypeLabel",
+          "callee": "t?.Split('/').LastOrDefault",
+          "lineNumber": 49
+        },
+        {
+          "caller": "TypeLabel",
+          "callee": "t?.Split",
+          "lineNumber": 49
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "new List<SafeToRemoveItem>",
+          "lineNumber": 64
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "new List<string>",
+          "lineNumber": 74
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "reasons.Add",
+          "lineNumber": 75
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "reasons.Add",
+          "lineNumber": 76
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "reasons.Add",
+          "lineNumber": 77
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "reasons.Add",
+          "lineNumber": 78
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "reasons.Add",
+          "lineNumber": 79
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items.Add",
+          "lineNumber": 80
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "new SafeToRemoveItem",
+          "lineNumber": 80
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "TypeLabel",
+          "lineNumber": 84
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "string.Join",
+          "lineNumber": 86
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items.Add",
+          "lineNumber": 97
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "new SafeToRemoveItem",
+          "lineNumber": 97
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "orphan.EstimatedMonthlyCost?.Contains",
+          "lineNumber": 104
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "r.AppServicePlanInventory.Where",
+          "lineNumber": 110
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items.Add",
+          "lineNumber": 112
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "new SafeToRemoveItem",
+          "lineNumber": 112
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "string.Equals",
+          "lineNumber": 120
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "r.AiServicesInventory.Where",
+          "lineNumber": 125
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items.Add",
+          "lineNumber": 127
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "new SafeToRemoveItem",
+          "lineNumber": 127
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "r.LogAnalyticsInventory.Where",
+          "lineNumber": 140
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items.Add",
+          "lineNumber": 142
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "new SafeToRemoveItem",
+          "lineNumber": 142
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items.Sort",
+          "lineNumber": 155
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "new Dictionary<string, int>",
+          "lineNumber": 157
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "o.GetValueOrDefault",
+          "lineNumber": 158
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "o.GetValueOrDefault",
+          "lineNumber": 158
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items\n            .GroupBy(i => $\"{i.Type}|{i.ResourceGroup}|{i.Name}\", StringComparer.OrdinalIgnoreCase)\n            .Select(g => g.First())\n            .ToList",
+          "lineNumber": 160
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items\n            .GroupBy(i => $\"{i.Type}|{i.ResourceGroup}|{i.Name}\", StringComparer.OrdinalIgnoreCase)\n            .Select",
+          "lineNumber": 160
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "items\n            .GroupBy",
+          "lineNumber": 160
+        },
+        {
+          "caller": "BuildSafeToRemove",
+          "callee": "g.First",
+          "lineNumber": 162
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "new List<WebService>",
+          "lineNumber": 171
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "sourceServices\r\n            .GroupBy(s => CanonicalAppKey(s.FriendlyName, s.Name))\r\n            .ToList",
+          "lineNumber": 175
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "sourceServices\r\n            .GroupBy",
+          "lineNumber": 175
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "CanonicalAppKey",
+          "lineNumber": 176
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "new List<ConsolidatedService>",
+          "lineNumber": 179
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "group.ToList",
+          "lineNumber": 182
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Sum",
+          "lineNumber": 184
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Sum",
+          "lineNumber": 185
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Any",
+          "lineNumber": 186
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Where(x => x.Connectivity?.Success == true)\r\n                .Select(x => x.Connectivity!.ResponseTime).ToList",
+          "lineNumber": 190
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Where(x => x.Connectivity?.Success == true)\r\n                .Select",
+          "lineNumber": 190
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Where",
+          "lineNumber": 190
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "Math.Round",
+          "lineNumber": 192
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "rtCandidates.Average",
+          "lineNumber": 192
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Any",
+          "lineNumber": 193
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "Math.Min",
+          "lineNumber": 197
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "Math.Clamp",
+          "lineNumber": 200
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Any",
+          "lineNumber": 203
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "Math.Clamp",
+          "lineNumber": 205
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw.Add",
+          "lineNumber": 207
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "new ConsolidatedService",
+          "lineNumber": 207
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "string.IsNullOrWhiteSpace",
+          "lineNumber": 209
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "string.Join",
+          "lineNumber": 210
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Select(x => TypeLabel(x.ResourceType)).Distinct",
+          "lineNumber": 210
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "entries.Select",
+          "lineNumber": 210
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "TypeLabel",
+          "lineNumber": 210
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "ToActionability",
+          "lineNumber": 217
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "InferOwner",
+          "lineNumber": 219
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "InferEnvironment",
+          "lineNumber": 220
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "InferCriticality",
+          "lineNumber": 221
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "Median",
+          "lineNumber": 229
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw.Select(x => x.Requests7d).ToList",
+          "lineNumber": 229
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw.Select",
+          "lineNumber": 229
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "Median",
+          "lineNumber": 230
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw.Where(x => x.ResponseTimeMs.HasValue)\r\n            .Select(x => (double)x.ResponseTimeMs!.Value).ToList",
+          "lineNumber": 230
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw.Where(x => x.ResponseTimeMs.HasValue)\r\n            .Select",
+          "lineNumber": 230
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw.Where",
+          "lineNumber": 230
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw\r\n            .Select(x => x with { HasAnomaly = IsAnomalous(x, medianReq, medianRt) })\r\n            .OrderBy(x => x.HealthScore)\r\n            .ThenBy(x => x.DisplayName)\r\n            .ToList",
+          "lineNumber": 233
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw\r\n            .Select(x => x with { HasAnomaly = IsAnomalous(x, medianReq, medianRt) })\r\n            .OrderBy(x => x.HealthScore)\r\n            .ThenBy",
+          "lineNumber": 233
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw\r\n            .Select(x => x with { HasAnomaly = IsAnomalous(x, medianReq, medianRt) })\r\n            .OrderBy",
+          "lineNumber": 233
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "raw\r\n            .Select",
+          "lineNumber": 233
+        },
+        {
+          "caller": "BuildConsolidatedServices",
+          "callee": "IsAnomalous",
+          "lineNumber": 234
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "new List<PriorityQueueItem>",
+          "lineNumber": 245
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "consolidated.Where",
+          "lineNumber": 247
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "items.Add",
+          "lineNumber": 249
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "new PriorityQueueItem",
+          "lineNumber": 249
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "items.Add",
+          "lineNumber": 264
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "new PriorityQueueItem",
+          "lineNumber": 264
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "r?.SslExpiry?.Where(x => x.DaysLeft is < 60).Take",
+          "lineNumber": 277
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "r?.SslExpiry?.Where",
+          "lineNumber": 277
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "Enumerable.Empty<SslEntry>",
+          "lineNumber": 277
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "items.Add",
+          "lineNumber": 280
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "new PriorityQueueItem",
+          "lineNumber": 280
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "InferEnvironment",
+          "lineNumber": 288
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "new List<OrphanedResource>",
+          "lineNumber": 293
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "items.Add",
+          "lineNumber": 295
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "new PriorityQueueItem",
+          "lineNumber": 295
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "InferEnvironment",
+          "lineNumber": 303
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "items\r\n            .OrderByDescending(i => i.ImpactScore)\r\n            .ThenBy(i => i.Actionability)\r\n            .Take(150)\r\n            .ToList",
+          "lineNumber": 308
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "items\r\n            .OrderByDescending(i => i.ImpactScore)\r\n            .ThenBy(i => i.Actionability)\r\n            .Take",
+          "lineNumber": 308
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "items\r\n            .OrderByDescending(i => i.ImpactScore)\r\n            .ThenBy",
+          "lineNumber": 308
+        },
+        {
+          "caller": "BuildPriorityQueue",
+          "callee": "items\r\n            .OrderByDescending",
+          "lineNumber": 308
+        },
+        {
+          "caller": "Median",
+          "callee": "values.OrderBy(v => v).ToList",
+          "lineNumber": 330
+        },
+        {
+          "caller": "Median",
+          "callee": "values.OrderBy",
+          "lineNumber": 330
+        },
+        {
+          "caller": "Median",
+          "callee": "Median",
+          "lineNumber": 335
+        },
+        {
+          "caller": "Median",
+          "callee": "values.Select(v => (double)v).ToList",
+          "lineNumber": 335
+        },
+        {
+          "caller": "Median",
+          "callee": "values.Select",
+          "lineNumber": 335
+        },
+        {
+          "caller": "CanonicalAppKey",
+          "callee": "string.IsNullOrWhiteSpace",
+          "lineNumber": 339
+        },
+        {
+          "caller": "CanonicalAppKey",
+          "callee": "source.Trim().ToLowerInvariant",
+          "lineNumber": 340
+        },
+        {
+          "caller": "CanonicalAppKey",
+          "callee": "source.Trim",
+          "lineNumber": 340
+        },
+        {
+          "caller": "InferEnvironment",
+          "callee": "$\"{resourceGroup} {name}\".ToLowerInvariant",
+          "lineNumber": 345
+        },
+        {
+          "caller": "InferEnvironment",
+          "callee": "text.Contains",
+          "lineNumber": 346
+        },
+        {
+          "caller": "InferEnvironment",
+          "callee": "text.Contains",
+          "lineNumber": 346
+        },
+        {
+          "caller": "InferEnvironment",
+          "callee": "text.Contains",
+          "lineNumber": 348
+        },
+        {
+          "caller": "InferEnvironment",
+          "callee": "text.Contains",
+          "lineNumber": 348
+        },
+        {
+          "caller": "InferEnvironment",
+          "callee": "text.Contains",
+          "lineNumber": 348
+        },
+        {
+          "caller": "InferOwner",
+          "callee": "(resourceGroup ?? name ?? \"\")\r\n            .Split(new[] { '-', '_', ' ' }, StringSplitOptions.RemoveEmptyEntries)\r\n            .FirstOrDefault",
+          "lineNumber": 355
+        },
+        {
+          "caller": "InferOwner",
+          "callee": "(resourceGroup ?? name ?? \"\")\r\n            .Split",
+          "lineNumber": 355
+        },
+        {
+          "caller": "InferOwner",
+          "callee": "string.IsNullOrWhiteSpace",
+          "lineNumber": 358
+        },
+        {
+          "caller": "InferOwner",
+          "callee": "token.ToLowerInvariant",
+          "lineNumber": 358
+        },
+        {
+          "caller": "InferCriticality",
+          "callee": "$\"{resourceGroup} {name}\".ToLowerInvariant",
+          "lineNumber": 363
+        },
+        {
+          "caller": "InferCriticality",
+          "callee": "text.Contains",
+          "lineNumber": 364
+        },
+        {
+          "caller": "InferCriticality",
+          "callee": "text.Contains",
+          "lineNumber": 364
+        },
+        {
+          "caller": "InferCriticality",
+          "callee": "text.Contains",
+          "lineNumber": 364
+        },
+        {
+          "caller": "InferCriticality",
+          "callee": "text.Contains",
+          "lineNumber": 366
+        },
+        {
+          "caller": "InferCriticality",
+          "callee": "text.Contains",
+          "lineNumber": 366
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 13,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.razor",
+      "language": "razor",
+      "fileCategory": "code",
+      "totalLines": 578,
+      "nonEmptyLines": 553,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.razor.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 290,
+      "nonEmptyLines": 254,
+      "functions": [
+        {
+          "name": "ReliabilityClass",
+          "startLine": 33,
+          "endLine": 34,
+          "params": [
+            "score"
+          ]
+        },
+        {
+          "name": "ResponseTimeClass",
+          "startLine": 36,
+          "endLine": 37,
+          "params": [
+            "responseTime"
+          ]
+        },
+        {
+          "name": "FormatAge",
+          "startLine": 49,
+          "endLine": 58,
+          "params": [
+            "age"
+          ]
+        },
+        {
+          "name": "DownloadReportAsync",
+          "startLine": 60,
+          "endLine": 75,
+          "params": []
+        },
+        {
+          "name": "DownloadAutomationScript",
+          "startLine": 77,
+          "endLine": 78,
+          "params": []
+        },
+        {
+          "name": "OnInitializedAsync",
+          "startLine": 83,
+          "endLine": 88,
+          "params": []
+        },
+        {
+          "name": "OnLocationChanging",
+          "startLine": 90,
+          "endLine": 99,
+          "params": [
+            "context"
+          ]
+        },
+        {
+          "name": "LoadReportAsync",
+          "startLine": 101,
+          "endLine": 134,
+          "params": []
+        },
+        {
+          "name": "RefreshAsync",
+          "startLine": 136,
+          "endLine": 187,
+          "params": []
+        },
+        {
+          "name": "CancelRefreshAsync",
+          "startLine": 189,
+          "endLine": 200,
+          "params": []
+        },
+        {
+          "name": "WaitForRefreshCompletionAsync",
+          "startLine": 202,
+          "endLine": 235,
+          "params": [
+            "ct",
+            "delayMs"
+          ]
+        },
+        {
+          "name": "EnsureHubConnectedAsync",
+          "startLine": 237,
+          "endLine": 282,
+          "params": []
+        },
+        {
+          "name": "DisposeAsync",
+          "startLine": 284,
+          "endLine": 289,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "AzureDashboard",
+          "startLine": 15,
+          "endLine": 290,
+          "methods": [
+            "ReliabilityClass",
+            "ResponseTimeClass",
+            "FormatAge",
+            "DownloadReportAsync",
+            "DownloadAutomationScript",
+            "OnInitializedAsync",
+            "OnLocationChanging",
+            "LoadReportAsync",
+            "RefreshAsync",
+            "CancelRefreshAsync",
+            "WaitForRefreshCompletionAsync",
+            "EnsureHubConnectedAsync",
+            "DisposeAsync"
+          ],
+          "properties": [
+            "HostEnvironment",
+            "report",
+            "services",
+            "safeToRemove",
+            "_selectedTabIndex",
+            "_loading",
+            "_loadError",
+            "ConsolidatedServices",
+            "SortedServices",
+            "PriorityQueue",
+            "_refreshing",
+            "_progressPercent",
+            "_progressStep",
+            "_refreshFailed",
+            "_refreshFailureMessage",
+            "_refreshCts",
+            "_locationChangingRegistration",
+            "RefreshTimeoutSeconds",
+            "ShowAdvancedDiagnostics",
+            "_hub"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DisposeAsync",
+          "line": 284,
+          "isDefault": false
+        },
+        {
+          "name": "AzureDashboard",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "DownloadReportAsync",
+          "callee": "new JsonSerializerOptions",
+          "lineNumber": 64
+        },
+        {
+          "caller": "DownloadReportAsync",
+          "callee": "JsonSerializer.Serialize",
+          "lineNumber": 70
+        },
+        {
+          "caller": "DownloadReportAsync",
+          "callee": "(report.GeneratedAt ?? DateTime.UtcNow).ToString",
+          "lineNumber": 71
+        },
+        {
+          "caller": "DownloadReportAsync",
+          "callee": "JS.InvokeVoidAsync",
+          "lineNumber": 74
+        },
+        {
+          "caller": "DownloadAutomationScript",
+          "callee": "NavManager.NavigateTo",
+          "lineNumber": 78
+        },
+        {
+          "caller": "OnInitializedAsync",
+          "callee": "NavManager.RegisterLocationChangingHandler",
+          "lineNumber": 85
+        },
+        {
+          "caller": "OnInitializedAsync",
+          "callee": "LoadReportAsync",
+          "lineNumber": 86
+        },
+        {
+          "caller": "OnInitializedAsync",
+          "callee": "LoadHistoryAsync",
+          "lineNumber": 87
+        },
+        {
+          "caller": "OnLocationChanging",
+          "callee": "context.PreventNavigation",
+          "lineNumber": 94
+        },
+        {
+          "caller": "OnLocationChanging",
+          "callee": "NotificationService.Notify",
+          "lineNumber": 95
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "StateHasChanged",
+          "lineNumber": 105
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "new JsonSerializerOptions",
+          "lineNumber": 109
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "Http.GetFromJsonAsync<AzureReport>",
+          "lineNumber": 114
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "new InvalidOperationException",
+          "lineNumber": 116
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "new List<WebService>",
+          "lineNumber": 118
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "BuildSafeToRemove",
+          "lineNumber": 119
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "new List<WebService>",
+          "lineNumber": 124
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "new List<SafeToRemoveItem>",
+          "lineNumber": 125
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "Console.Error.WriteLine",
+          "lineNumber": 127
+        },
+        {
+          "caller": "LoadReportAsync",
+          "callee": "StateHasChanged",
+          "lineNumber": 132
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "new CancellationTokenSource",
+          "lineNumber": 145
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "TimeSpan.FromSeconds",
+          "lineNumber": 145
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "StateHasChanged",
+          "lineNumber": 146
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "EnsureHubConnectedAsync",
+          "lineNumber": 148
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "Http.PostAsync",
+          "lineNumber": 152
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "NotificationService.Notify",
+          "lineNumber": 155
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "StateHasChanged",
+          "lineNumber": 157
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "WaitForRefreshCompletionAsync",
+          "lineNumber": 162
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "WaitForRefreshCompletionAsync",
+          "lineNumber": 164
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "LoadReportAsync",
+          "lineNumber": 166
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "NotificationService.Notify",
+          "lineNumber": 168
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "NotificationService.Notify",
+          "lineNumber": 170
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "NotificationService.Notify",
+          "lineNumber": 174
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "NotificationService.Notify",
+          "lineNumber": 178
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "_refreshCts?.Dispose",
+          "lineNumber": 183
+        },
+        {
+          "caller": "RefreshAsync",
+          "callee": "StateHasChanged",
+          "lineNumber": 185
+        },
+        {
+          "caller": "CancelRefreshAsync",
+          "callee": "_refreshCts.Cancel",
+          "lineNumber": 193
+        },
+        {
+          "caller": "CancelRefreshAsync",
+          "callee": "NotificationService.Notify",
+          "lineNumber": 194
+        },
+        {
+          "caller": "CancelRefreshAsync",
+          "callee": "Http.PostAsync",
+          "lineNumber": 197
+        },
+        {
+          "caller": "CancelRefreshAsync",
+          "callee": "StateHasChanged",
+          "lineNumber": 199
+        },
+        {
+          "caller": "WaitForRefreshCompletionAsync",
+          "callee": "Task.Delay",
+          "lineNumber": 207
+        },
+        {
+          "caller": "WaitForRefreshCompletionAsync",
+          "callee": "new JsonSerializerOptions",
+          "lineNumber": 215
+        },
+        {
+          "caller": "WaitForRefreshCompletionAsync",
+          "callee": "Http.GetFromJsonAsync<AzureReport>",
+          "lineNumber": 219
+        },
+        {
+          "caller": "WaitForRefreshCompletionAsync",
+          "callee": "ct.ThrowIfCancellationRequested",
+          "lineNumber": 234
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "_hub.DisposeAsync",
+          "lineNumber": 242
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "new HubConnectionBuilder()\n            .WithUrl(NavManager.ToAbsoluteUri(\"/hubs/refresh\"))\n            .WithAutomaticReconnect()\n            .Build",
+          "lineNumber": 244
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "new HubConnectionBuilder()\n            .WithUrl(NavManager.ToAbsoluteUri(\"/hubs/refresh\"))\n            .WithAutomaticReconnect",
+          "lineNumber": 244
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "new HubConnectionBuilder()\n            .WithUrl",
+          "lineNumber": 244
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "new HubConnectionBuilder",
+          "lineNumber": 244
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "NavManager.ToAbsoluteUri",
+          "lineNumber": 245
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "_hub.On<object>",
+          "lineNumber": 249
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "JsonSerializer.Serialize",
+          "lineNumber": 253
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "JsonDocument.Parse",
+          "lineNumber": 254
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "root.TryGetProperty",
+          "lineNumber": 256
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "pct.GetInt32",
+          "lineNumber": 257
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "root.TryGetProperty",
+          "lineNumber": 258
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "step.GetString",
+          "lineNumber": 259
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "root.TryGetProperty",
+          "lineNumber": 260
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "err.GetString",
+          "lineNumber": 263
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "root.TryGetProperty",
+          "lineNumber": 265
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "d.GetBoolean",
+          "lineNumber": 265
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "InvokeAsync",
+          "lineNumber": 271
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "_hub.StartAsync",
+          "lineNumber": 276
+        },
+        {
+          "caller": "EnsureHubConnectedAsync",
+          "callee": "Console.Error.WriteLine",
+          "lineNumber": 280
+        },
+        {
+          "caller": "DisposeAsync",
+          "callee": "_locationChangingRegistration?.Dispose",
+          "lineNumber": 286
+        },
+        {
+          "caller": "DisposeAsync",
+          "callee": "_hub.DisposeAsync",
+          "lineNumber": 288
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 13,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Trends.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 198,
+      "nonEmptyLines": 171,
+      "functions": [
+        {
+          "name": "LoadHistoryAsync",
+          "startLine": 16,
+          "endLine": 29,
+          "params": []
+        },
+        {
+          "name": "ToChartDateLabel",
+          "startLine": 74,
+          "endLine": 75,
+          "params": [
+            "utcDateTime"
+          ]
+        },
+        {
+          "name": "GetServiceResponseHistory",
+          "startLine": 113,
+          "endLine": 119,
+          "params": [
+            "name"
+          ]
+        },
+        {
+          "name": "HttpStatusBadgeStyle",
+          "startLine": 167,
+          "endLine": 173,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "SslBadgeStyle",
+          "startLine": 175,
+          "endLine": 181,
+          "params": [
+            "e"
+          ]
+        },
+        {
+          "name": "SslLabel",
+          "startLine": 183,
+          "endLine": 190,
+          "params": [
+            "e"
+          ]
+        },
+        {
+          "name": "SeverityStyle",
+          "startLine": 192,
+          "endLine": 197,
+          "params": [
+            "sev"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "AzureDashboard",
+          "startLine": 9,
+          "endLine": 198,
+          "methods": [
+            "LoadHistoryAsync",
+            "ToChartDateLabel",
+            "GetServiceResponseHistory",
+            "HttpStatusBadgeStyle",
+            "SslBadgeStyle",
+            "SslLabel",
+            "SeverityStyle"
+          ],
+          "properties": [
+            "HistoryWindowDays",
+            "_history",
+            "TotalCount",
+            "ScanAge",
+            "WebTrafficByService",
+            "HasHistory",
+            "HistoryWindow",
+            "ServiceStatusHistory",
+            "CostHistory",
+            "AvgResponseHistory",
+            "TrackedServiceNames",
+            "Errors5xxHistory",
+            "UptimePctHistory",
+            "BrokenDeltaHistory",
+            "ResourceCountHistory",
+            "ScanDurationHistory",
+            "AllServices"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "AzureDashboard",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "LoadHistoryAsync",
+          "callee": "new JsonSerializerOptions",
+          "lineNumber": 20
+        },
+        {
+          "caller": "LoadHistoryAsync",
+          "callee": "Http.GetFromJsonAsync<List<HistorySummary>>",
+          "lineNumber": 21
+        },
+        {
+          "caller": "LoadHistoryAsync",
+          "callee": "InvokeAsync",
+          "lineNumber": 28
+        },
+        {
+          "caller": "ToChartDateLabel",
+          "callee": "utcDateTime.ToLocalTime().ToString",
+          "lineNumber": 75
+        },
+        {
+          "caller": "ToChartDateLabel",
+          "callee": "utcDateTime.ToLocalTime",
+          "lineNumber": 75
+        },
+        {
+          "caller": "GetServiceResponseHistory",
+          "callee": "HistoryWindow\r\n            .Select(h => new ServiceTimePoint(\r\n                ToChartDateLabel(h.GeneratedAt),\r\n                h.Services.FirstOrDefault(s => s.Name == name)?.ResponseTimeMs ?? 0))\r\n            .Where(p => p.ResponseMs > 0)\r\n            .ToList",
+          "lineNumber": 114
+        },
+        {
+          "caller": "GetServiceResponseHistory",
+          "callee": "HistoryWindow\r\n            .Select(h => new ServiceTimePoint(\r\n                ToChartDateLabel(h.GeneratedAt),\r\n                h.Services.FirstOrDefault(s => s.Name == name)?.ResponseTimeMs ?? 0))\r\n            .Where",
+          "lineNumber": 114
+        },
+        {
+          "caller": "GetServiceResponseHistory",
+          "callee": "HistoryWindow\r\n            .Select",
+          "lineNumber": 114
+        },
+        {
+          "caller": "GetServiceResponseHistory",
+          "callee": "new ServiceTimePoint",
+          "lineNumber": 115
+        },
+        {
+          "caller": "GetServiceResponseHistory",
+          "callee": "ToChartDateLabel",
+          "lineNumber": 116
+        },
+        {
+          "caller": "GetServiceResponseHistory",
+          "callee": "h.Services.FirstOrDefault",
+          "lineNumber": 117
+        },
+        {
+          "caller": "SeverityStyle",
+          "callee": "sev.ToLowerInvariant",
+          "lineNumber": 192
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 7,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Index.razor",
+      "language": "razor",
+      "fileCategory": "code",
+      "totalLines": 261,
+      "nonEmptyLines": 236,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Models/SafeToRemoveItem.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 17,
+      "nonEmptyLines": 16,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/PortfolioModels.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 23,
+      "nonEmptyLines": 19,
+      "classes": [
+        {
+          "name": "AppsWrapper",
+          "startLine": 5,
+          "endLine": 8,
+          "methods": [],
+          "properties": [
+            "Apps"
+          ]
+        },
+        {
+          "name": "AppModel",
+          "startLine": 10,
+          "endLine": 18,
+          "methods": [],
+          "properties": [
+            "Name",
+            "Status",
+            "Description",
+            "Url",
+            "Technologies",
+            "GithubRepo"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Apps",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "AppsWrapper",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "Name",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "Status",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "Description",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "Url",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "Technologies",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "GithubRepo",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "AppModel",
+          "line": 10,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 9,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Sections/AzureDashboardDetailTabs.razor",
+      "language": "razor",
+      "fileCategory": "code",
+      "totalLines": 559,
+      "nonEmptyLines": 532,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Sections/PortfolioAppCard.razor",
+      "language": "razor",
+      "fileCategory": "code",
+      "totalLines": 154,
+      "nonEmptyLines": 139,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Sections/PortfolioAppCard.razor.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 14,
+      "nonEmptyLines": 14,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Shared/DevErrorBoundary.razor",
+      "language": "razor",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 37,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/PoAppSession.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 65,
+      "nonEmptyLines": 60,
+      "functions": [
+        {
+          "name": "GetAsync",
+          "startLine": 13,
+          "endLine": 31,
+          "params": []
+        },
+        {
+          "name": "SaveAsync",
+          "startLine": 33,
+          "endLine": 48,
+          "params": [
+            "session"
+          ]
+        },
+        {
+          "name": "ClearAsync",
+          "startLine": 50,
+          "endLine": 64,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "PoAppSession",
+          "startLine": 7,
+          "endLine": 65,
+          "methods": [
+            "GetAsync",
+            "SaveAsync",
+            "ClearAsync"
+          ],
+          "properties": [
+            "StorageKey",
+            "_jsonOptions",
+            "_jsRuntime"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "GetAsync",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "SaveAsync",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "ClearAsync",
+          "line": 50,
+          "isDefault": false
+        },
+        {
+          "name": "PoAppSession",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "GetAsync",
+          "callee": "_jsRuntime.InvokeAsync<string?>",
+          "lineNumber": 17
+        },
+        {
+          "caller": "GetAsync",
+          "callee": "string.IsNullOrWhiteSpace",
+          "lineNumber": 18
+        },
+        {
+          "caller": "GetAsync",
+          "callee": "JsonSerializer.Deserialize<PoUserSession>",
+          "lineNumber": 20
+        },
+        {
+          "caller": "SaveAsync",
+          "callee": "JsonSerializer.Serialize",
+          "lineNumber": 37
+        },
+        {
+          "caller": "SaveAsync",
+          "callee": "_jsRuntime.InvokeVoidAsync",
+          "lineNumber": 38
+        },
+        {
+          "caller": "ClearAsync",
+          "callee": "_jsRuntime.InvokeVoidAsync",
+          "lineNumber": 54
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 3,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/PoPunkouterSoftware.Client.csproj",
+      "language": "csproj",
+      "fileCategory": "config",
+      "totalLines": 25,
+      "nonEmptyLines": 21,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Program.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 26,
+      "nonEmptyLines": 21,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

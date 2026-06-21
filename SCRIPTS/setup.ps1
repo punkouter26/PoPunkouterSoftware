@@ -11,7 +11,7 @@ Write-Host '[setup] Starting PoPunkouterSoftware first-run setup...'
 # Ensure stale local API processes do not lock development ports.
 $dotnetProcesses = Get-Process dotnet -ErrorAction SilentlyContinue
 if ($dotnetProcesses) {
-    Write-Host '[setup] Stopping existing dotnet processes to free ports 5000/5001...'
+    Write-Host '[setup] Stopping existing dotnet processes to free port 8000...'
     $dotnetProcesses | Stop-Process -Force
 }
 

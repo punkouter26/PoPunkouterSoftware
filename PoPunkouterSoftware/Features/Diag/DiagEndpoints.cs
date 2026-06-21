@@ -13,6 +13,25 @@ internal static class DiagEndpoints
 {
     internal static WebApplication MapDiagEndpoints(this WebApplication app)
     {
+        app.MapGet("/api/diag/automation-script", (IWebHostEnvironment env) =>
+        {
+            var publishedPath = Path.Combine(env.ContentRootPath, "Automation", "New-AzureEfficiencyReport.ps1");
+            var sourcePath = Path.GetFullPath(Path.Combine(
+                env.ContentRootPath, "..", "SCRIPTS", "New-AzureEfficiencyReport.ps1"));
+            var scriptPath = File.Exists(publishedPath) ? publishedPath : sourcePath;
+
+            return File.Exists(scriptPath)
+                ? Results.File(
+                    scriptPath,
+                    contentType: "text/plain; charset=utf-8",
+                    fileDownloadName: "New-AzureEfficiencyReport.ps1")
+                : Results.Problem(
+                    detail: "The Azure efficiency automation script is not available in this deployment.",
+                    statusCode: StatusCodes.Status404NotFound);
+        })
+        .WithName("DownloadAzureEfficiencyAutomationScript")
+        .WithTags("Diag");
+
         app.MapGet("/diag", GetDiag)
         .WithName("GetDiag")
         .WithTags("Diag");

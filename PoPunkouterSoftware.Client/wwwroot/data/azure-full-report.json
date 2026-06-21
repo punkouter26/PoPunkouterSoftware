@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-16T19:01:19.6599469Z",
+  "generatedAt": "2026-06-21T16:33:13.0833578Z",
   "subscription": {
     "name": "Punkouter26"
   },
@@ -22,18 +22,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoPunkouterSoftware/providers/Microsoft.Web/sites/app-popunkoutersoftware",
-        "appServicePlan": "asp-poshared-linux",
+        "appServicePlan": "asp-po-shared-prd-wus2-01",
         "appServicePlanSku": "B2",
         "connectivity": {
           "success": false,
-          "responseTime": 384,
+          "responseTime": 668,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 4177,
-          "http5xx": 8,
-          "averageResponseTime": 8.7
+          "requests": 5104,
+          "http5xx": 0,
+          "averageResponseTime": 3.2
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -52,18 +52,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoRedoImage/providers/Microsoft.Web/sites/poredoimage-web",
-        "appServicePlan": "asp-poshared-linux",
+        "appServicePlan": "asp-po-shared-prd-wus2-01",
         "appServicePlanSku": "B2",
         "connectivity": {
           "success": false,
-          "responseTime": 390,
+          "responseTime": 554,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 1388,
-          "http5xx": 2,
-          "averageResponseTime": 2.6
+          "requests": 3189,
+          "http5xx": 0,
+          "averageResponseTime": 3
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -82,18 +82,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoRobotStocks/providers/Microsoft.Web/sites/PoRobotStocks-PoRobotStocks-web",
-        "appServicePlan": "asp-pofunquiz-f1",
+        "appServicePlan": "asp-po-shared-noncritical-wus2-01",
         "appServicePlanSku": "F1",
         "connectivity": {
           "success": true,
-          "responseTime": 396,
+          "responseTime": 1915,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 1844,
+          "requests": 1661,
           "http5xx": 1,
-          "averageResponseTime": 322.4
+          "averageResponseTime": 19.5
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -112,18 +112,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoFace/providers/Microsoft.Web/sites/poface-dev-web",
-        "appServicePlan": "asp-pofunquiz-f1",
-        "appServicePlanSku": "F1",
+        "appServicePlan": "asp-po-shared-prd-wus2-02",
+        "appServicePlanSku": "B1",
         "connectivity": {
           "success": true,
-          "responseTime": 388,
+          "responseTime": 415,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 2203,
-          "http5xx": 0,
-          "averageResponseTime": 136.5
+          "requests": 3079,
+          "http5xx": 18,
+          "averageResponseTime": 16
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -142,18 +142,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoMarriedLife/providers/Microsoft.Web/sites/pomarriedlife-api",
-        "appServicePlan": "asp-pofunquiz-f1",
+        "appServicePlan": "asp-po-shared-noncritical-wus2-01",
         "appServicePlanSku": "F1",
         "connectivity": {
           "success": true,
-          "responseTime": 388,
+          "responseTime": 1913,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 1849,
-          "http5xx": 1,
-          "averageResponseTime": 297
+          "requests": 1354,
+          "http5xx": 0,
+          "averageResponseTime": 19.9
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -172,18 +172,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoHappyTrump/providers/Microsoft.Web/sites/app-pohappytrump-2jr7zldry26xa",
-        "appServicePlan": "asp-pofunquiz-f1",
+        "appServicePlan": "asp-po-shared-noncritical-wus2-01",
         "appServicePlanSku": "F1",
         "connectivity": {
           "success": false,
-          "responseTime": 388,
+          "responseTime": 1965,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 6831,
-          "http5xx": 5,
-          "averageResponseTime": 44.1
+          "requests": 3226,
+          "http5xx": 1,
+          "averageResponseTime": 15.7
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -202,18 +202,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoMemeVideo/providers/Microsoft.Web/sites/app-pomemevideo",
-        "appServicePlan": "asp-poshared-linux",
+        "appServicePlan": "asp-po-shared-prd-wus2-01",
         "appServicePlanSku": "B2",
         "connectivity": {
           "success": true,
-          "responseTime": 363,
+          "responseTime": 428,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 2793,
+          "requests": 3603,
           "http5xx": 0,
-          "averageResponseTime": 3.5
+          "averageResponseTime": 2.4
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -232,18 +232,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoLocalCompare/providers/Microsoft.Web/sites/PoLocalCompare-AppService-dev",
-        "appServicePlan": "asp-pofunquiz-f1",
+        "appServicePlan": "asp-po-shared-noncritical-wus2-01",
         "appServicePlanSku": "F1",
         "connectivity": {
           "success": true,
-          "responseTime": 424,
+          "responseTime": 1915,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 2646,
-          "http5xx": 11,
-          "averageResponseTime": 262.2
+          "requests": 1305,
+          "http5xx": 0,
+          "averageResponseTime": 15.2
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -262,18 +262,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoCoupleQuiz/providers/Microsoft.Web/sites/pocouplequiz-app",
-        "appServicePlan": "asp-poshared-linux",
+        "appServicePlan": "asp-po-shared-prd-wus2-01",
         "appServicePlanSku": "B2",
         "connectivity": {
           "success": true,
-          "responseTime": 410,
+          "responseTime": 497,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 2310,
-          "http5xx": 0,
-          "averageResponseTime": 24.7
+          "requests": 4454,
+          "http5xx": 39,
+          "averageResponseTime": 9.3
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -292,18 +292,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoSeeReview/providers/Microsoft.Web/sites/app-poseereview",
-        "appServicePlan": "asp-pofunquiz-f2",
+        "appServicePlan": "asp-po-shared-noncritical-wus2-01",
         "appServicePlanSku": "F1",
         "connectivity": {
           "success": false,
-          "responseTime": 300,
+          "responseTime": 1915,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 2690,
+          "requests": 1945,
           "http5xx": 5,
-          "averageResponseTime": 92.2
+          "averageResponseTime": 10.8
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -322,18 +322,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoLinks/providers/Microsoft.Web/sites/app-polinks",
-        "appServicePlan": "asp-poshared-linux",
+        "appServicePlan": "asp-po-shared-prd-wus2-01",
         "appServicePlanSku": "B2",
         "connectivity": {
           "success": true,
-          "responseTime": 411,
+          "responseTime": 505,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 4056,
-          "http5xx": 8,
-          "averageResponseTime": 29.9
+          "requests": 3280,
+          "http5xx": 0,
+          "averageResponseTime": 6.7
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -352,18 +352,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoRepoLineTracker/providers/Microsoft.Web/sites/app-porepolinetracker",
-        "appServicePlan": "asp-pofunquiz-f2",
+        "appServicePlan": "asp-po-shared-noncritical-wus2-01",
         "appServicePlanSku": "F1",
         "connectivity": {
           "success": false,
-          "responseTime": 106,
+          "responseTime": 1915,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 3951,
-          "http5xx": 891,
-          "averageResponseTime": 191.1
+          "requests": 4679,
+          "http5xx": 10,
+          "averageResponseTime": 5.3
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -382,18 +382,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoMiniGames/providers/Microsoft.Web/sites/app-5ln5hfdrvof5u",
-        "appServicePlan": "asp-pofunquiz-f1",
+        "appServicePlan": "asp-po-shared-noncritical-wus2-01",
         "appServicePlanSku": "F1",
         "connectivity": {
           "success": true,
-          "responseTime": 388,
+          "responseTime": 1915,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 1996,
+          "requests": 1235,
           "http5xx": 0,
-          "averageResponseTime": 86.9
+          "averageResponseTime": 9.5
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -412,18 +412,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoNovaWeight/providers/Microsoft.Web/sites/ponovaweight-app",
-        "appServicePlan": "asp-poshared-linux",
+        "appServicePlan": "asp-po-shared-prd-wus2-01",
         "appServicePlanSku": "B2",
         "connectivity": {
           "success": true,
-          "responseTime": 353,
+          "responseTime": 471,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 2785,
-          "http5xx": 1,
-          "averageResponseTime": 167.5
+          "requests": 3301,
+          "http5xx": 0,
+          "averageResponseTime": 2
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -442,18 +442,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoJoker/providers/Microsoft.Web/sites/app-pojoker",
-        "appServicePlan": "asp-poshared-linux",
+        "appServicePlan": "asp-po-shared-prd-wus2-01",
         "appServicePlanSku": "B2",
         "connectivity": {
           "success": true,
-          "responseTime": 431,
+          "responseTime": 456,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 3289,
-          "http5xx": 3,
-          "averageResponseTime": 183.7
+          "requests": 3389,
+          "http5xx": 0,
+          "averageResponseTime": 3.6
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -472,18 +472,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoIssues/providers/Microsoft.Web/sites/po-issues",
-        "appServicePlan": "asp-poissues-b1-wus2",
+        "appServicePlan": "asp-po-shared-prd-wus2-02",
         "appServicePlanSku": "B1",
         "connectivity": {
           "success": true,
-          "responseTime": 385,
+          "responseTime": 382,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 1499,
+          "requests": 1671,
           "http5xx": 0,
-          "averageResponseTime": 17.7
+          "averageResponseTime": 7.6
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -502,18 +502,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoTraffic/providers/Microsoft.Web/sites/potraffic-api",
-        "appServicePlan": "asp-poissues-b1-wus2",
+        "appServicePlan": "asp-po-shared-prd-wus2-02",
         "appServicePlanSku": "B1",
         "connectivity": {
           "success": true,
-          "responseTime": 347,
+          "responseTime": 437,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 331,
+          "requests": 2762,
           "http5xx": 30,
-          "averageResponseTime": 1.4
+          "averageResponseTime": 5.5
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -532,18 +532,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoWatch/providers/Microsoft.Web/sites/app-powatch",
-        "appServicePlan": "asp-poshared-linux",
+        "appServicePlan": "asp-po-shared-prd-wus2-01",
         "appServicePlanSku": "B2",
         "connectivity": {
           "success": true,
-          "responseTime": 355,
+          "responseTime": 459,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 3298,
+          "requests": 4424,
           "http5xx": 0,
-          "averageResponseTime": 141.6
+          "averageResponseTime": 5.4
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -562,18 +562,18 @@
         "platformState": "Running",
         "description": null,
         "resourceId": "/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoFunQuiz/providers/Microsoft.Web/sites/app-pofunquiz-zizogpdhpyiwo",
-        "appServicePlan": "asp-poissues-b1-wus2",
+        "appServicePlan": "asp-po-shared-prd-wus2-02",
         "appServicePlanSku": "B1",
         "connectivity": {
           "success": true,
-          "responseTime": 339,
+          "responseTime": 347,
           "error": null,
           "isAzureErrorPage": false
         },
         "metrics7Days": {
-          "requests": 3255,
-          "http5xx": 988,
-          "averageResponseTime": 42.5
+          "requests": 6706,
+          "http5xx": 588,
+          "averageResponseTime": 11.6
         },
         "freeTierCheck": {
           "isOnFreeTier": false,
@@ -584,37 +584,37 @@
     ]
   },
   "cost": {
-    "totalCost30Days": 27.9888,
-    "totalFormatted": "$27.99",
+    "totalCost30Days": 36.0786,
+    "totalFormatted": "$36.08",
     "note": null,
     "topCostDrivers": [
       {
         "name": "Azure App Service (poshared)",
-        "cost": 24.3114
+        "cost": 24.7016
       },
       {
         "name": "Log Analytics (poshared)",
-        "cost": 1.8835
+        "cost": 9.5898
       },
       {
         "name": "Key Vault (poshared)",
-        "cost": 0.919
+        "cost": 0.8831
       },
       {
         "name": "Foundry Models (poshared)",
-        "cost": 0.7133
-      },
-      {
-        "name": "Storage (polinks)",
-        "cost": 0.0661
+        "cost": 0.6533
       },
       {
         "name": "Foundry Tools (poshared)",
-        "cost": 0.0527
+        "cost": 0.121
+      },
+      {
+        "name": "Storage (polinks)",
+        "cost": 0.0825
       },
       {
         "name": "Bandwidth (poissues)",
-        "cost": 0.0223
+        "cost": 0.0222
       },
       {
         "name": "Bandwidth (pofunquiz)",
@@ -622,7 +622,7 @@
       },
       {
         "name": "Storage (pomemevideo)",
-        "cost": 0.003
+        "cost": 0.0064
       },
       {
         "name": "Storage (polocalcompare)",
@@ -630,15 +630,27 @@
       },
       {
         "name": "Storage (pocouplequiz)",
-        "cost": 0.0014
+        "cost": 0.0015
       },
       {
         "name": "Storage (porobotstocks)",
-        "cost": 0.0012
+        "cost": 0.0013
       },
       {
-        "name": "Storage (poissues)",
+        "name": "Storage (powatch)",
         "cost": 0.0005
+      },
+      {
+        "name": "Storage (ponovaweight)",
+        "cost": 0.0005
+      },
+      {
+        "name": "Storage (pojoker)",
+        "cost": 0.0004
+      },
+      {
+        "name": "Storage (porepolinetracker)",
+        "cost": 0.0004
       },
       {
         "name": "Bandwidth (pocouplequiz)",
@@ -649,23 +661,11 @@
         "cost": 0.0003
       },
       {
-        "name": "Storage (porepolinetracker)",
+        "name": "Storage (poissues)",
         "cost": 0.0003
       },
       {
         "name": "Storage (pohappytrump)",
-        "cost": 0.0002
-      },
-      {
-        "name": "Storage (powatch)",
-        "cost": 0.0002
-      },
-      {
-        "name": "Storage (ponovaweight)",
-        "cost": 0.0002
-      },
-      {
-        "name": "Storage (poseereview)",
         "cost": 0.0002
       }
     ]
@@ -673,34 +673,7 @@
   "freeTier": {
     "onFree": [
       {
-        "name": "asp-pofunquiz-f1",
-        "label": "App Service Plan",
-        "currentSku": "F1",
-        "freeSku": "F1",
-        "freeSkuLabel": "Free (F1)",
-        "resourceGroup": "PoShared",
-        "recommendation": "Downgrade to F1 if traffic is low."
-      },
-      {
-        "name": "asp-pofunquiz-f2",
-        "label": "App Service Plan",
-        "currentSku": "F1",
-        "freeSku": "F1",
-        "freeSkuLabel": "Free (F1)",
-        "resourceGroup": "PoShared",
-        "recommendation": "Downgrade to F1 if traffic is low."
-      },
-      {
-        "name": "asp-pofunquiz-f3",
-        "label": "App Service Plan",
-        "currentSku": "F1",
-        "freeSku": "F1",
-        "freeSkuLabel": "Free (F1)",
-        "resourceGroup": "PoShared",
-        "recommendation": "Downgrade to F1 if traffic is low."
-      },
-      {
-        "name": "asp-poissues-f1-westus3",
+        "name": "asp-po-shared-noncritical-wus2-01",
         "label": "App Service Plan",
         "currentSku": "F1",
         "freeSku": "F1",
@@ -718,15 +691,6 @@
         "freeSkuLabel": "Free (500 MB/day)",
         "resourceGroup": "PoShared",
         "recommendation": "Set a data cap on paid SKUs."
-      },
-      {
-        "name": "asp-poshared-linux",
-        "label": "App Service Plan",
-        "currentSku": "B2",
-        "freeSku": "F1",
-        "freeSkuLabel": "Free (F1)",
-        "resourceGroup": "PoShared",
-        "recommendation": "Downgrade to F1 if traffic is low."
       },
       {
         "name": "app-poseereview",
@@ -792,7 +756,16 @@
         "recommendation": "F0 sufficient for dev/hobby use."
       },
       {
-        "name": "asp-poissues-b1-wus2",
+        "name": "asp-po-shared-prd-wus2-01",
+        "label": "App Service Plan",
+        "currentSku": "B2",
+        "freeSku": "F1",
+        "freeSkuLabel": "Free (F1)",
+        "resourceGroup": "PoShared",
+        "recommendation": "Downgrade to F1 if traffic is low."
+      },
+      {
+        "name": "asp-po-shared-prd-wus2-02",
         "label": "App Service Plan",
         "currentSku": "B1",
         "freeSku": "F1",
@@ -920,18 +893,16 @@
     ]
   },
   "allResourceSummary": {
-    "total": 51,
+    "total": 46,
     "byType": {
       "workspaces": 1,
       "vaults": 1,
       "components": 1,
       "storageAccounts": 19,
       "userAssignedIdentities": 1,
-      "serverFarms": 6,
       "sites": 19,
       "accounts": 1,
-      "projects": 1,
-      "webtests": 1
+      "serverFarms": 3
     },
     "resourcesByType": {
       "workspaces": [
@@ -1105,50 +1076,6 @@
           "type": "Microsoft.ManagedIdentity/userAssignedIdentities"
         }
       ],
-      "serverFarms": [
-        {
-          "name": "asp-pofunquiz-f1",
-          "resourceGroup": "PoShared",
-          "location": "westus2",
-          "sku": "F1",
-          "type": "Microsoft.Web/serverFarms"
-        },
-        {
-          "name": "asp-pofunquiz-f2",
-          "resourceGroup": "PoShared",
-          "location": "westus2",
-          "sku": "F1",
-          "type": "Microsoft.Web/serverFarms"
-        },
-        {
-          "name": "asp-pofunquiz-f3",
-          "resourceGroup": "PoShared",
-          "location": "westus2",
-          "sku": "F1",
-          "type": "Microsoft.Web/serverFarms"
-        },
-        {
-          "name": "asp-poissues-b1-wus2",
-          "resourceGroup": "PoShared",
-          "location": "westus2",
-          "sku": "B1",
-          "type": "Microsoft.Web/serverFarms"
-        },
-        {
-          "name": "asp-poissues-f1-westus3",
-          "resourceGroup": "PoShared",
-          "location": "westus3",
-          "sku": "F1",
-          "type": "Microsoft.Web/serverFarms"
-        },
-        {
-          "name": "asp-poshared-linux",
-          "resourceGroup": "PoShared",
-          "location": "westus2",
-          "sku": "B2",
-          "type": "Microsoft.Web/serverFarms"
-        }
-      ],
       "sites": [
         {
           "name": "app-5ln5hfdrvof5u",
@@ -1293,22 +1220,27 @@
           "type": "Microsoft.CognitiveServices/accounts"
         }
       ],
-      "projects": [
+      "serverFarms": [
         {
-          "name": "po-aiservices-shared/po-aiservices-shared-project",
+          "name": "asp-po-shared-noncritical-wus2-01",
           "resourceGroup": "PoShared",
-          "location": "eastus2",
-          "sku": null,
-          "type": "Microsoft.CognitiveServices/accounts/projects"
-        }
-      ],
-      "webtests": [
+          "location": "westus2",
+          "sku": "F1",
+          "type": "Microsoft.Web/serverFarms"
+        },
         {
-          "name": "avail-app-porepolinetracker-health",
+          "name": "asp-po-shared-prd-wus2-01",
           "resourceGroup": "PoShared",
-          "location": "eastus2",
-          "sku": null,
-          "type": "Microsoft.Insights/webtests"
+          "location": "westus2",
+          "sku": "B2",
+          "type": "Microsoft.Web/serverFarms"
+        },
+        {
+          "name": "asp-po-shared-prd-wus2-02",
+          "resourceGroup": "PoShared",
+          "location": "westus2",
+          "sku": "B1",
+          "type": "Microsoft.Web/serverFarms"
         }
       ]
     }
@@ -1318,7 +1250,7 @@
       "name": "app-popunkoutersoftware",
       "url": "https://app-popunkoutersoftware.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1326,7 +1258,7 @@
       "name": "poredoimage-web",
       "url": "https://poredoimage-web.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1334,7 +1266,7 @@
       "name": "PoRobotStocks-PoRobotStocks-web",
       "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1342,7 +1274,7 @@
       "name": "poface-dev-web",
       "url": "https://poface-dev-web.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1350,7 +1282,7 @@
       "name": "pomarriedlife-api",
       "url": "https://pomarriedlife-api.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1358,7 +1290,7 @@
       "name": "app-pohappytrump-2jr7zldry26xa",
       "url": "https://app-pohappytrump-2jr7zldry26xa.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1366,7 +1298,7 @@
       "name": "app-pomemevideo",
       "url": "https://app-pomemevideo.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1374,7 +1306,7 @@
       "name": "PoLocalCompare-AppService-dev",
       "url": "https://polocalcompare-appservice-dev.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1382,7 +1314,7 @@
       "name": "pocouplequiz-app",
       "url": "https://pocouplequiz-app.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1390,7 +1322,7 @@
       "name": "app-poseereview",
       "url": "https://app-poseereview.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1398,7 +1330,7 @@
       "name": "app-polinks",
       "url": "https://app-polinks.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1406,7 +1338,7 @@
       "name": "app-porepolinetracker",
       "url": "https://app-porepolinetracker.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1414,7 +1346,7 @@
       "name": "app-5ln5hfdrvof5u",
       "url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1422,7 +1354,7 @@
       "name": "ponovaweight-app",
       "url": "https://ponovaweight-app.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1430,7 +1362,7 @@
       "name": "app-pojoker",
       "url": "https://app-pojoker.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1438,7 +1370,7 @@
       "name": "po-issues",
       "url": "https://po-issues.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1446,7 +1378,7 @@
       "name": "potraffic-api",
       "url": "https://potraffic-api.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1454,7 +1386,7 @@
       "name": "app-powatch",
       "url": "https://app-powatch.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     },
@@ -1462,7 +1394,7 @@
       "name": "app-pofunquiz-zizogpdhpyiwo",
       "url": "https://app-pofunquiz-zizogpdhpyiwo.azurewebsites.net",
       "expiry": "2026-12-08",
-      "daysLeft": 174,
+      "daysLeft": 169,
       "subject": "CN=*.azurewebsites.net, O=Microsoft Corporation, L=Redmond, S=WA, C=US",
       "error": null
     }
@@ -1598,13 +1530,8 @@
       "name": "poface-dev-web",
       "friendlyName": "PoFace",
       "resourceGroup": "PoFace",
-      "issueCount": 1,
-      "issues": [
-        {
-          "severity": "low",
-          "issue": "Always-On disabled (cold starts)"
-        }
-      ]
+      "issueCount": 0,
+      "issues": []
     },
     {
       "name": "PoLocalCompare-AppService-dev",
@@ -1879,8 +1806,9 @@
       "kind": "AIServices",
       "sku": "S0",
       "endpoint": "https://po-aiservices-shared.cognitiveservices.azure.com/",
-      "deploymentCount": 1,
+      "deploymentCount": 2,
       "deployments": [
+        "gpt-5-nano (gpt-5-nano)",
         "gpt-5.4-nano (gpt-5.4-nano)"
       ],
       "recommendation": "Paid AI account. Review token/call volume and cap spend with Azure budgets.",
@@ -1904,30 +1832,13 @@
     {
       "name": "poappideinsights8f9c9a4e",
       "resourceGroup": "PoShared",
-      "requests7Days": 73842,
-      "failedRequests7Days": 2991,
-      "exceptions7Days": 8054
+      "requests7Days": 82140,
+      "failedRequests7Days": 1497,
+      "exceptions7Days": 1580
     }
   ],
   "zombieApps": [],
-  "orphanedResources": [
-    {
-      "name": "asp-pofunquiz-f3",
-      "resourceGroup": "PoShared",
-      "type": "App Service Plan",
-      "reason": "No apps deployed (SKU: F1)",
-      "estimatedMonthlyCost": "$0/mo (Free)",
-      "command": "az appservice plan delete --name \u0022asp-pofunquiz-f3\u0022 --resource-group \u0022PoShared\u0022 --yes"
-    },
-    {
-      "name": "asp-poissues-f1-westus3",
-      "resourceGroup": "PoShared",
-      "type": "App Service Plan",
-      "reason": "No apps deployed (SKU: F1)",
-      "estimatedMonthlyCost": "$0/mo (Free)",
-      "command": "az appservice plan delete --name \u0022asp-poissues-f1-westus3\u0022 --resource-group \u0022PoShared\u0022 --yes"
-    }
-  ],
+  "orphanedResources": [],
   "burnRate": {
     "dailyCosts": [
       {
@@ -1992,136 +1903,125 @@
       },
       {
         "date": "2026-06-16",
-        "cost": 0.6697
+        "cost": 1.9257
+      },
+      {
+        "date": "2026-06-17",
+        "cost": 2.4802
+      },
+      {
+        "date": "2026-06-18",
+        "cost": 2.6026
+      },
+      {
+        "date": "2026-06-19",
+        "cost": 2.3857
+      },
+      {
+        "date": "2026-06-20",
+        "cost": 2.461
+      },
+      {
+        "date": "2026-06-21",
+        "cost": 1.2836
       }
     ],
-    "projectedMonthTotal": 25.4,
-    "projectedFormatted": "$25.40"
+    "projectedMonthTotal": 37.17,
+    "projectedFormatted": "$37.17"
   },
   "stepTimings": [
     {
-      "step": "Fetching cost data",
-      "elapsedMs": 32770
-    },
-    {
       "step": "Diagnosing downtime",
-      "elapsedMs": 6755
-    },
-    {
-      "step": "Scanning orphaned resources",
-      "elapsedMs": 4240
-    },
-    {
-      "step": "Fetching App Insights metrics",
-      "elapsedMs": 3209
+      "elapsedMs": 60031
     },
     {
       "step": "Fetching metrics (7 days)",
-      "elapsedMs": 2958
-    },
-    {
-      "step": "Resolving App Service Plans",
-      "elapsedMs": 2788
+      "elapsedMs": 3549
     },
     {
       "step": "Discovering web services",
-      "elapsedMs": 2489
+      "elapsedMs": 2967
     },
     {
-      "step": "Checking configuration drift",
-      "elapsedMs": 1619
+      "step": "Resolving App Service Plans",
+      "elapsedMs": 2683
     },
     {
-      "step": "Checking SSL certificates",
-      "elapsedMs": 664
+      "step": "Fetching App Insights metrics",
+      "elapsedMs": 2674
     },
     {
-      "step": "Calculating burn rate",
-      "elapsedMs": 662
+      "step": "Fetching cost data",
+      "elapsedMs": 2523
     },
     {
-      "step": "Scanning Log Analytics",
-      "elapsedMs": 632
-    },
-    {
-      "step": "Scanning storage accounts",
-      "elapsedMs": 578
-    },
-    {
-      "step": "Scanning AI services",
-      "elapsedMs": 486
+      "step": "Scanning orphaned resources",
+      "elapsedMs": 2194
     },
     {
       "step": "Testing connectivity",
-      "elapsedMs": 435
+      "elapsedMs": 1968
+    },
+    {
+      "step": "Calculating burn rate",
+      "elapsedMs": 1895
+    },
+    {
+      "step": "Scanning AI services",
+      "elapsedMs": 1786
+    },
+    {
+      "step": "Checking configuration drift",
+      "elapsedMs": 1587
+    },
+    {
+      "step": "Scanning storage accounts",
+      "elapsedMs": 725
+    },
+    {
+      "step": "Checking SSL certificates",
+      "elapsedMs": 531
     },
     {
       "step": "Loading all resources",
-      "elapsedMs": 401
+      "elapsedMs": 450
+    },
+    {
+      "step": "Scanning Log Analytics",
+      "elapsedMs": 180
     },
     {
       "step": "Diffing apps.json",
-      "elapsedMs": 0
+      "elapsedMs": 1
     }
   ],
   "appServicePlanInventory": [
     {
-      "name": "asp-pofunquiz-f1",
+      "name": "asp-po-shared-noncritical-wus2-01",
       "resourceGroup": "PoShared",
       "location": "westus2",
       "sku": "F1",
-      "appCount": 6,
+      "appCount": 7,
       "type": "Microsoft.Web/serverFarms"
     },
     {
-      "name": "asp-pofunquiz-f2",
-      "resourceGroup": "PoShared",
-      "location": "westus2",
-      "sku": "F1",
-      "appCount": 2,
-      "type": "Microsoft.Web/serverFarms"
-    },
-    {
-      "name": "asp-pofunquiz-f3",
-      "resourceGroup": "PoShared",
-      "location": "westus2",
-      "sku": "F1",
-      "appCount": 0,
-      "type": "Microsoft.Web/serverFarms"
-    },
-    {
-      "name": "asp-poissues-b1-wus2",
-      "resourceGroup": "PoShared",
-      "location": "westus2",
-      "sku": "B1",
-      "appCount": 3,
-      "type": "Microsoft.Web/serverFarms"
-    },
-    {
-      "name": "asp-poissues-f1-westus3",
-      "resourceGroup": "PoShared",
-      "location": "westus3",
-      "sku": "F1",
-      "appCount": 0,
-      "type": "Microsoft.Web/serverFarms"
-    },
-    {
-      "name": "asp-poshared-linux",
+      "name": "asp-po-shared-prd-wus2-01",
       "resourceGroup": "PoShared",
       "location": "westus2",
       "sku": "B2",
       "appCount": 8,
       "type": "Microsoft.Web/serverFarms"
+    },
+    {
+      "name": "asp-po-shared-prd-wus2-02",
+      "resourceGroup": "PoShared",
+      "location": "westus2",
+      "sku": "B1",
+      "appCount": 4,
+      "type": "Microsoft.Web/serverFarms"
     }
   ],
-  "delta": {
-    "previousGeneratedAt": "2026-06-16T18:48:50.924581Z",
-    "brokenServicesDelta": 0,
-    "costDelta": 0,
-    "newBrokenServices": [],
-    "recoveredServices": [],
-    "newOrphanedResources": []
-  },
+  "delta": null,
   "downtimeDiagnoses": [
     {
       "name": "app-popunkoutersoftware",
@@ -2132,66 +2032,20 @@
       "usageState": "Normal",
       "isSuspended": false,
       "suspendedTill": null,
-      "planName": "asp-poshared-linux",
+      "planName": "asp-po-shared-prd-wus2-01",
       "planStatus": "Ready",
       "planSku": "B2",
       "planStopped": false,
-      "recentDeployments": [
-        {
-          "deploymentId": "app-popunkoutersoftware/8338b782-1330-4c10-8137-2b4e78c0dc2e",
-          "active": true,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-11T15:19:17.0942557-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-popunkoutersoftware/47ab56df-2857-4218-97f6-2a5dec81eb5c",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-11T12:39:37.9721838-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-popunkoutersoftware/708e76fc-9699-41d4-8985-30249153f961",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-05T15:14:05.4489732-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-popunkoutersoftware/74082200-42e6-47a9-aaba-8a203b37ac38",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-05T12:28:31.7287218-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-popunkoutersoftware/4430058a-fb42-471d-8b56-4b96980a66f4",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-27T18:59:01.056229-04:00",
-          "author": "N/A"
-        }
-      ],
+      "recentDeployments": [],
       "recentActivity": [],
       "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-popunkoutersoftware.scm.azurewebsites.net/api/logstream",
       "appInsightsExceptions7Days": null,
       "appInsightsFailedRequests7Days": null,
-      "gitHubWorkflowRunUrl": "https://github.com/punkouter26/PoPunkouterSoftware/actions/runs/27371341556",
+      "gitHubWorkflowRunUrl": "https://github.com/punkouter26/PoPunkouterSoftware/actions/runs/27643506346",
       "gitHubWorkflowStatus": "completed",
       "gitHubWorkflowConclusion": "success",
-      "gitHubWorkflowCompletedAt": "2026-06-11T15:19:26-04:00",
+      "gitHubWorkflowCompletedAt": "2026-06-16T15:48:07-04:00",
       "kuduProcesses": null,
       "kuduReachable": false
     },
@@ -2204,57 +2058,11 @@
       "usageState": "Normal",
       "isSuspended": false,
       "suspendedTill": null,
-      "planName": "asp-poshared-linux",
+      "planName": "asp-po-shared-prd-wus2-01",
       "planStatus": "Ready",
       "planSku": "B2",
       "planStopped": false,
-      "recentDeployments": [
-        {
-          "deploymentId": "poredoimage-web/e5a881fe-1d4f-434d-8ddd-3d882b39b589",
-          "active": true,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-14T10:26:49.6302645-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "poredoimage-web/8d6f8558-a409-43c6-bf00-d565fba379cf",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-14T10:18:26.5904512-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "poredoimage-web/663db62e-9b7c-4515-8221-0fc4215fce62",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-13T20:08:09.3857842-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "poredoimage-web/c73a0834-683a-4634-9672-c7f7ecf2d654",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-13T20:02:41.1902233-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "poredoimage-web/ad80b1be-a1d1-4178-871f-75bc55b07879",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-13T19:39:21.2403168-04:00",
-          "author": "N/A"
-        }
-      ],
+      "recentDeployments": [],
       "recentActivity": [],
       "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://poredoimage-web.scm.azurewebsites.net/api/logstream",
@@ -2276,66 +2084,20 @@
       "usageState": "Normal",
       "isSuspended": false,
       "suspendedTill": null,
-      "planName": "asp-pofunquiz-f1",
+      "planName": "asp-po-shared-noncritical-wus2-01",
       "planStatus": "Ready",
       "planSku": "F1",
       "planStopped": false,
-      "recentDeployments": [
-        {
-          "deploymentId": "app-pohappytrump-2jr7zldry26xa/c32918df-b65f-4755-8113-e2907a505ed4",
-          "active": true,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-28T14:26:48.12165-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-pohappytrump-2jr7zldry26xa/73b64604-15b0-498d-8bcc-591d74da3d01",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-28T13:07:49.5120434-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-pohappytrump-2jr7zldry26xa/b68e8940-5ef2-4a9a-9b1b-2821b19dd4e8",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-28T12:58:41.9562943-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-pohappytrump-2jr7zldry26xa/a640418a-8616-4903-9afc-2e90121f8954",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-28T11:12:10.0564452-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-pohappytrump-2jr7zldry26xa/19718b55-ff50-461d-9a90-8489e499bed3",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-17T17:11:27.1993019-04:00",
-          "author": "N/A"
-        }
-      ],
+      "recentDeployments": [],
       "recentActivity": [],
-      "likelyCause": "Recent GitHub Actions workflow run failed \u2014 deployment may not have reached Azure",
-      "suggestedFix": "Review the failed workflow run: https://github.com/punkouter26/PoHappyTrump/actions/runs/27361391442",
+      "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
+      "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-pohappytrump-2jr7zldry26xa.scm.azurewebsites.net/api/logstream",
       "appInsightsExceptions7Days": null,
       "appInsightsFailedRequests7Days": null,
-      "gitHubWorkflowRunUrl": "https://github.com/punkouter26/PoHappyTrump/actions/runs/27361391442",
+      "gitHubWorkflowRunUrl": "https://github.com/punkouter26/PoHappyTrump/actions/runs/27773602978",
       "gitHubWorkflowStatus": "completed",
-      "gitHubWorkflowConclusion": "failure",
-      "gitHubWorkflowCompletedAt": "2026-06-11T12:37:00-04:00",
+      "gitHubWorkflowConclusion": "success",
+      "gitHubWorkflowCompletedAt": "2026-06-18T12:30:35-04:00",
       "kuduProcesses": null,
       "kuduReachable": false
     },
@@ -2348,164 +2110,12 @@
       "usageState": "Normal",
       "isSuspended": false,
       "suspendedTill": null,
-      "planName": "asp-pofunquiz-f2",
+      "planName": "asp-po-shared-noncritical-wus2-01",
       "planStatus": "Ready",
       "planSku": "F1",
       "planStopped": false,
-      "recentDeployments": [
-        {
-          "deploymentId": "app-poseereview/2bc0b7f0-39d8-4945-84b5-11e62d9ab782",
-          "active": true,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-15T12:49:01.908284-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-poseereview/be570b74-0946-4f8d-8a84-41731e98f2af",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-15T12:18:39.9853801-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-poseereview/2e81b7ae-281d-4acc-9a11-5451ae4523bd",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-03T21:32:38.8263674-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-poseereview/7ad4568b-abe5-4d85-bc83-a3fe68d540d5",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-03T17:05:49.3141582-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-poseereview/54a80662-e858-4687-ac34-0e29ba6ad1ac",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-05-03T16:36:08.3782996-04:00",
-          "author": "N/A"
-        }
-      ],
-      "recentActivity": [
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-15T12:48:28.2870184-04:00",
-          "caller": "eb233f30-864c-44fc-b99f-790d1e32b5b3",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-06-15T12:48:28.0995145-04:00",
-          "caller": "eb233f30-864c-44fc-b99f-790d1e32b5b3",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-15T12:30:53.2715836-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-06-15T12:30:53.0997069-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-15T12:28:57.3105093-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-06-15T12:28:56.9198922-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-15T12:11:42.027117-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Update web sites config",
-          "status": "Started",
-          "eventTimestamp": "2026-06-15T12:11:41.1208805-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Restart Web App",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-15T12:09:06.7073505-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "RestartWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-15T12:09:06-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Restart Web App",
-          "status": "Started",
-          "eventTimestamp": "2026-06-15T12:09:05.3947546-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "RestartWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-06-15T12:09:05-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-15T11:55:38.1030016-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-06-15T11:55:37.7123805-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-15T11:54:46.5724537-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        }
-      ],
+      "recentDeployments": [],
+      "recentActivity": [],
       "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-poseereview.scm.azurewebsites.net/api/logstream",
       "appInsightsExceptions7Days": null,
@@ -2526,164 +2136,12 @@
       "usageState": "Normal",
       "isSuspended": false,
       "suspendedTill": null,
-      "planName": "asp-pofunquiz-f2",
+      "planName": "asp-po-shared-noncritical-wus2-01",
       "planStatus": "Ready",
       "planSku": "F1",
       "planStopped": false,
-      "recentDeployments": [
-        {
-          "deploymentId": "app-porepolinetracker/c7dbc3d6-8913-4f9e-9783-2fc0f53ce919",
-          "active": true,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-14T18:44:45.5427109-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-porepolinetracker/fbcec878-2fa7-4025-8425-2ee16d7b802d",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-14T18:13:04.1731737-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-porepolinetracker/90ebc9c9-6496-4222-9b75-02dab0d2b3dc",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-14T16:42:53.2854513-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-porepolinetracker/4725e2a4-7d8d-4f03-a7d0-c686cc6bb8ec",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-14T16:30:29.6909188-04:00",
-          "author": "N/A"
-        },
-        {
-          "deploymentId": "app-porepolinetracker/2f9d69ea-66b0-4b25-9bdf-bc4b7842896f",
-          "active": false,
-          "statusCode": 4,
-          "statusText": "Success",
-          "message": "OneDeploy",
-          "deployedAt": "2026-06-14T14:25:37.2173858-04:00",
-          "author": "N/A"
-        }
-      ],
-      "recentActivity": [
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-14T18:44:19.7227055-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-06-14T18:44:19.5195794-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Restart Web App",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-14T18:17:57.653241-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "RestartWebSite",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-14T18:17:57-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "RestartWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-06-14T18:17:57-04:00",
-          "caller": null,
-          "level": "Informational"
-        },
-        {
-          "operationName": "Restart Web App",
-          "status": "Started",
-          "eventTimestamp": "2026-06-14T18:17:56.8094831-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-14T18:11:50.872933-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-06-14T18:11:50.6854337-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-14T16:44:29.8447887-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-06-14T16:44:29.4697945-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-14T16:41:19.3982815-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Get Web App Publishing Profile",
-          "status": "Started",
-          "eventTimestamp": "2026-06-14T16:41:18.9920329-04:00",
-          "caller": "e64dd088-331e-49f6-b7e1-f458e74e3db9",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Restart Web App",
-          "status": "Succeeded",
-          "eventTimestamp": "2026-06-14T16:33:57.887214-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "Restart Web App",
-          "status": "Started",
-          "eventTimestamp": "2026-06-14T16:33:57.6840923-04:00",
-          "caller": "punkouter26@outlook.com",
-          "level": "Informational"
-        },
-        {
-          "operationName": "RestartWebSite",
-          "status": "Started",
-          "eventTimestamp": "2026-06-14T16:33:57-04:00",
-          "caller": null,
-          "level": "Informational"
-        }
-      ],
+      "recentDeployments": [],
+      "recentActivity": [],
       "likelyCause": "No obvious infrastructure cause found \u2014 likely an application-level error (crash loop, bad startup config, or missing secrets)",
       "suggestedFix": "Check Application Insights for exceptions or stream live logs at: https://app-porepolinetracker.scm.azurewebsites.net/api/logstream",
       "appInsightsExceptions7Days": null,
@@ -2701,7 +2159,7 @@
       "serviceName": "app-5ln5hfdrvof5u",
       "friendlyName": "PoMiniGames",
       "resourceGroup": "PoMiniGames",
-      "currentPlanName": "asp-pofunquiz-f1",
+      "currentPlanName": "asp-po-shared-noncritical-wus2-01",
       "currentPlanSku": "F1",
       "recommendedPlanSku": "B2",
       "action": "upgrade",
@@ -2719,34 +2177,88 @@
       "serviceName": "app-pohappytrump-2jr7zldry26xa",
       "friendlyName": "PoHappyTrump",
       "resourceGroup": "PoHappyTrump",
-      "currentPlanName": "asp-pofunquiz-f1",
+      "currentPlanName": "asp-po-shared-noncritical-wus2-01",
       "currentPlanSku": "F1",
       "recommendedPlanSku": "B2",
       "action": "upgrade",
-      "reason": "Always-On disabled (causing cold starts) \u2014 requires paid plan; 5 server errors in 7 days \u2014 possible memory/CPU exhaustion; HTTP/2 disabled \u2014 enable for better performance",
+      "reason": "Always-On disabled (causing cold starts) \u2014 requires paid plan; 1 server errors in 7 days \u2014 possible memory/CPU exhaustion; HTTP/2 disabled \u2014 enable for better performance",
       "monthlyCostImpact": "\u002B$108/mo",
       "priority": "medium",
       "triggers": [
         "Always-On disabled (causing cold starts) \u2014 requires paid plan",
-        "5 server errors in 7 days \u2014 possible memory/CPU exhaustion",
+        "1 server errors in 7 days \u2014 possible memory/CPU exhaustion",
         "HTTP/2 disabled \u2014 enable for better performance"
       ],
       "recommendedMonthlyCost": "$108/mo",
       "currentMonthlyCost": "$0/mo"
     },
     {
-      "serviceName": "app-pomemevideo",
-      "friendlyName": "PoMemeVideo",
-      "resourceGroup": "PoMemeVideo",
-      "currentPlanName": "asp-poshared-linux",
+      "serviceName": "app-pojoker",
+      "friendlyName": "PoJoker",
+      "resourceGroup": "PoJoker",
+      "currentPlanName": "asp-po-shared-prd-wus2-01",
       "currentPlanSku": "B2",
       "recommendedPlanSku": "F1",
       "action": "downgrade",
-      "reason": "Low-traffic app (2793 reqs/wk, 4ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
+      "reason": "Low-traffic app (3389 reqs/wk, 4ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
       "monthlyCostImpact": "-$108/mo",
       "priority": "medium",
       "triggers": [
-        "Low-traffic app (2793 reqs/wk, 4ms avg) \u2014 fits F1 limits",
+        "Low-traffic app (3389 reqs/wk, 4ms avg) \u2014 fits F1 limits",
+        "Always-On not required \u2014 F1 suitable"
+      ],
+      "recommendedMonthlyCost": "$0/mo",
+      "currentMonthlyCost": "$108/mo"
+    },
+    {
+      "serviceName": "app-polinks",
+      "friendlyName": "PoLinks",
+      "resourceGroup": "PoLinks",
+      "currentPlanName": "asp-po-shared-prd-wus2-01",
+      "currentPlanSku": "B2",
+      "recommendedPlanSku": "F1",
+      "action": "downgrade",
+      "reason": "Low-traffic app (3280 reqs/wk, 7ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
+      "monthlyCostImpact": "-$108/mo",
+      "priority": "medium",
+      "triggers": [
+        "Low-traffic app (3280 reqs/wk, 7ms avg) \u2014 fits F1 limits",
+        "Always-On not required \u2014 F1 suitable"
+      ],
+      "recommendedMonthlyCost": "$0/mo",
+      "currentMonthlyCost": "$108/mo"
+    },
+    {
+      "serviceName": "app-pomemevideo",
+      "friendlyName": "PoMemeVideo",
+      "resourceGroup": "PoMemeVideo",
+      "currentPlanName": "asp-po-shared-prd-wus2-01",
+      "currentPlanSku": "B2",
+      "recommendedPlanSku": "F1",
+      "action": "downgrade",
+      "reason": "Low-traffic app (3603 reqs/wk, 2ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
+      "monthlyCostImpact": "-$108/mo",
+      "priority": "medium",
+      "triggers": [
+        "Low-traffic app (3603 reqs/wk, 2ms avg) \u2014 fits F1 limits",
+        "Always-On not required \u2014 F1 suitable"
+      ],
+      "recommendedMonthlyCost": "$0/mo",
+      "currentMonthlyCost": "$108/mo"
+    },
+    {
+      "serviceName": "app-popunkoutersoftware",
+      "friendlyName": "PoPunkouterSoftware",
+      "resourceGroup": "PoPunkouterSoftware",
+      "currentPlanName": "asp-po-shared-prd-wus2-01",
+      "currentPlanSku": "B2",
+      "recommendedPlanSku": "F1",
+      "action": "downgrade",
+      "reason": "Low-traffic app (5104 reqs/wk, 3ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
+      "monthlyCostImpact": "-$108/mo",
+      "priority": "medium",
+      "triggers": [
+        "Low-traffic app (5104 reqs/wk, 3ms avg) \u2014 fits F1 limits",
         "Always-On not required \u2014 F1 suitable"
       ],
       "recommendedMonthlyCost": "$0/mo",
@@ -2756,16 +2268,16 @@
       "serviceName": "app-porepolinetracker",
       "friendlyName": "PoRepoLineTracker",
       "resourceGroup": "PoRepoLineTracker",
-      "currentPlanName": "asp-pofunquiz-f2",
+      "currentPlanName": "asp-po-shared-noncritical-wus2-01",
       "currentPlanSku": "F1",
       "recommendedPlanSku": "B2",
       "action": "upgrade",
-      "reason": "Always-On disabled (causing cold starts) \u2014 requires paid plan; 891 server errors in 7 days \u2014 possible memory/CPU exhaustion; HTTP/2 disabled \u2014 enable for better performance",
+      "reason": "Always-On disabled (causing cold starts) \u2014 requires paid plan; 10 server errors in 7 days \u2014 possible memory/CPU exhaustion; HTTP/2 disabled \u2014 enable for better performance",
       "monthlyCostImpact": "\u002B$108/mo",
       "priority": "medium",
       "triggers": [
         "Always-On disabled (causing cold starts) \u2014 requires paid plan",
-        "891 server errors in 7 days \u2014 possible memory/CPU exhaustion",
+        "10 server errors in 7 days \u2014 possible memory/CPU exhaustion",
         "HTTP/2 disabled \u2014 enable for better performance"
       ],
       "recommendedMonthlyCost": "$108/mo",
@@ -2775,7 +2287,7 @@
       "serviceName": "app-poseereview",
       "friendlyName": "PoSeeReview",
       "resourceGroup": "PoSeeReview",
-      "currentPlanName": "asp-pofunquiz-f2",
+      "currentPlanName": "asp-po-shared-noncritical-wus2-01",
       "currentPlanSku": "F1",
       "recommendedPlanSku": "B2",
       "action": "upgrade",
@@ -2793,25 +2305,25 @@
       "serviceName": "app-powatch",
       "friendlyName": "PoWatch",
       "resourceGroup": "PoWatch",
-      "currentPlanName": "asp-poshared-linux",
+      "currentPlanName": "asp-po-shared-prd-wus2-01",
       "currentPlanSku": "B2",
       "recommendedPlanSku": "F1",
       "action": "downgrade",
-      "reason": "Low-traffic app (3298 reqs/wk, 142ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
+      "reason": "Low-traffic app (4424 reqs/wk, 5ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
       "monthlyCostImpact": "-$108/mo",
       "priority": "medium",
       "triggers": [
-        "Low-traffic app (3298 reqs/wk, 142ms avg) \u2014 fits F1 limits",
+        "Low-traffic app (4424 reqs/wk, 5ms avg) \u2014 fits F1 limits",
         "Always-On not required \u2014 F1 suitable"
       ],
       "recommendedMonthlyCost": "$0/mo",
       "currentMonthlyCost": "$108/mo"
     },
     {
-      "serviceName": "poface-dev-web",
-      "friendlyName": "PoFace",
-      "resourceGroup": "PoFace",
-      "currentPlanName": "asp-pofunquiz-f1",
+      "serviceName": "PoLocalCompare-AppService-dev",
+      "friendlyName": "PoLocalCompare",
+      "resourceGroup": "PoLocalCompare",
+      "currentPlanName": "asp-po-shared-noncritical-wus2-01",
       "currentPlanSku": "F1",
       "recommendedPlanSku": "B2",
       "action": "upgrade",
@@ -2825,46 +2337,63 @@
       "currentMonthlyCost": "$0/mo"
     },
     {
-      "serviceName": "PoLocalCompare-AppService-dev",
-      "friendlyName": "PoLocalCompare",
-      "resourceGroup": "PoLocalCompare",
-      "currentPlanName": "asp-pofunquiz-f1",
+      "serviceName": "pomarriedlife-api",
+      "friendlyName": "PoMarriedLife",
+      "resourceGroup": "PoMarriedLife",
+      "currentPlanName": "asp-po-shared-noncritical-wus2-01",
       "currentPlanSku": "F1",
       "recommendedPlanSku": "B2",
       "action": "upgrade",
-      "reason": "Always-On disabled (causing cold starts) \u2014 requires paid plan; 11 server errors in 7 days \u2014 possible memory/CPU exhaustion",
+      "reason": "Always-On disabled (causing cold starts) \u2014 requires paid plan",
       "monthlyCostImpact": "\u002B$108/mo",
       "priority": "medium",
       "triggers": [
-        "Always-On disabled (causing cold starts) \u2014 requires paid plan",
-        "11 server errors in 7 days \u2014 possible memory/CPU exhaustion"
+        "Always-On disabled (causing cold starts) \u2014 requires paid plan"
       ],
       "recommendedMonthlyCost": "$108/mo",
       "currentMonthlyCost": "$0/mo"
     },
     {
-      "serviceName": "pomarriedlife-api",
-      "friendlyName": "PoMarriedLife",
-      "resourceGroup": "PoMarriedLife",
-      "currentPlanName": "asp-pofunquiz-f1",
-      "currentPlanSku": "F1",
-      "recommendedPlanSku": "B2",
-      "action": "upgrade",
-      "reason": "Always-On disabled (causing cold starts) \u2014 requires paid plan; 1 server errors in 7 days \u2014 possible memory/CPU exhaustion",
-      "monthlyCostImpact": "\u002B$108/mo",
+      "serviceName": "ponovaweight-app",
+      "friendlyName": "PoNovaWeight",
+      "resourceGroup": "PoNovaWeight",
+      "currentPlanName": "asp-po-shared-prd-wus2-01",
+      "currentPlanSku": "B2",
+      "recommendedPlanSku": "F1",
+      "action": "downgrade",
+      "reason": "Low-traffic app (3301 reqs/wk, 2ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
+      "monthlyCostImpact": "-$108/mo",
       "priority": "medium",
       "triggers": [
-        "Always-On disabled (causing cold starts) \u2014 requires paid plan",
-        "1 server errors in 7 days \u2014 possible memory/CPU exhaustion"
+        "Low-traffic app (3301 reqs/wk, 2ms avg) \u2014 fits F1 limits",
+        "Always-On not required \u2014 F1 suitable"
       ],
-      "recommendedMonthlyCost": "$108/mo",
-      "currentMonthlyCost": "$0/mo"
+      "recommendedMonthlyCost": "$0/mo",
+      "currentMonthlyCost": "$108/mo"
+    },
+    {
+      "serviceName": "poredoimage-web",
+      "friendlyName": "PoRedoImage",
+      "resourceGroup": "PoRedoImage",
+      "currentPlanName": "asp-po-shared-prd-wus2-01",
+      "currentPlanSku": "B2",
+      "recommendedPlanSku": "F1",
+      "action": "downgrade",
+      "reason": "Low-traffic app (3189 reqs/wk, 3ms avg) \u2014 fits F1 limits; Always-On not required \u2014 F1 suitable",
+      "monthlyCostImpact": "-$108/mo",
+      "priority": "medium",
+      "triggers": [
+        "Low-traffic app (3189 reqs/wk, 3ms avg) \u2014 fits F1 limits",
+        "Always-On not required \u2014 F1 suitable"
+      ],
+      "recommendedMonthlyCost": "$0/mo",
+      "currentMonthlyCost": "$108/mo"
     },
     {
       "serviceName": "PoRobotStocks-PoRobotStocks-web",
       "friendlyName": "PoRobotStocks",
       "resourceGroup": "PoRobotStocks",
-      "currentPlanName": "asp-pofunquiz-f1",
+      "currentPlanName": "asp-po-shared-noncritical-wus2-01",
       "currentPlanSku": "F1",
       "recommendedPlanSku": "B2",
       "action": "upgrade",
@@ -2882,7 +2411,7 @@
       "serviceName": "app-pofunquiz-zizogpdhpyiwo",
       "friendlyName": "PoFunQuiz",
       "resourceGroup": "PoFunQuiz",
-      "currentPlanName": "asp-poissues-b1-wus2",
+      "currentPlanName": "asp-po-shared-prd-wus2-02",
       "currentPlanSku": "B1",
       "recommendedPlanSku": "B1",
       "action": "keep",
@@ -2894,59 +2423,14 @@
       "currentMonthlyCost": "$54/mo"
     },
     {
-      "serviceName": "app-pojoker",
-      "friendlyName": "PoJoker",
-      "resourceGroup": "PoJoker",
-      "currentPlanName": "asp-poshared-linux",
-      "currentPlanSku": "B2",
-      "recommendedPlanSku": "B2",
-      "action": "keep",
-      "reason": "Always-On not required \u2014 F1 suitable \u2014 but upgrade/downgrade not strongly indicated.",
-      "monthlyCostImpact": null,
-      "priority": "low",
-      "triggers": [],
-      "recommendedMonthlyCost": "$108/mo",
-      "currentMonthlyCost": "$108/mo"
-    },
-    {
-      "serviceName": "app-polinks",
-      "friendlyName": "PoLinks",
-      "resourceGroup": "PoLinks",
-      "currentPlanName": "asp-poshared-linux",
-      "currentPlanSku": "B2",
-      "recommendedPlanSku": "B2",
-      "action": "keep",
-      "reason": "Always-On not required \u2014 F1 suitable \u2014 but upgrade/downgrade not strongly indicated.",
-      "monthlyCostImpact": null,
-      "priority": "low",
-      "triggers": [],
-      "recommendedMonthlyCost": "$108/mo",
-      "currentMonthlyCost": "$108/mo"
-    },
-    {
-      "serviceName": "app-popunkoutersoftware",
-      "friendlyName": "PoPunkouterSoftware",
-      "resourceGroup": "PoPunkouterSoftware",
-      "currentPlanName": "asp-poshared-linux",
-      "currentPlanSku": "B2",
-      "recommendedPlanSku": "B2",
-      "action": "keep",
-      "reason": "Always-On not required \u2014 F1 suitable \u2014 but upgrade/downgrade not strongly indicated.",
-      "monthlyCostImpact": null,
-      "priority": "low",
-      "triggers": [],
-      "recommendedMonthlyCost": "$108/mo",
-      "currentMonthlyCost": "$108/mo"
-    },
-    {
       "serviceName": "po-issues",
       "friendlyName": "PoIssues",
       "resourceGroup": "PoIssues",
-      "currentPlanName": "asp-poissues-b1-wus2",
+      "currentPlanName": "asp-po-shared-prd-wus2-02",
       "currentPlanSku": "B1",
       "recommendedPlanSku": "B1",
       "action": "keep",
-      "reason": "Low-traffic app (1499 reqs/wk, 18ms avg) \u2014 fits F1 limits \u2014 but upgrade/downgrade not strongly indicated.",
+      "reason": "Low-traffic app (1671 reqs/wk, 8ms avg) \u2014 fits F1 limits \u2014 but upgrade/downgrade not strongly indicated.",
       "monthlyCostImpact": null,
       "priority": "low",
       "triggers": [],
@@ -2957,11 +2441,11 @@
       "serviceName": "pocouplequiz-app",
       "friendlyName": "PoCoupleQuiz",
       "resourceGroup": "PoCoupleQuiz",
-      "currentPlanName": "asp-poshared-linux",
+      "currentPlanName": "asp-po-shared-prd-wus2-01",
       "currentPlanSku": "B2",
       "recommendedPlanSku": "B2",
       "action": "keep",
-      "reason": "Low-traffic app (2310 reqs/wk, 25ms avg) \u2014 fits F1 limits \u2014 but upgrade/downgrade not strongly indicated.",
+      "reason": "App is well-provisioned on current paid tier.",
       "monthlyCostImpact": null,
       "priority": "low",
       "triggers": [],
@@ -2969,40 +2453,25 @@
       "currentMonthlyCost": "$108/mo"
     },
     {
-      "serviceName": "ponovaweight-app",
-      "friendlyName": "PoNovaWeight",
-      "resourceGroup": "PoNovaWeight",
-      "currentPlanName": "asp-poshared-linux",
-      "currentPlanSku": "B2",
-      "recommendedPlanSku": "B2",
+      "serviceName": "poface-dev-web",
+      "friendlyName": "PoFace",
+      "resourceGroup": "PoFace",
+      "currentPlanName": "asp-po-shared-prd-wus2-02",
+      "currentPlanSku": "B1",
+      "recommendedPlanSku": "B1",
       "action": "keep",
       "reason": "Always-On not required \u2014 F1 suitable \u2014 but upgrade/downgrade not strongly indicated.",
       "monthlyCostImpact": null,
       "priority": "low",
       "triggers": [],
-      "recommendedMonthlyCost": "$108/mo",
-      "currentMonthlyCost": "$108/mo"
-    },
-    {
-      "serviceName": "poredoimage-web",
-      "friendlyName": "PoRedoImage",
-      "resourceGroup": "PoRedoImage",
-      "currentPlanName": "asp-poshared-linux",
-      "currentPlanSku": "B2",
-      "recommendedPlanSku": "B2",
-      "action": "keep",
-      "reason": "Always-On not required \u2014 F1 suitable \u2014 but upgrade/downgrade not strongly indicated.",
-      "monthlyCostImpact": null,
-      "priority": "low",
-      "triggers": [],
-      "recommendedMonthlyCost": "$108/mo",
-      "currentMonthlyCost": "$108/mo"
+      "recommendedMonthlyCost": "$54/mo",
+      "currentMonthlyCost": "$54/mo"
     },
     {
       "serviceName": "potraffic-api",
       "friendlyName": "PoTraffic",
       "resourceGroup": "PoTraffic",
-      "currentPlanName": "asp-poissues-b1-wus2",
+      "currentPlanName": "asp-po-shared-prd-wus2-02",
       "currentPlanSku": "B1",
       "recommendedPlanSku": "B1",
       "action": "keep",

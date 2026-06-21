@@ -43,4 +43,11 @@
     <ProjectReference Include="..\PoPunkouterSoftware.Infrastructure\PoPunkouterSoftware.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\SCRIPTS\New-AzureEfficiencyReport.ps1"
+             Link="Automation\New-AzureEfficiencyReport.ps1"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

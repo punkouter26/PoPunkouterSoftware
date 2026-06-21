@@ -1,0 +1,55 @@
+{
+  "nodes": [
+    {
+      "id": "config:PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+      "type": "config",
+      "name": "PoPunkouterSoftware.csproj",
+      "filePath": "PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+      "summary": "ASP.NET Core Web SDK project file for the host server; references the Shared, Client, and Infrastructure projects and pulls in Blazor WASM hosting, Radzen UI, Serilog, OpenTelemetry/Azure Monitor, OpenAPI/Scalar, and Azure Key Vault/Identity packages.",
+      "tags": ["configuration", "build-system", "dotnet", "entry-point", "aspnet-core"],
+      "complexity": "simple",
+      "languageNotes": "Uses central package management (versions in Directory.Packages.props) and InternalsVisibleTo to expose internals to the test projects; copies an automation PowerShell script to output."
+    },
+    {
+      "id": "config:PoPunkouterSoftware/appsettings.json",
+      "type": "config",
+      "name": "appsettings.json",
+      "filePath": "PoPunkouterSoftware/appsettings.json",
+      "summary": "Base runtime configuration for the host server covering Serilog logging, allowed hosts/origins, Azure Table Storage, Application Insights, feature flags, Azure OpenAI, GitHub, the service pinger, incidents, and Key Vault settings.",
+      "tags": ["configuration", "runtime-settings", "logging", "azure", "feature-flags"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:PoPunkouterSoftware/appsettings.Development.json",
+      "type": "config",
+      "name": "appsettings.Development.json",
+      "filePath": "PoPunkouterSoftware/appsettings.Development.json",
+      "summary": "Development environment overrides for the host server, adjusting logging levels, Serilog, Key Vault, Azure Table Storage, feature flags, and Application Insights for local debugging.",
+      "tags": ["configuration", "runtime-settings", "development", "logging", "azure"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "config:PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+      "target": "file:PoPunkouterSoftware/Program.cs",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:PoPunkouterSoftware/appsettings.json",
+      "target": "file:PoPunkouterSoftware/Program.cs",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:PoPunkouterSoftware/appsettings.Development.json",
+      "target": "file:PoPunkouterSoftware/Program.cs",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

@@ -220,3 +220,29 @@ public class StaticFilesTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 }
+
+[Collection("WebApp")]
+public class AzureAutomationScriptEndpointTests
+{
+    private readonly HttpClient _client;
+
+    public AzureAutomationScriptEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
+
+    [Fact]
+    public async Task GetAutomationScript_ReturnsDownloadablePowerShellScript()
+    {
+        var response = await _client.GetAsync("/api/diag/automation-script");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/plain");
+        response.Content.Headers.ContentDisposition?.FileNameStar.Should().Be("New-AzureEfficiencyReport.ps1");
+
+        var script = await response.Content.ReadAsStringAsync();
+        script.Should().Contain("az login");
+        script.Should().Contain("\"group\", \"list\"");
+        script.Should().Contain("--skip-token");
+        script.Should().Contain("azure-inventory-report.html");
+        script.Should().Contain("cleanup_suggestions.ps1");
+        script.Should().NotContain("keyvault\", \"secret\", \"show");
+    }
+}

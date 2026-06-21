@@ -1,0 +1,1011 @@
+{
+  "scriptCompleted": true,
+  "entryPointCandidates": [
+    {
+      "id": "document:README.md",
+      "score": 5,
+      "name": "README.md",
+      "summary": "Top-level project overview documenting the solution layout, local development prerequisites and commands, runtime notes (health/diagnostics endpoints, Azure behavior), testing strategy, and developer guidance."
+    },
+    {
+      "id": "file:PoPunkouterSoftware/Program.cs",
+      "score": 5,
+      "name": "Program.cs",
+      "summary": "ASP.NET Core host entry point: bootstraps Serilog, wires Azure Key Vault, OpenTelemetry, SignalR, Radzen, services, middleware, and maps all feature endpoints before running the Blazor Web App."
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/Program.cs",
+      "score": 4,
+      "name": "Program.cs",
+      "summary": "Blazor WebAssembly entry point wiring up the HttpClient, Radzen UI services, and PoAppSession before running the host."
+    },
+    {
+      "id": "file:SCRIPTS/New-AzureNamingStandardizationPlan.ps1",
+      "score": 3,
+      "name": "New-AzureNamingStandardizationPlan.ps1",
+      "summary": "PowerShell tool that parses the embedded inventory JSON from the efficiency report and produces a CAF-derived naming/region standardization plan as CSV, Markdown, and a non-destructive remediation script."
+    },
+    {
+      "id": "document:ARCHITECTURE.md",
+      "score": 2,
+      "name": "ARCHITECTURE.md",
+      "summary": "Describes the four runtime layers of the solution (host, WASM client, shared contracts, infrastructure) and the Azure reporting flow from AzureReportService through AzureReportStore and diagnostics endpoints to the hidden /azure dashboard."
+    }
+  ],
+  "fanInRanking": [
+    {
+      "id": "file:PoPunkouterSoftware/Program.cs",
+      "fanIn": 6,
+      "name": "Program.cs"
+    },
+    {
+      "id": "file:tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts",
+      "fanIn": 3,
+      "name": "_helpers.ts"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/wwwroot/css/modern-ui.base.css",
+      "fanIn": 3,
+      "name": "modern-ui.base.css"
+    },
+    {
+      "id": "file:tests/PoPunkouterSoftware.Tests.Integration/ApiEndpointTests.cs",
+      "fanIn": 3,
+      "name": "ApiEndpointTests.cs"
+    },
+    {
+      "id": "config:PoPunkouterSoftware.sln",
+      "fanIn": 2,
+      "name": "PoPunkouterSoftware.sln"
+    },
+    {
+      "id": "service:docker-compose.yml",
+      "fanIn": 2,
+      "name": "docker-compose.yml"
+    },
+    {
+      "id": "file:SCRIPTS/azure-naming-remediation.ps1",
+      "fanIn": 2,
+      "name": "azure-naming-remediation.ps1"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/Components/Pages/PortfolioModels.cs",
+      "fanIn": 2,
+      "name": "PortfolioModels.cs"
+    },
+    {
+      "id": "config:PoPunkouterSoftware.Client/PoPunkouterSoftware.Client.csproj",
+      "fanIn": 2,
+      "name": "PoPunkouterSoftware.Client.csproj"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "fanIn": 2,
+      "name": "AzureReportStore.cs"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/Infrastructure/RefreshHub.cs",
+      "fanIn": 2,
+      "name": "RefreshHub.cs"
+    },
+    {
+      "id": "file:tests/PoPunkouterSoftware.Tests.E2E/playwright.config.ts",
+      "fanIn": 2,
+      "name": "playwright.config.ts"
+    },
+    {
+      "id": "step:.github/workflows/deploy.yml:build-and-deploy",
+      "fanIn": 1,
+      "name": "build-and-deploy"
+    },
+    {
+      "id": "document:ARCHITECTURE.md",
+      "fanIn": 1,
+      "name": "ARCHITECTURE.md"
+    },
+    {
+      "id": "document:CONVENTIONS.md",
+      "fanIn": 1,
+      "name": "CONVENTIONS.md"
+    },
+    {
+      "id": "document:STACK.md",
+      "fanIn": 1,
+      "name": "STACK.md"
+    },
+    {
+      "id": "document:TESTING.md",
+      "fanIn": 1,
+      "name": "TESTING.md"
+    },
+    {
+      "id": "config:global.json",
+      "fanIn": 1,
+      "name": "global.json"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/wwwroot/css/modern-ui.components.css",
+      "fanIn": 1,
+      "name": "modern-ui.components.css"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/wwwroot/css/modern-ui.responsive.css",
+      "fanIn": 1,
+      "name": "modern-ui.responsive.css"
+    }
+  ],
+  "fanOutRanking": [
+    {
+      "id": "file:SCRIPTS/New-AzureNamingStandardizationPlan.ps1",
+      "fanOut": 10,
+      "name": "New-AzureNamingStandardizationPlan.ps1"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/Features/Infra/InfraEndpoints.cs",
+      "fanOut": 10,
+      "name": "InfraEndpoints.cs"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/Features/Diag/DiagEndpoints.cs",
+      "fanOut": 9,
+      "name": "DiagEndpoints.cs"
+    },
+    {
+      "id": "file:SCRIPTS/New-AzureEfficiencyReport.ps1",
+      "fanOut": 7,
+      "name": "New-AzureEfficiencyReport.ps1"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.razor.cs",
+      "fanOut": 7,
+      "name": "AzureDashboard.razor.cs"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/Program.cs",
+      "fanOut": 7,
+      "name": "Program.cs"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/Features/Diag/HealthEndpoints.cs",
+      "fanOut": 6,
+      "name": "HealthEndpoints.cs"
+    },
+    {
+      "id": "document:README.md",
+      "fanOut": 5,
+      "name": "README.md"
+    },
+    {
+      "id": "file:PoPunkouterSoftware/Features/GitHub/GitHubEndpoints.cs",
+      "fanOut": 5,
+      "name": "GitHubEndpoints.cs"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "fanOut": 4,
+      "name": "ServicePingerService.cs"
+    },
+    {
+      "id": "file:tests/PoPunkouterSoftware.Tests.Integration/ApiEndpointTests.cs",
+      "fanOut": 4,
+      "name": "ApiEndpointTests.cs"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/wwwroot/css/modern-ui.css",
+      "fanOut": 3,
+      "name": "modern-ui.css"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Portfolio.cs",
+      "fanOut": 3,
+      "name": "AzureDashboard.Portfolio.cs"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportService.cs",
+      "fanOut": 3,
+      "name": "AzureReportService.cs"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "fanOut": 3,
+      "name": "IncidentService.cs"
+    },
+    {
+      "id": "file:tests/PoPunkouterSoftware.Tests.Unit/GitHubActivityTests.cs",
+      "fanOut": 3,
+      "name": "GitHubActivityTests.cs"
+    },
+    {
+      "id": "file:tests/PoPunkouterSoftware.Tests.Unit/ResultTests.cs",
+      "fanOut": 3,
+      "name": "ResultTests.cs"
+    },
+    {
+      "id": "file:tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts",
+      "fanOut": 2,
+      "name": "_helpers.ts"
+    },
+    {
+      "id": "document:ARCHITECTURE.md",
+      "fanOut": 2,
+      "name": "ARCHITECTURE.md"
+    },
+    {
+      "id": "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.razor",
+      "fanOut": 2,
+      "name": "AzureDashboard.razor"
+    }
+  ],
+  "bfsTraversal": {
+    "startNode": "file:PoPunkouterSoftware/Program.cs",
+    "order": [
+      "file:PoPunkouterSoftware/Program.cs"
+    ],
+    "depthMap": {
+      "file:PoPunkouterSoftware/Program.cs": 0
+    },
+    "byDepth": {
+      "0": [
+        "file:PoPunkouterSoftware/Program.cs"
+      ]
+    }
+  },
+  "nonCodeFiles": {
+    "documentation": [
+      {
+        "id": "document:ARCHITECTURE.md",
+        "name": "ARCHITECTURE.md",
+        "type": "document",
+        "summary": "Describes the four runtime layers of the solution (host, WASM client, shared contracts, infrastructure) and the Azure reporting flow from AzureReportService through AzureReportStore and diagnostics endpoints to the hidden /azure dashboard."
+      },
+      {
+        "id": "document:CONVENTIONS.md",
+        "name": "CONVENTIONS.md",
+        "type": "document",
+        "summary": "Coding conventions for the project covering feature/infrastructure layout, immutable shared models, async and cancellation patterns, input validation, opt-in destructive Azure operations, and UI styling tokens."
+      },
+      {
+        "id": "document:README.md",
+        "name": "README.md",
+        "type": "document",
+        "summary": "Top-level project overview documenting the solution layout, local development prerequisites and commands, runtime notes (health/diagnostics endpoints, Azure behavior), testing strategy, and developer guidance."
+      },
+      {
+        "id": "document:STACK.md",
+        "name": "STACK.md",
+        "type": "document",
+        "summary": "Enumerates the technology stack: .NET 10 / C# 14, ASP.NET Core with Blazor WebAssembly, Radzen.Blazor, Azure SDKs, Serilog/OpenTelemetry, and the xUnit/Playwright test tooling."
+      },
+      {
+        "id": "document:TESTING.md",
+        "name": "TESTING.md",
+        "type": "document",
+        "summary": "Describes the testing strategy across unit, integration (WebApplicationFactory in the Testing environment), and Playwright E2E tests, plus required build verification and runtime checks for browser-facing changes."
+      },
+      {
+        "id": "document:SCRIPTS/azure-naming-standardization-plan.md",
+        "name": "azure-naming-standardization-plan.md",
+        "type": "document",
+        "summary": "Generated Markdown report listing the proposed CAF-derived naming/region baseline and a per-resource-group migration table mapping current resources to standardized targets and actions."
+      },
+      {
+        "id": "document:docs/ideas/config-inventory.md",
+        "name": "config-inventory.md",
+        "type": "document",
+        "summary": "Design note proposing an Azure custom config audit page, covering problem statement, recommended direction, MVP scope, and open questions."
+      }
+    ],
+    "infrastructure": [
+      {
+        "id": "pipeline:.github/workflows/deploy.yml",
+        "name": "deploy.yml",
+        "type": "pipeline",
+        "summary": "GitHub Actions workflow that builds and deploys the .NET 10 Blazor app to Azure App Service on push to master, using OIDC authentication and a protected 'production' environment."
+      },
+      {
+        "id": "step:.github/workflows/deploy.yml:build-and-deploy",
+        "name": "build-and-deploy",
+        "type": "pipeline",
+        "summary": "Single CI/CD job that validates deploy targets, restores, builds, and publishes the solution, then authenticates to Azure via OIDC and deploys the published artifacts to Azure App Service."
+      },
+      {
+        "id": "service:docker-compose.yml",
+        "name": "docker-compose.yml",
+        "type": "service",
+        "summary": "Docker Compose definition running an Azurite container that emulates Azure Blob, Queue, and Table Storage on ports 10000-10002 for local development and integration tests, backed by a named volume."
+      }
+    ],
+    "data": [],
+    "config": [
+      {
+        "id": "config:PoPunkouterSoftware.sln",
+        "name": "PoPunkouterSoftware.sln",
+        "type": "config",
+        "summary": "Visual Studio solution file aggregating the host, client, shared, infrastructure, and three test projects (unit, integration, E2E) with their build configurations."
+      },
+      {
+        "id": "config:global.json",
+        "name": "global.json",
+        "type": "config",
+        "summary": "Pins the .NET SDK to version 10.0.300 with latestMinor roll-forward, ensuring consistent build tooling across environments."
+      },
+      {
+        "id": "config:PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+        "name": "PoPunkouterSoftware.csproj",
+        "type": "config",
+        "summary": "ASP.NET Core Web SDK project file for the host server; references the Shared, Client, and Infrastructure projects and pulls in Blazor WASM hosting, Radzen UI, Serilog, OpenTelemetry/Azure Monitor, OpenAPI/Scalar, and Azure Key Vault/Identity packages."
+      },
+      {
+        "id": "config:PoPunkouterSoftware/appsettings.json",
+        "name": "appsettings.json",
+        "type": "config",
+        "summary": "Base runtime configuration for the host server covering Serilog logging, allowed hosts/origins, Azure Table Storage, Application Insights, feature flags, Azure OpenAI, GitHub, the service pinger, incidents, and Key Vault settings."
+      },
+      {
+        "id": "config:PoPunkouterSoftware/appsettings.Development.json",
+        "name": "appsettings.Development.json",
+        "type": "config",
+        "summary": "Development environment overrides for the host server, adjusting logging levels, Serilog, Key Vault, Azure Table Storage, feature flags, and Application Insights for local debugging."
+      },
+      {
+        "id": "config:SCRIPTS/azure.yaml",
+        "name": "azure.yaml",
+        "type": "config",
+        "summary": "Azure Developer CLI (azd) project configuration declaring the project name, metadata, infra provider, and service definitions for deployment."
+      },
+      {
+        "id": "config:Directory.Build.props",
+        "name": "Directory.Build.props",
+        "type": "config",
+        "summary": "Solution-wide MSBuild properties applied to every project, setting shared build settings such as target framework, nullable, and language version."
+      },
+      {
+        "id": "config:Directory.Packages.props",
+        "name": "Directory.Packages.props",
+        "type": "config",
+        "summary": "Central Package Management manifest pinning NuGet package versions for all projects in the solution."
+      },
+      {
+        "id": "config:PoPunkouterSoftware.Client/PoPunkouterSoftware.Client.csproj",
+        "name": "PoPunkouterSoftware.Client.csproj",
+        "type": "config",
+        "summary": "Project file for the Blazor WebAssembly client, declaring the WASM SDK and package references such as Radzen."
+      },
+      {
+        "id": "config:PoPunkouterSoftware.Client/wwwroot/data/apps.json",
+        "name": "apps.json",
+        "type": "config",
+        "summary": "Static portfolio data file listing the catalog of applications (name, status, description, URL, technologies, GitHub repo) rendered by the client portfolio UI."
+      },
+      {
+        "id": "config:PoPunkouterSoftware.Client/wwwroot/data/azure-full-report.json",
+        "name": "azure-full-report.json",
+        "type": "config",
+        "summary": "Large pre-generated snapshot of the Azure inventory report (web services, costs, SSL expiry, config drift, storage, AI services, downtime diagnoses, plan recommendations) served statically as the dashboard fallback dataset."
+      },
+      {
+        "id": "config:PoPunkouterSoftware.Client/wwwroot/staticwebapp.config.json",
+        "name": "staticwebapp.config.json",
+        "type": "config",
+        "summary": "Azure Static Web Apps configuration defining SPA navigation fallback, MIME type mappings for WebAssembly assets, and global response headers."
+      },
+      {
+        "id": "config:PoPunkouterSoftware.Infrastructure/PoPunkouterSoftware.Infrastructure.csproj",
+        "name": "PoPunkouterSoftware.Infrastructure.csproj",
+        "type": "config",
+        "summary": "Project file for the Infrastructure library declaring Azure SDK, Table Storage, and related package references."
+      },
+      {
+        "id": "config:PoPunkouterSoftware.Shared/PoPunkouterSoftware.Shared.csproj",
+        "name": "PoPunkouterSoftware.Shared.csproj",
+        "type": "config",
+        "summary": "Minimal project file for the Shared library containing cross-cutting models and result types."
+      },
+      {
+        "id": "config:PoPunkouterSoftware/Properties/launchSettings.json",
+        "name": "launchSettings.json",
+        "type": "config",
+        "summary": "Visual Studio / dotnet launch profiles defining environment variables and application URLs for running the Blazor host locally."
+      },
+      {
+        "id": "config:tests/PoPunkouterSoftware.Tests.E2E/package.json",
+        "name": "package.json",
+        "type": "config",
+        "summary": "NPM manifest for the Playwright E2E test project declaring test scripts and the @playwright/test dev dependency."
+      },
+      {
+        "id": "config:tests/PoPunkouterSoftware.Tests.E2E/tsconfig.json",
+        "name": "tsconfig.json",
+        "type": "config",
+        "summary": "TypeScript compiler configuration for the Playwright E2E test project."
+      },
+      {
+        "id": "config:tests/PoPunkouterSoftware.Tests.Integration/PoPunkouterSoftware.Tests.Integration.csproj",
+        "name": "PoPunkouterSoftware.Tests.Integration.csproj",
+        "type": "config",
+        "summary": "MSBuild project file for the integration test assembly declaring test SDK, xUnit, and project references."
+      },
+      {
+        "id": "config:tests/PoPunkouterSoftware.Tests.Unit/PoPunkouterSoftware.Tests.Unit.csproj",
+        "name": "PoPunkouterSoftware.Tests.Unit.csproj",
+        "type": "config",
+        "summary": "MSBuild project file for the unit test assembly, declaring the test SDK, xUnit and FluentAssertions packages, and project references to the code under test."
+      }
+    ]
+  },
+  "clusters": [],
+  "layers": {
+    "count": 8,
+    "list": [
+      {
+        "id": "layer:client-ui",
+        "name": "Client UI Layer",
+        "description": "Blazor WebAssembly front end: pages, layout/shared components, the Azure operations dashboard, client session state, CSS, and static client assets."
+      },
+      {
+        "id": "layer:api-host",
+        "name": "API & Host Layer",
+        "description": "ASP.NET Core host exposing minimal-API endpoints (Health, Diag, GitHub, Infra, Pinger), the SignalR refresh hub, Blazor server shell, global exception middleware, and the Program.cs entry point."
+      },
+      {
+        "id": "layer:infrastructure-services",
+        "name": "Infrastructure Services Layer",
+        "description": "Azure integration adapters (report, pinger, incident, downtime, plan recommendation, raw services), Key Vault secret management, and telemetry."
+      },
+      {
+        "id": "layer:shared-contracts",
+        "name": "Shared Contracts Layer",
+        "description": "Cross-project models and contracts shared by host, client, and infrastructure, including Result<T>, Azure report models, and user-session types."
+      },
+      {
+        "id": "layer:testing",
+        "name": "Testing Layer",
+        "description": "xUnit unit tests, WebApplicationFactory/Azurite integration tests, and Playwright end-to-end specs with their helpers and test configuration."
+      },
+      {
+        "id": "layer:devops-infra",
+        "name": "DevOps & Infrastructure",
+        "description": "CI/CD pipeline, operational PowerShell scripts, Azure provisioning/identity scripts, and the docker-compose service definition."
+      },
+      {
+        "id": "layer:documentation",
+        "name": "Documentation",
+        "description": "Project documentation covering architecture, conventions, stack, testing, and operational planning notes."
+      },
+      {
+        "id": "layer:configuration",
+        "name": "Configuration & Build",
+        "description": "Solution, MSBuild props, project files, app settings, launch profiles, and static data/config JSON that define build and runtime configuration."
+      }
+    ]
+  },
+  "nodeSummaryIndex": {
+    "file:tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts": {
+      "name": "_helpers.ts",
+      "type": "file",
+      "summary": "Shared Playwright test helper that wires up page error and console listeners so specs can assert the absence of runtime JS errors."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.E2E/tests/auth-model-lobby.spec.ts": {
+      "name": "auth-model-lobby.spec.ts",
+      "type": "file",
+      "summary": "Playwright end-to-end spec covering authentication, model selection, and lobby flows, using the shared error-collection helper to guard against runtime JS errors."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.E2E/tests/pages.spec.ts": {
+      "name": "pages.spec.ts",
+      "type": "file",
+      "summary": "Playwright end-to-end spec verifying that the Home, Azure Dashboard, and Diag pages load without JS errors, return HTTP 200, hydrate the Blazor WASM client, and render correctly on mobile viewports."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.E2E/tests/smoke-regressions.spec.ts": {
+      "name": "smoke-regressions.spec.ts",
+      "type": "file",
+      "summary": "Playwright smoke and regression spec that exercises core application routes to catch broken pages and previously fixed defects, relying on the shared JS-error helper."
+    },
+    "pipeline:.github/workflows/deploy.yml": {
+      "name": "deploy.yml",
+      "type": "pipeline",
+      "summary": "GitHub Actions workflow that builds and deploys the .NET 10 Blazor app to Azure App Service on push to master, using OIDC authentication and a protected 'production' environment."
+    },
+    "step:.github/workflows/deploy.yml:build-and-deploy": {
+      "name": "build-and-deploy",
+      "type": "pipeline",
+      "summary": "Single CI/CD job that validates deploy targets, restores, builds, and publishes the solution, then authenticates to Azure via OIDC and deploys the published artifacts to Azure App Service."
+    },
+    "document:ARCHITECTURE.md": {
+      "name": "ARCHITECTURE.md",
+      "type": "document",
+      "summary": "Describes the four runtime layers of the solution (host, WASM client, shared contracts, infrastructure) and the Azure reporting flow from AzureReportService through AzureReportStore and diagnostics endpoints to the hidden /azure dashboard."
+    },
+    "document:CONVENTIONS.md": {
+      "name": "CONVENTIONS.md",
+      "type": "document",
+      "summary": "Coding conventions for the project covering feature/infrastructure layout, immutable shared models, async and cancellation patterns, input validation, opt-in destructive Azure operations, and UI styling tokens."
+    },
+    "config:PoPunkouterSoftware.sln": {
+      "name": "PoPunkouterSoftware.sln",
+      "type": "config",
+      "summary": "Visual Studio solution file aggregating the host, client, shared, infrastructure, and three test projects (unit, integration, E2E) with their build configurations."
+    },
+    "document:README.md": {
+      "name": "README.md",
+      "type": "document",
+      "summary": "Top-level project overview documenting the solution layout, local development prerequisites and commands, runtime notes (health/diagnostics endpoints, Azure behavior), testing strategy, and developer guidance."
+    },
+    "document:STACK.md": {
+      "name": "STACK.md",
+      "type": "document",
+      "summary": "Enumerates the technology stack: .NET 10 / C# 14, ASP.NET Core with Blazor WebAssembly, Radzen.Blazor, Azure SDKs, Serilog/OpenTelemetry, and the xUnit/Playwright test tooling."
+    },
+    "document:TESTING.md": {
+      "name": "TESTING.md",
+      "type": "document",
+      "summary": "Describes the testing strategy across unit, integration (WebApplicationFactory in the Testing environment), and Playwright E2E tests, plus required build verification and runtime checks for browser-facing changes."
+    },
+    "service:docker-compose.yml": {
+      "name": "docker-compose.yml",
+      "type": "service",
+      "summary": "Docker Compose definition running an Azurite container that emulates Azure Blob, Queue, and Table Storage on ports 10000-10002 for local development and integration tests, backed by a named volume."
+    },
+    "config:global.json": {
+      "name": "global.json",
+      "type": "config",
+      "summary": "Pins the .NET SDK to version 10.0.300 with latestMinor roll-forward, ensuring consistent build tooling across environments."
+    },
+    "file:PoPunkouterSoftware.Client/wwwroot/css/modern-ui.base.css": {
+      "name": "modern-ui.base.css",
+      "type": "file",
+      "summary": "Foundation stylesheet of the modern-ui design system defining CSS custom properties (design tokens for colors, spacing, radii, fonts, motion) and base element/layout styling, including Radzen token unification."
+    },
+    "file:PoPunkouterSoftware.Client/wwwroot/css/modern-ui.components.css": {
+      "name": "modern-ui.components.css",
+      "type": "file",
+      "summary": "Component-level stylesheet for the modern-ui design system, styling cards, buttons, grids, and other UI widgets using the shared design tokens defined in the base stylesheet."
+    },
+    "file:PoPunkouterSoftware.Client/wwwroot/css/modern-ui.css": {
+      "name": "modern-ui.css",
+      "type": "file",
+      "summary": "Aggregator stylesheet that imports the base, components, and responsive partials to expose the complete modern-ui design system through a single entry point."
+    },
+    "file:PoPunkouterSoftware.Client/wwwroot/css/modern-ui.responsive.css": {
+      "name": "modern-ui.responsive.css",
+      "type": "file",
+      "summary": "Responsive layer of the modern-ui design system providing media-query overrides that adapt the layout and components across breakpoints."
+    },
+    "config:PoPunkouterSoftware/PoPunkouterSoftware.csproj": {
+      "name": "PoPunkouterSoftware.csproj",
+      "type": "config",
+      "summary": "ASP.NET Core Web SDK project file for the host server; references the Shared, Client, and Infrastructure projects and pulls in Blazor WASM hosting, Radzen UI, Serilog, OpenTelemetry/Azure Monitor, OpenAPI/Scalar, and Azure Key Vault/Identity packages."
+    },
+    "config:PoPunkouterSoftware/appsettings.json": {
+      "name": "appsettings.json",
+      "type": "config",
+      "summary": "Base runtime configuration for the host server covering Serilog logging, allowed hosts/origins, Azure Table Storage, Application Insights, feature flags, Azure OpenAI, GitHub, the service pinger, incidents, and Key Vault settings."
+    },
+    "config:PoPunkouterSoftware/appsettings.Development.json": {
+      "name": "appsettings.Development.json",
+      "type": "config",
+      "summary": "Development environment overrides for the host server, adjusting logging levels, Serilog, Key Vault, Azure Table Storage, feature flags, and Application Insights for local debugging."
+    },
+    "file:SCRIPTS/New-AzureEfficiencyReport.ps1": {
+      "name": "New-AzureEfficiencyReport.ps1",
+      "type": "file",
+      "summary": "PowerShell automation that probes an Azure subscription via the Azure CLI for inventory, cost, efficiency, governance, and waste signals, rendering an interactive HTML report and a commented-out cleanup script."
+    },
+    "file:SCRIPTS/New-AzureNamingStandardizationPlan.ps1": {
+      "name": "New-AzureNamingStandardizationPlan.ps1",
+      "type": "file",
+      "summary": "PowerShell tool that parses the embedded inventory JSON from the efficiency report and produces a CAF-derived naming/region standardization plan as CSV, Markdown, and a non-destructive remediation script."
+    },
+    "file:SCRIPTS/azure-naming-remediation.ps1": {
+      "name": "azure-naming-remediation.ps1",
+      "type": "file",
+      "summary": "Generated, intentionally non-destructive remediation script containing commented-out Azure CLI commands to create standardized resource groups and tag resources for the naming migration."
+    },
+    "document:SCRIPTS/azure-naming-standardization-plan.md": {
+      "name": "azure-naming-standardization-plan.md",
+      "type": "document",
+      "summary": "Generated Markdown report listing the proposed CAF-derived naming/region baseline and a per-resource-group migration table mapping current resources to standardized targets and actions."
+    },
+    "config:SCRIPTS/azure.yaml": {
+      "name": "azure.yaml",
+      "type": "config",
+      "summary": "Azure Developer CLI (azd) project configuration declaring the project name, metadata, infra provider, and service definitions for deployment."
+    },
+    "file:SCRIPTS/cleanup_suggestions.ps1": {
+      "name": "cleanup_suggestions.ps1",
+      "type": "file",
+      "summary": "Generated placeholder cleanup script containing only commented header lines; populated by New-AzureEfficiencyReport.ps1 with reviewable delete/stop commands for orphaned or idle Azure resources."
+    },
+    "file:SCRIPTS/setup.ps1": {
+      "name": "setup.ps1",
+      "type": "file",
+      "summary": "First-run developer setup script that frees dev ports, verifies winget/Docker availability, and ensures Azure CLI authentication for Key Vault access."
+    },
+    "file:.understand-anything/.understandignore": {
+      "name": ".understandignore",
+      "type": "file",
+      "summary": "Ignore-pattern list controlling which paths the Understand-Anything knowledge-graph tooling excludes from scanning."
+    },
+    "config:Directory.Build.props": {
+      "name": "Directory.Build.props",
+      "type": "config",
+      "summary": "Solution-wide MSBuild properties applied to every project, setting shared build settings such as target framework, nullable, and language version."
+    },
+    "config:Directory.Packages.props": {
+      "name": "Directory.Packages.props",
+      "type": "config",
+      "summary": "Central Package Management manifest pinning NuGet package versions for all projects in the solution."
+    },
+    "document:docs/ideas/config-inventory.md": {
+      "name": "config-inventory.md",
+      "type": "document",
+      "summary": "Design note proposing an Azure custom config audit page, covering problem statement, recommended direction, MVP scope, and open questions."
+    },
+    "file:infra/bind-managed-identity.ps1": {
+      "name": "bind-managed-identity.ps1",
+      "type": "file",
+      "summary": "PowerShell infrastructure script that binds a managed identity to Azure resources for keyless authentication."
+    },
+    "file:infra/migrate-kv-prefix.ps1": {
+      "name": "migrate-kv-prefix.ps1",
+      "type": "file",
+      "summary": "PowerShell infrastructure script that migrates Azure Key Vault secrets to a new naming prefix convention."
+    },
+    "file:PoPunkouterSoftware.Client/_Imports.razor": {
+      "name": "_Imports.razor",
+      "type": "file",
+      "summary": "Global Razor using-directives imported by every component in the Blazor WebAssembly client project."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Layout/MainLayout.razor": {
+      "name": "MainLayout.razor",
+      "type": "file",
+      "summary": "Root application layout providing the navigation shell, header, and body render fragment for all pages."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Layout/MainLayout.razor.css": {
+      "name": "MainLayout.razor.css",
+      "type": "file",
+      "summary": "Scoped CSS styling the MainLayout component's shell, header, and content regions."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Charts.cs": {
+      "name": "AzureDashboard.Charts.cs",
+      "type": "file",
+      "summary": "Partial class of the AzureDashboard page that builds chart datasets and badge/label helpers for resource visualizations."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Operations.cs": {
+      "name": "AzureDashboard.Operations.cs",
+      "type": "file",
+      "summary": "Partial class of the AzureDashboard page computing operational health reports, cost-watch items, and maintenance-refresh signals."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Portfolio.cs": {
+      "name": "AzureDashboard.Portfolio.cs",
+      "type": "file",
+      "summary": "Partial class of the AzureDashboard page that derives the portfolio view: safe-to-remove candidates, consolidated services, priority queue, and resource inference heuristics."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.razor": {
+      "name": "AzureDashboard.razor",
+      "type": "file",
+      "summary": "Markup for the Azure operations dashboard page rendering fleet health, charts, portfolio tables, and detail tabs."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.razor.cs": {
+      "name": "AzureDashboard.razor.cs",
+      "type": "file",
+      "summary": "Primary code-behind for the AzureDashboard page handling report loading, SignalR-driven refresh progress, navigation guards, and lifecycle."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Trends.cs": {
+      "name": "AzureDashboard.Trends.cs",
+      "type": "file",
+      "summary": "Partial class of the AzureDashboard page loading historical scan summaries and building time-series trend data for cost, uptime, and response history."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/Index.razor": {
+      "name": "Index.razor",
+      "type": "file",
+      "summary": "Landing/portfolio page that fetches the live Azure app inventory and renders it as a hero section plus a grid of portfolio app cards."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/Models/SafeToRemoveItem.cs": {
+      "name": "SafeToRemoveItem.cs",
+      "type": "file",
+      "summary": "Data model record describing an Azure resource flagged as safe to remove, with its type, name, and removal reasons."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/PortfolioModels.cs": {
+      "name": "PortfolioModels.cs",
+      "type": "file",
+      "summary": "Data models for the portfolio view, defining AppsWrapper and AppModel records used to deserialize and render the app inventory."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/Sections/AzureDashboardDetailTabs.razor": {
+      "name": "AzureDashboardDetailTabs.razor",
+      "type": "file",
+      "summary": "Tabbed detail section component for the Azure dashboard, rendering drill-down tables for services, costs, SSL, and trends."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/Sections/PortfolioAppCard.razor": {
+      "name": "PortfolioAppCard.razor",
+      "type": "file",
+      "summary": "Reusable card component that renders a single portfolio app's details, status badge, technologies, and links."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Pages/Sections/PortfolioAppCard.razor.css": {
+      "name": "PortfolioAppCard.razor.css",
+      "type": "file",
+      "summary": "Scoped CSS styling the PortfolioAppCard component's layout and visual treatment."
+    },
+    "file:PoPunkouterSoftware.Client/Components/Shared/DevErrorBoundary.razor": {
+      "name": "DevErrorBoundary.razor",
+      "type": "file",
+      "summary": "Development-mode error boundary component that catches and displays component exceptions during local debugging."
+    },
+    "file:PoPunkouterSoftware.Client/PoAppSession.cs": {
+      "name": "PoAppSession.cs",
+      "type": "file",
+      "summary": "Client-side session service persisting user session state to browser localStorage via JS interop."
+    },
+    "config:PoPunkouterSoftware.Client/PoPunkouterSoftware.Client.csproj": {
+      "name": "PoPunkouterSoftware.Client.csproj",
+      "type": "config",
+      "summary": "Project file for the Blazor WebAssembly client, declaring the WASM SDK and package references such as Radzen."
+    },
+    "file:PoPunkouterSoftware.Client/Program.cs": {
+      "name": "Program.cs",
+      "type": "file",
+      "summary": "Blazor WebAssembly entry point wiring up the HttpClient, Radzen UI services, and PoAppSession before running the host."
+    },
+    "file:PoPunkouterSoftware.Client/WasmRenderModes.cs": {
+      "name": "WasmRenderModes.cs",
+      "type": "file",
+      "summary": "Defines a small static helper exposing the InteractiveWebAssembly render mode used to configure Blazor component interactivity in the client."
+    },
+    "config:PoPunkouterSoftware.Client/wwwroot/data/apps.json": {
+      "name": "apps.json",
+      "type": "config",
+      "summary": "Static portfolio data file listing the catalog of applications (name, status, description, URL, technologies, GitHub repo) rendered by the client portfolio UI."
+    },
+    "config:PoPunkouterSoftware.Client/wwwroot/data/azure-full-report.json": {
+      "name": "azure-full-report.json",
+      "type": "config",
+      "summary": "Large pre-generated snapshot of the Azure inventory report (web services, costs, SSL expiry, config drift, storage, AI services, downtime diagnoses, plan recommendations) served statically as the dashboard fallback dataset."
+    },
+    "file:PoPunkouterSoftware.Client/wwwroot/index.html": {
+      "name": "index.html",
+      "type": "file",
+      "summary": "Root HTML host page for the Blazor WebAssembly client, loading the app stylesheet and the WebAssembly runtime bootstrap script."
+    },
+    "file:PoPunkouterSoftware.Client/wwwroot/js/helpers.js": {
+      "name": "helpers.js",
+      "type": "file",
+      "summary": "Client-side JavaScript interop helpers providing a particle/background canvas animation and mouse-tracking pointer effects for interactive UI elements."
+    },
+    "config:PoPunkouterSoftware.Client/wwwroot/staticwebapp.config.json": {
+      "name": "staticwebapp.config.json",
+      "type": "config",
+      "summary": "Azure Static Web Apps configuration defining SPA navigation fallback, MIME type mappings for WebAssembly assets, and global response headers."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportService.cs": {
+      "name": "AzureReportService.cs",
+      "type": "file",
+      "summary": "Core orchestration service that builds the full Azure inventory report by discovering web services, resolving plans, gathering metrics, cost, SSL, config drift, storage/AI/log inventories, orphaned/zombie detection, burn rate, and downtime diagnoses."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs": {
+      "name": "AzureReportStore.cs",
+      "type": "file",
+      "summary": "Persistence layer that stores and retrieves Azure reports in Azure Table Storage, with gzip compression, history tracking, and automatic recovery of a missing table."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs": {
+      "name": "DowntimeDiagnosisService.cs",
+      "type": "file",
+      "summary": "Diagnoses why broken/inactive web services are down by correlating ARM deployments, activity-log stop events, App Insights metrics, and GitHub workflow runs into per-service diagnoses."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs": {
+      "name": "IncidentService.cs",
+      "type": "file",
+      "summary": "Detects service status transitions between report runs, records incidents to Azure Table Storage, optionally posts a webhook notification, and loads recent incidents."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs": {
+      "name": "PlanRecommendationService.cs",
+      "type": "file",
+      "summary": "Analyzes services with their config drift and downtime diagnoses to produce prioritized App Service Plan upgrade/downgrade recommendations with cost estimates."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Azure/RawService.cs": {
+      "name": "RawService.cs",
+      "type": "file",
+      "summary": "Internal record describing a discovered Azure service before enrichment, with a mapping helper to the public WebService model."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs": {
+      "name": "ServicePingerService.cs",
+      "type": "file",
+      "summary": "Background hosted service that periodically pings all known service URLs, records up/down telemetry, and caches the latest ping snapshot."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Configuration/AppKeyVaultSecretManager.cs": {
+      "name": "AppKeyVaultSecretManager.cs",
+      "type": "file",
+      "summary": "Custom Key Vault secret manager that filters to an app-specific prefix and strips it when mapping secret names to configuration keys."
+    },
+    "config:PoPunkouterSoftware.Infrastructure/PoPunkouterSoftware.Infrastructure.csproj": {
+      "name": "PoPunkouterSoftware.Infrastructure.csproj",
+      "type": "config",
+      "summary": "Project file for the Infrastructure library declaring Azure SDK, Table Storage, and related package references."
+    },
+    "file:PoPunkouterSoftware.Infrastructure/Telemetry.cs": {
+      "name": "Telemetry.cs",
+      "type": "file",
+      "summary": "Static OpenTelemetry meter and instrument definitions (counters/histograms) for Azure OpenAI, GitHub, pinger, and refresh metrics."
+    },
+    "file:PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs": {
+      "name": "AppServicePlanInventory.cs",
+      "type": "file",
+      "summary": "Shared helper that builds an inventory of PoShared App Service Plans, filtering server farms and counting hosted apps per plan."
+    },
+    "file:PoPunkouterSoftware.Shared/Azure/AzureModels.cs": {
+      "name": "AzureModels.cs",
+      "type": "file",
+      "summary": "Shared record/DTO definitions for the entire Azure report domain (web services, metrics, cost, SSL, drift, inventories, diagnoses, recommendations) used across client and server."
+    },
+    "file:PoPunkouterSoftware.Shared/Azure/Result.cs": {
+      "name": "Result.cs",
+      "type": "file",
+      "summary": "Generic Result<T> type encapsulating success/failure with value, error message, and optional exception for explicit error handling."
+    },
+    "config:PoPunkouterSoftware.Shared/PoPunkouterSoftware.Shared.csproj": {
+      "name": "PoPunkouterSoftware.Shared.csproj",
+      "type": "config",
+      "summary": "Minimal project file for the Shared library containing cross-cutting models and result types."
+    },
+    "file:PoPunkouterSoftware.Shared/Session/PoUserSession.cs": {
+      "name": "PoUserSession.cs",
+      "type": "file",
+      "summary": "Minimal shared record modeling the persisted user session state."
+    },
+    "file:PoPunkouterSoftware/_Imports.razor": {
+      "name": "_Imports.razor",
+      "type": "file",
+      "summary": "Global Razor using-directive file importing common namespaces for the server host's Razor components."
+    },
+    "file:PoPunkouterSoftware/.azure/config": {
+      "name": "config",
+      "type": "file",
+      "summary": "Azure Developer CLI (azd) environment configuration file recording the active default Azure environment."
+    },
+    "file:PoPunkouterSoftware/api.http": {
+      "name": "api.http",
+      "type": "file",
+      "summary": "REST Client request collection for manually exercising the application's diagnostic, health, GitHub, and Azure API endpoints during development."
+    },
+    "file:PoPunkouterSoftware/App.razor": {
+      "name": "App.razor",
+      "type": "file",
+      "summary": "Root Blazor host document defining the HTML shell, head outlet, stylesheet links, and the Routes component with WebAssembly render mode."
+    },
+    "file:PoPunkouterSoftware/Features/Azure/PingerEndpoints.cs": {
+      "name": "PingerEndpoints.cs",
+      "type": "file",
+      "summary": "Maps minimal-API endpoints that expose the background Pinger service snapshot and a toggle to enable/disable connectivity pinging."
+    },
+    "file:PoPunkouterSoftware/Features/Diag/DiagEndpoints.cs": {
+      "name": "DiagEndpoints.cs",
+      "type": "file",
+      "summary": "Defines the diagnostics API surface: serving the Azure efficiency report, triggering and cancelling background refresh runs over SignalR, and rendering the /diag HTML status page."
+    },
+    "file:PoPunkouterSoftware/Features/Diag/HealthEndpoints.cs": {
+      "name": "HealthEndpoints.cs",
+      "type": "file",
+      "summary": "Maps health-check and client-config endpoints, reporting application status, dependency checks, and a masked configuration snapshot."
+    },
+    "file:PoPunkouterSoftware/Features/Diag/RefreshSessionManager.cs": {
+      "name": "RefreshSessionManager.cs",
+      "type": "file",
+      "summary": "Singleton coordinating a single concurrent Azure report refresh run via a lock and a cancellable token source."
+    },
+    "file:PoPunkouterSoftware/Features/GitHub/GitHubEndpoints.cs": {
+      "name": "GitHubEndpoints.cs",
+      "type": "file",
+      "summary": "Maps GitHub activity endpoints that fetch repository activity, compute a health score, and cache results per repository."
+    },
+    "file:PoPunkouterSoftware/Features/Infra/InfraEndpoints.cs": {
+      "name": "InfraEndpoints.cs",
+      "type": "file",
+      "summary": "Maps infrastructure-discovery endpoints that scan GitHub repositories for workflow and IaC files, parse them, and infer deployment topology."
+    },
+    "file:PoPunkouterSoftware/Infrastructure/GlobalExceptionHandler.cs": {
+      "name": "GlobalExceptionHandler.cs",
+      "type": "file",
+      "summary": "Implements IExceptionHandler to convert unhandled exceptions into structured ProblemDetails responses with logging."
+    },
+    "file:PoPunkouterSoftware/Infrastructure/RefreshHub.cs": {
+      "name": "RefreshHub.cs",
+      "type": "file",
+      "summary": "SignalR hub that broadcasts Azure report refresh progress and completion events to connected dashboard clients."
+    },
+    "file:PoPunkouterSoftware/Program.cs": {
+      "name": "Program.cs",
+      "type": "file",
+      "summary": "ASP.NET Core host entry point: bootstraps Serilog, wires Azure Key Vault, OpenTelemetry, SignalR, Radzen, services, middleware, and maps all feature endpoints before running the Blazor Web App."
+    },
+    "config:PoPunkouterSoftware/Properties/launchSettings.json": {
+      "name": "launchSettings.json",
+      "type": "config",
+      "summary": "Visual Studio / dotnet launch profiles defining environment variables and application URLs for running the Blazor host locally."
+    },
+    "file:PoPunkouterSoftware/Routes.razor": {
+      "name": "Routes.razor",
+      "type": "file",
+      "summary": "Blazor Router component that resolves routes against the host and client assemblies, applying the shared MainLayout and a not-found fallback."
+    },
+    "config:tests/PoPunkouterSoftware.Tests.E2E/package.json": {
+      "name": "package.json",
+      "type": "config",
+      "summary": "NPM manifest for the Playwright E2E test project declaring test scripts and the @playwright/test dev dependency."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.E2E/playwright.config.ts": {
+      "name": "playwright.config.ts",
+      "type": "file",
+      "summary": "Playwright configuration that auto-starts the Blazor server, sets the base URL, and defines chromium and mobile-chrome test projects."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.E2E/tests/diag-api.spec.ts": {
+      "name": "diag-api.spec.ts",
+      "type": "file",
+      "summary": "Playwright E2E spec verifying the diagnostics API endpoints respond correctly against the running Blazor host."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.E2E/tests/health.spec.ts": {
+      "name": "health.spec.ts",
+      "type": "file",
+      "summary": "Playwright E2E spec checking the /health endpoint returns a healthy status from the live server."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.E2E/tests/static-openapi.spec.ts": {
+      "name": "static-openapi.spec.ts",
+      "type": "file",
+      "summary": "Playwright E2E spec validating that the static OpenAPI document is served correctly."
+    },
+    "config:tests/PoPunkouterSoftware.Tests.E2E/tsconfig.json": {
+      "name": "tsconfig.json",
+      "type": "config",
+      "summary": "TypeScript compiler configuration for the Playwright E2E test project."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.Integration/ApiEndpointTests.cs": {
+      "name": "ApiEndpointTests.cs",
+      "type": "file",
+      "summary": "xUnit integration tests exercising health, config, diag-report, az-status, OpenAPI, static-file, and automation-script endpoints against an in-memory test host."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.Integration/ApiSchemaContractTests.cs": {
+      "name": "ApiSchemaContractTests.cs",
+      "type": "file",
+      "summary": "xUnit integration tests asserting API JSON responses use camelCase property naming across health, config, az-status, and diag-report endpoints."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.Integration/AzureReportStoreTests.cs": {
+      "name": "AzureReportStoreTests.cs",
+      "type": "file",
+      "summary": "xUnit integration tests for AzureReportStore persistence, covering empty-connection handling, save/load round-trips, history retention, and concurrent saves against Azurite."
+    },
+    "config:tests/PoPunkouterSoftware.Tests.Integration/PoPunkouterSoftware.Tests.Integration.csproj": {
+      "name": "PoPunkouterSoftware.Tests.Integration.csproj",
+      "type": "config",
+      "summary": "MSBuild project file for the integration test assembly declaring test SDK, xUnit, and project references."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.Integration/TestWebAppFixture.cs": {
+      "name": "TestWebAppFixture.cs",
+      "type": "file",
+      "summary": "WebApplicationFactory-based xUnit fixture that boots the host under the Testing environment and shares it across the integration test collection."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.Unit/AppServicePlanInventoryTests.cs": {
+      "name": "AppServicePlanInventoryTests.cs",
+      "type": "file",
+      "summary": "xUnit unit test verifying the App Service plan inventory builder filters to PoShared server farms and counts hosted apps correctly."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.Unit/GitHubActivityTests.cs": {
+      "name": "GitHubActivityTests.cs",
+      "type": "file",
+      "summary": "xUnit unit tests for the GitHub activity endpoint covering validation, caching, rate-limit handling, and health-score computation with a stubbed HTTP handler."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.Unit/PoAppSessionTests.cs": {
+      "name": "PoAppSessionTests.cs",
+      "type": "file",
+      "summary": "xUnit unit tests verifying PoAppSession persistence (save, get, clear) against browser local storage."
+    },
+    "config:tests/PoPunkouterSoftware.Tests.Unit/PoPunkouterSoftware.Tests.Unit.csproj": {
+      "name": "PoPunkouterSoftware.Tests.Unit.csproj",
+      "type": "config",
+      "summary": "MSBuild project file for the unit test assembly, declaring the test SDK, xUnit and FluentAssertions packages, and project references to the code under test."
+    },
+    "file:tests/PoPunkouterSoftware.Tests.Unit/ResultTests.cs": {
+      "name": "ResultTests.cs",
+      "type": "file",
+      "summary": "xUnit test suite verifying the Result<T> value type, covering success construction, failure construction with and without exceptions, and behavioural invariants such as default values and verbatim error preservation."
+    }
+  },
+  "totalNodes": 105,
+  "totalEdges": 197
+}

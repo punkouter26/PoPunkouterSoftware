@@ -1,0 +1,142 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 3,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+      "language": "csproj",
+      "fileCategory": "config",
+      "totalLines": 53,
+      "nonEmptyLines": 42,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware/appsettings.Development.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 33,
+      "nonEmptyLines": 33,
+      "sections": [
+        {
+          "heading": "Logging",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "KeyVault",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "Serilog",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "AzureTableStorage",
+          "level": 1,
+          "line": 21
+        },
+        {
+          "heading": "FeatureFlags",
+          "level": 1,
+          "line": 25
+        },
+        {
+          "heading": "ApplicationInsights",
+          "level": 1,
+          "line": 29
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "PoPunkouterSoftware/appsettings.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 61,
+      "nonEmptyLines": 61,
+      "sections": [
+        {
+          "heading": "Logging",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "Serilog",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "AllowedHosts",
+          "level": 1,
+          "line": 21
+        },
+        {
+          "heading": "AllowedOrigins",
+          "level": 1,
+          "line": 22
+        },
+        {
+          "heading": "Azure",
+          "level": 1,
+          "line": 26
+        },
+        {
+          "heading": "AzureTableStorage",
+          "level": 1,
+          "line": 29
+        },
+        {
+          "heading": "ApplicationInsights",
+          "level": 1,
+          "line": 34
+        },
+        {
+          "heading": "FeatureFlags",
+          "level": 1,
+          "line": 38
+        },
+        {
+          "heading": "AzureOpenAI",
+          "level": 1,
+          "line": 43
+        },
+        {
+          "heading": "GitHub",
+          "level": 1,
+          "line": 48
+        },
+        {
+          "heading": "Pinger",
+          "level": 1,
+          "line": 51
+        },
+        {
+          "heading": "Incidents",
+          "level": 1,
+          "line": 55
+        },
+        {
+          "heading": "KeyVault",
+          "level": 1,
+          "line": 58
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 13
+      }
+    }
+  ]
+}

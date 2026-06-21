@@ -1,0 +1,204 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 7,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "SCRIPTS/New-AzureEfficiencyReport.ps1",
+      "language": "powershell",
+      "fileCategory": "script",
+      "totalLines": 771,
+      "nonEmptyLines": 687,
+      "metrics": {}
+    },
+    {
+      "path": "SCRIPTS/New-AzureNamingStandardizationPlan.ps1",
+      "language": "powershell",
+      "fileCategory": "script",
+      "totalLines": 314,
+      "nonEmptyLines": 277,
+      "metrics": {}
+    },
+    {
+      "path": "SCRIPTS/azure-naming-remediation.ps1",
+      "language": "powershell",
+      "fileCategory": "script",
+      "totalLines": 355,
+      "nonEmptyLines": 271,
+      "metrics": {}
+    },
+    {
+      "path": "SCRIPTS/azure-naming-standardization-plan.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 168,
+      "nonEmptyLines": 122,
+      "sections": [
+        {
+          "heading": "Azure Naming Standardization Plan",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "pocouplequiz",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "poface",
+          "level": 2,
+          "line": 25
+        },
+        {
+          "heading": "pofunquiz",
+          "level": 2,
+          "line": 32
+        },
+        {
+          "heading": "pohappytrump",
+          "level": 2,
+          "line": 39
+        },
+        {
+          "heading": "poissues",
+          "level": 2,
+          "line": 46
+        },
+        {
+          "heading": "pojoker",
+          "level": 2,
+          "line": 53
+        },
+        {
+          "heading": "polinks",
+          "level": 2,
+          "line": 60
+        },
+        {
+          "heading": "polocalcompare",
+          "level": 2,
+          "line": 67
+        },
+        {
+          "heading": "pomarriedlife",
+          "level": 2,
+          "line": 74
+        },
+        {
+          "heading": "pomemevideo",
+          "level": 2,
+          "line": 81
+        },
+        {
+          "heading": "pominigames",
+          "level": 2,
+          "line": 88
+        },
+        {
+          "heading": "ponovaweight",
+          "level": 2,
+          "line": 95
+        },
+        {
+          "heading": "popunkoutersoftware",
+          "level": 2,
+          "line": 102
+        },
+        {
+          "heading": "poredoimage",
+          "level": 2,
+          "line": 109
+        },
+        {
+          "heading": "porepolinetracker",
+          "level": 2,
+          "line": 116
+        },
+        {
+          "heading": "porobotstocks",
+          "level": 2,
+          "line": 123
+        },
+        {
+          "heading": "poseereview",
+          "level": 2,
+          "line": 130
+        },
+        {
+          "heading": "poshared",
+          "level": 2,
+          "line": 137
+        },
+        {
+          "heading": "potraffic",
+          "level": 2,
+          "line": 155
+        },
+        {
+          "heading": "powatch",
+          "level": 2,
+          "line": 162
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 21
+      }
+    },
+    {
+      "path": "SCRIPTS/azure.yaml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 15,
+      "nonEmptyLines": 12,
+      "sections": [
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "metadata",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "infra",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "services",
+          "level": 1,
+          "line": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "SCRIPTS/cleanup_suggestions.ps1",
+      "language": "powershell",
+      "fileCategory": "script",
+      "totalLines": 3,
+      "nonEmptyLines": 3,
+      "metrics": {}
+    },
+    {
+      "path": "SCRIPTS/setup.ps1",
+      "language": "powershell",
+      "fileCategory": "script",
+      "totalLines": 60,
+      "nonEmptyLines": 53,
+      "metrics": {}
+    }
+  ]
+}

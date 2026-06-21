@@ -74,6 +74,9 @@ public partial class AzureDashboard
         await JS.InvokeVoidAsync("downloadTextFile", filename, json, "application/json");
     }
 
+    private void DownloadAutomationScript() =>
+        NavManager.NavigateTo("/api/diag/automation-script", forceLoad: true);
+
     // ── SignalR hub connection ─────────────────────────────────────────────────
     private HubConnection? _hub;
 

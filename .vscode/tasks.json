@@ -126,7 +126,7 @@
 				"reveal": "always",
 				"focus": false,
 				"panel": "dedicated",
-				"label": "API Server (watch :5000)"
+				"label": "API Server (watch :8000)"
 			},
 			"problemMatcher": {
 				"pattern": {

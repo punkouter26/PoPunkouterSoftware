@@ -73,6 +73,10 @@ else
                                               Variant="Variant.Outlined" Size="ButtonSize.Small"
                                               Disabled="@(report == null)" Click="DownloadReportAsync"
                                               title="Download the full Azure report as JSON for sharing with AI tools or debugging" />
+                                <RadzenButton Text="Download audit script" Icon="terminal" ButtonStyle="ButtonStyle.Light"
+                                              Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                              Click="DownloadAutomationScript"
+                                              title="Download the local Azure CLI inventory and efficiency report generator" />
                             </div>
                         </details>
                         @if (_refreshing)
@@ -96,6 +100,28 @@ else
             </RadzenStack>
         </section>
     }
+
+    <section class="app-section">
+        <div class="app-card">
+            <div class="app-toolbar">
+                <div>
+                    <div class="app-kicker">Subscription automation</div>
+                    <h2 class="app-card-title">Generate a portable Azure efficiency report</h2>
+                    <p class="app-note rz-mb-0">
+                        Download the PowerShell 7 script, run it locally with Azure CLI installed, and select a subscription.
+                        It creates a standalone HTML inventory and a separate cleanup script whose commands remain commented out.
+                    </p>
+                </div>
+                <RadzenButton Text="Download PowerShell script" Icon="download"
+                              ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                              Click="DownloadAutomationScript" />
+            </div>
+            <div class="app-callout info rz-mt-3">
+                <strong>Run:</strong> <code>pwsh ./New-AzureEfficiencyReport.ps1</code><br />
+                <span class="app-note">Prerequisites: PowerShell 7 and Azure CLI. The script installs the Resource Graph extension when needed and never reads secret values.</span>
+            </div>
+        </div>
+    </section>
 
     @* Fix 3: Age badge in header is sufficient. Stale banner removed. *@
 

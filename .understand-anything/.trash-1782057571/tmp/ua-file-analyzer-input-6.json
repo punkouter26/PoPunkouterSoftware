@@ -1,0 +1,21 @@
+{
+  "projectRoot": "c:/Users/punko/Downloads/PO/PoPunkouterSoftware",
+  "batchFiles": [
+    {"path": "SCRIPTS/New-AzureEfficiencyReport.ps1", "language": "powershell", "sizeLines": 771, "fileCategory": "script"},
+    {"path": "SCRIPTS/New-AzureNamingStandardizationPlan.ps1", "language": "powershell", "sizeLines": 314, "fileCategory": "script"},
+    {"path": "SCRIPTS/azure-naming-remediation.ps1", "language": "powershell", "sizeLines": 355, "fileCategory": "script"},
+    {"path": "SCRIPTS/azure-naming-standardization-plan.md", "language": "markdown", "sizeLines": 168, "fileCategory": "docs"},
+    {"path": "SCRIPTS/azure.yaml", "language": "yaml", "sizeLines": 15, "fileCategory": "config"},
+    {"path": "SCRIPTS/cleanup_suggestions.ps1", "language": "powershell", "sizeLines": 3, "fileCategory": "script"},
+    {"path": "SCRIPTS/setup.ps1", "language": "powershell", "sizeLines": 60, "fileCategory": "script"}
+  ],
+  "batchImportData": {
+    "SCRIPTS/New-AzureEfficiencyReport.ps1": [],
+    "SCRIPTS/New-AzureNamingStandardizationPlan.ps1": [],
+    "SCRIPTS/azure-naming-remediation.ps1": [],
+    "SCRIPTS/azure-naming-standardization-plan.md": [],
+    "SCRIPTS/azure.yaml": [],
+    "SCRIPTS/cleanup_suggestions.ps1": [],
+    "SCRIPTS/setup.ps1": []
+  }
+}

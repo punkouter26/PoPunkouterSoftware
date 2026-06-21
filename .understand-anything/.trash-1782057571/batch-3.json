@@ -1,0 +1,143 @@
+{
+  "nodes": [
+    {
+      "id": "document:ARCHITECTURE.md",
+      "type": "document",
+      "name": "ARCHITECTURE.md",
+      "filePath": "ARCHITECTURE.md",
+      "summary": "Describes the four runtime layers of the solution (host, WASM client, shared contracts, infrastructure) and the Azure reporting flow from AzureReportService through AzureReportStore and diagnostics endpoints to the hidden /azure dashboard.",
+      "tags": ["documentation", "architecture", "overview", "azure"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:CONVENTIONS.md",
+      "type": "document",
+      "name": "CONVENTIONS.md",
+      "filePath": "CONVENTIONS.md",
+      "summary": "Coding conventions for the project covering feature/infrastructure layout, immutable shared models, async and cancellation patterns, input validation, opt-in destructive Azure operations, and UI styling tokens.",
+      "tags": ["documentation", "conventions", "development", "guidelines"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:PoPunkouterSoftware.sln",
+      "type": "config",
+      "name": "PoPunkouterSoftware.sln",
+      "filePath": "PoPunkouterSoftware.sln",
+      "summary": "Visual Studio solution file aggregating the host, client, shared, infrastructure, and three test projects (unit, integration, E2E) with their build configurations.",
+      "tags": ["configuration", "build-system", "dotnet", "solution"],
+      "complexity": "moderate",
+      "languageNotes": "MSBuild solution file enumerating projects and per-configuration build mappings."
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "README.md",
+      "summary": "Top-level project overview documenting the solution layout, local development prerequisites and commands, runtime notes (health/diagnostics endpoints, Azure behavior), testing strategy, and developer guidance.",
+      "tags": ["documentation", "entry-point", "overview", "getting-started"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:STACK.md",
+      "type": "document",
+      "name": "STACK.md",
+      "filePath": "STACK.md",
+      "summary": "Enumerates the technology stack: .NET 10 / C# 14, ASP.NET Core with Blazor WebAssembly, Radzen.Blazor, Azure SDKs, Serilog/OpenTelemetry, and the xUnit/Playwright test tooling.",
+      "tags": ["documentation", "tech-stack", "overview", "dependencies"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:TESTING.md",
+      "type": "document",
+      "name": "TESTING.md",
+      "filePath": "TESTING.md",
+      "summary": "Describes the testing strategy across unit, integration (WebApplicationFactory in the Testing environment), and Playwright E2E tests, plus required build verification and runtime checks for browser-facing changes.",
+      "tags": ["documentation", "testing", "quality", "guidelines"],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:docker-compose.yml",
+      "type": "service",
+      "name": "docker-compose.yml",
+      "filePath": "docker-compose.yml",
+      "summary": "Docker Compose definition running an Azurite container that emulates Azure Blob, Queue, and Table Storage on ports 10000-10002 for local development and integration tests, backed by a named volume.",
+      "tags": ["orchestration", "infrastructure", "containerization", "azure"],
+      "complexity": "simple",
+      "languageNotes": "Single-service compose stack exposing Azurite storage emulator endpoints with a persistent named volume."
+    },
+    {
+      "id": "config:global.json",
+      "type": "config",
+      "name": "global.json",
+      "filePath": "global.json",
+      "summary": "Pins the .NET SDK to version 10.0.300 with latestMinor roll-forward, ensuring consistent build tooling across environments.",
+      "tags": ["configuration", "dotnet", "build-system", "sdk-pinning"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:README.md",
+      "target": "config:PoPunkouterSoftware.sln",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "config:global.json",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "service:docker-compose.yml",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "document:ARCHITECTURE.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "document:TESTING.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:ARCHITECTURE.md",
+      "target": "document:STACK.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:ARCHITECTURE.md",
+      "target": "document:CONVENTIONS.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:TESTING.md",
+      "target": "service:docker-compose.yml",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:global.json",
+      "target": "config:PoPunkouterSoftware.sln",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

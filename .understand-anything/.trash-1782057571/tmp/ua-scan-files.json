@@ -1,0 +1,660 @@
+{
+  "scriptCompleted": true,
+  "files": [
+    {
+      "path": ".github/workflows/deploy.yml",
+      "language": "yaml",
+      "sizeLines": 93,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".understand-anything/.understandignore",
+      "language": "unknown",
+      "sizeLines": 138,
+      "fileCategory": "code"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "language": "markdown",
+      "sizeLines": 11,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "CONVENTIONS.md",
+      "language": "markdown",
+      "sizeLines": 10,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "Directory.Build.props",
+      "language": "props",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "Directory.Packages.props",
+      "language": "props",
+      "sizeLines": 42,
+      "fileCategory": "code"
+    },
+    {
+      "path": "docker-compose.yml",
+      "language": "yaml",
+      "sizeLines": 14,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "docs/ideas/config-inventory.md",
+      "language": "markdown",
+      "sizeLines": 39,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "global.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "infra/bind-managed-identity.ps1",
+      "language": "powershell",
+      "sizeLines": 106,
+      "fileCategory": "script"
+    },
+    {
+      "path": "infra/migrate-kv-prefix.ps1",
+      "language": "powershell",
+      "sizeLines": 101,
+      "fileCategory": "script"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/_Imports.razor",
+      "language": "razor",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Layout/MainLayout.razor",
+      "language": "razor",
+      "sizeLines": 126,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Layout/MainLayout.razor.css",
+      "language": "css",
+      "sizeLines": 39,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Charts.cs",
+      "language": "csharp",
+      "sizeLines": 187,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Operations.cs",
+      "language": "csharp",
+      "sizeLines": 156,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Portfolio.cs",
+      "language": "csharp",
+      "sizeLines": 381,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.razor",
+      "language": "razor",
+      "sizeLines": 578,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.razor.cs",
+      "language": "csharp",
+      "sizeLines": 290,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/AzureDashboard.Trends.cs",
+      "language": "csharp",
+      "sizeLines": 198,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Index.razor",
+      "language": "razor",
+      "sizeLines": 261,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Models/SafeToRemoveItem.cs",
+      "language": "csharp",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/PortfolioModels.cs",
+      "language": "csharp",
+      "sizeLines": 23,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Sections/AzureDashboardDetailTabs.razor",
+      "language": "razor",
+      "sizeLines": 559,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Sections/PortfolioAppCard.razor",
+      "language": "razor",
+      "sizeLines": 154,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Pages/Sections/PortfolioAppCard.razor.css",
+      "language": "css",
+      "sizeLines": 14,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Components/Shared/DevErrorBoundary.razor",
+      "language": "razor",
+      "sizeLines": 42,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/PoAppSession.cs",
+      "language": "csharp",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/PoPunkouterSoftware.Client.csproj",
+      "language": "csproj",
+      "sizeLines": 25,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/Program.cs",
+      "language": "csharp",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/WasmRenderModes.cs",
+      "language": "csharp",
+      "sizeLines": 20,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.base.css",
+      "language": "css",
+      "sizeLines": 366,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.components.css",
+      "language": "css",
+      "sizeLines": 594,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.css",
+      "language": "css",
+      "sizeLines": 4,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.responsive.css",
+      "language": "css",
+      "sizeLines": 170,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/data/apps.json",
+      "language": "json",
+      "sizeLines": 323,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/data/azure-full-report.json",
+      "language": "json",
+      "sizeLines": 3016,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/index.html",
+      "language": "html",
+      "sizeLines": 14,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/js/helpers.js",
+      "language": "javascript",
+      "sizeLines": 207,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/staticwebapp.config.json",
+      "language": "json",
+      "sizeLines": 17,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportService.cs",
+      "language": "csharp",
+      "sizeLines": 1764,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Azure/AzureReportStore.cs",
+      "language": "csharp",
+      "sizeLines": 282,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Azure/DowntimeDiagnosisService.cs",
+      "language": "csharp",
+      "sizeLines": 390,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Azure/IncidentService.cs",
+      "language": "csharp",
+      "sizeLines": 216,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Azure/PlanRecommendationService.cs",
+      "language": "csharp",
+      "sizeLines": 206,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Azure/RawService.cs",
+      "language": "csharp",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Azure/ServicePingerService.cs",
+      "language": "csharp",
+      "sizeLines": 163,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Configuration/AppKeyVaultSecretManager.cs",
+      "language": "csharp",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/PoPunkouterSoftware.Infrastructure.csproj",
+      "language": "csproj",
+      "sizeLines": 27,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware.Infrastructure/Telemetry.cs",
+      "language": "csharp",
+      "sizeLines": 66,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Shared/Azure/AppServicePlanInventory.cs",
+      "language": "csharp",
+      "sizeLines": 33,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Shared/Azure/AzureModels.cs",
+      "language": "csharp",
+      "sizeLines": 445,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Shared/Azure/Result.cs",
+      "language": "csharp",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.Shared/PoPunkouterSoftware.Shared.csproj",
+      "language": "csproj",
+      "sizeLines": 10,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware.Shared/Session/PoUserSession.cs",
+      "language": "csharp",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware.sln",
+      "language": "sln",
+      "sizeLines": 119,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware/_Imports.razor",
+      "language": "razor",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/.azure/config",
+      "language": "unknown",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/api.http",
+      "language": "http",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/App.razor",
+      "language": "razor",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/appsettings.Development.json",
+      "language": "json",
+      "sizeLines": 33,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware/appsettings.json",
+      "language": "json",
+      "sizeLines": 61,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Azure/PingerEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Diag/DiagEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 408,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Diag/HealthEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 142,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Diag/RefreshSessionManager.cs",
+      "language": "csharp",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/GitHub/GitHubEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 172,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Features/Infra/InfraEndpoints.cs",
+      "language": "csharp",
+      "sizeLines": 599,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Infrastructure/GlobalExceptionHandler.cs",
+      "language": "csharp",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Infrastructure/RefreshHub.cs",
+      "language": "csharp",
+      "sizeLines": 15,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+      "language": "csproj",
+      "sizeLines": 53,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware/Program.cs",
+      "language": "csharp",
+      "sizeLines": 330,
+      "fileCategory": "code"
+    },
+    {
+      "path": "PoPunkouterSoftware/Properties/launchSettings.json",
+      "language": "json",
+      "sizeLines": 24,
+      "fileCategory": "config"
+    },
+    {
+      "path": "PoPunkouterSoftware/Routes.razor",
+      "language": "razor",
+      "sizeLines": 12,
+      "fileCategory": "code"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 59,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "SCRIPTS/azure-naming-remediation.ps1",
+      "language": "powershell",
+      "sizeLines": 355,
+      "fileCategory": "script"
+    },
+    {
+      "path": "SCRIPTS/azure-naming-standardization-plan.md",
+      "language": "markdown",
+      "sizeLines": 168,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "SCRIPTS/azure.yaml",
+      "language": "yaml",
+      "sizeLines": 15,
+      "fileCategory": "config"
+    },
+    {
+      "path": "SCRIPTS/cleanup_suggestions.ps1",
+      "language": "powershell",
+      "sizeLines": 3,
+      "fileCategory": "script"
+    },
+    {
+      "path": "SCRIPTS/New-AzureEfficiencyReport.ps1",
+      "language": "powershell",
+      "sizeLines": 771,
+      "fileCategory": "script"
+    },
+    {
+      "path": "SCRIPTS/New-AzureNamingStandardizationPlan.ps1",
+      "language": "powershell",
+      "sizeLines": 314,
+      "fileCategory": "script"
+    },
+    {
+      "path": "SCRIPTS/setup.ps1",
+      "language": "powershell",
+      "sizeLines": 60,
+      "fileCategory": "script"
+    },
+    {
+      "path": "STACK.md",
+      "language": "markdown",
+      "sizeLines": 10,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "TESTING.md",
+      "language": "markdown",
+      "sizeLines": 8,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/package.json",
+      "language": "json",
+      "sizeLines": 21,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/playwright.config.ts",
+      "language": "typescript",
+      "sizeLines": 66,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts",
+      "language": "typescript",
+      "sizeLines": 11,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/auth-model-lobby.spec.ts",
+      "language": "typescript",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/diag-api.spec.ts",
+      "language": "typescript",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/health.spec.ts",
+      "language": "typescript",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/pages.spec.ts",
+      "language": "typescript",
+      "sizeLines": 114,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/smoke-regressions.spec.ts",
+      "language": "typescript",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/static-openapi.spec.ts",
+      "language": "typescript",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tsconfig.json",
+      "language": "json",
+      "sizeLines": 11,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/ApiEndpointTests.cs",
+      "language": "csharp",
+      "sizeLines": 248,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/ApiSchemaContractTests.cs",
+      "language": "csharp",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/AzureReportStoreTests.cs",
+      "language": "csharp",
+      "sizeLines": 173,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/PoPunkouterSoftware.Tests.Integration.csproj",
+      "language": "csproj",
+      "sizeLines": 26,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Integration/TestWebAppFixture.cs",
+      "language": "csharp",
+      "sizeLines": 32,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/AppServicePlanInventoryTests.cs",
+      "language": "csharp",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/GitHubActivityTests.cs",
+      "language": "csharp",
+      "sizeLines": 330,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/PoAppSessionTests.cs",
+      "language": "csharp",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/PoPunkouterSoftware.Tests.Unit.csproj",
+      "language": "csproj",
+      "sizeLines": 31,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/ResultTests.cs",
+      "language": "csharp",
+      "sizeLines": 116,
+      "fileCategory": "code"
+    }
+  ],
+  "totalFiles": 104,
+  "filteredByIgnore": 4,
+  "estimatedComplexity": "moderate",
+  "stats": {
+    "filesScanned": 104,
+    "byCategory": {
+      "infra": 2,
+      "code": 64,
+      "docs": 7,
+      "config": 17,
+      "script": 7,
+      "markup": 7
+    },
+    "byLanguage": {
+      "yaml": 3,
+      "unknown": 2,
+      "markdown": 7,
+      "props": 2,
+      "json": 9,
+      "powershell": 7,
+      "razor": 10,
+      "css": 6,
+      "csharp": 40,
+      "csproj": 6,
+      "html": 1,
+      "javascript": 1,
+      "sln": 1,
+      "http": 1,
+      "typescript": 8
+    }
+  }
+}

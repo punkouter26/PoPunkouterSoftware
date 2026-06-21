@@ -1,0 +1,39 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 4,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.base.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 366,
+      "nonEmptyLines": 320,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.components.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 594,
+      "nonEmptyLines": 517,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 4,
+      "nonEmptyLines": 3,
+      "metrics": {}
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.responsive.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 170,
+      "nonEmptyLines": 144,
+      "metrics": {}
+    }
+  ]
+}

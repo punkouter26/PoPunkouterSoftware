@@ -1,0 +1,14 @@
+{
+  "projectRoot": "c:/Users/punko/Downloads/PO/PoPunkouterSoftware",
+  "batchFiles": [
+    {
+      "path": ".github/workflows/deploy.yml",
+      "language": "yaml",
+      "sizeLines": 93,
+      "fileCategory": "infra"
+    }
+  ],
+  "batchImportData": {
+    ".github/workflows/deploy.yml": []
+  }
+}

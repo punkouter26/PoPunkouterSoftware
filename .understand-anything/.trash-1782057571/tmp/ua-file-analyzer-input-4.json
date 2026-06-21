@@ -1,0 +1,35 @@
+{
+  "projectRoot": "c:/Users/punko/Downloads/PO/PoPunkouterSoftware",
+  "batchFiles": [
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.base.css",
+      "language": "css",
+      "sizeLines": 366,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.components.css",
+      "language": "css",
+      "sizeLines": 594,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.css",
+      "language": "css",
+      "sizeLines": 4,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.responsive.css",
+      "language": "css",
+      "sizeLines": 170,
+      "fileCategory": "markup"
+    }
+  ],
+  "batchImportData": {
+    "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.base.css": [],
+    "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.components.css": [],
+    "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.css": [],
+    "PoPunkouterSoftware.Client/wwwroot/css/modern-ui.responsive.css": []
+  }
+}

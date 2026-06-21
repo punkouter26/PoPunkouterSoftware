@@ -3,6 +3,7 @@
 @inject HttpClient Http
 @inject PoAppSession AppSession
 @inject IJSRuntime JS
+@using System.Text.Json.Serialization
 
 <RadzenComponents />
 
@@ -122,5 +123,9 @@
     }
 
     // GoF: Value Object — immutable config response carrier.
-    private sealed record ConfigResponse(string ApiBase, bool IsMockMode, bool GuestLoginEnabled);
+    // Uses JsonPropertyName to handle ASP.NET Core's default camelCase JSON serialization.
+    private sealed record ConfigResponse(
+        [property: JsonPropertyName("apiBase")] string ApiBase,
+        [property: JsonPropertyName("isMockMode")] bool IsMockMode,
+        [property: JsonPropertyName("guestLoginEnabled")] bool GuestLoginEnabled);
 }

@@ -1,0 +1,53 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 1,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": ".github/workflows/deploy.yml",
+      "language": "yaml",
+      "fileCategory": "infra",
+      "totalLines": 93,
+      "nonEmptyLines": 80,
+      "sections": [
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "on",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "concurrency",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "permissions",
+          "level": 1,
+          "line": 16
+        },
+        {
+          "heading": "env",
+          "level": 1,
+          "line": 27
+        },
+        {
+          "heading": "jobs",
+          "level": 1,
+          "line": 34
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    }
+  ]
+}

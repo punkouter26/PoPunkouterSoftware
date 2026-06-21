@@ -2,7 +2,7 @@
 ### Run these with the REST Client extension (Ctrl+Alt+R) or JetBrains HTTP Client
 ### Server must be running: F5 in VS Code or `dotnet run --project PoPunkouterSoftware/PoPunkouterSoftware.csproj`
 
-@baseUrl = http://localhost:5000
+@baseUrl = http://localhost:8000
 
 # ─── Health ───────────────────────────────────────────────────────────────────
 
@@ -89,6 +89,6 @@ Accept: application/json
 ###
 
 ### Scalar interactive UI (open in browser)
-# http://localhost:5000/scalar
+# http://localhost:8000/scalar
 
 ###

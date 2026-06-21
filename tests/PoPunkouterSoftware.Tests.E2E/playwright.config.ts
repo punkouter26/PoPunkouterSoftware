@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 const isDev = process.env['ASPNETCORE_ENVIRONMENT'] !== 'Production';
-const baseURL = process.env['BASE_URL'] ?? 'http://127.0.0.1:5000';
+const baseURL = process.env['BASE_URL'] ?? 'http://127.0.0.1:8000';
 const dotnetCommand = process.env['DOTNET_PATH']
   ?? (process.platform === 'win32'
     ? '"C:\\Program Files\\dotnet\\x64\\dotnet.exe"'

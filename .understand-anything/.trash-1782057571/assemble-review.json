@@ -1,0 +1,15 @@
+{
+  "fixedSectionOk": true,
+  "nodesRecovered": 0,
+  "edgesRestored": 0,
+  "crossBatchEdgesAdded": 0,
+  "typesRemapped": 0,
+  "complexityRemapped": 0,
+  "notes": [
+    "Clean merge: all 211 unique batch node IDs present in assembled graph; 0 dropped. All 197 edges preserved with 0 dangling references and 0 duplicate IDs.",
+    "All node types valid (file, function, pipeline, document, config, service, class). All complexity values valid (simple/moderate/complex). No func:/double-prefix/project-name-prefix issues.",
+    "All function and class nodes have a containing parent via 'contains' edges (0 orphans). All 6 tested_by edges reference existing nodes.",
+    "One non-canonical ID 'step:.github/workflows/deploy.yml:build-and-deploy' (type=pipeline) is intentional: it is a CI/CD sub-job, came verbatim from batch-2, has a valid 'contains' edge from its parent pipeline node, and produces no dangling references. Renaming to 'pipeline:' would collide with the parent workflow node. Left as-is.",
+    "Cross-batch imports gap is a known tool limitation, not a defect: project-scanner importMap was empty for all C#/Razor files (it does not resolve C# project-internal references as file-to-file edges). File-analyzers compensated with depends_on (27), calls (9), and contains (107) edges. No importMap-backed imports edges to add."
+  ]
+}

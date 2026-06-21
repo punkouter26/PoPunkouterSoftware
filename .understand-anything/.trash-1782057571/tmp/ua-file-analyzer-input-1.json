@@ -1,0 +1,41 @@
+{
+  "projectRoot": "c:/Users/punko/Downloads/PO/PoPunkouterSoftware",
+  "batchFiles": [
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts",
+      "language": "typescript",
+      "sizeLines": 11,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/auth-model-lobby.spec.ts",
+      "language": "typescript",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/pages.spec.ts",
+      "language": "typescript",
+      "sizeLines": 114,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.E2E/tests/smoke-regressions.spec.ts",
+      "language": "typescript",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts": [],
+    "tests/PoPunkouterSoftware.Tests.E2E/tests/auth-model-lobby.spec.ts": [
+      "tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts"
+    ],
+    "tests/PoPunkouterSoftware.Tests.E2E/tests/pages.spec.ts": [
+      "tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts"
+    ],
+    "tests/PoPunkouterSoftware.Tests.E2E/tests/smoke-regressions.spec.ts": [
+      "tests/PoPunkouterSoftware.Tests.E2E/tests/_helpers.ts"
+    ]
+  }
+}

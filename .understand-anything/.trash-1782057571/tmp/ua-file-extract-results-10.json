@@ -1,0 +1,463 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 2,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/PoPunkouterSoftware.Tests.Unit.csproj",
+      "language": "csproj",
+      "fileCategory": "config",
+      "totalLines": 31,
+      "nonEmptyLines": 26,
+      "metrics": {}
+    },
+    {
+      "path": "tests/PoPunkouterSoftware.Tests.Unit/ResultTests.cs",
+      "language": "csharp",
+      "fileCategory": "code",
+      "totalLines": 116,
+      "nonEmptyLines": 100,
+      "functions": [
+        {
+          "name": "Success_SetsIsSuccessTrue",
+          "startLine": 10,
+          "endLine": 15,
+          "params": []
+        },
+        {
+          "name": "Success_SetsValue",
+          "startLine": 17,
+          "endLine": 22,
+          "params": []
+        },
+        {
+          "name": "Success_ErrorIsNull",
+          "startLine": 24,
+          "endLine": 29,
+          "params": []
+        },
+        {
+          "name": "Success_ExceptionIsNull",
+          "startLine": 31,
+          "endLine": 36,
+          "params": []
+        },
+        {
+          "name": "Success_AcceptsNullValue",
+          "startLine": 38,
+          "endLine": 44,
+          "params": []
+        },
+        {
+          "name": "Failure_SetsIsSuccessFalse",
+          "startLine": 49,
+          "endLine": 54,
+          "params": []
+        },
+        {
+          "name": "Failure_SetsErrorMessage",
+          "startLine": 56,
+          "endLine": 62,
+          "params": []
+        },
+        {
+          "name": "Failure_ValueIsDefault",
+          "startLine": 64,
+          "endLine": 69,
+          "params": []
+        },
+        {
+          "name": "Failure_WithException_SetsException",
+          "startLine": 71,
+          "endLine": 77,
+          "params": []
+        },
+        {
+          "name": "Failure_WithoutException_ExceptionIsNull",
+          "startLine": 79,
+          "endLine": 84,
+          "params": []
+        },
+        {
+          "name": "Success_And_Failure_AreDistinct",
+          "startLine": 89,
+          "endLine": 97,
+          "params": []
+        },
+        {
+          "name": "Success_WithReferenceType_ValueIsSameInstance",
+          "startLine": 99,
+          "endLine": 105,
+          "params": []
+        },
+        {
+          "name": "Failure_PreservesErrorMessageVerbatim",
+          "startLine": 107,
+          "endLine": 115,
+          "params": [
+            "error"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Result_SuccessTests",
+          "startLine": 8,
+          "endLine": 45,
+          "methods": [
+            "Success_SetsIsSuccessTrue",
+            "Success_SetsValue",
+            "Success_ErrorIsNull",
+            "Success_ExceptionIsNull",
+            "Success_AcceptsNullValue"
+          ],
+          "properties": []
+        },
+        {
+          "name": "Result_FailureTests",
+          "startLine": 47,
+          "endLine": 85,
+          "methods": [
+            "Failure_SetsIsSuccessFalse",
+            "Failure_SetsErrorMessage",
+            "Failure_ValueIsDefault",
+            "Failure_WithException_SetsException",
+            "Failure_WithoutException_ExceptionIsNull"
+          ],
+          "properties": []
+        },
+        {
+          "name": "Result_BehaviourTests",
+          "startLine": 87,
+          "endLine": 116,
+          "methods": [
+            "Success_And_Failure_AreDistinct",
+            "Success_WithReferenceType_ValueIsSameInstance",
+            "Failure_PreservesErrorMessageVerbatim"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "Success_SetsIsSuccessTrue",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "Success_SetsValue",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "Success_ErrorIsNull",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "Success_ExceptionIsNull",
+          "line": 31,
+          "isDefault": false
+        },
+        {
+          "name": "Success_AcceptsNullValue",
+          "line": 38,
+          "isDefault": false
+        },
+        {
+          "name": "Result_SuccessTests",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "Failure_SetsIsSuccessFalse",
+          "line": 49,
+          "isDefault": false
+        },
+        {
+          "name": "Failure_SetsErrorMessage",
+          "line": 56,
+          "isDefault": false
+        },
+        {
+          "name": "Failure_ValueIsDefault",
+          "line": 64,
+          "isDefault": false
+        },
+        {
+          "name": "Failure_WithException_SetsException",
+          "line": 71,
+          "isDefault": false
+        },
+        {
+          "name": "Failure_WithoutException_ExceptionIsNull",
+          "line": 79,
+          "isDefault": false
+        },
+        {
+          "name": "Result_FailureTests",
+          "line": 47,
+          "isDefault": false
+        },
+        {
+          "name": "Success_And_Failure_AreDistinct",
+          "line": 89,
+          "isDefault": false
+        },
+        {
+          "name": "Success_WithReferenceType_ValueIsSameInstance",
+          "line": 99,
+          "isDefault": false
+        },
+        {
+          "name": "Failure_PreservesErrorMessageVerbatim",
+          "line": 107,
+          "isDefault": false
+        },
+        {
+          "name": "Result_BehaviourTests",
+          "line": 87,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Success_SetsIsSuccessTrue",
+          "callee": "Result<string>.Success",
+          "lineNumber": 13
+        },
+        {
+          "caller": "Success_SetsIsSuccessTrue",
+          "callee": "result.IsSuccess.Should().BeTrue",
+          "lineNumber": 14
+        },
+        {
+          "caller": "Success_SetsIsSuccessTrue",
+          "callee": "result.IsSuccess.Should",
+          "lineNumber": 14
+        },
+        {
+          "caller": "Success_SetsValue",
+          "callee": "Result<int>.Success",
+          "lineNumber": 20
+        },
+        {
+          "caller": "Success_SetsValue",
+          "callee": "result.Value.Should().Be",
+          "lineNumber": 21
+        },
+        {
+          "caller": "Success_SetsValue",
+          "callee": "result.Value.Should",
+          "lineNumber": 21
+        },
+        {
+          "caller": "Success_ErrorIsNull",
+          "callee": "Result<string>.Success",
+          "lineNumber": 27
+        },
+        {
+          "caller": "Success_ErrorIsNull",
+          "callee": "result.Error.Should().BeNull",
+          "lineNumber": 28
+        },
+        {
+          "caller": "Success_ErrorIsNull",
+          "callee": "result.Error.Should",
+          "lineNumber": 28
+        },
+        {
+          "caller": "Success_ExceptionIsNull",
+          "callee": "Result<string>.Success",
+          "lineNumber": 34
+        },
+        {
+          "caller": "Success_ExceptionIsNull",
+          "callee": "result.Exception.Should().BeNull",
+          "lineNumber": 35
+        },
+        {
+          "caller": "Success_ExceptionIsNull",
+          "callee": "result.Exception.Should",
+          "lineNumber": 35
+        },
+        {
+          "caller": "Success_AcceptsNullValue",
+          "callee": "Result<string?>.Success",
+          "lineNumber": 41
+        },
+        {
+          "caller": "Success_AcceptsNullValue",
+          "callee": "result.IsSuccess.Should().BeTrue",
+          "lineNumber": 42
+        },
+        {
+          "caller": "Success_AcceptsNullValue",
+          "callee": "result.IsSuccess.Should",
+          "lineNumber": 42
+        },
+        {
+          "caller": "Success_AcceptsNullValue",
+          "callee": "result.Value.Should().BeNull",
+          "lineNumber": 43
+        },
+        {
+          "caller": "Success_AcceptsNullValue",
+          "callee": "result.Value.Should",
+          "lineNumber": 43
+        },
+        {
+          "caller": "Failure_SetsIsSuccessFalse",
+          "callee": "Result<string>.Failure",
+          "lineNumber": 52
+        },
+        {
+          "caller": "Failure_SetsIsSuccessFalse",
+          "callee": "result.IsSuccess.Should().BeFalse",
+          "lineNumber": 53
+        },
+        {
+          "caller": "Failure_SetsIsSuccessFalse",
+          "callee": "result.IsSuccess.Should",
+          "lineNumber": 53
+        },
+        {
+          "caller": "Failure_SetsErrorMessage",
+          "callee": "Result<string>.Failure",
+          "lineNumber": 60
+        },
+        {
+          "caller": "Failure_SetsErrorMessage",
+          "callee": "result.Error.Should().Be",
+          "lineNumber": 61
+        },
+        {
+          "caller": "Failure_SetsErrorMessage",
+          "callee": "result.Error.Should",
+          "lineNumber": 61
+        },
+        {
+          "caller": "Failure_ValueIsDefault",
+          "callee": "Result<int>.Failure",
+          "lineNumber": 67
+        },
+        {
+          "caller": "Failure_ValueIsDefault",
+          "callee": "result.Value.Should().Be",
+          "lineNumber": 68
+        },
+        {
+          "caller": "Failure_ValueIsDefault",
+          "callee": "result.Value.Should",
+          "lineNumber": 68
+        },
+        {
+          "caller": "Failure_WithException_SetsException",
+          "callee": "new InvalidOperationException",
+          "lineNumber": 74
+        },
+        {
+          "caller": "Failure_WithException_SetsException",
+          "callee": "Result<string>.Failure",
+          "lineNumber": 75
+        },
+        {
+          "caller": "Failure_WithException_SetsException",
+          "callee": "result.Exception.Should().BeSameAs",
+          "lineNumber": 76
+        },
+        {
+          "caller": "Failure_WithException_SetsException",
+          "callee": "result.Exception.Should",
+          "lineNumber": 76
+        },
+        {
+          "caller": "Failure_WithoutException_ExceptionIsNull",
+          "callee": "Result<string>.Failure",
+          "lineNumber": 82
+        },
+        {
+          "caller": "Failure_WithoutException_ExceptionIsNull",
+          "callee": "result.Exception.Should().BeNull",
+          "lineNumber": 83
+        },
+        {
+          "caller": "Failure_WithoutException_ExceptionIsNull",
+          "callee": "result.Exception.Should",
+          "lineNumber": 83
+        },
+        {
+          "caller": "Success_And_Failure_AreDistinct",
+          "callee": "Result<bool>.Success",
+          "lineNumber": 92
+        },
+        {
+          "caller": "Success_And_Failure_AreDistinct",
+          "callee": "Result<bool>.Failure",
+          "lineNumber": 93
+        },
+        {
+          "caller": "Success_And_Failure_AreDistinct",
+          "callee": "ok.IsSuccess.Should().BeTrue",
+          "lineNumber": 95
+        },
+        {
+          "caller": "Success_And_Failure_AreDistinct",
+          "callee": "ok.IsSuccess.Should",
+          "lineNumber": 95
+        },
+        {
+          "caller": "Success_And_Failure_AreDistinct",
+          "callee": "err.IsSuccess.Should().BeFalse",
+          "lineNumber": 96
+        },
+        {
+          "caller": "Success_And_Failure_AreDistinct",
+          "callee": "err.IsSuccess.Should",
+          "lineNumber": 96
+        },
+        {
+          "caller": "Success_WithReferenceType_ValueIsSameInstance",
+          "callee": "new List<string>",
+          "lineNumber": 102
+        },
+        {
+          "caller": "Success_WithReferenceType_ValueIsSameInstance",
+          "callee": "Result<List<string>>.Success",
+          "lineNumber": 103
+        },
+        {
+          "caller": "Success_WithReferenceType_ValueIsSameInstance",
+          "callee": "result.Value.Should().BeSameAs",
+          "lineNumber": 104
+        },
+        {
+          "caller": "Success_WithReferenceType_ValueIsSameInstance",
+          "callee": "result.Value.Should",
+          "lineNumber": 104
+        },
+        {
+          "caller": "Failure_PreservesErrorMessageVerbatim",
+          "callee": "Result<object>.Failure",
+          "lineNumber": 113
+        },
+        {
+          "caller": "Failure_PreservesErrorMessageVerbatim",
+          "callee": "result.Error.Should().Be",
+          "lineNumber": 114
+        },
+        {
+          "caller": "Failure_PreservesErrorMessageVerbatim",
+          "callee": "result.Error.Should",
+          "lineNumber": 114
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 16,
+        "functionCount": 13,
+        "classCount": 3
+      }
+    }
+  ]
+}

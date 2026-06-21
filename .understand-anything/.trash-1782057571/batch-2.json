@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    {
+      "id": "pipeline:.github/workflows/deploy.yml",
+      "type": "pipeline",
+      "name": "deploy.yml",
+      "filePath": ".github/workflows/deploy.yml",
+      "summary": "GitHub Actions workflow that builds and deploys the .NET 10 Blazor app to Azure App Service on push to master, using OIDC authentication and a protected 'production' environment.",
+      "tags": ["ci-cd", "deployment", "infrastructure", "azure", "dotnet"],
+      "complexity": "moderate",
+      "languageNotes": "Uses OIDC federated credentials (id-token: write) instead of stored Azure secrets, pins all third-party actions to commit SHAs, and gates deploys behind a GitHub production environment with concurrency cancellation."
+    },
+    {
+      "id": "step:.github/workflows/deploy.yml:build-and-deploy",
+      "type": "pipeline",
+      "name": "build-and-deploy",
+      "filePath": ".github/workflows/deploy.yml",
+      "summary": "Single CI/CD job that validates deploy targets, restores, builds, and publishes the solution, then authenticates to Azure via OIDC and deploys the published artifacts to Azure App Service.",
+      "tags": ["ci-cd", "deployment", "build-system", "azure"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "pipeline:.github/workflows/deploy.yml",
+      "target": "step:.github/workflows/deploy.yml:build-and-deploy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    }
+  ]
+}

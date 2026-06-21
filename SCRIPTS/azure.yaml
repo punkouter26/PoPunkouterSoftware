@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: pofunquiz
+metadata:
+  template: pofunquiz@1.0.0
+
+infra:
+  provider: bicep
+  path: infra
+
+services:
+  pofunquiz-api:
+    project: src/PoFunQuiz.API/PoFunQuiz.API.csproj
+    host: appservice
+    language: dotnet
