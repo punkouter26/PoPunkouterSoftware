@@ -8,7 +8,6 @@ using PoPunkouterSoftware.Shared.Azure;
 using Radzen;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace PoPunkouterSoftware.Client.Components.Pages;
 
@@ -61,13 +60,7 @@ public partial class AzureDashboard
     {
         if (report is null) return;
 
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-
-        var json = JsonSerializer.Serialize(report, options);
+        var json = JsonSerializer.Serialize(report, AppJsonContext.Default.AzureReport);
         var timestamp = (report.GeneratedAt ?? DateTime.UtcNow).ToString("yyyy-MM-dd_HHmm");
         var filename = $"azure-report-{timestamp}.json";
 
@@ -106,12 +99,7 @@ public partial class AzureDashboard
 
         try
         {
-            var opts = new JsonSerializerOptions(JsonSerializerDefaults.Web)
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            report = await Http.GetFromJsonAsync<AzureReport>("/api/diag/report", opts);
+            report = await Http.GetFromJsonAsync("/api/diag/report", AppJsonContext.Default.AzureReport);
             if (report is null)
                 throw new InvalidOperationException("The Azure report endpoint returned no data.");
 
@@ -212,11 +200,7 @@ public partial class AzureDashboard
             {
                 try
                 {
-                    var opts = new JsonSerializerOptions(JsonSerializerDefaults.Web)
-                    {
-                        PropertyNameCaseInsensitive = true
-                    };
-                    var latest = await Http.GetFromJsonAsync<AzureReport>("/api/diag/report", opts, ct);
+                    var latest = await Http.GetFromJsonAsync("/api/diag/report", AppJsonContext.Default.AzureReport, ct);
                     if (latest is not null && latest.GeneratedAt != initialGeneratedAt)
                     {
                         _refreshing = false;
@@ -246,13 +230,12 @@ public partial class AzureDashboard
             .WithAutomaticReconnect()
             .Build();
 
-        _hub.On<object>("RefreshProgress", payload =>
+        // Bind the hub payload straight to a JsonElement — no reflection-based
+        // re-serialise round-trip, which keeps this trim-safe.
+        _hub.On<JsonElement>("RefreshProgress", root =>
         {
             try
             {
-                var json = JsonSerializer.Serialize(payload);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
                 if (root.TryGetProperty("percent", out var pct))
                     _progressPercent = pct.GetInt32();
                 if (root.TryGetProperty("step", out var step))

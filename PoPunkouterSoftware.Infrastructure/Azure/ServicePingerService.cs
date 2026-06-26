@@ -12,9 +12,19 @@ namespace PoPunkouterSoftware.Infrastructure.Azure;
 /// Background service that periodically pings each Azure web service URL to warm cold-start instances.
 /// Ping results are stored in IMemoryCache for the pinger-status endpoint.
 /// </summary>
-public sealed class ServicePingerService : BackgroundService
+public sealed partial class ServicePingerService : BackgroundService
 {
     private const string CacheKey = "pinger-status";
+
+    // Source-generated logging — zero boxing/allocation on the per-ping hot path.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Pinger disabled by configuration.")]
+    private partial void LogDisabled();
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Pinger: {Name} -> {Status} ({Ms} ms)")]
+    private partial void LogPing(string name, string status, long ms);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Pinger sweep complete: {Total} services probed")]
+    private partial void LogSweepComplete(int total);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -48,7 +58,7 @@ public sealed class ServicePingerService : BackgroundService
     {
         if (!_enabled)
         {
-            _logger.LogInformation("Pinger disabled by configuration.");
+            LogDisabled();
             return;
         }
 
@@ -92,7 +102,7 @@ public sealed class ServicePingerService : BackgroundService
             try
             {
                 var result = await PingOneAsync(client, svc.Name, svc.FriendlyName, svc.Url!, ct);
-                _logger.LogDebug("Pinger: {Name} -> {Status} ({Ms} ms)", svc.Name, result.Status, result.ResponseTimeMs);
+                LogPing(svc.Name, result.Status, result.ResponseTimeMs);
 
                 // Metrics: per-service up/down gauge + response-time histogram so reachability
                 // and latency trends are alertable without parsing logs. (questions 4 & 6)
@@ -112,7 +122,7 @@ public sealed class ServicePingerService : BackgroundService
         _cache.Set(CacheKey, new PingerSnapshot(DateTime.UtcNow, results), TimeSpan.FromMinutes(30));
         // Heartbeat: a flat sweep-counter rate means the background loop has silently died. (question 5)
         Telemetry.PingerSweeps.Add(1);
-        _logger.LogInformation("Pinger sweep complete: {Total} services probed", results.Count);
+        LogSweepComplete(results.Count);
     }
 
     private static async Task<PingResult> PingOneAsync(

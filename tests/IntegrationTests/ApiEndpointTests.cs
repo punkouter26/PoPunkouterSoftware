@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 
-namespace PoPunkouterSoftware.Tests.Integration;
+namespace PoPunkouterSoftware.IntegrationTests;
 
 [Collection("WebApp")]
 public class HealthEndpointTests
@@ -112,22 +112,15 @@ public class ConfigEndpointTests
     }
 
     [Fact]
-    public async Task GetConfig_TestEnvironment_EnablesGuestLogin()
+    public async Task GetConfig_TestEnvironment_IsNotProduction()
     {
         var json = await _client.GetStringAsync("/api/config");
         var doc = JsonDocument.Parse(json);
 
-        doc.RootElement.GetProperty("guestLoginEnabled").GetBoolean().Should().BeTrue();
+        // This site has no auth — config exposes only environment/feature state.
         doc.RootElement.GetProperty("isProduction").GetBoolean().Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task GetConfig_WithoutMicrosoftClientId_DisablesOAuthFlag()
-    {
-        var json = await _client.GetStringAsync("/api/config");
-        var doc = JsonDocument.Parse(json);
-
-        doc.RootElement.GetProperty("microsoftOAuthEnabled").GetBoolean().Should().BeFalse();
+        doc.RootElement.TryGetProperty("guestLoginEnabled", out _).Should().BeFalse();
+        doc.RootElement.TryGetProperty("microsoftOAuthEnabled", out _).Should().BeFalse();
     }
 
     [Fact]

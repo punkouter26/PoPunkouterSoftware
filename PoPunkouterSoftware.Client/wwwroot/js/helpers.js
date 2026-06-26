@@ -17,18 +17,6 @@ window.downloadTextFile = function (filename, content, mimeType) {
     URL.revokeObjectURL(url);
 };
 
-window.poAppStorage = {
-    get: function (key) {
-        return window.localStorage.getItem(key);
-    },
-    set: function (key, value) {
-        window.localStorage.setItem(key, value);
-    },
-    remove: function (key) {
-        window.localStorage.removeItem(key);
-    }
-};
-
 /**
  * Dynamically animate blurry interactive dynamic background nodes on a background canvas.
  */

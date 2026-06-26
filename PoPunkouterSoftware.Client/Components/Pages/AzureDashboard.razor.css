@@ -1,0 +1,42 @@
+/* Page-specific styles lifted out of inline style= attributes in AzureDashboard.razor.
+   Values that depend on runtime data (e.g. health-threshold colours) deliberately stay
+   inline; only the static presentation lives here. */
+
+.azure-hero-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff 30%, var(--app-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.03em;
+    font-family: var(--app-headline-font);
+}
+
+.azure-donut-wrap {
+    position: relative;
+}
+
+.azure-donut-center {
+    position: absolute;
+    top: 38%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.azure-donut-pct {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.azure-donut-caption {
+    font-size: .72rem;
+    opacity: .65;
+    margin-top: .15rem;
+}
+
+.azure-fleet-emoji {
+    font-size: 1.25rem;
+}

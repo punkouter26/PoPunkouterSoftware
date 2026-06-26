@@ -13,7 +13,15 @@ internal static class DiagEndpoints
 {
     internal static WebApplication MapDiagEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/diag/automation-script", (IWebHostEnvironment env) =>
+        // Human-facing diagnostics page (HTML or JSON) — kept off the /api group.
+        app.MapGet("/diag", GetDiag)
+        .WithName("GetDiag")
+        .WithTags("Diag");
+
+        // All machine endpoints share the /api/diag prefix and the "Diag" OpenAPI tag.
+        var diag = app.MapGroup("/api/diag").WithTags("Diag");
+
+        diag.MapGet("/automation-script", (IWebHostEnvironment env) =>
         {
             var publishedPath = Path.Combine(env.ContentRootPath, "Automation", "New-AzureEfficiencyReport.ps1");
             var sourcePath = Path.GetFullPath(Path.Combine(
@@ -29,14 +37,9 @@ internal static class DiagEndpoints
                     detail: "The Azure efficiency automation script is not available in this deployment.",
                     statusCode: StatusCodes.Status404NotFound);
         })
-        .WithName("DownloadAzureEfficiencyAutomationScript")
-        .WithTags("Diag");
+        .WithName("DownloadAzureEfficiencyAutomationScript");
 
-        app.MapGet("/diag", GetDiag)
-        .WithName("GetDiag")
-        .WithTags("Diag");
-
-        app.MapGet("/api/diag/report", async (IWebHostEnvironment env, AzureReportStore store) =>
+        diag.MapGet("/report", async (IWebHostEnvironment env, AzureReportStore store) =>
         {
             var reportResult = await store.LoadAsync();
             if (reportResult.IsSuccess && reportResult.Value is not null)
@@ -67,7 +70,7 @@ internal static class DiagEndpoints
             return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
         });
 
-        app.MapPost("/api/diag/refresh",
+        diag.MapPost("/refresh",
             (IServiceScopeFactory scopeFactory, IWebHostEnvironment env, ILogger<Program> logger,
              Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Infrastructure.RefreshHub> hubCtx,
              RefreshSessionManager session) =>
@@ -158,19 +161,20 @@ internal static class DiagEndpoints
             });
 
             return Results.Accepted();
-        });
+        })
+        .RequireManagementActions();
 
         // ── Cancel in-progress refresh ───────────────────────────────────────
-        app.MapPost("/api/diag/cancel-refresh", (RefreshSessionManager session) =>
+        diag.MapPost("/cancel-refresh", (RefreshSessionManager session) =>
         {
             session.Cancel();
             return Results.Ok(new { cancelled = true });
         })
-        .WithName("CancelDiagRefresh")
-        .WithTags("Diag");
+        .RequireManagementActions()
+        .WithName("CancelDiagRefresh");
 
         // ── Az CLI login status ──────────────────────────────────────────────
-        app.MapGet("/api/diag/az-status", async (HttpContext ctx) =>
+        diag.MapGet("/az-status", async (HttpContext ctx) =>
         {
             // az.cmd is a batch file on Windows; must run through cmd.exe
             var azExe = OperatingSystem.IsWindows() ? "az.cmd" : "az";
@@ -218,7 +222,7 @@ internal static class DiagEndpoints
         });
 
         // ── History summary for /timebased time-series charts ─────────────────
-        app.MapGet("/api/diag/history", async (AzureReportStore store, CancellationToken ct) =>
+        diag.MapGet("/history", async (AzureReportStore store, CancellationToken ct) =>
         {
             var result = await store.LoadHistoryAsync(maxEntries: 90, ct);
             if (!result.IsSuccess)

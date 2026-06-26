@@ -8,9 +8,10 @@ PoPunkouterSoftware is a .NET 10 Blazor Web App with a server host, a WebAssembl
 - `PoPunkouterSoftware.Client/`: WASM UI, layouts, pages, and static assets.
 - `PoPunkouterSoftware.Shared/`: contracts and models shared between the host and client.
 - `PoPunkouterSoftware.Infrastructure/`: Azure and integration adapters.
-- `tests/PoPunkouterSoftware.Tests.Unit/`: xUnit unit tests.
-- `tests/PoPunkouterSoftware.Tests.Integration/`: integration tests with `WebApplicationFactory` and Azurite.
-- `tests/PoPunkouterSoftware.Tests.E2E/`: Playwright end-to-end tests.
+- `tests/UnitTests/`: xUnit unit tests.
+- `tests/IntegrationTests/`: integration tests with `WebApplicationFactory` and Azurite (Testcontainers).
+- `tests/E2EAPI/`: pure HTTP API end-to-end tests that emulate front-end functionality.
+- `tests/E2EUI/`: C# Playwright browser tests (run on demand against a live instance).
 - `SCRIPTS/`: setup and automation helpers.
 
 ## Local Development
@@ -25,8 +26,9 @@ Common commands:
 
 ```powershell
 dotnet build .\PoPunkouterSoftware\PoPunkouterSoftware.csproj
-dotnet test .\tests\PoPunkouterSoftware.Tests.Unit
-dotnet test .\tests\PoPunkouterSoftware.Tests.Integration
+dotnet test .\tests\UnitTests
+dotnet test .\tests\IntegrationTests
+dotnet test .\tests\E2EAPI
 ```
 
 Available VS Code tasks in this workspace include:

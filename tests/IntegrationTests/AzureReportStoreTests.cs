@@ -4,7 +4,7 @@ using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Shared.Azure;
 using Testcontainers.Azurite;
 
-namespace PoPunkouterSoftware.Tests.Integration;
+namespace PoPunkouterSoftware.IntegrationTests;
 
 public class AzureReportStoreNoConnectionTests
 {

@@ -17,8 +17,7 @@ public partial class AzureDashboard
     {
         try
         {
-            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var hist = await Http.GetFromJsonAsync<List<HistorySummary>>("/api/diag/history", opts);
+            var hist = await Http.GetFromJsonAsync("/api/diag/history", AppJsonContext.Default.ListHistorySummary);
             _history = hist ?? new();
         }
         catch

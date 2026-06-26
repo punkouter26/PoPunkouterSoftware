@@ -8,8 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="PoPunkouterSoftware.Tests.Unit" />
-    <InternalsVisibleTo Include="PoPunkouterSoftware.Tests.Integration" />
+    <InternalsVisibleTo Include="PoPunkouterSoftware.UnitTests" />
+    <InternalsVisibleTo Include="PoPunkouterSoftware.IntegrationTests" />
+    <InternalsVisibleTo Include="PoPunkouterSoftware.E2EAPI" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,6 +19,12 @@
 
     <!-- UI -->
     <PackageReference Include="Radzen.Blazor" />
+
+    <!-- Resilience pipelines for typed HttpClients -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+
+    <!-- Validation -->
+    <PackageReference Include="FluentValidation" />
 
     <!-- Structured logging -->
     <PackageReference Include="Serilog.AspNetCore" />

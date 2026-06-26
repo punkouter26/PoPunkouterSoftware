@@ -1,6 +1,6 @@
 using PoPunkouterSoftware.Shared.Azure;
 
-namespace PoPunkouterSoftware.Tests.Unit;
+namespace PoPunkouterSoftware.UnitTests;
 
 public class AppServicePlanInventoryTests
 {

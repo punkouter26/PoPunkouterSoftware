@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using PoPunkouterSoftware.Infrastructure;
+using PoPunkouterSoftware.Shared.Validation;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace PoPunkouterSoftware.Features.GitHub;
 
@@ -11,17 +11,18 @@ namespace PoPunkouterSoftware.Features.GitHub;
 /// </summary>
 internal static class GitHubEndpoints
 {
-    private static readonly Regex _repoPattern = new(@"^[a-zA-Z0-9_.\-]+/[a-zA-Z0-9_.\-]+$", RegexOptions.Compiled);
+    private static readonly RepoQueryValidator _repoValidator = new();
 
     internal static WebApplication MapGitHubEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/github-activity", async (
+        var group = app.MapGroup("/api").WithTags("GitHub");
+
+        group.MapGet("/github-activity", async (
             string? repo,
             IHttpClientFactory httpClientFactory,
             IMemoryCache cache,
             ILogger<Program> logger) => await InvokeAsync(repo, httpClientFactory, cache, logger))
-        .WithName("GetGitHubActivity")
-        .WithTags("GitHub");
+        .WithName("GetGitHubActivity");
 
         return app;
     }
@@ -33,8 +34,9 @@ internal static class GitHubEndpoints
         IMemoryCache cache,
         ILogger<Program> logger)
     {
-        if (string.IsNullOrWhiteSpace(repo) || !_repoPattern.IsMatch(repo))
-            return Results.BadRequest(new { error = "Invalid repo parameter. Expected format: owner/repo" });
+        var validation = _repoValidator.Validate(repo ?? string.Empty);
+        if (!validation.IsValid)
+            return Results.BadRequest(new { error = validation.Errors[0].ErrorMessage });
 
         var cacheKey = $"github-activity:{repo}";
         if (cache.TryGetValue(cacheKey, out object? cached))

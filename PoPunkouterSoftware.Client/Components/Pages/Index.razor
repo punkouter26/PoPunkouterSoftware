@@ -1,7 +1,5 @@
 @page "/"
 @rendermode WasmRenderModes.Interactive
-@using System.Text.Json
-@using System.Text.Json.Serialization
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
 
@@ -9,7 +7,7 @@
 
 <div class="app-page">
     <section class="app-section app-hero app-glow">
-        <div class="app-grid" style="align-content:start;gap:1rem;">
+        <div class="app-grid hero-grid">
             <span class="app-eyebrow">Modern indie software studio</span>
             <h1 class="app-hero-title">Punkouter Software</h1>
             <p class="app-hero-copy">
@@ -36,7 +34,7 @@
                 </p>
             </div>
 
-            <div class="app-grid metrics" style="min-width:min(100%, 520px);">
+            <div class="app-grid metrics metrics-grid">
                 <div class="app-metric-card">
                     <strong>@filteredApps.Count</strong>
                     <span class="app-note">Healthy apps shown</span>
@@ -102,8 +100,7 @@
     {
         try
         {
-            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var wrapper = await Http.GetFromJsonAsync<AppsWrapper>("data/apps.json", opts);
+            var wrapper = await Http.GetFromJsonAsync("data/apps.json", AppJsonContext.Default.AppsWrapper);
             apps = wrapper?.Apps ?? new List<AppModel>();
             ApplyDefaultSort();
         }
@@ -119,8 +116,7 @@
     {
         try
         {
-            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var report = await Http.GetFromJsonAsync<AzureReport>("/api/diag/report", opts);
+            var report = await Http.GetFromJsonAsync("/api/diag/report", AppJsonContext.Default.AzureReport);
             var services = report?.WebServices?.Services ?? new List<WebService>();
             _liveByUrl = services
                 .Where(s => !string.IsNullOrEmpty(s.Url))
@@ -158,8 +154,7 @@
         {
             try
             {
-                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var gh = await Http.GetFromJsonAsync<GitHubActivity>($"/api/github-activity?repo={Uri.EscapeDataString(repo)}", opts);
+                var gh = await Http.GetFromJsonAsync($"/api/github-activity?repo={Uri.EscapeDataString(repo)}", AppJsonContext.Default.GitHubActivity);
                 if (gh is not null)
                     _ghActivity[repo] = gh;
             }

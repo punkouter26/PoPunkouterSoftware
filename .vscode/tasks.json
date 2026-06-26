@@ -2,6 +2,12 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "f5-prep",
+			"dependsOrder": "sequence",
+			"dependsOn": ["kill-dotnet", "start-azurite", "build"],
+			"problemMatcher": []
+		},
+		{
 			"label": "kill-dotnet",
 			"type": "shell",
 			"command": "Get-Process dotnet -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0",
@@ -151,7 +157,7 @@
 			"type": "process",
 			"args": [
 				"test",
-				"${workspaceFolder}/tests/PoPunkouterSoftware.Tests.Unit",
+				"${workspaceFolder}/tests/UnitTests",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -170,9 +176,9 @@
 		{
 			"label": "test-unit-watch",
 			"type": "shell",
-			"command": "dotnet watch test --project ${workspaceFolder}/tests/PoPunkouterSoftware.Tests.Unit",
+			"command": "dotnet watch test --project ${workspaceFolder}/tests/UnitTests",
 			"windows": {
-				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch test --project ${workspaceFolder}/tests/PoPunkouterSoftware.Tests.Unit"
+				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch test --project ${workspaceFolder}/tests/UnitTests"
 			},
 			"group": "test",
 			"isBackground": true,

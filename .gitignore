@@ -143,6 +143,12 @@ Desktop.ini
 *.stackdump
 core.*
 
+# Generated outputs from SCRIPTS/New-AzureEfficiencyReport.ps1 (source scripts stay tracked)
+SCRIPTS/azure-inventory-report.html
+SCRIPTS/azure-naming-standardization-plan.csv
+SCRIPTS/azure-naming-standardization-plan.md
+SCRIPTS/cleanup_suggestions.ps1
+
 # Local tooling / report artifacts (generated, not source)
 .porun/
 TESTRESULTS/

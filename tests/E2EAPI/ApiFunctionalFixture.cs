@@ -2,9 +2,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 
-namespace PoPunkouterSoftware.IntegrationTests;
+namespace PoPunkouterSoftware.E2EAPI;
 
-public class TestWebApp : WebApplicationFactory<Program>
+/// <summary>
+/// Hosts the real application in-process for pure-API end-to-end exercises.
+/// Runs in the "Testing" environment so Key Vault and external telemetry stay disabled.
+/// </summary>
+public class ApiFunctionalApp : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -15,9 +19,6 @@ public class TestWebApp : WebApplicationFactory<Program>
         {
             cfg.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                // Disable Key Vault for hermetic tests. Program.cs checks "KeyVault:Uri"
-                // BEFORE "AzureKeyVaultUri", so both must be cleared or the real shared
-                // vault loads and leaks secrets (e.g. Authentication:Microsoft:ClientId).
                 ["KeyVault:Uri"] = "",
                 ["AzureKeyVaultUri"] = "",
                 ["ApplicationInsights:ConnectionString"] = "",
@@ -27,7 +28,5 @@ public class TestWebApp : WebApplicationFactory<Program>
     }
 }
 
-[CollectionDefinition("WebApp")]
-public class WebAppCollection : ICollectionFixture<TestWebApp>
-{
-}
+[CollectionDefinition("ApiFunctional")]
+public class ApiFunctionalCollection : ICollectionFixture<ApiFunctionalApp>;

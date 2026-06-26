@@ -6,6 +6,14 @@
     <AssemblyName>PoPunkouterSoftware.Shared</AssemblyName>
     <!-- Classes in this project are shared between the server (API) and WASM client.
          Keep this project free of server-only or browser-only dependencies. -->
+    <!-- Trim hygiene — this assembly ships in the WASM bundle. -->
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Shared validation rules (DTOs + FluentValidation only, per architecture) -->
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
 
 </Project>

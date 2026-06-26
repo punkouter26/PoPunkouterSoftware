@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace PoPunkouterSoftware.Tests.Integration;
+namespace PoPunkouterSoftware.IntegrationTests;
 
 [Collection("WebApp")]
 public class ApiSchemaContractTests

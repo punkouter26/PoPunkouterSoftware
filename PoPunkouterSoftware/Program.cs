@@ -2,6 +2,8 @@ using Azure.Core;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.ResourceManager;
+using OpenTelemetry;
+using OpenTelemetry.Resources;
 using PoPunkouterSoftware;
 using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Features.Diag;
@@ -101,7 +103,13 @@ try
     // defined in PoPunkouterSoftware.Infrastructure.Telemetry and exported by registering
     // the meter source here. They flow to Azure Monitor when a connection string is set;
     // without one they are still recorded in-process (and harmless if never scraped).
+    // cloud_RoleName in Azure Monitor is derived from the OpenTelemetry resource's
+    // service.name attribute. Without it, traces surface as "unknown_service:dotnet".
+    // We resolve it by reflection on the entry assembly so the role always tracks the
+    // executing API binary — done here in the API project only (never in the WASM client).
+    var serviceName = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "PoPunkouterSoftware";
     var otelBuilder = builder.Services.AddOpenTelemetry()
+        .ConfigureResource(r => r.AddService(serviceName))
         .WithMetrics(m => m.AddMeter(PoPunkouterSoftware.Infrastructure.Telemetry.MeterName));
     if (!string.IsNullOrWhiteSpace(aiConnectionString))
     {
@@ -119,7 +127,6 @@ try
     builder.Services.AddRadzenComponents();
     builder.Services.AddScoped<DialogService>();
     builder.Services.AddScoped<NotificationService>();
-    builder.Services.AddScoped<PoPunkouterSoftware.Client.PoAppSession>();
 
 
     // ─── CORS — origins loaded from configuration ─────────────────────
@@ -174,6 +181,10 @@ try
     builder.Services.AddMemoryCache();
 
     // ─── HTTP client for GitHub API ───────────────────────────────────
+    // Resilience: GitHub is a transient-failure-prone dependency we *want* to succeed,
+    // so it gets retry + circuit-breaker + timeout. (The "health"/"azure-probe" clients
+    // deliberately have NO resilience — their job is to report real reachability, and
+    // retries would mask the very outages they exist to detect.)
     var ghPat = builder.Configuration["GitHub:PersonalAccessToken"];
     builder.Services.AddHttpClient("github")
         .ConfigureHttpClient(c =>
@@ -183,11 +194,22 @@ try
             if (!string.IsNullOrWhiteSpace(ghPat))
                 c.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ghPat);
-        });
+        })
+        .AddStandardResilienceHandler();
 
     // ─── HTTP client for Azure OpenAI ─────────────────────────────────
     builder.Services.AddHttpClient("azure-openai")
-        .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(60));
+        // The resilience pipeline owns all timeouts, so the inner HttpClient timeout is
+        // disabled (otherwise it could fire before the pipeline's total-request timeout).
+        .ConfigureHttpClient(c => c.Timeout = Timeout.InfiniteTimeSpan)
+        .AddStandardResilienceHandler(o =>
+        {
+            // Completions are slow; widen the per-attempt and total timeouts so the
+            // pipeline does not abort legitimate long-running model responses.
+            o.AttemptTimeout.Timeout = TimeSpan.FromSeconds(60);
+            o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(120);
+            o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(120);
+        });
 
     var app = builder.Build();
 
@@ -261,14 +283,13 @@ try
     // ─── Config — lets the client discover the canonical API base URL and env mode ─
     // isMockMode=true tells the UI to display the "MOCK DATA" banner (rule 10).
     // Activated when ASPNETCORE_ENVIRONMENT is "Testing" (integration / E2E test runs).
+    // This site has no authentication — there are deliberately no auth/login flags here.
     app.MapGet("/api/config",
         (HttpContext ctx, IWebHostEnvironment env, IConfiguration config) => Results.Ok(new
         {
             apiBase = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api",
             isMockMode = env.IsEnvironment("Testing"),
             isProduction = env.IsProduction(),
-            guestLoginEnabled = !env.IsProduction(),
-            microsoftOAuthEnabled = !string.IsNullOrWhiteSpace(config["Authentication:Microsoft:ClientId"]),
             aiIntegrationEnabled = config.GetValue<bool>("FeatureFlags:EnableAiIntegration"),
             azureOpenAIConfigured =
                 !string.IsNullOrWhiteSpace(config["AzureOpenAI:Endpoint"]) &&

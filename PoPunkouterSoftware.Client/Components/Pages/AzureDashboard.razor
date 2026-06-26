@@ -46,7 +46,7 @@ else
 
     <!-- ── Header banner ── -->
     <section class="app-section">
-        <h1 class="rz-mb-4" style="font-size: 2.25rem; font-weight: 800; background: linear-gradient(135deg, #fff 30%, var(--app-accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.03em; font-family: var(--app-headline-font);">Azure Cleanup &amp; Weekly Health Report</h1>
+        <h1 class="rz-mb-4 azure-hero-title">Azure Cleanup &amp; Weekly Health Report</h1>
         <div class="app-banner @(broken > 0 ? "critical" : "healthy")">
             <div class="app-toolbar">
                 <div>
@@ -168,15 +168,15 @@ else
                                 <div class="app-kicker">Fleet Health</div>
                                 <h3 class="app-card-title rz-mb-1">Service Status Overview</h3>
                                 <p class="app-note rz-mb-2">Active / Broken / Other across all @total web services.</p>
-                                <div style="position:relative">
+                                <div class="azure-donut-wrap">
                                     <RadzenChart Style="height:230px">
                                         <RadzenDonutSeries TItem="ChartPoint" Data="@FleetHealthDonutData"
                                                            CategoryProperty="Label" ValueProperty="Value" InnerRadius="75" />
                                         <RadzenLegend Position="LegendPosition.Bottom" />
                                     </RadzenChart>
-                                    <div style="position:absolute;top:38%;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none">
-                                        <div style="font-size:2rem;font-weight:700;line-height:1;color:@(healthPct >= 80 ? "var(--rz-success)" : healthPct >= 50 ? "var(--rz-warning)" : "var(--rz-danger)")">@healthPct%</div>
-                                        <div style="font-size:.72rem;opacity:.65;margin-top:.15rem">healthy</div>
+                                    <div class="azure-donut-center">
+                                        <div class="azure-donut-pct" style="color:@(healthPct >= 80 ? "var(--rz-success)" : healthPct >= 50 ? "var(--rz-warning)" : "var(--rz-danger)")">@healthPct%</div>
+                                        <div class="azure-donut-caption">healthy</div>
                                     </div>
                                 </div>
                             </div>
@@ -547,7 +547,7 @@ else
                 @if (allSameCause && !string.IsNullOrEmpty(fleetPattern))
                 {
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px" class="rz-mb-1">
-                        <span style="font-size:1.25rem">💡</span>
+                        <span class="azure-fleet-emoji">💡</span>
                         <strong>@diags.Count/@diags.Count broken apps show the same pattern:</strong>
                     </RadzenStack>
                     <div class="rz-mb-2">@fleetPattern</div>

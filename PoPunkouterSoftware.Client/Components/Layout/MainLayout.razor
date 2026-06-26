@@ -1,9 +1,7 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
-@inject PoAppSession AppSession
 @inject IJSRuntime JS
-@using System.Text.Json.Serialization
 
 <RadzenComponents />
 
@@ -26,22 +24,6 @@
                 </a>
                 @* /azure is a hidden page — reachable by direct URL only, no nav link. *@
             </div>
-            <div class="app-topbar-session">
-                @if (_session?.IsAuthenticated == true)
-                {
-                    <span class="app-topbar-session-pill">
-                        @_session.DisplayName @(_session.IsGuest ? "LOGGED IN" : _session.Status)
-                        <button class="app-session-btn-logout" @onclick="LogoutAsync" title="Log Out">
-                            <span class="material-symbols-outlined">logout</span>
-                        </button>
-                    </span>
-                }
-                else if (_guestLoginEnabled)
-                {
-                    <RadzenButton Text="Guest Login" Icon="login" ButtonStyle="ButtonStyle.Secondary"
-                                  Size="ButtonSize.Small" Click="LoginAsGuestAsync" />
-                }
-            </div>
         </nav>
     </RadzenHeader>
     <RadzenBody>
@@ -55,8 +37,6 @@
 
 @code {
     private bool _isMockMode;
-    private bool _guestLoginEnabled;
-    private PoUserSession? _session;
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,22 +44,12 @@
         {
             // Fetch environment mode from server — shows MOCK DATA banner when server
             // runs in "Testing" environment (integration / E2E test runs). Rule 10.
-            var cfg = await Http.GetFromJsonAsync<ConfigResponse>("/api/config");
+            var cfg = await Http.GetFromJsonAsync("/api/config", AppJsonContext.Default.ConfigResponse);
             _isMockMode = cfg?.IsMockMode ?? false;
-            _guestLoginEnabled = cfg?.GuestLoginEnabled ?? false;
         }
         catch
         {
             // Non-fatal — banner stays hidden if the call fails.
-        }
-
-        try
-        {
-            _session = await AppSession.GetAsync();
-        }
-        catch
-        {
-            // Non-fatal — session pill stays hidden if browser storage is unavailable.
         }
     }
 
@@ -92,28 +62,6 @@
         }
     }
 
-    private async Task LoginAsGuestAsync()
-    {
-        var session = new PoUserSession(
-            LoginMode: "Guest",
-            DisplayName: "Guest User",
-            Email: "guest@punkouter.local",
-            IsGuest: true,
-            IsAuthenticated: true,
-            Status: "Active"
-        );
-        await AppSession.SaveAsync(session);
-        _session = session;
-        StateHasChanged();
-    }
-
-    private async Task LogoutAsync()
-    {
-        await AppSession.ClearAsync();
-        _session = null;
-        StateHasChanged();
-    }
-
     private string NavClass(string href)
     {
         var current = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -121,11 +69,4 @@
             return current == "" || current == "/" ? "active" : "";
         return current.StartsWith(href.TrimStart('/'), StringComparison.OrdinalIgnoreCase) ? "active" : "";
     }
-
-    // GoF: Value Object — immutable config response carrier.
-    // Uses JsonPropertyName to handle ASP.NET Core's default camelCase JSON serialization.
-    private sealed record ConfigResponse(
-        [property: JsonPropertyName("apiBase")] string ApiBase,
-        [property: JsonPropertyName("isMockMode")] bool IsMockMode,
-        [property: JsonPropertyName("guestLoginEnabled")] bool GuestLoginEnabled);
 }

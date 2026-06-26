@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Shared.Azure;
 using System.Diagnostics;
 using System.Net.Http.Headers;
@@ -60,7 +61,9 @@ internal static class InfraEndpoints
 
     internal static WebApplication MapInfraEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/infra/cicd-review", async (
+        var group = app.MapGroup("/api/infra").WithTags("Infra");
+
+        group.MapGet("/cicd-review", async (
             IHttpClientFactory httpClientFactory,
             IMemoryCache cache,
             IConfiguration config,
@@ -162,17 +165,16 @@ internal static class InfraEndpoints
                 return Results.Problem(ex.Message, statusCode: 500);
             }
         })
-        .WithName("GetCiCdReview")
-        .WithTags("Infra");
+        .WithName("GetCiCdReview");
 
         // ── Force-refresh (clears cache and re-scans) ─────────────────────────
-        app.MapPost("/api/infra/cicd-review/refresh", (IMemoryCache cache) =>
+        group.MapPost("/cicd-review/refresh", (IMemoryCache cache) =>
         {
             cache.Remove(CacheKey);
             return Results.Ok(new { cleared = true });
         })
-        .WithName("RefreshCiCdReview")
-        .WithTags("Infra");
+        .RequireManagementActions()
+        .WithName("RefreshCiCdReview");
 
         return app;
     }

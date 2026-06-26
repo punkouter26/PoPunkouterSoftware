@@ -5,7 +5,7 @@
             "name": "▶ Run PoPunkouterSoftware (.NET) — Edge",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "kill-dotnet",
+            "preLaunchTask": "f5-prep",
             "program": "${workspaceFolder}/PoPunkouterSoftware/bin/Debug/net10.0/PoPunkouterSoftware.dll",
             "args": [],
             "cwd": "${workspaceFolder}/PoPunkouterSoftware",

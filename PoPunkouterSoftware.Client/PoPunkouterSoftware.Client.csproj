@@ -5,6 +5,11 @@
     <AssemblyName>PoPunkouterSoftware.Client</AssemblyName>
     <!-- Static assets from this project are served by the host server project at build time -->
     <PublishTrimmed>false</PublishTrimmed>
+    <!-- Surface trim-unsafe patterns at build time without forcing a trimmed publish. -->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <!-- All client JSON now flows through the source-generated AppJsonContext, so the
+         reflection-based IL2026 suppression is no longer needed: the analyzer runs clean
+         under the global TreatWarningsAsErrors build. -->
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
   </PropertyGroup>
 

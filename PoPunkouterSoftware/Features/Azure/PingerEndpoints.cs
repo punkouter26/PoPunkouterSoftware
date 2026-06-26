@@ -1,3 +1,4 @@
+using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
 
 namespace PoPunkouterSoftware.Features.Azure;
@@ -9,8 +10,10 @@ internal static class PingerEndpoints
 {
     internal static WebApplication MapPingerEndpoints(this WebApplication app)
     {
+        var group = app.MapGroup("/api/pinger").WithTags("Pinger");
+
         // ── Current snapshot of all last ping results ─────────────────────────
-        app.MapGet("/api/pinger/status", (ServicePingerService pinger) =>
+        group.MapGet("/status", (ServicePingerService pinger) =>
         {
             var snap = pinger.CurrentSnapshot();
             if (snap is null)
@@ -36,12 +39,13 @@ internal static class PingerEndpoints
 
         // ── Toggle a specific service on or off ───────────────────────────────
         // POST /api/pinger/toggle/{name}?disable=true
-        app.MapPost("/api/pinger/toggle/{name}", (string name, bool? disable, ServicePingerService pinger) =>
+        group.MapPost("/toggle/{name}", (string name, bool? disable, ServicePingerService pinger) =>
         {
             var shouldDisable = disable ?? true;
             pinger.SetDisabled(name, shouldDisable);
             return Results.Ok(new { name, disabled = shouldDisable });
-        });
+        })
+        .RequireManagementActions();
 
         return app;
     }

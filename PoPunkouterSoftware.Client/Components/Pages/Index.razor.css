@@ -1,0 +1,10 @@
+/* Layout tweaks lifted out of inline style= attributes in Index.razor. */
+
+.hero-grid {
+    align-content: start;
+    gap: 1rem;
+}
+
+.metrics-grid {
+    min-width: min(100%, 520px);
+}
