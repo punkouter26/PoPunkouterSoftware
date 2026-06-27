@@ -27,6 +27,12 @@ param location string = resourceGroup().location
 @description('App Service Plan SKU. F1 = Free tier (no Always-On, cold starts).')
 param appServicePlanSku string = 'F1'
 
+@description('Shared Key Vault the app reads secrets from (system-assigned MI).')
+param sharedKeyVaultName string = 'kv-poshared'
+
+@description('Resource group that holds the shared Key Vault.')
+param sharedKeyVaultResourceGroup string = 'PoShared'
+
 // Windows App Service Plan, Free (F1) tier.
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: appServicePlanName
@@ -81,6 +87,18 @@ resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
     allowBlobPublicAccess: false
+  }
+}
+
+// Least-privilege binding: grant the site's system-assigned identity read-only
+// access to secrets in the shared Key Vault — nothing more. Scoped to the shared
+// RG because that is where kv-poshared lives.
+module keyVaultAccess 'modules/keyvault-secrets-user.bicep' = {
+  name: 'kv-secrets-user-${appName}'
+  scope: resourceGroup(sharedKeyVaultResourceGroup)
+  params: {
+    keyVaultName: sharedKeyVaultName
+    principalId: site.identity.principalId
   }
 }
 

@@ -99,19 +99,10 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Idempotent infra guarantee: ensure the App Service plan + site exist before
-      # we deploy. Incremental mode is a no-op when nothing has drifted, and it does
-      # NOT touch existing app settings (the template intentionally omits them).
-      # az CLI is preinstalled on the runner and already authenticated by azure/login.
-      - name: Provision infrastructure (Bicep)
-        run: |
-          az deployment group create \
-            --resource-group "${{ steps.targets.outputs.resource_group }}" \
-            --template-file ./infra/main.bicep \
-            --parameters appName="${{ steps.targets.outputs.app_name }}" \
-            --mode Incremental \
-            --only-show-errors
-
+      # Infrastructure is provisioned out-of-band (infra/main.bicep, applied
+      # locally or by a separately-privileged infra workflow) — deliberately NOT
+      # here. That keeps this deploy identity scoped to website-publish only,
+      # rather than the resource-group Contributor that provisioning requires.
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:

@@ -3,6 +3,8 @@ using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.ResourceManager;
 using OpenTelemetry;
+using OpenTelemetry.Instrumentation.AspNetCore;
+using OpenTelemetry.Instrumentation.Http;
 using OpenTelemetry.Resources;
 using PoPunkouterSoftware;
 using PoPunkouterSoftware.Features.Azure;
@@ -113,7 +115,36 @@ try
         .WithMetrics(m => m.AddMeter(PoPunkouterSoftware.Infrastructure.Telemetry.MeterName));
     if (!string.IsNullOrWhiteSpace(aiConnectionString))
     {
-        otelBuilder.UseAzureMonitor(o => o.ConnectionString = aiConnectionString);
+        // ─── Telemetry budgeting (zero-waste) ────────────────────────────────
+        // Fixed-rate sampling caps ingestion (and therefore Application Insights
+        // cost) at a fraction of total traffic. Tune via the config key without a
+        // redeploy; default keeps a representative 25% sample.
+        var samplingRatio = builder.Configuration.GetValue<float?>("ApplicationInsights:SamplingRatio") ?? 0.25f;
+        otelBuilder.UseAzureMonitor(o =>
+        {
+            o.ConnectionString = aiConnectionString;
+            o.SamplingRatio = samplingRatio;
+        });
+
+        // Strip recurring noise BEFORE it is sampled/billed: kubernetes-style
+        // liveness probes and the masked health endpoint are pure heartbeat traffic,
+        // not signal. (499/cancellation request noise is already handled in Serilog.)
+        builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(o =>
+            o.Filter = ctx =>
+            {
+                var path = ctx.Request.Path.Value;
+                return path is null
+                    || !(path.Equals("/healthz", StringComparison.OrdinalIgnoreCase)
+                         || path.StartsWith("/health", StringComparison.OrdinalIgnoreCase)
+                         || path.StartsWith("/api/health", StringComparison.OrdinalIgnoreCase));
+            });
+
+        // Drop the outbound reachability-probe dependency spans. The "azure-probe"
+        // HttpClient exists to test live reachability on a schedule (UA below); it is
+        // not an application dependency worth recording on every cycle.
+        builder.Services.Configure<HttpClientTraceInstrumentationOptions>(o =>
+            o.FilterHttpRequestMessage = req =>
+                !req.Headers.UserAgent.ToString().Contains("PoPunkouterSoftware-Audit", StringComparison.OrdinalIgnoreCase));
     }
 
     // ─── OpenAPI / Scalar ────────────────────────────────────────────
@@ -128,17 +159,10 @@ try
     builder.Services.AddScoped<DialogService>();
     builder.Services.AddScoped<NotificationService>();
 
-
-    // ─── CORS — origins loaded from configuration ─────────────────────
-    var allowedOrigins = builder.Configuration
-        .GetSection("AllowedOrigins")
-        .Get<string[]>() ?? [];
-
-    builder.Services.AddCors(options =>
-    {
-        options.AddDefaultPolicy(policy =>
-            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
-    });
+    // NOTE: No CORS. This is a single-origin Blazor Web App — the WASM client is
+    // served from this same host (see MapStaticAssets + MapRazorComponents below),
+    // so there is no cross-origin caller to authorize. Adding CORS here would be
+    // dead configuration and needless attack surface.
 
     // ─── HTTP clients for Azure services ──────────────────────────────────────
     builder.Services.AddHttpClient("health")
@@ -260,7 +284,6 @@ try
         }
     });
 
-    app.UseCors();
     app.UseStaticFiles();
     app.UseAntiforgery();
 
