@@ -13,7 +13,7 @@
 targetScope = 'resourceGroup'
 
 @description('App Service name. Must match the live site — defaults to the production app.')
-param appName string = 'app-popunkoutersoftware-win'
+param appName string = 'app-popunkoutersoftware'
 
 @description('App Service Plan (Windows) hosting the site.')
 param appServicePlanName string = 'asp-PoPunkouterSoftware-f1'

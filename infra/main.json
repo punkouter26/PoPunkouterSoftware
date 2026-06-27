@@ -1,0 +1,206 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "429787587303697581"
+    }
+  },
+  "parameters": {
+    "appName": {
+      "type": "string",
+      "defaultValue": "app-popunkoutersoftware",
+      "metadata": {
+        "description": "App Service name. Must match the live site — defaults to the production app."
+      }
+    },
+    "appServicePlanName": {
+      "type": "string",
+      "defaultValue": "asp-PoPunkouterSoftware-f1",
+      "metadata": {
+        "description": "App Service Plan (Windows) hosting the site."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "defaultValue": "stpopunkoutersoftware",
+      "metadata": {
+        "description": "Storage account used by the app (Azure Table Storage)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region. Defaults to the resource group location."
+      }
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "F1",
+      "metadata": {
+        "description": "App Service Plan SKU. F1 = Free tier (no Always-On, cold starts)."
+      }
+    },
+    "sharedKeyVaultName": {
+      "type": "string",
+      "defaultValue": "kv-poshared",
+      "metadata": {
+        "description": "Shared Key Vault the app reads secrets from (system-assigned MI)."
+      }
+    },
+    "sharedKeyVaultResourceGroup": {
+      "type": "string",
+      "defaultValue": "PoShared",
+      "metadata": {
+        "description": "Resource group that holds the shared Key Vault."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2024-04-01",
+      "name": "[parameters('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "kind": "app",
+      "sku": {
+        "name": "[parameters('appServicePlanSku')]",
+        "tier": "[if(equals(parameters('appServicePlanSku'), 'F1'), 'Free', 'Basic')]"
+      },
+      "properties": {
+        "reserved": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2024-04-01",
+      "name": "[parameters('appName')]",
+      "location": "[parameters('location')]",
+      "kind": "app",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "netFrameworkVersion": "v10.0",
+          "minTlsVersion": "1.2",
+          "ftpsState": "Disabled",
+          "http20Enabled": true,
+          "alwaysOn": false,
+          "metadata": [
+            {
+              "name": "CURRENT_STACK",
+              "value": "dotnet"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2024-01-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('kv-secrets-user-{0}', parameters('appName'))]",
+      "resourceGroup": "[parameters('sharedKeyVaultResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "keyVaultName": {
+            "value": "[parameters('sharedKeyVaultName')]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Web/sites', parameters('appName')), '2024-04-01', 'full').identity.principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "17609124738394578415"
+            }
+          },
+          "parameters": {
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the existing shared Key Vault, e.g. kv-poshared."
+              }
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Object (principal) ID of the identity to grant access to."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults/accessPolicies",
+              "apiVersion": "2024-04-01-preview",
+              "name": "[format('{0}/{1}', parameters('keyVaultName'), 'add')]",
+              "properties": {
+                "accessPolicies": [
+                  {
+                    "tenantId": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), '2024-04-01-preview').tenantId]",
+                    "objectId": "[parameters('principalId')]",
+                    "permissions": {
+                      "secrets": [
+                        "get",
+                        "list"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "appName": {
+      "type": "string",
+      "value": "[parameters('appName')]"
+    },
+    "appServicePlanId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
+    },
+    "sitePrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/sites', parameters('appName')), '2024-04-01', 'full').identity.principalId]"
+    }
+  }
+}
