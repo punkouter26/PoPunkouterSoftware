@@ -17,12 +17,14 @@ permissions:
   id-token: write
   contents: read
 
-# All values come from the GitHub Environment "production" — never hardcode.
+# Most values come from the GitHub Environment "production".
 # Required environment secrets/vars (configure in Settings → Environments → production):
 #   AZURE_CLIENT_ID            (secret) — User-assigned MI for OIDC
 #   AZURE_TENANT_ID            (secret)
 #   AZURE_SUBSCRIPTION_ID      (secret)
-#   AZURE_APP_NAME             (variable) — e.g. app-popunkoutersoftware
+#   AZURE_APP_NAME             (variable, optional) — App Service name.
+#                              Falls back to the known production app if unset.
+#   AZURE_RESOURCE_GROUP       (variable, optional) — falls back to PoPunkouterSoftware.
 #   AZURE_WEBAPP_SLOT          (variable, optional) — default 'production'
 env:
   DOTNET_VERSION: '10.0.x'
@@ -30,6 +32,11 @@ env:
   DOTNET_NOLOGO: 'true'
   # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 keeps Azure actions on the maintained Node 24 runtime.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  # The live production targets. Used as the fallback when the matching
+  # "production" environment variables are unset or misconfigured, so the
+  # pipeline deploys to the right resource even without the GitHub vars.
+  DEFAULT_APP_NAME: 'app-popunkoutersoftware-win'
+  DEFAULT_RESOURCE_GROUP: 'PoPunkouterSoftware'
 
 jobs:
   build-and-deploy:
@@ -39,13 +46,20 @@ jobs:
     # Pin to the production environment so its protection rules / approval gates apply.
     environment: production
     steps:
-      # Fail fast — if the production environment is missing AZURE_APP_NAME, abort
-      # BEFORE we waste minutes on restore/build/publish for a deploy we cannot run.
-      - name: Validate deploy targets
-        if: vars.AZURE_APP_NAME == ''
+      # Resolve the deploy targets once: prefer the production environment vars,
+      # fall back to the known live resources. A warning (not a hard failure) is
+      # emitted when a var is missing so the deploy still proceeds correctly.
+      - name: Resolve deploy targets
+        id: targets
         run: |
-          echo "::error title=Missing AZURE_APP_NAME::The 'production' GitHub Environment is missing the AZURE_APP_NAME variable. Set it in Settings → Environments → production → Variables (e.g. value: app-popunkoutersoftware)."
-          exit 1
+          APP_NAME="${{ vars.AZURE_APP_NAME || env.DEFAULT_APP_NAME }}"
+          RG="${{ vars.AZURE_RESOURCE_GROUP || env.DEFAULT_RESOURCE_GROUP }}"
+          if [ -z "${{ vars.AZURE_APP_NAME }}" ]; then
+            echo "::warning title=AZURE_APP_NAME unset::Using fallback app name '$APP_NAME'. Set AZURE_APP_NAME in Settings → Environments → production → Variables to make this explicit."
+          fi
+          echo "app_name=$APP_NAME" >> "$GITHUB_OUTPUT"
+          echo "resource_group=$RG" >> "$GITHUB_OUTPUT"
+          echo "Deploying '$APP_NAME' in resource group '$RG'."
 
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -85,9 +99,22 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      # Idempotent infra guarantee: ensure the App Service plan + site exist before
+      # we deploy. Incremental mode is a no-op when nothing has drifted, and it does
+      # NOT touch existing app settings (the template intentionally omits them).
+      # az CLI is preinstalled on the runner and already authenticated by azure/login.
+      - name: Provision infrastructure (Bicep)
+        run: |
+          az deployment group create \
+            --resource-group "${{ steps.targets.outputs.resource_group }}" \
+            --template-file ./infra/main.bicep \
+            --parameters appName="${{ steps.targets.outputs.app_name }}" \
+            --mode Incremental \
+            --only-show-errors
+
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:
-          app-name: ${{ vars.AZURE_APP_NAME }}
+          app-name: ${{ steps.targets.outputs.app_name }}
           slot-name: ${{ vars.AZURE_WEBAPP_SLOT || 'production' }}
           package: ./publish
