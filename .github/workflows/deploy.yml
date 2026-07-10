@@ -106,9 +106,18 @@ jobs:
       # locally or by a separately-privileged infra workflow) — deliberately NOT
       # here. That keeps this deploy identity scoped to website-publish only,
       # rather than the resource-group Contributor that provisioning requires.
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
-        with:
-          app-name: ${{ steps.targets.outputs.app_name }}
-          slot-name: ${{ vars.AZURE_WEBAPP_SLOT || 'production' }}
-          package: ./publish
+      #
+      # NOTE: azure/webapps-deploy (OneDeploy) started returning HTTP 500 from the
+      # App Service intake API on 2026-07-10 across three consecutive runs, while
+      # the site and Kudu stayed healthy. The legacy Kudu zipdeploy path is a
+      # separate endpoint and unaffected, so deploy through it via the CLI.
+      - name: Zip publish output
+        run: cd publish && zip -qr ../deploy.zip .
+
+      - name: Deploy to Azure App Service (zipdeploy)
+        run: |
+          az webapp deployment source config-zip \
+            --resource-group "${{ steps.targets.outputs.resource_group }}" \
+            --name "${{ steps.targets.outputs.app_name }}" \
+            --src deploy.zip \
+            --timeout 600
