@@ -204,14 +204,45 @@ public class PortfolioEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        doc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-        doc.RootElement.GetArrayLength().Should().BeGreaterThan(0);
-        foreach (var app in doc.RootElement.EnumerateArray())
+        var apps = doc.RootElement.GetProperty("apps");
+        apps.ValueKind.Should().Be(JsonValueKind.Array);
+        apps.GetArrayLength().Should().BeGreaterThan(0);
+        foreach (var app in apps.EnumerateArray())
         {
             app.TryGetProperty("id", out _).Should().BeTrue();
             app.TryGetProperty("description", out var description).Should().BeTrue();
             description.GetString().Should().NotBeNullOrWhiteSpace();
             app.TryGetProperty("status", out _).Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task GetPortfolio_EnvelopeCarriesFreshness_SoTheUiCanBeHonestAboutLive()
+    {
+        var response = await _client.GetAsync("/api/portfolio");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.TryGetProperty("stale", out var stale).Should().BeTrue();
+        stale.ValueKind.Should().BeOneOf(JsonValueKind.True, JsonValueKind.False);
+        doc.RootElement.TryGetProperty("refreshInProgress", out var refreshing).Should().BeTrue();
+        refreshing.ValueKind.Should().BeOneOf(JsonValueKind.True, JsonValueKind.False);
+    }
+
+    [Fact]
+    public async Task GetPortfolio_CardUrlsComeFromTheCuratedCatalog_NeverBlank()
+    {
+        // The catalog URL wins over scanned inventory so a card can never point a
+        // visitor at a decommissioned host from a weeks-old report.
+        var response = await _client.GetAsync("/api/portfolio");
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        foreach (var app in doc.RootElement.GetProperty("apps").EnumerateArray())
+        {
+            var url = app.GetProperty("url").GetString();
+            url.Should().NotBeNullOrWhiteSpace();
+            Uri.TryCreate(url, UriKind.Absolute, out _).Should().BeTrue(
+                because: $"'{app.GetProperty("name").GetString()}' must have an absolute URL");
         }
     }
 }

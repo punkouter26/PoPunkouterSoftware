@@ -15,13 +15,13 @@
     <HeadOutlet />
 </head>
 <body class="rz-background-color-base rz-color-base">
-    <div id="app-nav-progress" style="position:fixed;top:0;left:0;width:0;height:2px;background:linear-gradient(90deg,#49c7a3,#8de2c5);z-index:10000;transition:width .2s,opacity .3s;opacity:0;pointer-events:none"></div>
+    <div id="app-nav-progress" style="position:fixed;top:0;left:0;width:0;height:2px;background:linear-gradient(90deg,#5b7cd6,#93b4f5);z-index:10000;transition:width .2s,opacity .3s;opacity:0;pointer-events:none"></div>
     <!-- Static boot splash: WASM (prerender: false) renders nothing until the runtime
          downloads, which previously meant a blank dark page for the entire first load.
          Pure HTML/CSS so it paints immediately; removed by the observer script below
          the moment Blazor renders its first component. -->
-    <div id="app-boot-splash" aria-label="Loading" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#08121a;color:#b8d0df;z-index:9999;font-family:'Segoe UI',Arial,sans-serif;transition:opacity .3s">
-        <div style="width:38px;height:38px;border-radius:50%;border:3px solid rgba(141,226,197,.25);border-top-color:#8de2c5;animation:app-boot-spin .8s linear infinite"></div>
+    <div id="app-boot-splash" aria-label="Loading" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#060a14;color:#94a3b8;z-index:9999;font-family:'Segoe UI',Arial,sans-serif;transition:opacity .3s">
+        <div style="width:38px;height:38px;border-radius:50%;border:3px solid rgba(147,180,245,.22);border-top-color:#93b4f5;animation:app-boot-spin .8s linear infinite"></div>
         <div style="font-size:.95rem;letter-spacing:.04em">Loading PoPunkouterSoftware…</div>
         <style>@@keyframes app-boot-spin { to { transform: rotate(360deg); } }</style>
     </div>
@@ -61,6 +61,11 @@
             document.addEventListener('enhancednavigationstart', function () {
                 var b = getBar(); if (!b) return;
                 b.style.width = '40%'; b.style.opacity = '1';
+                // Close the mobile drawer once a navigation begins, otherwise it stays
+                // open across page changes and looks like a stuck overlay.
+                document.body.classList.remove('topbar-open');
+                var btn = document.querySelector('.app-topbar-menu');
+                if (btn) { btn.setAttribute('aria-expanded', 'false'); if (btn.firstElementChild) btn.firstElementChild.textContent = 'menu'; }
             });
             document.addEventListener('enhancedload', function () {
                 var b = getBar(); if (!b) return;

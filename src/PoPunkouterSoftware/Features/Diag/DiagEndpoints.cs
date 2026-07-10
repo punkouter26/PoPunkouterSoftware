@@ -2,12 +2,11 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.SignalR;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Infrastructure.Configuration;
-using PoPunkouterSoftware.Infrastructure.Screenshots;
 using PoPunkouterSoftware.Shared.Azure;
+using PoPunkouterSoftware.Shared.Portfolio;
 
 namespace PoPunkouterSoftware.Features.Diag;
 
@@ -77,6 +76,30 @@ internal static class DiagEndpoints
             return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
         });
 
+        // Build fingerprint — used by the client to detect when the server has been
+        // rebuilt but the cached WASM bundle still matches a stale inventory. Cheap to
+        // compute, never cached longer than the build's process lifetime.
+        diag.MapGet("/build", (IWebHostEnvironment env, IConfiguration config) =>
+        {
+            var entry = System.Reflection.Assembly.GetEntryAssembly();
+            var version = entry?.GetName().Version?.ToString() ?? "0.0.0";
+            // Use the file's last-write UTC ticks (clipped to seconds) — stable for the
+            // lifetime of the running process and identical across replicas built together.
+            var buildId = (long)(entry?.Location is { } loc && File.Exists(loc)
+                ? new DateTimeOffset(File.GetLastWriteTimeUtc(loc)).ToUnixTimeSeconds()
+                : DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            return Results.Json(new
+            {
+                assembly = entry?.GetName().Name ?? "PoPunkouterSoftware",
+                version,
+                buildId,
+                environment = env.EnvironmentName,
+                generatedAt = DateTime.UtcNow,
+            });
+        })
+        .WithName("GetBuildFingerprint")
+        .WithTags("Diag");
+
         diag.MapGet("/summary", async (IWebHostEnvironment env, AzureReportStore store, ILogger<Program> logger, CancellationToken ct) =>
         {
             var report = await LoadLatestReportAsync(env, store, logger, ct);
@@ -89,134 +112,10 @@ internal static class DiagEndpoints
         })
         .WithName("GetOpsSummary");
 
-        diag.MapPost("/refresh",
-            (IServiceScopeFactory scopeFactory, IWebHostEnvironment env, ILogger<Program> logger,
-             Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Infrastructure.RefreshHub> hubCtx,
-             RefreshSessionManager session) =>
-        {
-            // Records one refresh-run sample tagged by outcome (success|failed|cancelled|collision).
-            static void RecordOutcome(string outcome) =>
-                Telemetry.RefreshRuns.Add(1, new KeyValuePair<string, object?>("outcome", outcome));
-
-            if (!session.Lock.Wait(0))
-            {
-                // A refresh is already running — quantify collisions so we know if the lock is
-                // a frequent bottleneck rather than a rare race. (question 3)
-                RecordOutcome("collision");
-                logger.LogInformation("Refresh rejected — another refresh is already in progress (409).");
-                return Results.Problem(detail: "Refresh already in progress.", statusCode: 409);
-            }
-
-            _ = Task.Run(async () =>
-            {
-                // The outer try/finally is the only owner of the semaphore: no statement that
-                // can throw (scope creation, DI resolution, CTS allocation) runs outside it,
-                // so a fault can never leak the lock and dead-lock every future refresh.
-                string? terminalError = null;
-                var refreshRunId = Guid.NewGuid();
-                try
-                {
-                    // Root span so the hundreds of outbound ARM/GitHub dependency calls made by
-                    // this background run are parented and correlatable in Azure Monitor.
-                    using var activity = Telemetry.Source.StartActivity("refresh");
-                    activity?.SetTag("refresh.run_id", refreshRunId);
-                    using var _logScope = Serilog.Context.LogContext.PushProperty("RefreshRunId", refreshRunId);
-
-                    using var scope = scopeFactory.CreateScope();
-                    var azureService = scope.ServiceProvider.GetRequiredService<AzureReportService>();
-                    var store = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
-
-                    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-                    session.SetActiveCts(cts);
-                    try
-                    {
-                        var ct = cts.Token;
-                        var sw = Stopwatch.StartNew();
-                        var progress = new Progress<(string Step, int Percent)>(p =>
-                        {
-                            _ = hubCtx.Clients.All.SendAsync("RefreshProgress",
-                                new { step = p.Step, percent = p.Percent, done = false });
-                        });
-
-                        // Capture the outgoing "latest" report before it is overwritten so incident
-                        // detection can diff against it without re-downloading history blobs.
-                        var previousResult = await store.LoadAsync(ct);
-                        var previousReport = previousResult.IsSuccess ? previousResult.Value : null;
-
-                        var report = await azureService.RunAsync(progress, ct);
-
-                        await store.SaveAsync(report, ct);
-
-                        try
-                        {
-                            var incidentSvc = scope.ServiceProvider.GetRequiredService<IncidentService>();
-                            await incidentSvc.DetectAndRecordAsync(report, previousReport, ct);
-                        }
-                        catch (Exception iex)
-                        {
-                            logger.LogWarning(iex, "Incident detection failed (non-fatal)");
-                        }
-
-                        var json = JsonSerializer.Serialize(report, FileCacheJsonOptions);
-                        var filePath = ReportFileCache.GetReportPath(env);
-                        await File.WriteAllTextAsync(filePath, json, ct);
-
-                        // Refresh the home-page screenshots alongside the inventory (non-fatal).
-                        try
-                        {
-                            await hubCtx.Clients.All.SendAsync("RefreshProgress",
-                                new { step = "Capturing app screenshots…", percent = 99, done = false }, CancellationToken.None);
-                            var screenshots = scope.ServiceProvider.GetRequiredService<AppScreenshotService>();
-                            await screenshots.CaptureAsync(AppScreenshotService.ActiveTargets(report), ct);
-                        }
-                        catch (Exception shotEx)
-                        {
-                            logger.LogWarning(shotEx, "App screenshot capture failed (non-fatal)");
-                        }
-
-                        sw.Stop();
-                        // Metrics: a successful run with its wall-clock duration. (questions 1 & 2)
-                        RecordOutcome("success");
-                        Telemetry.RefreshDuration.Record(sw.Elapsed.TotalMilliseconds);
-                        logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
-                    }
-                    finally
-                    {
-                        // Clear the shared reference BEFORE the using disposes the CTS so a
-                        // concurrent /cancel-refresh cannot cancel a disposed source.
-                        session.SetActiveCts(null);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    terminalError = "Refresh cancelled or timed out.";
-                    RecordOutcome("cancelled");
-                    logger.LogWarning("Refresh cancelled or timed out");
-                }
-                catch (Exception ex)
-                {
-                    terminalError = "Refresh failed. Check server logs for details.";
-                    RecordOutcome("failed");
-                    logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
-                }
-                finally
-                {
-                    session.Lock.Release();
-                    try
-                    {
-                        await hubCtx.Clients.All.SendAsync("RefreshProgress",
-                            new { step = terminalError is null ? "Done" : "Failed", percent = 100, done = true, error = terminalError },
-                            CancellationToken.None);
-                    }
-                    catch (Exception hubEx)
-                    {
-                        logger.LogWarning(hubEx, "Failed to broadcast terminal refresh status");
-                    }
-                }
-            });
-
-            return Results.Accepted();
-        })
+        diag.MapPost("/refresh", (ReportRefreshRunner runner) =>
+            runner.TryStart("manual")
+                ? Results.Accepted()
+                : Results.Problem(detail: "Refresh already in progress.", statusCode: 409))
         .RequireManagementActions();
 
         // ── Cancel in-progress refresh ───────────────────────────────────────
@@ -295,14 +194,6 @@ internal static class DiagEndpoints
         return app;
     }
 
-    // Hoisted so System.Text.Json's converter metadata cache is reused instead of being
-    // rebuilt for every request that hits the file-fallback path.
-    private static readonly JsonSerializerOptions FileCacheJsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
-    };
-
     private static async Task<AzureReport?> LoadLatestReportAsync(
         IWebHostEnvironment env, AzureReportStore store, ILogger logger, CancellationToken ct)
     {
@@ -342,7 +233,7 @@ internal static class DiagEndpoints
             attention.Add($"{security} security configuration finding(s)");
         if (cleanup > 0)
             attention.Add($"{cleanup} cleanup candidate(s)");
-        var isStale = report.GeneratedAt is not DateTime generated || DateTime.UtcNow - generated > TimeSpan.FromHours(12);
+        var isStale = PortfolioFreshness.IsStale(report.GeneratedAt, DateTime.UtcNow);
         if (isStale)
             attention.Add("Azure data is stale and should be refreshed");
 

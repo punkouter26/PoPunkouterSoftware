@@ -2,34 +2,69 @@
 @rendermode WasmRenderModes.Interactive
 @using PoPunkouterSoftware.Shared.Portfolio
 @inject HttpClient Http
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>PoPunkouterSoftware — Apps</PageTitle>
 
-<main class="app-page portfolio-page">
+<main id="main-content" class="app-page portfolio-page" tabindex="-1">
     <header class="portfolio-header">
         <div>
             <span class="app-eyebrow">Punkouter Software</span>
             <h1>Web apps</h1>
             <p>Small tools and experiments built with .NET and Azure.</p>
         </div>
-        <a class="portfolio-azure-link" href="/azure"><RadzenIcon Icon="monitor_heart" /><span>Azure status</span></a>
+        @* Azure status link removed — hidden per design update. *@
     </header>
 
-    @if (apps is not null && apps.Count > 0)
+    @* Cache-mismatch banner: server BuildId has changed since the WASM bundle loaded,
+       meaning what is on screen was rendered against outdated server state — offer a
+       gentle "reload" that doesn't punish the visitor with a hard refresh. *@
+    @if (data is not null
+         && _buildIdAtLoad is not null
+         && data.BuildId != _buildIdAtLoad
+         && !_buildMismatchDismissed)
     {
-        var generatedAt = apps.Where(a => a.InventoryGeneratedAt.HasValue).Select(a => a.InventoryGeneratedAt).FirstOrDefault();
-        var stale = generatedAt is DateTime dt && DateTime.UtcNow - dt > TimeSpan.FromHours(12);
-        <div class="portfolio-summary" aria-live="polite">
-            <strong>@apps.Count apps</strong>
-            @if (generatedAt is DateTime updated)
-            {
-                <span class="@(stale ? "is-stale" : "")">Inventory updated @RelativeTime.Format(updated)@(stale ? " · stale" : "")</span>
-            }
-            <button type="button" @onclick="LoadAppsAsync" disabled="@_loading"><RadzenIcon Icon="refresh" /> Refresh list</button>
+        <div class="portfolio-build-banner" role="status">
+            <RadzenIcon Icon="cloud_sync" />
+            <div class="portfolio-build-banner__copy">
+                <strong>The dashboard has been updated since this page loaded.</strong>
+                <span>A newer build is live; click "Reload" to pick up the freshest inventory and live status.</span>
+            </div>
+            <button type="button" class="portfolio-build-banner__action" @onclick="HardReloadAsync">Reload</button>
+            <button type="button" class="portfolio-build-banner__dismiss" aria-label="Dismiss update banner" @onclick="@(() => _buildMismatchDismissed = true)">×</button>
         </div>
     }
 
-    @if (_loading && apps is null)
+    @if (data is not null && data.Apps.Count > 0)
+    {
+        <div class="portfolio-summary" aria-live="polite">
+            <strong>@data.Apps.Count apps</strong>
+            @if (data.GeneratedAt is DateTime updated)
+            {
+                <span class="@(data.Stale ? "is-stale" : "")" title="@updated.ToString("u")">
+                    Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
+                </span>
+            }
+            <span class="portfolio-summary__next" title="The dashboard auto-refreshes in the background so the freshness badge never rots.">
+                Next refresh in @FormatCountdown(_lastAutoRefresh + AutoRefreshEvery - _now)
+            </span>
+            <button type="button" class="portfolio-summary__btn @(data.Stale ? "is-stale" : "")" @onclick="LoadAppsAsync" disabled="@_loading" aria-busy="@_loading">
+                @if (_loading)
+                {
+                    <span class="portfolio-summary__spinner" aria-hidden="true"></span>
+                    <span>Refreshing…</span>
+                }
+                else
+                {
+                    <RadzenIcon Icon="refresh" />
+                    <span>Refresh list</span>
+                }
+            </button>
+        </div>
+    }
+
+    @if (_loading && data is null)
     {
         <LoadingSkeleton Variant="cards" TileCount="6" AriaLabel="Loading portfolio" />
     }
@@ -37,14 +72,14 @@
     {
         <ErrorRetryBanner Title="The app list could not be updated." Message="@_loadError" OnRetry="LoadAppsAsync" />
     }
-    else if (apps?.Count == 0)
+    else if (data?.Apps.Count == 0)
     {
         <div class="app-empty-state">No apps are configured yet.</div>
     }
-    else if (apps is not null)
+    else if (data is not null)
     {
         <section class="app-grid cards" aria-label="Web applications">
-            @foreach (var app in apps)
+            @foreach (var app in data.Apps)
             {
                 <PortfolioAppCard @key="app.Id" App="app" />
             }
@@ -53,11 +88,50 @@
 </main>
 
 @code {
-    private List<PortfolioApp>? apps;
+    private PortfolioResponse? data;
+    private long? _buildIdAtLoad;
+    private bool _buildMismatchDismissed;
     private bool _loading;
     private string? _loadError;
 
-    protected override Task OnInitializedAsync() => LoadAppsAsync();
+    // Auto-refresh bookkeeping — refreshes the portfolio every 5 minutes so the freshness
+    // badge stays honest without forcing the visitor to interact with the page.
+    private static readonly TimeSpan AutoRefreshEvery = TimeSpan.FromMinutes(5);
+    private DateTime _lastAutoRefresh = DateTime.UtcNow;
+    private DateTime _now = DateTime.UtcNow;
+    private Timer? _tickTimer;
+    private DateTime RefreshIn => _lastAutoRefresh + AutoRefreshEvery;
+    private string FormatCountdown(TimeSpan? ts)
+    {
+        var t = ts ?? TimeSpan.Zero;
+        if (t <= TimeSpan.Zero) return "now";
+        if (t.TotalMinutes >= 1) return $"{(int)t.TotalMinutes}m {t.Seconds:D2}s";
+        return $"{t.Seconds}s";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAppsAsync();
+        // UI tick for countdown + auto-refresh — keeps the page fresh without losing state.
+        _tickTimer = new Timer(async _ =>
+        {
+            _now = DateTime.UtcNow;
+            if (data is not null && _now - _lastAutoRefresh >= AutoRefreshEvery && !_loading)
+            {
+                await InvokeAsync(LoadAppsAsync);
+            }
+            else
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _tickTimer?.Dispose();
+        return ValueTask.CompletedTask;
+    }
 
     private async Task LoadAppsAsync()
     {
@@ -68,7 +142,10 @@
             // Per-call budget: the shared HttpClient's 5-minute timeout is sized for the
             // huge report endpoint; a hung portfolio call should fail in seconds, not minutes.
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            apps = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.ListPortfolioApp, cts.Token) ?? new();
+            data = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.PortfolioResponse, cts.Token);
+            _lastAutoRefresh = DateTime.UtcNow;
+            if (_buildIdAtLoad is null && data?.BuildId > 0)
+                _buildIdAtLoad = data.BuildId;
         }
         catch (Exception ex)
         {
@@ -77,6 +154,25 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task HardReloadAsync()
+    {
+        // Refresh inventory view first; if user dismisses without reloading, at least the
+        // data is fresh. If the build id is genuinely different, force a hard reload so
+        // the WASM bundle matches the server.
+        await LoadAppsAsync();
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                "if(window.location.search.indexOf('reload=1')===-1){" +
+                "  window.location.replace(window.location.pathname + '?reload=1&t=' + Date.now());" +
+                "} else { window.location.reload(); }");
+        }
+        catch
+        {
+            // swallow — we re-rendered the latest data above already
         }
     }
 }

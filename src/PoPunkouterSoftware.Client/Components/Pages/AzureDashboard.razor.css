@@ -14,6 +14,14 @@
 .azure-glance-grid h2 { margin: 0; font-size: 1rem; }
 .azure-glance-grid ::deep .rz-chart { min-width: 0; padding: .25rem; border: 0; }
 
+/* Each chart card now has a one-line subtitle so the tile says what it measures */
+.azure-glance-title { font-family: var(--app-headline-font); letter-spacing: -.02em; }
+.azure-glance-subtitle { color: var(--app-text-soft); font-size: .72rem; margin: 0 0 .35rem; letter-spacing: .03em; }
+
+/* H1 with embedded badge — keep them on one line at desktop, wrap on mobile */
+.azure-hero-title { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: .55rem; }
+.azure-hero-title .rz-badge { transform: translateY(-.15em); }
+
 .azure-attention-summary {
     padding: .9rem;
     border: 1px solid var(--app-border);
@@ -36,7 +44,7 @@
     border: 1px solid var(--app-border-strong);
     border-radius: var(--app-radius-xl);
     background:
-        linear-gradient(135deg, rgba(73, 199, 163, .13), transparent 45%),
+        linear-gradient(135deg, rgba(91, 124, 214, .12), transparent 45%),
         var(--app-surface-strong);
     box-shadow: var(--app-shadow-lg);
 }
@@ -319,6 +327,8 @@
 .azure-risk-label.danger { color: var(--app-danger-soft); }
 .azure-risk-label.warning { color: var(--app-accent-warm); }
 .azure-risk-label.muted { color: var(--app-text-soft); }
+
+.azure-chart-note { margin: .4rem 0 0; color: var(--app-text-muted); font-size: .74rem; }
 
 .azure-compact-state {
     display: flex;

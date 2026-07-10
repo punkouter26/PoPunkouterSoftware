@@ -217,6 +217,7 @@ try
     builder.Services.AddSignalR();
     builder.Services.AddSingleton<IncidentService>();
     builder.Services.AddSingleton<RefreshSessionManager>();
+    builder.Services.AddSingleton<ReportRefreshRunner>();
 
     // ─── In-process memory cache (pinger snapshots) ──────────────────────────
     // SizeLimit caps the entry count; every Set site passes Size = 1, so the limit
@@ -233,14 +234,18 @@ try
         o.MaximumKeyLength = 256;
     });
 
-    // ─── Response compression for dynamic JSON ────────────────────────────────
+    // ─── Response compression for dynamic JSON only ───────────────────────────
     // The report/summary/history payloads are large, highly compressible JSON that
-    // Kestrel does not compress by default.
+    // Kestrel does not compress by default. .NET 10's MapStaticAssets already serves
+    // fingerprinted `.br`/`.gz` blobs from disk with the right Content-Encoding; if
+    // UseResponseCompression runs over those the browser hits an integrity/body mismatch
+    // ("empty SHA-256 + Failed to fetch" cascade for blazor.boot.json, .wasm, .pdb).
+    // Limiting compression to application/json keeps the static-asset pipeline intact
+    // while still shrinking every JSON payload.
     builder.Services.AddResponseCompression(o =>
     {
         o.EnableForHttps = true;
-        o.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes
-            .Concat(new[] { "application/json" });
+        o.MimeTypes = new[] { "application/json" };
     });
 
     // ─── HTTP client for GitHub API ───────────────────────────────────
@@ -349,8 +354,11 @@ try
         }
     });
 
-    app.UseResponseCompression();
     app.UseStaticFiles();
+    // Run UseResponseCompression AFTER UseStaticFiles so the fingerprinted asset
+    // pipeline (MapStaticAssets, .br / .gz) is not double-compressed. JSON-only policy
+    // above is the second guard rail; ordering is the first.
+    app.UseResponseCompression();
     app.UseAntiforgery();
 
     // MapStaticAssets serves compressed + fingerprinted static web assets from the client WASM project.

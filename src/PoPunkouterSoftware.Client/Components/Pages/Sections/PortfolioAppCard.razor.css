@@ -1,16 +1,105 @@
-.app-portfolio-card { display: flex; flex-direction: column; gap: .75rem; min-width: 0; padding: .8rem; border-left: 3px solid var(--app-border-strong); }
-/* Hover lift + glow (pure CSS — no JS tilt tracker); moved from modern-ui.components.css */
-.app-portfolio-card { transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s, box-shadow 0.3s; position: relative; }
-.app-portfolio-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle 220px at 50% 50%, rgba(141, 226, 197, 0.12), transparent 80%); pointer-events: none; z-index: 1; opacity: 0; transition: opacity 0.3s; }
-.app-portfolio-card:hover::before { opacity: 1; }
-.app-portfolio-card:hover { transform: translateY(-4px); box-shadow: var(--app-shadow-lg) !important; border-color: rgba(141, 226, 197, 0.3) !important; }
-.app-portfolio-card.is-healthy { border-left-color: var(--app-accent-strong); }
-.app-portfolio-card.is-unavailable { border-left-color: var(--app-danger-soft); }
-.app-screenshot-thumb { display: block; height: 138px; overflow: hidden; border-radius: var(--app-radius-md); background: var(--app-surface-soft); }
-.app-screenshot-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.portfolio-card-heading { display: flex; align-items: start; justify-content: space-between; gap: .75rem; }
-.portfolio-card-heading h2 { margin-top: .1rem; }
-.app-card-copy { margin: 0; min-height: 2.7em; line-height: 1.4; }
-.app-chip-row { min-height: 24px; }
-.portfolio-card-actions { display: flex; align-items: center; gap: .8rem; margin-top: auto; }
-.portfolio-card-actions .app-inline-link { display: inline-flex; align-items: center; gap: .25rem; font-size: .82rem; }
+/* Stripped-down portfolio card. The previous build exposed status badges, tech
+   chips, action buttons, and a "checked X ago" timestamp; the card now holds only
+   a screenshot, the app name, and a short description. The hover lift stays
+   because it confirms the screenshot is clickable, but the mint radial glow and
+   green border tint were dropped — they read as toy dashboard chrome. */
+.app-portfolio-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.85rem;
+    border: 1px solid var(--app-border);
+    transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
+                border-color 0.2s,
+                box-shadow 0.2s;
+    box-shadow: var(--app-shadow-sm);
+}
+
+.app-portfolio-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--app-border-strong);
+    box-shadow: var(--app-shadow-md) !important;
+}
+
+.app-screenshot-thumb {
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: var(--app-radius-md);
+    background: var(--app-surface-soft);
+    border: 1px solid var(--app-border);
+}
+
+.app-screenshot-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.app-portfolio-card:hover .app-screenshot-thumb img {
+    transform: scale(1.02);
+}
+
+.app-card-title {
+    margin: 0.15rem 0 0;
+    font-size: 1.08rem;
+    letter-spacing: -0.01em;
+}
+
+.app-card-copy {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--app-text-muted);
+    /* Cap description to four lines so cards align in the grid — long descriptions
+       no longer push the row down unevenly. */
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.app-card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: auto;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--app-accent);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    align-self: flex-start;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.app-card-link:hover {
+    border-color: var(--app-accent);
+    background: rgba(91, 124, 214, 0.12);
+    color: var(--app-accent);
+    text-decoration: none;
+}
+
+.app-card-link .rz-icon {
+    font-size: 0.95rem;
+}
+
+/* Host label sits to the right of the "Open app" label as secondary text.
+   Truncated at the card edge so a long URL never wraps the row. */
+.app-card-link-host {
+    max-width: 12rem;
+    overflow: hidden;
+    color: var(--app-text-soft);
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-card-link:hover .app-card-link-host {
+    color: var(--app-text-muted);
+}

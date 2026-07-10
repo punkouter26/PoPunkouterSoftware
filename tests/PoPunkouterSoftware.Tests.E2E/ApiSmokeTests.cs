@@ -147,22 +147,59 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
     // ─── Portfolio ────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Portfolio_ReturnsNonEmptyArray_EveryItemHasIdStatusDescription()
+    public async Task Portfolio_ReturnsNonEmptyEnvelope_EveryItemHasIdStatusDescription()
     {
         var resp = await _client.GetAsync("/api/portfolio");
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
         using var doc = await ReadJsonAsync(resp);
-        doc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-        doc.RootElement.GetArrayLength().Should().BeGreaterThan(0,
+        doc.RootElement.TryGetProperty("stale", out _).Should().BeTrue(
+            because: "the UI needs inventory freshness to render honest Live badges");
+        var apps = doc.RootElement.GetProperty("apps");
+        apps.ValueKind.Should().Be(JsonValueKind.Array);
+        apps.GetArrayLength().Should().BeGreaterThan(0,
             because: "the catalog stays visible even with no Azure report");
 
-        foreach (var item in doc.RootElement.EnumerateArray())
+        foreach (var item in apps.EnumerateArray())
         {
             item.GetProperty("id").GetString().Should().NotBeNullOrWhiteSpace();
             item.GetProperty("status").GetString().Should().NotBeNullOrWhiteSpace();
             item.GetProperty("description").GetString().Should().NotBeNullOrWhiteSpace();
         }
+    }
+
+    /// <summary>
+    /// The original "ghost fleet" bug: cards pointing at decommissioned hosts. Every
+    /// rendered card URL must actually resolve and answer. Network-bound by design —
+    /// this is the E2E tier, which already requires a running app and real DNS.
+    /// </summary>
+    [Fact]
+    public async Task Portfolio_EveryCardUrl_ActuallyResolvesAndResponds()
+    {
+        var resp = await _client.GetAsync("/api/portfolio");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var doc = await ReadJsonAsync(resp);
+
+        using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        var failures = new List<string>();
+        foreach (var item in doc.RootElement.GetProperty("apps").EnumerateArray())
+        {
+            var name = item.GetProperty("name").GetString();
+            var url = item.GetProperty("url").GetString();
+            try
+            {
+                // Cold F1 apps 200 slowly; any HTTP answer proves the host exists.
+                using var r = await probe.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                if ((int)r.StatusCode >= 400)
+                    failures.Add($"{name}: {url} -> {(int)r.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"{name}: {url} -> {ex.GetBaseException().Message}");
+            }
+        }
+
+        failures.Should().BeEmpty(because: "the portfolio must not showcase apps that no longer exist");
     }
 
     // ─── Diag ─────────────────────────────────────────────────────────────────

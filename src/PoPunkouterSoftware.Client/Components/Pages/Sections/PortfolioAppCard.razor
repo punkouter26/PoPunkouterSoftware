@@ -1,33 +1,32 @@
 @using PoPunkouterSoftware.Shared.Portfolio
 @using Radzen
 
-<article class="app-card app-portfolio-card @StatusClass">
+@* Stripped-down card per the design pass: only the screenshot, the app name, and a
+   one-line description. Status badges, technology chips, action buttons, and
+   "checked at" timestamps were removed so the grid reads as a clean visual catalogue
+   rather than a dashboard tile. The screenshot links out to the live app, and an
+   explicit "Open app" affordance sits under the description so visitors who never
+   hover the screenshot still have a clear way through. *@
+<article class="app-card app-portfolio-card">
     @if (!string.IsNullOrEmpty(App.ScreenshotUrl))
     {
         <a class="app-screenshot-thumb" href="@App.Url" target="_blank" rel="noopener noreferrer" title="@($"Open {App.Name}")">
             <img src="@App.ScreenshotUrl" alt="@($"Preview of {App.Name}")" loading="lazy" width="390" height="844" />
         </a>
     }
-    <div class="portfolio-card-heading">
-        <div><div class="app-kicker">@(string.IsNullOrWhiteSpace(App.Category) ? "App" : App.Category)</div><h2 class="app-card-title">@App.Name</h2></div>
-        <RadzenBadge Text="@StatusLabel" IsPill="true" BadgeStyle="@StatusBadge" />
-    </div>
+    <h2 class="app-card-title">@App.Name</h2>
     <p class="app-card-copy">@App.Description</p>
-    @if (App.Technologies?.Any() == true)
+    @if (!string.IsNullOrWhiteSpace(App.Url))
     {
-        <div class="app-chip-row" aria-label="Technologies">
-            @foreach (var tech in App.Technologies.Take(3)) { <RadzenBadge Text="@tech" BadgeStyle="BadgeStyle.Light" Variant="Variant.Flat" IsPill="true" /> }
-        </div>
+        <a class="app-card-link" href="@App.Url" target="_blank" rel="noopener noreferrer"
+           aria-label="@($"Open {App.Name} app")">
+            <RadzenIcon Icon="open_in_new" />
+            <span>Open app</span>
+            <span class="app-card-link-host" aria-hidden="true">@App.Url</span>
+        </a>
     }
-    <div class="portfolio-card-actions">
-        <a class="rz-button rz-button-sm rz-variant-filled rz-primary rz-shade-default" href="@App.Url" target="_blank" rel="noopener noreferrer" aria-label="@($"Open {App.Name} app")"><RadzenIcon Icon="open_in_new" /><span class="rz-button-text">Open</span></a>
-        @if (!string.IsNullOrEmpty(App.GithubRepo)) { <a class="app-inline-link" href="@($"https://github.com/{App.GithubRepo}")" target="_blank" rel="noopener noreferrer" aria-label="@($"View {App.Name} source on GitHub")"><RadzenIcon Icon="code" /> Source</a> }
-    </div>
 </article>
 
 @code {
     [Parameter, EditorRequired] public PortfolioApp App { get; set; } = default!;
-    private string StatusLabel => App.Status switch { "healthy" => "Live", "unavailable" => "Unavailable", _ => "Catalog" };
-    private string StatusClass => App.Status switch { "healthy" => "is-healthy", "unavailable" => "is-unavailable", _ => "is-unmonitored" };
-    private BadgeStyle StatusBadge => App.Status switch { "healthy" => BadgeStyle.Success, "unavailable" => BadgeStyle.Danger, _ => BadgeStyle.Info };
 }

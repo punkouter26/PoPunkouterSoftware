@@ -114,7 +114,10 @@ internal static class HealthEndpoints
                     ["AzureKeyVaultUri"] = SecretMasking.MaskValue(config["AzureKeyVaultUri"]),
                     ["AzureTableStorage:ConnectionString"] = SecretMasking.MaskValue(config["AzureTableStorage:ConnectionString"]),
                     ["AzureTableStorage:Endpoint"] = SecretMasking.MaskValue(config["AzureTableStorage:Endpoint"]),
-                    ["ApplicationInsights:ConnectionString"] = SecretMasking.MaskValue(config["ApplicationInsights:ConnectionString"]),
+                    // Don't ship the App Insights connection string — InstrumentationKey
+                    // is a stable per-resource identifier; even the masked prefix leaks
+                    // region + which App Insights workspace the deployment targets.
+                    ["ApplicationInsights:ConnectionString"] = string.IsNullOrWhiteSpace(config["ApplicationInsights:ConnectionString"]) ? "(not set)" : "configured (redacted)",
                     ["ASPNETCORE_ENVIRONMENT"] = env.EnvironmentName,
                 }
             });

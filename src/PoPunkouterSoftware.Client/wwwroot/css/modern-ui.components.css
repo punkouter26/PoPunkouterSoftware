@@ -87,7 +87,7 @@
 }
 
 .app-page .rz-button.rz-primary {
-    box-shadow: 0 10px 24px rgba(73, 199, 163, 0.24);
+    box-shadow: 0 8px 20px rgba(91, 124, 214, 0.22);
 }
 
 .app-page .rz-badge {
@@ -120,9 +120,9 @@
 .app-page .rz-tabs-nav li.rz-tabview-selected a,
 .app-page .rz-tabview-nav li.rz-state-active a,
 .app-page .rz-tabs-nav li.rz-state-active a {
-    background: rgba(141, 226, 197, 0.12);
+    background: rgba(91, 124, 214, 0.14);
     color: var(--app-text);
-    border-color: rgba(141, 226, 197, 0.28);
+    border-color: rgba(91, 124, 214, 0.32);
 }
 
 .app-page .rz-tabview-panels,
@@ -195,7 +195,7 @@
 /* WCAG AA: darken filled danger badges so white text passes 4.5:1 contrast ratio */
 .rz-badge-danger.rz-variant-fill,
 .app-badge-danger {
-    background: #d93025 !important;
+    background: #b94a4a !important;
     color: #fff !important;
 }
 

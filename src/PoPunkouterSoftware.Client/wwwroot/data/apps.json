@@ -1,11 +1,118 @@
 {
   "apps": [
     {
-      "id": "poface-dev",
-      "name": "PoFace",
-      "description": "PoFace app",
+      "id": "polocalcompare",
+      "name": "PoLocalCompare",
+      "description": "Side-by-side comparison tool for local options",
       "category": "productivity",
       "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "JavaScript"
+      ],
+      "url": "https://app-polocalcompare-win.azurewebsites.net",
+      "githubRepo": "punkouter26/PoLocalCompare"
+    },
+    {
+      "id": "pomarriedlife-api",
+      "name": "PoMarriedLife",
+      "description": "Married life tracking app",
+      "category": "health",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://pomarriedlife-api.azurewebsites.net",
+      "githubRepo": "punkouter26/PoMarriedLife"
+    },
+    {
+      "id": "pomemevideo",
+      "name": "PoMemeVideo",
+      "description": "Meme video creation tool",
+      "category": "creative",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#"
+      ],
+      "url": "https://app-pomemevideo.azurewebsites.net",
+      "githubRepo": "punkouter26/PoMemeVideo"
+    },
+    {
+      "id": "5ln5hfdrvof5u",
+      "name": "PoMiniGames",
+      "description": "Collection of browser mini-games",
+      "category": "games",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#"
+      ],
+      "url": "https://app-5ln5hfdrvof5u-f1win.azurewebsites.net",
+      "githubRepo": "punkouter26/PoMiniGames"
+    },
+    {
+      "id": "popunkoutersoftware",
+      "name": "PoPunkouterSoftware",
+      "description": "This portfolio site with a live Azure ops dashboard",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://app-popunkoutersoftware.azurewebsites.net",
+      "githubRepo": "punkouter26/PoPunkouterSoftware"
+    },
+    {
+      "id": "potraffic-api",
+      "name": "PoTraffic",
+      "description": "Traffic monitoring dashboard and API",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#"
+      ],
+      "url": "https://potraffic-api-win.azurewebsites.net",
+      "githubRepo": "punkouter26/PoTraffic"
+    },
+    {
+      "id": "app-powatch",
+      "name": "PoWatch",
+      "description": "Personal watchlist app",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://app-powatch-win.azurewebsites.net",
+      "githubRepo": "punkouter26/PoWatch"
+    },
+    {
+      "id": "pocouplequiz",
+      "name": "PoCoupleQuiz",
+      "description": "Two-player trivia quiz app designed for couples — choose a topic and race through questions to see who knows the other better.",
+      "category": "games",
+      "status": "inactive",
+      "technologies": [
+        "Azure App Service",
+        "Blazor"
+      ],
+      "url": "https://pocouplequiz-app.azurewebsites.net",
+      "githubRepo": "punkouter26/PoCoupleQuiz"
+    },
+    {
+      "id": "poface-dev",
+      "name": "PoFace",
+      "description": "Browser-based face/avatar composer that lets you mix and match features to build a profile picture that actually looks like you.",
+      "category": "productivity",
+      "status": "inactive",
       "technologies": [
         "Azure App Service",
         "Blazor"
@@ -16,9 +123,9 @@
     {
       "id": "pohorserace",
       "name": "PoHorseRace",
-      "description": "Interactive HorseRace game",
+      "description": "Pick your runners, place your bets, watch the race unfold — a horse-racing simulation tuned for quick rounds and live commentary.",
       "category": "games",
-      "status": "active",
+      "status": "inactive",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
@@ -29,9 +136,9 @@
     {
       "id": "pomarriedlifegoogle",
       "name": "PoMarriedLifeGoogle",
-      "description": "PoMarriedLifeGoogle app",
+      "description": "Google-Workspace companion for PoMarriedLife — imports Calendar events and Drive docs so anniversaries never get lost in another tab.",
       "category": "productivity",
-      "status": "active",
+      "status": "inactive",
       "technologies": [
         "Azure Static Web Apps",
         "JavaScript"
@@ -40,56 +147,17 @@
       "githubRepo": "punkouter26/PoMarriedLifeGoogle"
     },
     {
-      "id": "5ln5hfdrvof5u",
-      "name": "PoMiniGames",
-      "description": "PoMiniGames app",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://white-rock-0dc02af1e.1.azurestaticapps.net",
-      "githubRepo": "punkouter26/PoMiniGames"
-    },
-    {
-      "id": "popunkoutersoftware",
-      "name": "PoPunkouterSoftware",
-      "description": "Punkouter Software portfolio app",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure Static Web Apps",
-        "JavaScript"
-      ],
-      "url": "https://witty-smoke-014bc370f.2.azurestaticapps.net",
-      "githubRepo": "punkouter26/PoPunkouterSoftware"
-    },
-    {
       "id": "porobotstocks-porobotstocks",
       "name": "PoRobotStocks",
-      "description": "AI-powered stock analysis tool",
+      "description": "Watchlist + AI-generated thesis for every ticker you track — get a daily plain-English summary of which holdings moved and why.",
       "category": "productivity",
-      "status": "active",
+      "status": "inactive",
       "technologies": [
         "Azure App Service",
         "Blazor"
       ],
       "url": "https://porobotstocks-porobotstocks-web.azurewebsites.net",
       "githubRepo": "punkouter26/PoRobotStocks"
-    },
-    {
-      "id": "pocouplequiz",
-      "name": "PoCoupleQuiz",
-      "description": "Interactive couplequiz game",
-      "category": "games",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://pocouplequiz-app.azurewebsites.net",
-      "githubRepo": "punkouter26/PoCoupleQuiz"
     },
     {
       "id": "pofunquiz-zizogpdhpyiwo",
@@ -120,7 +188,7 @@
     {
       "id": "po-issues",
       "name": "PoIssues",
-      "description": "PoIssues app",
+      "description": "Lightweight issue tracker that turns bullet-point notes into triaged tickets — built for solo developers who want GitHub Issues without the noise.",
       "category": "productivity",
       "status": "inactive",
       "technologies": [
@@ -134,7 +202,7 @@
     {
       "id": "pojoker",
       "name": "PoJoker",
-      "description": "Creative joker app",
+      "description": "A pocket deck of random jokes, prompts, and icebreakers you can pull out whenever a chat needs to lighten up.",
       "category": "creative",
       "status": "disabled",
       "technologies": [
@@ -158,34 +226,6 @@
       "githubRepo": null
     },
     {
-      "id": "pomarriedlife-api",
-      "name": "PoMarriedLife",
-      "description": "PomarriedlifeApi app",
-      "category": "health",
-      "status": "inactive",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://pomarriedlife-api.azurewebsites.net",
-      "githubRepo": null
-    },
-    {
-      "id": "pomarriedlifeshared7377",
-      "name": "PoMarriedLifeGoogle",
-      "description": "Married life productivity app",
-      "category": "health",
-      "status": "inactive",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://pomarriedlifeshared7377.azurewebsites.net",
-      "githubRepo": null
-    },
-    {
       "id": "pominiapps",
       "name": "PoMiniApps",
       "description": "Collection of mini productivity apps",
@@ -196,20 +236,6 @@
         "Blazor"
       ],
       "url": "https://pominiapps.azurewebsites.net",
-      "githubRepo": null
-    },
-    {
-      "id": "app-5ln5hfdrvof5u",
-      "name": "PoMiniGames",
-      "description": "PoMiniGames app",
-      "category": "productivity",
-      "status": "inactive",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://app-5ln5hfdrvof5u.azurewebsites.net",
       "githubRepo": null
     },
     {
@@ -226,20 +252,6 @@
       "githubRepo": null
     },
     {
-      "id": "app-popunkoutersoftware",
-      "name": "PoPunkouterSoftware",
-      "description": "PoPunkouterSoftware dashboard app",
-      "category": "productivity",
-      "status": "inactive",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://app-popunkoutersoftware.azurewebsites.net",
-      "githubRepo": null
-    },
-    {
       "id": "poredoimage-web",
       "name": "PoRedoImage",
       "description": "Image editing and transformation app",
@@ -251,7 +263,7 @@
         "Blazor"
       ],
       "url": "https://poredoimage-web.azurewebsites.net",
-      "githubRepo": null
+      "githubRepo": "punkouter26/PoRedoImage"
     },
     {
       "id": "porepolinetracker",
@@ -282,7 +294,7 @@
     {
       "id": "potaggame",
       "name": "PoTagGame",
-      "description": "Interactive TagGame game",
+      "description": "Multiplayer browser tag — claim a lobby, pick your arena, and chase your friends across the map in real time.",
       "category": "games",
       "status": "disabled",
       "technologies": [
@@ -290,34 +302,6 @@
         "Blazor"
       ],
       "url": "https://potaggame-server.azurewebsites.net",
-      "githubRepo": null
-    },
-    {
-      "id": "potraffic-api",
-      "name": "PoTraffic",
-      "description": "PoTraffic monitoring API app",
-      "category": "productivity",
-      "status": "inactive",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://potraffic-api.azurewebsites.net",
-      "githubRepo": null
-    },
-    {
-      "id": "app-powatch",
-      "name": "PoWatch",
-      "description": "Powatch app",
-      "category": "productivity",
-      "status": "inactive",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://app-powatch.azurewebsites.net",
       "githubRepo": null
     }
   ]

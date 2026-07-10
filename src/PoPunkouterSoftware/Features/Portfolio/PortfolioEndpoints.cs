@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Infrastructure.Screenshots;
 using PoPunkouterSoftware.Shared.Azure;
@@ -27,10 +28,20 @@ internal static partial class PortfolioEndpoints
     }
 
     internal static async Task<IResult> GetPortfolio(
-        IWebHostEnvironment env, AzureReportStore store, AppScreenshotService screenshots,
-        ILogger<Program> logger, CancellationToken ct)
+        IWebHostEnvironment env, IConfiguration config, AzureReportStore store, AppScreenshotService screenshots,
+        ReportRefreshRunner refreshRunner, ILogger<Program> logger, CancellationToken ct)
     {
         var (report, services) = await LoadInventoryAsync(env, store, logger, ct);
+        var stale = PortfolioFreshness.IsStale(report?.GeneratedAt, DateTime.UtcNow);
+
+        // Self-healing inventory: production has no interactive refresh (management actions
+        // are disabled there), so a stale report schedules its own background rescan. Off in
+        // Development/Testing — local runs and test suites must never start real ARM scans.
+        if (stale && config.GetValue("FeatureFlags:EnableAutoInventoryRefresh", !env.IsDevelopment() && !env.IsEnvironment("Testing")))
+        {
+            if (refreshRunner.TryStartAuto())
+                logger.LogInformation("Inventory is stale — background Azure rescan started");
+        }
         var metadata = await LoadMetadataAsync(env, logger, ct);
         var screenshotVersions = await screenshots.ListVersionsAsync(ct);
         var metaByName = metadata
@@ -81,7 +92,18 @@ internal static partial class PortfolioEndpoints
             }, CancellationToken.None);
         }
 
-        return Results.Json(apps);
+        return Results.Json(new PortfolioResponse
+        {
+            GeneratedAt = report?.GeneratedAt,
+            Stale = stale,
+            RefreshInProgress = refreshRunner.IsRunning,
+            // Stable for the lifetime of the server process; lets the client detect
+            // "this WASM bundle was built against inventory that is older than the API".
+            BuildId = (long)(System.Reflection.Assembly.GetEntryAssembly()?.Location is { } loc && File.Exists(loc)
+                ? new DateTimeOffset(File.GetLastWriteTimeUtc(loc)).ToUnixTimeSeconds()
+                : DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+            Apps = apps,
+        });
     }
 
     private static async Task<IResult> GetScreenshot(
@@ -160,7 +182,9 @@ internal static partial class PortfolioEndpoints
         AppMeta? meta, WebService? service, DateTime? generatedAt, IReadOnlyDictionary<string, long> screenshotVersions)
     {
         var name = meta?.Name ?? service?.FriendlyName ?? service?.Name ?? "Unnamed app";
-        var url = !string.IsNullOrWhiteSpace(service?.Url) ? service.Url : meta?.Url ?? "";
+        // The curated catalog URL wins over the scanned one: inventory can lag reality by
+        // hours (or weeks), and a card must never send visitors to a decommissioned host.
+        var url = !string.IsNullOrWhiteSpace(meta?.Url) ? meta.Url : service?.Url ?? "";
         var host = HostOf(url);
         long version = 0;
         var hasScreenshot = host is not null && screenshotVersions.TryGetValue(host, out version);

@@ -28,17 +28,27 @@ else
     <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")">
         <div class="azure-command-copy">
             <div class="app-kicker">Azure · @summary.SubscriptionName</div>
-            <h1 class="azure-hero-title">@(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")</h1>
+            <h1 class="azure-hero-title">
+                @(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")
+                @if (summary.AttentionCount > 0)
+                {
+                    <RadzenBadge Text="@($"{summary.SecurityFindings + summary.CleanupCandidates} actionable")" IsPill="true"
+                                  BadgeStyle="BadgeStyle.Warning"
+                                  title="Actionable items exclude the staleness flag itself; they are the security + cleanup count from the JSON." />
+                }
+            </h1>
             <div class="azure-command-meta">
                 <span>Updated @ageLabel</span>
                 <RadzenBadge Text="@(summary.IsStale ? "Stale data" : "Current")" IsPill="true"
                               BadgeStyle="@(summary.IsStale ? BadgeStyle.Danger : BadgeStyle.Success)" />
             </div>
         </div>
+        @* Health claims inherit the report's age: "100% healthy" from a stale scan is a
+           snapshot, not a status — the tiles must not contradict the Stale badge above. *@
         <div class="azure-command-kpis" aria-label="Azure status summary">
-            <div><strong>@summary.HealthPercent%</strong><span>Service health</span></div>
+            <div><strong>@summary.HealthPercent%</strong><span>@(summary.IsStale ? $"Health as of {ageLabel}" : "Service health")</span></div>
             <div><strong>@summary.CostFormatted</strong><span>30-day cost</span></div>
-            <div><strong>@summary.BrokenServices</strong><span>Unavailable</span></div>
+            <div><strong>@summary.BrokenServices</strong><span>@(summary.IsStale ? $"Unavailable ({ageLabel})" : "Unavailable")</span></div>
             <div><strong>@summary.TotalResources</strong><span>Resources</span></div>
         </div>
         <div class="azure-command-actions">
@@ -53,7 +63,9 @@ else
             }
             else
             {
-                <span class="app-note" title="Management actions are disabled on this deployment.">Read-only view</span>
+                <span class="app-note" title="Management actions are disabled on this deployment. Set FeatureFlags:EnableManagementActions=true (and Security:ManagementApiKey if you want the extra API-key gate) in production appsettings to enable refresh, cancel, and pinger toggle.">
+                    Read-only view — enable&nbsp;<code>FeatureFlags:EnableManagementActions</code>&nbsp;to unlock refresh controls
+                </span>
             }
         </div>
     </header>
@@ -77,7 +89,8 @@ else
 
     <section class="azure-glance-grid" aria-label="Azure status charts">
         <article class="app-card">
-            <h2>Services</h2>
+            <h2 class="azure-glance-title">Service health</h2>
+            <div class="azure-glance-subtitle" aria-hidden="true">@summary.ActiveServices of @summary.TotalServices services</div>
             <div class="azure-donut-wrap">
                 <RadzenChart Style="height:210px">
                     <RadzenDonutSeries TItem="OpsMetricPoint" Data="@summary.FleetHealth" CategoryProperty="Label" ValueProperty="Value" InnerRadius="72" />
@@ -88,7 +101,8 @@ else
             <span class="app-sr-only">@string.Join(", ", summary.FleetHealth.Select(x => $"{x.Label}: {x.Value}"))</span>
         </article>
         <article class="app-card">
-            <h2>Cost</h2>
+            <h2 class="azure-glance-title">30-day cost by resource group</h2>
+            <div class="azure-glance-subtitle" aria-hidden="true">@(summary.CostHistory.Count > 1 ? "Trend over the past 30 days" : "Snapshot — top cost drivers")</div>
             @if (costSeries.Count == 0)
             {
                 <div class="azure-compact-state">No cost trend is available.</div>
@@ -110,7 +124,8 @@ else
             <span class="app-sr-only">@string.Join(", ", costSeries.Select(x => $"{x.Label}: ${x.Value:F2}"))</span>
         </article>
         <article class="app-card">
-            <h2>Response time</h2>
+            <h2 class="azure-glance-title">Response time · slowest endpoints</h2>
+            <div class="azure-glance-subtitle" aria-hidden="true">Current scan, milliseconds</div>
             @if (summary.ResponseTimes.Count == 0)
             {
                 <div class="azure-compact-state success">No slow responses detected.</div>
@@ -121,6 +136,7 @@ else
                     <RadzenBarSeries TItem="OpsMetricPoint" Data="@summary.ResponseTimes" CategoryProperty="Label" ValueProperty="Value" Title="ms" />
                     <RadzenCategoryAxis /><RadzenValueAxis FormatString="{0:N0} ms"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
                 </RadzenChart>
+                <p class="azure-chart-note">Free-tier apps sleep when idle — multi-second times are usually cold starts, not outages.</p>
             }
             <span class="app-sr-only">@string.Join(", ", summary.ResponseTimes.Select(x => $"{x.Label}: {x.Value:N0} milliseconds"))</span>
         </article>

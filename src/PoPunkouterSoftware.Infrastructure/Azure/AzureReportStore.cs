@@ -273,10 +273,16 @@ public class AzureReportStore
             if (results.Count > 0)
                 return Result<List<HistorySummary>>.Success(results);
 
-            // Legacy data path: no summary rows yet — project the full blobs once.
+            // Legacy data path: no summary rows yet — project the full blobs once. The
+            // summary query above already succeeded, so storage is reachable; a failure
+            // here just means there is no projectable legacy data. "No history yet" must
+            // render as an empty chart, not a 503 error banner.
             var historyResult = await LoadHistoryAsync(maxEntries, ct);
             if (!historyResult.IsSuccess)
-                return Result<List<HistorySummary>>.Failure(historyResult.Error ?? "Failed to load history", historyResult.Exception);
+            {
+                _logger.LogWarning("Legacy history projection unavailable ({Error}) — returning empty history", historyResult.Error);
+                return Result<List<HistorySummary>>.Success(results);
+            }
 
             return Result<List<HistorySummary>>.Success(
                 (historyResult.Value ?? new()).Select(HistorySummaryMapper.FromReport).ToList());

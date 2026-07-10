@@ -5,6 +5,11 @@
 
 <RadzenComponents />
 
+@* Skip-to-content link — first focusable element on every page, invisible until it
+   receives keyboard focus. Tab order lands on it before the topbar nav, then jumps the
+   visitor past the chrome directly to <main id="main-content">. *@
+<a href="#main-content" class="app-skip-link">Skip to content</a>
+
 @if (_isMockMode)
 {
     <div class="app-mock-data-warning">
@@ -14,9 +19,16 @@
 
 <RadzenLayout Style="grid-template-areas: 'rz-header' 'rz-body'; grid-template-rows: auto 1fr;">
     <RadzenHeader>
-        <nav class="app-topbar">
+        <nav class="app-topbar" aria-label="Primary navigation">
             <a href="/" class="app-topbar-brand">PoPunkouterSoftware</a>
-            <div class="app-topbar-nav">
+            @* Mobile-only hamburger trigger — visible below 768 px only (see modern-ui.responsive.css).
+               Layouts can't carry an InteractiveWebAssembly render mode (Body is a RenderFragment),
+               so the drawer state lives in a tiny bit of inline JS rather than a Blazor field. *@
+            <button type="button" class="app-topbar-menu" aria-expanded="false" aria-controls="app-topbar-drawer"
+                    aria-label="Toggle navigation menu" onclick="document.body.classList.toggle('topbar-open'); this.setAttribute('aria-expanded', document.body.classList.contains('topbar-open')); this.firstElementChild.textContent = document.body.classList.contains('topbar-open') ? 'close' : 'menu';">
+                <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+            </button>
+            <div id="app-topbar-drawer" class="app-topbar-nav">
                 <a href="/" class="app-topbar-link @NavClass("/")">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>Apps
                 </a>

@@ -1,0 +1,117 @@
+name: Capture app screenshots
+
+# The portfolio home page shows a mobile-portrait screenshot of each app. Capturing
+# them inside the App Service is impossible: the production plan is Windows F1, whose
+# sandbox blocks headless Chromium (and a Playwright download once filled the tiny
+# worker disk and broke deployments). So capture runs here — a real Linux runner with
+# a real browser — and the PNGs land in the same "app-screenshots" blob container the
+# site already serves from (FeatureFlags:EnableScreenshots stays false in production).
+#
+# Identity: reuses the deploy OIDC identity (production environment secrets). That
+# identity additionally needs blob write on the storage account — one-time setup:
+#   az role assignment create \
+#     --assignee <AZURE_CLIENT_ID> \
+#     --role "Storage Blob Data Contributor" \
+#     --scope $(az storage account show -n stpopunkoutersoftware -g PoPunkouterSoftware --query id -o tsv)
+on:
+  schedule:
+    - cron: '17 6 * * *'   # daily, 06:17 UTC — off the top-of-hour rush
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: screenshots-popunkoutersoftware
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  DEFAULT_APP_NAME: 'app-popunkoutersoftware'
+  STORAGE_ACCOUNT: 'stpopunkoutersoftware'
+  CONTAINER: 'app-screenshots'
+
+jobs:
+  capture:
+    name: Capture & upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@395ad3262231945ff9e2d3a3cc6764a02d38f2b4 # v6.1.0
+        with:
+          node-version: '24'
+
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y > /dev/null
+          npm install playwright --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Capture screenshots
+        run: |
+          cat > capture.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs';
+
+          const site = `https://${process.env.APP_NAME || 'app-popunkoutersoftware'}.azurewebsites.net`;
+          const resp = await fetch(`${site}/api/portfolio`, { headers: { Accept: 'application/json' } });
+          if (!resp.ok) throw new Error(`portfolio fetch failed: ${resp.status}`);
+          const { apps } = await resp.json();
+
+          // One capture per host; F1 apps cold-start, so tolerate slow first paint.
+          const targets = new Map();
+          for (const app of apps ?? []) {
+            try { targets.set(new URL(app.url).host.toLowerCase(), app.url); } catch {}
+          }
+
+          fs.mkdirSync('shots', { recursive: true });
+          const browser = await chromium.launch();
+          const ctx = await browser.newContext({
+            viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+          });
+
+          let ok = 0;
+          for (const [host, url] of targets) {
+            const page = await ctx.newPage();
+            try {
+              try {
+                await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+              } catch { /* capture whatever rendered on timeout */ }
+              await page.waitForTimeout(1500);
+              await page.screenshot({ path: `shots/${host}.png`, type: 'png' });
+              ok++;
+              console.log(`captured ${host}`);
+            } catch (e) {
+              console.warn(`skipped ${host}: ${e.message}`);
+            } finally {
+              await page.close();
+            }
+          }
+          await browser.close();
+          console.log(`captured ${ok}/${targets.size} screenshots`);
+          if (ok === 0) process.exit(1);
+          EOF
+          node capture.mjs
+        env:
+          APP_NAME: ${{ vars.AZURE_APP_NAME || env.DEFAULT_APP_NAME }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Upload to blob storage
+        run: |
+          az storage blob upload-batch \
+            --account-name "$STORAGE_ACCOUNT" \
+            --destination "$CONTAINER" \
+            --source shots \
+            --pattern '*.png' \
+            --content-type image/png \
+            --auth-mode login \
+            --overwrite

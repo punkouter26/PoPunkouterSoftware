@@ -36,7 +36,7 @@ internal sealed record ProblemResponse(
 [JsonSerializable(typeof(AzureReport))]
 [JsonSerializable(typeof(OpsSummary))]
 [JsonSerializable(typeof(List<HistorySummary>))]
-[JsonSerializable(typeof(List<PortfolioApp>))]
+[JsonSerializable(typeof(PortfolioResponse))]
 [JsonSerializable(typeof(GitHubActivity))]
 [JsonSerializable(typeof(ConfigResponse))]
 [JsonSerializable(typeof(ProblemResponse))]
