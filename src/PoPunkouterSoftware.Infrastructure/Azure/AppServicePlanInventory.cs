@@ -1,4 +1,6 @@
-namespace PoPunkouterSoftware.Shared.Azure;
+using PoPunkouterSoftware.Shared.Azure;
+
+namespace PoPunkouterSoftware.Infrastructure.Azure;
 
 public static class AppServicePlanInventory
 {

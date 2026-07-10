@@ -24,33 +24,6 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "start-live-server",
-			"type": "shell",
-			"command": "node",
-			"args": ["${workspaceFolder}/server.js"],
-			"group": "build",
-			"presentation": {
-				"echo": true,
-				"reveal": "always",
-				"focus": false,
-				"panel": "shared"
-			},
-			"isBackground": true,
-			"problemMatcher": {
-				"pattern": {
-					"regexp": "^.*$",
-					"file": 1,
-					"location": 2,
-					"message": 3
-				},
-				"background": {
-					"activeOnStart": true,
-					"beginsPattern": "^.*Server running at.*$",
-					"endsPattern": "^.*Server running at.*$"
-				}
-			}
-		},
-		{
 			"label": "clean",
 			"command": "dotnet",
 			"windows": {
@@ -59,7 +32,7 @@
 			"type": "process",
 			"args": [
 				"clean",
-				"${workspaceFolder}/PoPunkouterSoftware",
+				"${workspaceFolder}/src/PoPunkouterSoftware",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -74,7 +47,7 @@
 			"type": "process",
 			"args": [
 				"publish",
-				"${workspaceFolder}/PoPunkouterSoftware",
+				"${workspaceFolder}/src/PoPunkouterSoftware",
 				"--configuration",
 				"Release",
 				"/property:GenerateFullPaths=true",
@@ -92,7 +65,7 @@
 			"type": "process",
 			"args": [
 				"build",
-				"${workspaceFolder}/PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+				"${workspaceFolder}/src/PoPunkouterSoftware/PoPunkouterSoftware.csproj",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -120,9 +93,9 @@
 		{
 			"label": "start-api-server",
 			"type": "shell",
-			"command": "dotnet watch run --project ${workspaceFolder}/PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+			"command": "dotnet watch run --project ${workspaceFolder}/src/PoPunkouterSoftware/PoPunkouterSoftware.csproj",
 			"windows": {
-				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch run --project ${workspaceFolder}/PoPunkouterSoftware/PoPunkouterSoftware.csproj"
+				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch run --project ${workspaceFolder}/src/PoPunkouterSoftware/PoPunkouterSoftware.csproj"
 			},
 			"group": "build",
 			"isBackground": true,
@@ -157,7 +130,7 @@
 			"type": "process",
 			"args": [
 				"test",
-				"${workspaceFolder}/tests/UnitTests",
+				"${workspaceFolder}/tests/PoPunkouterSoftware.Tests",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -176,9 +149,9 @@
 		{
 			"label": "test-unit-watch",
 			"type": "shell",
-			"command": "dotnet watch test --project ${workspaceFolder}/tests/UnitTests",
+			"command": "dotnet watch test --project ${workspaceFolder}/tests/PoPunkouterSoftware.Tests",
 			"windows": {
-				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch test --project ${workspaceFolder}/tests/UnitTests"
+				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch test --project ${workspaceFolder}/tests/PoPunkouterSoftware.Tests"
 			},
 			"group": "test",
 			"isBackground": true,

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 namespace PoPunkouterSoftware.Infrastructure;
@@ -21,8 +22,24 @@ public static class Telemetry
 
     private static readonly Meter Meter = new(MeterName, "1.0.0");
 
+    /// <summary>
+    /// Tracing source for custom spans (refresh runs and their steps). Registered with the
+    /// OpenTelemetry pipeline in Program.cs via <c>AddSource(Telemetry.MeterName)</c> so
+    /// background work (which has no inbound request Activity) still produces correlated,
+    /// parented spans in Azure Monitor instead of orphaned dependency calls.
+    /// </summary>
+    public static readonly ActivitySource Source = new(MeterName, "1.0.0");
+
     /// <summary>Maps an HTTP status code to a low-cardinality status class label (e.g. "2xx").</summary>
-    public static string StatusClass(int statusCode) => $"{statusCode / 100}xx";
+    public static string StatusClass(int statusCode) => statusCode switch
+    {
+        >= 100 and < 200 => "1xx",
+        >= 200 and < 300 => "2xx",
+        >= 300 and < 400 => "3xx",
+        >= 400 and < 500 => "4xx",
+        >= 500 and < 600 => "5xx",
+        _ => "other",
+    };
 
     // ─── Azure OpenAI (questions 7 & 8) ──────────────────────────────────────
     public static readonly Counter<long> AzureOpenAiCalls = Meter.CreateCounter<long>(

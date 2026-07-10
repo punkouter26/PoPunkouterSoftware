@@ -6,9 +6,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "f5-prep",
-            "program": "${workspaceFolder}/PoPunkouterSoftware/bin/Debug/net10.0/PoPunkouterSoftware.dll",
+            "program": "${workspaceFolder}/src/PoPunkouterSoftware/bin/Debug/net10.0/PoPunkouterSoftware.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/PoPunkouterSoftware",
+            "cwd": "${workspaceFolder}/src/PoPunkouterSoftware",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:8000"

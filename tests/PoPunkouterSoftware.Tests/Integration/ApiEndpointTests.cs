@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 
-namespace PoPunkouterSoftware.IntegrationTests;
+namespace PoPunkouterSoftware.Tests.Integration;
 
 [Collection("WebApp")]
 public class HealthEndpointTests
@@ -21,6 +21,13 @@ public class HealthEndpointTests
     public async Task GetHealthAlias_Returns200()
     {
         var response = await _client.GetAsync("/health");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetLiveness_Returns200()
+    {
+        var response = await _client.GetAsync("/healthz");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 

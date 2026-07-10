@@ -10,7 +10,9 @@
     <!-- All client JSON now flows through the source-generated AppJsonContext, so the
          reflection-based IL2026 suppression is no longer needed: the analyzer runs clean
          under the global TreatWarningsAsErrors build. -->
-    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+    <!-- Full ICU (BlazorWebAssemblyLoadAllGlobalizationData) was removed: it added ~1.5 MB
+         compressed to first load and the only culture-sensitive formatting in the app
+         ("MMM dd", "N0") is covered by the default sharded ICU data. -->
   </PropertyGroup>
 
   <ItemGroup>

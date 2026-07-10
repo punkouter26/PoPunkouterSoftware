@@ -47,7 +47,7 @@ public class DowntimeDiagnosisService(
                     kv.Key.Contains(svc.Name, StringComparison.OrdinalIgnoreCase)).Value;
         }
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("azure-arm");
         using var gate = new SemaphoreSlim(4);
 
         var tasks = brokenServices.Select(async svc =>
@@ -75,7 +75,7 @@ public class DowntimeDiagnosisService(
                     if (resp.IsSuccessStatusCode)
                     {
                         var json = await resp.Content.ReadAsStringAsync(tok);
-                        var doc = JsonDocument.Parse(json);
+                        using var doc = JsonDocument.Parse(json);
                         if (doc.RootElement.TryGetProperty("properties", out var props))
                         {
                             availState = props.TryGetProperty("availabilityState", out var av) ? av.GetString() : null;
@@ -107,7 +107,7 @@ public class DowntimeDiagnosisService(
                         if (resp.IsSuccessStatusCode)
                         {
                             var json = await resp.Content.ReadAsStringAsync(tok);
-                            var doc = JsonDocument.Parse(json);
+                            using var doc = JsonDocument.Parse(json);
                             if (doc.RootElement.TryGetProperty("properties", out var props))
                                 planStatus = props.TryGetProperty("status", out var st) ? st.GetString() : null;
                             if (doc.RootElement.TryGetProperty("sku", out var sku))
@@ -129,7 +129,7 @@ public class DowntimeDiagnosisService(
                     if (resp.IsSuccessStatusCode)
                     {
                         var json = await resp.Content.ReadAsStringAsync(tok);
-                        var doc = JsonDocument.Parse(json);
+                        using var doc = JsonDocument.Parse(json);
                         if (doc.RootElement.TryGetProperty("value", out var arr))
                         {
                             foreach (var item in arr.EnumerateArray().Take(5))
@@ -181,7 +181,7 @@ public class DowntimeDiagnosisService(
                     if (resp.IsSuccessStatusCode)
                     {
                         var json = await resp.Content.ReadAsStringAsync(tok);
-                        var doc = JsonDocument.Parse(json);
+                        using var doc = JsonDocument.Parse(json);
                         if (doc.RootElement.TryGetProperty("value", out var arr))
                         {
                             foreach (var ev in arr.EnumerateArray().Take(15))
@@ -224,7 +224,7 @@ public class DowntimeDiagnosisService(
                     {
                         kuduReachable = true;
                         var procJson = await kuduResp.Content.ReadAsStringAsync(tok);
-                        var procDoc = JsonDocument.Parse(procJson);
+                        using var procDoc = JsonDocument.Parse(procJson);
                         if (procDoc.RootElement.ValueKind == JsonValueKind.Array)
                         {
                             var procs = procDoc.RootElement.EnumerateArray()

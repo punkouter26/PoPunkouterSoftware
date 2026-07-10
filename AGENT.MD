@@ -21,17 +21,19 @@ add auth wiring, session storage, or login UI unless the owner explicitly revers
 this decision. `/api/config` deliberately exposes no auth flags.
 
 ## Solution layout (Vertical Slice Architecture)
+Source projects live under `/src`; tests under `/tests`.
 | Project | Role |
 |---|---|
-| `PoPunkouterSoftware` (`/src` group) | API host + BFF. Feature slices under `Features/<Area>/*Endpoints.cs`, each an `IEndpointRouteBuilder` extension. Hosts the Blazor WASM app. |
-| `PoPunkouterSoftware.Client` | Blazor WASM (Radzen UI, mobile-first). `wwwroot` lives **only** here. |
-| `PoPunkouterSoftware.Shared` | Shared DTOs **and FluentValidation rules only**. No server/browser-only deps. Ships in the WASM bundle (`IsTrimmable`). |
-| `PoPunkouterSoftware.Infrastructure` | Azure services (Table Storage, ARM, pinger, incident, telemetry). |
+| `src/PoPunkouterSoftware` | API host + BFF. Feature slices under `Features/<Area>/*Endpoints.cs` (Config, Diag, GitHub, Infra, Pinger, Portfolio), each a `Map<Area>Endpoints` extension called from `Program.cs`. Hosts the Blazor WASM app. |
+| `src/PoPunkouterSoftware.Client` | Blazor WASM (Radzen UI, mobile-first). `wwwroot` lives **only** here. Shared UI in `Components/Shared` (`ErrorRetryBanner`, `LoadingSkeleton`, `DevErrorBoundary`); relative-time formatting in `RelativeTime.cs`. |
+| `src/PoPunkouterSoftware.Shared` | Shared DTOs **and FluentValidation rules only** — no behavior beyond the domain vocabulary helpers (`DomainVocabulary.cs`). No server/browser-only deps. Ships in the WASM bundle (`IsTrimmable`). |
+| `src/PoPunkouterSoftware.Infrastructure` | Azure services (Table Storage, ARM, pinger, incident, telemetry) plus cross-slice helpers: `ReportFileCache` (report file fallback + data dir), `HistorySummaryMapper`, `AppServicePlanInventory`, `SecretMasking`. Slices must not reference each other — shared logic goes here. |
 
 ## Cross-cutting conventions
 - **Routing:** slices register via `Map<Area>Endpoints(this WebApplication)`. `/api/diag/*` uses `MapGroup("/api/diag")`. `/health`, `/healthz`, `/diag` are off the `/api` group.
 - **Config:** `Directory.Build.props` (net10, `Nullable`, `TreatWarningsAsErrors`, LangVersion 14) and `Directory.Packages.props` (Central Package Management). Add package **versions** only in `Directory.Packages.props`.
-- **Resilience:** typed `HttpClient`s `github` and `azure-openai` use `AddStandardResilienceHandler`. `health` and `azure-probe` deliberately have **no** resilience — they must report real reachability, not retry through outages.
+- **Resilience:** typed `HttpClient`s `github`, `azure-arm`, and `azure-openai` use `AddStandardResilienceHandler`. `health` and `azure-probe` deliberately have **no** resilience — they must report real reachability, not retry through outages.
+- **Caching:** `HybridCache` backs the read-through GitHub-activity and CI/CD-review lookups (stampede protection; outcome-dependent TTL for rate-limited GitHub results). `IMemoryCache` remains only for the pinger snapshot.
 - **Telemetry:** Serilog → Console + File; Azure Monitor via OpenTelemetry (the sole App Insights pipeline). `cloud_RoleName` comes from the OTel resource `service.name` (set by reflection in the API only — never in WASM). High-frequency logs use `[LoggerMessage]` source-gen (see `ServicePingerService`).
 - **Secrets:** Azure Key Vault (`kv-poshared`, prefix `PoPunkouterSoftware--`) loaded at startup via Managed Identity; skipped under the `Testing` environment.
 - **Storage:** Azure Table Storage. Local dev runs **Azurite in Docker** (`docker-compose.yml`, container `popunkoutersoftware-azurite`). `UseDevelopmentStorage=true` in `appsettings.Development.json`.
@@ -45,15 +47,17 @@ the previous `IL2026`/`IL2104` `WarningsNotAsErrors` suppression has been remove
 client builds trim-safe under the global `TreatWarningsAsErrors`. Add new client (de)serialised
 types to `AppJsonContext` with a `[JsonSerializable]` attribute.
 
-## Tests (`/tests`)
-Four projects, by test tier (not mirrored 1:1 to feature slices):
-- `UnitTests` — fast, isolated.
-- `IntegrationTests` — `WebApplicationFactory` + Testcontainers (Azurite) for ephemeral infra.
-- `E2EAPI` — pure HTTP API calls against the hosted app (functional emulation).
-- `E2EUI` — C# Playwright UI tests.
-**CI (`ci.yml`)** runs on pull requests and executes the two fast tiers (Unit + Integration).
-The E2E tiers need a running host / Playwright browser and stay manual. The **deploy**
-pipeline (`deploy.yml`) is build-and-deploy only and runs no tests.
+## Tests (`/tests`) — two-tier layout
+- `PoPunkouterSoftware.Tests` — the fast tier. `Unit/` (isolated, HTTP stubs) and
+  `Integration/` (`WebApplicationFactory` + Testcontainers Azurite). Collections run
+  sequentially (`AssemblyInfo.cs`) because concurrent entry-point boots race.
+  Covers the `ManagementActionFilter` gate, pinger, config, diag, and portfolio contracts.
+- `PoPunkouterSoftware.Tests.E2E` — C# Playwright UI tests against a live instance
+  (`BASE_URL`, default `http://localhost:8000`); run on demand, not in CI.
+
+**CI/CD:** `deploy.yml` is the only workflow. It builds the solution, runs the fast
+test tier (`PoPunkouterSoftware.Tests`), then publishes and deploys — a failing test
+blocks the deploy.
 
 ## Agent tooling (Claude Code)
 - **User-level plugins** (`claude plugin list`): `dotnet-claude-kit` (codewithmukesh), `dotnet-skills@wshaddix-dotnet-skills` (167 skills + 16 agents; local marketplace at `~/.claude/local-marketplaces/wshaddix-dotnet-skills`), and the official `dotnet/skills` plugins `dotnet`, `dotnet-aspnetcore`, `dotnet-blazor`, `dotnet-test`, `dotnet-data`, `dotnet-diag` (marketplace `dotnet-agent-skills`).
@@ -61,4 +65,4 @@ pipeline (`deploy.yml`) is build-and-deploy only and runs no tests.
 
 ## Run / deploy
 - **Local (Development env):** F5 in VS Code runs `f5-prep` (kill stale dotnet → start Azurite → build) then launches on `http://localhost:8000`. `SCRIPTS/setup.ps1` provisions WinGet/Docker/Azure prerequisites.
-- **Azure (Production env):** `.github/workflows/deploy.yml` builds + deploys to App Service `app-popunkoutersoftware` (OIDC login, no secrets in workflow, no tests).
+- **Azure (Production env):** `.github/workflows/deploy.yml` builds, tests, and deploys to App Service `app-popunkoutersoftware` (OIDC login, no secrets in workflow).

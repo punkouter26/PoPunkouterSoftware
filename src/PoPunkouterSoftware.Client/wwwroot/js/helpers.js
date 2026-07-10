@@ -51,24 +51,21 @@ window.initNavbarScroll = function () {
 };
 
 /**
- * One-tap copy clipboard helper with a micro-notification overlay
+ * One-tap copy clipboard helper. Returns a promise resolving to true/false so the
+ * caller (C#) can show honest feedback — the previous version swallowed failures
+ * (the UI said "Copied" with nothing on the clipboard) and threw synchronously on
+ * non-secure origins where navigator.clipboard is undefined, which crashed the page
+ * through the Blazor error boundary. The single toast is now owned by the C# side.
  */
 window.copyToClipboard = function (text) {
-    navigator.clipboard.writeText(text).then(() => {
-        const toast = document.createElement('div');
-        toast.className = 'app-micro-toast';
-        toast.innerText = 'Copied suggested fix!';
-        document.body.appendChild(toast);
-        setTimeout(() => toast.classList.add('show'), 20);
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    document.body.removeChild(toast);
-                }
-            }, 300);
-        }, 1800);
-    }).catch(err => {
-        console.error('Clipboard copy failed: ', err);
-    });
+    if (!navigator.clipboard) {
+        console.error('Clipboard API unavailable (non-secure context?)');
+        return Promise.resolve(false);
+    }
+    return navigator.clipboard.writeText(text)
+        .then(() => true)
+        .catch(err => {
+            console.error('Clipboard copy failed: ', err);
+            return false;
+        });
 };

@@ -50,7 +50,7 @@ public partial class AzureDashboard
 
     private string MaintenanceInventoryRefreshReason =>
         report?.GeneratedAt is DateTime generatedAt && DateTime.UtcNow - generatedAt > TimeSpan.FromHours(12)
-            ? $"Latest report was generated {FormatAge(DateTime.UtcNow - generatedAt)}."
+            ? $"Latest report was generated {RelativeTime.FormatDetailed(DateTime.UtcNow - generatedAt)}."
             : "Latest report was generated before AI Services and Log Analytics inventory fields were available.";
 
     private static int ConfidenceRank(string? confidence) => confidence switch

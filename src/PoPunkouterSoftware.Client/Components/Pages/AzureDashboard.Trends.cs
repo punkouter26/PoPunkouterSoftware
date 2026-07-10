@@ -31,7 +31,7 @@ public partial class AzureDashboard
     private int TotalCount => report?.WebServices?.Total ?? 0;
 
     private string ScanAge => report?.GeneratedAt is DateTime dt
-        ? FormatAge(DateTime.UtcNow - dt)
+        ? RelativeTime.FormatDetailed(DateTime.UtcNow - dt)
         : "unknown";
 
     // ── Chart records ──────────────────────────────────────────────────────────

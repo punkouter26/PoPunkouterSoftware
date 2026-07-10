@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
+using PoPunkouterSoftware.Infrastructure.Configuration;
 using PoPunkouterSoftware.Infrastructure.Screenshots;
 using PoPunkouterSoftware.Shared.Azure;
 
@@ -26,7 +27,7 @@ internal static class DiagEndpoints
         {
             var publishedPath = Path.Combine(env.ContentRootPath, "Automation", "New-AzureEfficiencyReport.ps1");
             var sourcePath = Path.GetFullPath(Path.Combine(
-                env.ContentRootPath, "..", "SCRIPTS", "New-AzureEfficiencyReport.ps1"));
+                env.ContentRootPath, "..", "..", "SCRIPTS", "New-AzureEfficiencyReport.ps1"));
             var scriptPath = File.Exists(publishedPath) ? publishedPath : sourcePath;
 
             return File.Exists(scriptPath)
@@ -40,25 +41,30 @@ internal static class DiagEndpoints
         })
         .WithName("DownloadAzureEfficiencyAutomationScript");
 
-        diag.MapGet("/report", async (IWebHostEnvironment env, AzureReportStore store) =>
+        diag.MapGet("/report", async (HttpContext http, IWebHostEnvironment env, AzureReportStore store, ILogger<Program> logger) =>
         {
             var reportResult = await store.LoadAsync();
             if (reportResult.IsSuccess && reportResult.Value is not null)
             {
+                // The report changes at most once per scan — let clients revalidate cheaply.
+                var etag = $"\"{reportResult.Value.GeneratedAt?.Ticks ?? 0}\"";
+                if (http.Request.Headers.IfNoneMatch.Contains(etag))
+                    return Results.StatusCode(StatusCodes.Status304NotModified);
+                http.Response.Headers.ETag = etag;
                 return Results.Json(reportResult.Value);
             }
 
-            var reportPath = Path.Combine(GetDataDir(env), "azure-full-report.json");
+            var reportPath = ReportFileCache.GetReportPath(env);
             if (File.Exists(reportPath))
             {
                 var json = await File.ReadAllTextAsync(reportPath);
                 // Deserialize then re-serialize via Results.Json so ASP.NET Core's camelCase
                 // naming policy (JsonSerializerDefaults.Web) is applied consistently.
-                var fileOpts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var fileReport = JsonSerializer.Deserialize<AzureReport>(json, fileOpts);
-                return fileReport is not null
-                    ? Results.Json(fileReport)
-                    : Results.Content(json, "application/json");
+                // A corrupt cache file must degrade to "no report", not a 500 — this file
+                // fallback IS the resilience path when Table Storage is down.
+                var fileReport = ReportFileCache.TryDeserializeReport(json, logger);
+                if (fileReport is not null)
+                    return Results.Json(fileReport);
             }
 
             if (!reportResult.IsSuccess)
@@ -71,14 +77,14 @@ internal static class DiagEndpoints
             return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
         });
 
-        diag.MapGet("/summary", async (IWebHostEnvironment env, AzureReportStore store, CancellationToken ct) =>
+        diag.MapGet("/summary", async (IWebHostEnvironment env, AzureReportStore store, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var report = await LoadLatestReportAsync(env, store, ct);
+            var report = await LoadLatestReportAsync(env, store, logger, ct);
             if (report is null)
                 return Results.Problem(detail: "No Azure report is available.", statusCode: 404);
 
-            var historyResult = await store.LoadHistoryAsync(maxEntries: 30, ct);
-            var history = historyResult.IsSuccess ? historyResult.Value ?? new List<AzureReport>() : new List<AzureReport>();
+            var historyResult = await store.LoadHistorySummariesAsync(maxEntries: 30, ct);
+            var history = historyResult.IsSuccess ? historyResult.Value ?? new List<HistorySummary>() : new List<HistorySummary>();
             return Results.Json(BuildOpsSummary(report, history));
         })
         .WithName("GetOpsSummary");
@@ -103,59 +109,83 @@ internal static class DiagEndpoints
 
             _ = Task.Run(async () =>
             {
-                using var scope = scopeFactory.CreateScope();
-                var azureService = scope.ServiceProvider.GetRequiredService<AzureReportService>();
-                var store = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
-
-                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-                session.SetActiveCts(cts);
-                var ct = cts.Token;
-                var sw = Stopwatch.StartNew();
-                var progress = new Progress<(string Step, int Percent)>(p =>
-                {
-                    _ = hubCtx.Clients.All.SendAsync("RefreshProgress",
-                        new { step = p.Step, percent = p.Percent, done = false });
-                });
+                // The outer try/finally is the only owner of the semaphore: no statement that
+                // can throw (scope creation, DI resolution, CTS allocation) runs outside it,
+                // so a fault can never leak the lock and dead-lock every future refresh.
                 string? terminalError = null;
+                var refreshRunId = Guid.NewGuid();
                 try
                 {
-                    var report = await azureService.RunAsync(progress, ct);
+                    // Root span so the hundreds of outbound ARM/GitHub dependency calls made by
+                    // this background run are parented and correlatable in Azure Monitor.
+                    using var activity = Telemetry.Source.StartActivity("refresh");
+                    activity?.SetTag("refresh.run_id", refreshRunId);
+                    using var _logScope = Serilog.Context.LogContext.PushProperty("RefreshRunId", refreshRunId);
 
-                    await store.SaveAsync(report, ct);
+                    using var scope = scopeFactory.CreateScope();
+                    var azureService = scope.ServiceProvider.GetRequiredService<AzureReportService>();
+                    var store = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
 
+                    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                    session.SetActiveCts(cts);
                     try
                     {
-                        var incidentSvc = scope.ServiceProvider.GetRequiredService<IncidentService>();
-                        await incidentSvc.DetectAndRecordAsync(report, ct);
-                    }
-                    catch (Exception iex)
-                    {
-                        logger.LogWarning(iex, "Incident detection failed (non-fatal)");
-                    }
+                        var ct = cts.Token;
+                        var sw = Stopwatch.StartNew();
+                        var progress = new Progress<(string Step, int Percent)>(p =>
+                        {
+                            _ = hubCtx.Clients.All.SendAsync("RefreshProgress",
+                                new { step = p.Step, percent = p.Percent, done = false });
+                        });
 
-                    var opts = new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
-                    var json = JsonSerializer.Serialize(report, opts);
-                    var filePath = Path.Combine(GetDataDir(env), "azure-full-report.json");
-                    await File.WriteAllTextAsync(filePath, json, ct);
+                        // Capture the outgoing "latest" report before it is overwritten so incident
+                        // detection can diff against it without re-downloading history blobs.
+                        var previousResult = await store.LoadAsync(ct);
+                        var previousReport = previousResult.IsSuccess ? previousResult.Value : null;
 
-                    // Refresh the home-page screenshots alongside the inventory (non-fatal).
-                    try
-                    {
-                        await hubCtx.Clients.All.SendAsync("RefreshProgress",
-                            new { step = "Capturing app screenshots…", percent = 99, done = false }, CancellationToken.None);
-                        var screenshots = scope.ServiceProvider.GetRequiredService<AppScreenshotService>();
-                        await screenshots.CaptureAsync(AppScreenshotService.ActiveTargets(report), ct);
-                    }
-                    catch (Exception shotEx)
-                    {
-                        logger.LogWarning(shotEx, "App screenshot capture failed (non-fatal)");
-                    }
+                        var report = await azureService.RunAsync(progress, ct);
 
-                    sw.Stop();
-                    // Metrics: a successful run with its wall-clock duration. (questions 1 & 2)
-                    RecordOutcome("success");
-                    Telemetry.RefreshDuration.Record(sw.Elapsed.TotalMilliseconds);
-                    logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
+                        await store.SaveAsync(report, ct);
+
+                        try
+                        {
+                            var incidentSvc = scope.ServiceProvider.GetRequiredService<IncidentService>();
+                            await incidentSvc.DetectAndRecordAsync(report, previousReport, ct);
+                        }
+                        catch (Exception iex)
+                        {
+                            logger.LogWarning(iex, "Incident detection failed (non-fatal)");
+                        }
+
+                        var json = JsonSerializer.Serialize(report, FileCacheJsonOptions);
+                        var filePath = ReportFileCache.GetReportPath(env);
+                        await File.WriteAllTextAsync(filePath, json, ct);
+
+                        // Refresh the home-page screenshots alongside the inventory (non-fatal).
+                        try
+                        {
+                            await hubCtx.Clients.All.SendAsync("RefreshProgress",
+                                new { step = "Capturing app screenshots…", percent = 99, done = false }, CancellationToken.None);
+                            var screenshots = scope.ServiceProvider.GetRequiredService<AppScreenshotService>();
+                            await screenshots.CaptureAsync(AppScreenshotService.ActiveTargets(report), ct);
+                        }
+                        catch (Exception shotEx)
+                        {
+                            logger.LogWarning(shotEx, "App screenshot capture failed (non-fatal)");
+                        }
+
+                        sw.Stop();
+                        // Metrics: a successful run with its wall-clock duration. (questions 1 & 2)
+                        RecordOutcome("success");
+                        Telemetry.RefreshDuration.Record(sw.Elapsed.TotalMilliseconds);
+                        logger.LogInformation("Azure report refreshed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
+                    }
+                    finally
+                    {
+                        // Clear the shared reference BEFORE the using disposes the CTS so a
+                        // concurrent /cancel-refresh cannot cancel a disposed source.
+                        session.SetActiveCts(null);
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -171,7 +201,6 @@ internal static class DiagEndpoints
                 }
                 finally
                 {
-                    session.SetActiveCts(null);
                     session.Lock.Release();
                     try
                     {
@@ -248,36 +277,15 @@ internal static class DiagEndpoints
         });
 
         // ── History summary for /timebased time-series charts ─────────────────
+        // Reads the tiny precomputed summary rows written at save time; the previous
+        // implementation decompressed and deserialized up to 90 full report blobs per hit.
         diag.MapGet("/history", async (AzureReportStore store, CancellationToken ct) =>
         {
-            var result = await store.LoadHistoryAsync(maxEntries: 90, ct);
+            var result = await store.LoadHistorySummariesAsync(maxEntries: 90, ct);
             if (!result.IsSuccess)
                 return Results.Problem(detail: result.Error ?? "Failed to load history", statusCode: 503);
 
             var summaries = (result.Value ?? new())
-                .Select(r => new PoPunkouterSoftware.Shared.Azure.HistorySummary
-                {
-                    GeneratedAt = r.GeneratedAt ?? DateTime.MinValue,
-                    TotalServices = r.WebServices?.Total ?? 0,
-                    ActiveServices = r.WebServices?.ByStatus?.Active ?? 0,
-                    BrokenServices = r.WebServices?.ByStatus?.Broken ?? 0,
-                    TotalCost30Days = r.Cost?.TotalCost30Days ?? 0,
-                    ProjectedMonthCost = r.BurnRate?.ProjectedMonthTotal ?? 0,
-                    AvgResponseTimeMs = r.WebServices?.Services?.Where(s => s.Connectivity?.Success == true)
-                        .Select(s => (double)(s.Connectivity?.ResponseTime ?? 0))
-                        .DefaultIfEmpty(0).Average() ?? 0,
-                    Total5xxErrors = r.WebServices?.Services?.Sum(s => s.Metrics7Days?.Http5xx ?? 0) ?? 0,
-                    TotalResources = r.AllResourceSummary?.Total ?? 0,
-                    ScanDurationMs = r.StepTimings?.Sum(t => t.ElapsedMs) ?? 0,
-                    BrokenDelta = r.Delta?.BrokenServicesDelta,
-                    Services = (r.WebServices?.Services ?? new()).Select(s => new PoPunkouterSoftware.Shared.Azure.ServiceHistoryPoint
-                    {
-                        Name = s.FriendlyName ?? s.Name,
-                        HttpStatus = s.HttpStatus,
-                        ResponseTimeMs = s.Connectivity?.ResponseTime ?? 0,
-                        Requests7d = s.Metrics7Days?.Requests ?? 0,
-                    }).ToList(),
-                })
                 .OrderBy(s => s.GeneratedAt)
                 .ToList();
 
@@ -287,36 +295,34 @@ internal static class DiagEndpoints
         return app;
     }
 
-    // In the unified Blazor WASM model, wwwroot lives in the Client project.
-    // env.WebRootPath is null on the server because the server has no wwwroot of its own.
-    // In dev, resolve to the Client project's wwwroot; in production, UseStaticWebAssets()
-    // publishes client assets under ContentRootPath/wwwroot, so WebRootPath is non-null.
-    internal static string GetDataDir(IWebHostEnvironment env) =>
-        env.WebRootPath is not null
-            ? Path.Combine(env.WebRootPath, "data")
-            : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "data"));
+    // Hoisted so System.Text.Json's converter metadata cache is reused instead of being
+    // rebuilt for every request that hits the file-fallback path.
+    private static readonly JsonSerializerOptions FileCacheJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+    };
 
     private static async Task<AzureReport?> LoadLatestReportAsync(
-        IWebHostEnvironment env, AzureReportStore store, CancellationToken ct)
+        IWebHostEnvironment env, AzureReportStore store, ILogger logger, CancellationToken ct)
     {
         var result = await store.LoadAsync(ct);
         if (result.IsSuccess && result.Value is not null)
             return result.Value;
 
-        var reportPath = Path.Combine(GetDataDir(env), "azure-full-report.json");
+        var reportPath = ReportFileCache.GetReportPath(env);
         if (!File.Exists(reportPath))
             return null;
 
         var json = await File.ReadAllTextAsync(reportPath, ct);
-        return JsonSerializer.Deserialize<AzureReport>(json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return ReportFileCache.TryDeserializeReport(json, logger);
     }
 
-    private static OpsSummary BuildOpsSummary(AzureReport report, IReadOnlyCollection<AzureReport> history)
+    private static OpsSummary BuildOpsSummary(AzureReport report, IReadOnlyCollection<HistorySummary> history)
     {
         var services = report.WebServices?.Services ?? new List<WebService>();
         var total = report.WebServices?.Total ?? services.Count;
-        var active = report.WebServices?.ByStatus?.Active ?? services.Count(s => s.HttpStatus == "active");
+        var active = report.WebServices?.ByStatus?.Active ?? services.Count(s => ServiceHealth.IsHealthy(s.HttpStatus));
         var broken = report.WebServices?.ByStatus?.Broken ?? Math.Max(0, total - active);
         var cleanup = (report.OrphanedResources?.Count ?? 0)
             + (report.ZombieApps?.Count ?? 0)
@@ -324,12 +330,12 @@ internal static class DiagEndpoints
         var insecureStorage = (report.StorageInventory ?? new()).Count(s =>
             s.PublicBlobAccess || !s.HttpsOnly || s.MinTls is "TLS1_0" or "TLS1_1");
         var criticalDrift = (report.ConfigDrift ?? new()).Count(d =>
-            d.Issues?.Any(i => i.Severity is "critical" or "high") == true);
+            d.Issues?.Any(i => SeverityLevel.Rank(i.Severity) <= SeverityLevel.Rank(SeverityLevel.High)) == true);
         var security = insecureStorage + criticalDrift;
         var attention = new List<string>();
 
         attention.AddRange(services
-            .Where(s => !string.Equals(s.HttpStatus, "active", StringComparison.OrdinalIgnoreCase))
+            .Where(s => !ServiceHealth.IsHealthy(s.HttpStatus))
             .Take(3)
             .Select(s => $"{(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName)} is unavailable"));
         if (security > 0)
@@ -368,10 +374,10 @@ internal static class DiagEndpoints
             ServerErrors = services.Where(s => s.Metrics7Days?.Http5xx > 0)
                 .OrderByDescending(s => s.Metrics7Days!.Http5xx).Take(6)
                 .Select(s => new OpsMetricPoint(s.FriendlyName ?? s.Name, s.Metrics7Days!.Http5xx)).ToList(),
-            CostHistory = history.Where(h => h.GeneratedAt.HasValue && (h.Cost?.TotalCost30Days ?? 0) > 0)
+            CostHistory = history.Where(h => h.GeneratedAt > DateTime.MinValue && h.TotalCost30Days > 0)
                 .OrderBy(h => h.GeneratedAt).TakeLast(30)
-                .Select(h => new OpsMetricPoint(h.GeneratedAt!.Value.ToString("MMM dd"),
-                    Math.Round(h.Cost!.TotalCost30Days, 2))).ToList(),
+                .Select(h => new OpsMetricPoint(h.GeneratedAt.ToString("MMM dd"),
+                    Math.Round(h.TotalCost30Days, 2))).ToList(),
             AttentionItems = attention.Take(5).ToList(),
         };
     }
@@ -379,7 +385,7 @@ internal static class DiagEndpoints
     private static async Task<IResult> GetDiag(HttpContext http, IWebHostEnvironment env, IConfiguration config, AzureReportStore store, CancellationToken ct)
     {
         var reportResult = await store.LoadAsync(ct);
-        var reportPath = Path.Combine(GetDataDir(env), "azure-full-report.json");
+        var reportPath = ReportFileCache.GetReportPath(env);
         var effectiveKeyVaultUri = config["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
         var requiredKeys = new Dictionary<string, string?>
         {
@@ -407,7 +413,7 @@ internal static class DiagEndpoints
                 pair => pair.Key,
                 pair => pair.Key == "ASPNETCORE_ENVIRONMENT"
                     ? pair.Value ?? "(not set)"
-                    : HealthEndpoints.MaskValue(pair.Value));
+                    : SecretMasking.MaskValue(pair.Value));
         var reportSource = reportResult.IsSuccess && reportResult.Value is not null ? "table-storage" : File.Exists(reportPath) ? "file-cache" : "missing";
         var cachedReportPath = File.Exists(reportPath) ? reportPath : null;
         var reportAvailable = reportResult.IsSuccess && reportResult.Value is not null || File.Exists(reportPath);

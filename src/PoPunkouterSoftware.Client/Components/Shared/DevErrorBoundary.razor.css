@@ -1,0 +1,30 @@
+.dev-error-box {
+    border: 2px solid #e74c3c; /* no --app-* danger token matches this red — keep literal */
+    border-radius: var(--app-radius-md);
+    padding: 1.25rem;
+    margin: 1rem 0;
+    background: #1a0000;
+}
+
+/* RadzenText renders its own element, so scope through the box with ::deep. */
+.dev-error-box ::deep .dev-error-title {
+    color: #e74c3c;
+}
+
+.dev-error-details {
+    margin-top: .75rem;
+}
+
+.dev-error-summary {
+    cursor: pointer;
+    color: #aaa;
+    font-size: .85rem;
+}
+
+.dev-error-stack {
+    overflow-x: auto;
+    font-size: .75rem;
+    color: #ccc;
+    white-space: pre-wrap;
+    margin-top: .5rem;
+}

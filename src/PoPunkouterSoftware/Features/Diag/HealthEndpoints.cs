@@ -1,3 +1,5 @@
+using PoPunkouterSoftware.Infrastructure.Configuration;
+
 namespace PoPunkouterSoftware.Features.Diag;
 
 internal static class HealthEndpoints
@@ -109,10 +111,10 @@ internal static class HealthEndpoints
                 checks,
                 config = new Dictionary<string, string>
                 {
-                    ["AzureKeyVaultUri"] = MaskValue(config["AzureKeyVaultUri"]),
-                    ["AzureTableStorage:ConnectionString"] = MaskValue(config["AzureTableStorage:ConnectionString"]),
-                    ["AzureTableStorage:Endpoint"] = MaskValue(config["AzureTableStorage:Endpoint"]),
-                    ["ApplicationInsights:ConnectionString"] = MaskValue(config["ApplicationInsights:ConnectionString"]),
+                    ["AzureKeyVaultUri"] = SecretMasking.MaskValue(config["AzureKeyVaultUri"]),
+                    ["AzureTableStorage:ConnectionString"] = SecretMasking.MaskValue(config["AzureTableStorage:ConnectionString"]),
+                    ["AzureTableStorage:Endpoint"] = SecretMasking.MaskValue(config["AzureTableStorage:Endpoint"]),
+                    ["ApplicationInsights:ConnectionString"] = SecretMasking.MaskValue(config["ApplicationInsights:ConnectionString"]),
                     ["ASPNETCORE_ENVIRONMENT"] = env.EnvironmentName,
                 }
             });
@@ -134,9 +136,4 @@ internal static class HealthEndpoints
 
         return app;
     }
-
-    internal static string MaskValue(string? v) =>
-        string.IsNullOrWhiteSpace(v) ? "(not set)" :
-        v.Length <= 8 ? "****" :
-        v[..4] + new string('*', Math.Min(v.Length - 8, 20)) + v[^4..];
 }

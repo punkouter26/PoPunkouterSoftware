@@ -1,0 +1,49 @@
+.loading-skeleton {
+    display: grid;
+}
+
+/* "cards" — shimmering portfolio tiles (moved from Index.razor.css) */
+.loading-skeleton.is-cards {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: .8rem;
+}
+
+.loading-skeleton.is-cards > div {
+    min-height: 320px;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-lg);
+    background: linear-gradient(100deg, var(--app-surface) 20%, var(--app-surface-soft) 45%, var(--app-surface) 70%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s infinite linear;
+}
+
+@keyframes skeleton-shimmer {
+    to { background-position-x: -200%; }
+}
+
+/* "summary" — Azure status placeholder (moved from AzureDashboard.razor.css) */
+.loading-skeleton.is-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .75rem;
+}
+
+.loading-skeleton.is-summary > div {
+    min-height: 180px;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-lg);
+    background: var(--app-surface);
+}
+
+.loading-skeleton.is-summary > div:first-child {
+    grid-column: 1 / -1;
+    min-height: 150px;
+}
+
+@media (max-width: 720px) {
+    .loading-skeleton.is-summary { grid-template-columns: 1fr; }
+    .loading-skeleton.is-summary > div:first-child { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-skeleton.is-cards > div { animation: none; }
+}

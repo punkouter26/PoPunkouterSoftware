@@ -5,8 +5,8 @@
 
 @if (CurrentException is not null)
 {
-    <div style="border:2px solid #e74c3c;border-radius:8px;padding:1.25rem;margin:1rem 0;background:#1a0000">
-        <RadzenText TextStyle="TextStyle.H5" Style="color:#e74c3c">
+    <div class="dev-error-box">
+        <RadzenText TextStyle="TextStyle.H5" class="dev-error-title">
             ⚠ Unhandled Error
         </RadzenText>
 
@@ -14,9 +14,9 @@
             <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" class="rz-mb-2">
                 <strong>@CurrentException.GetType().FullName</strong>: @CurrentException.Message
             </RadzenAlert>
-            <details open style="margin-top:.75rem">
-                <summary style="cursor:pointer;color:#aaa;font-size:.85rem">Stack trace (dev only)</summary>
-                <pre style="overflow-x:auto;font-size:.75rem;color:#ccc;white-space:pre-wrap;margin-top:.5rem">@CurrentException.ToString()</pre>
+            <details open class="dev-error-details">
+                <summary class="dev-error-summary">Stack trace (dev only)</summary>
+                <pre class="dev-error-stack">@CurrentException.ToString()</pre>
             </details>
 #else
             <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true">

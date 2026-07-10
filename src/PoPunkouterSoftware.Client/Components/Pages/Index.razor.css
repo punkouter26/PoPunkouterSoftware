@@ -8,8 +8,4 @@
 .portfolio-summary strong { color: var(--app-text); }
 .portfolio-summary .is-stale { color: var(--app-accent-warm); }
 .portfolio-summary button { display: inline-flex; align-items: center; gap: .25rem; margin-left: auto; padding: .25rem .5rem; border: 0; color: var(--app-text-muted); background: transparent; cursor: pointer; }
-.portfolio-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .8rem; }
-.portfolio-skeleton { min-height: 320px; border: 1px solid var(--app-border); border-radius: var(--app-radius-lg); background: linear-gradient(100deg, var(--app-surface) 20%, var(--app-surface-soft) 45%, var(--app-surface) 70%); background-size: 200% 100%; animation: portfolio-shimmer 1.2s infinite linear; }
-@keyframes portfolio-shimmer { to { background-position-x: -200%; } }
 @media (max-width: 640px) { .portfolio-header { align-items: start; } .portfolio-header p { max-width: 26ch; } .portfolio-azure-link span { display: none; } }
-@media (prefers-reduced-motion: reduce) { .portfolio-skeleton { animation: none; } }

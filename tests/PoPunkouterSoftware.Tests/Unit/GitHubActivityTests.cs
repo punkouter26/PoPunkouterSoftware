@@ -1,14 +1,27 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 
-namespace PoPunkouterSoftware.UnitTests;
+namespace PoPunkouterSoftware.Tests.Unit;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+file static class TestHybridCache
+{
+    /// <summary>Mirrors the production registration in Program.cs (sized MemoryCache + HybridCache).</summary>
+    public static HybridCache Create()
+    {
+        var services = new ServiceCollection();
+        services.AddMemoryCache(o => o.SizeLimit = 2048);
+        services.AddHybridCache(o => o.MaximumKeyLength = 256);
+        return services.BuildServiceProvider().GetRequiredService<HybridCache>();
+    }
+}
 
 file sealed class StubHandler : HttpMessageHandler
 {
@@ -92,7 +105,7 @@ public class GitHubActivityEndpoint_ValidationTests
 
     private static async Task<IResult> InvokeEndpoint(string? repo, HttpMessageHandler handler)
     {
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        var cache = TestHybridCache.Create();
         var factory = GitHubClientFactory.Create(handler);
         var logger = NullLogger<Program>.Instance;
         return await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints
@@ -128,7 +141,7 @@ public class GitHubActivityEndpoint_CacheTests
             { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
         });
 
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        var cache = TestHybridCache.Create();
         var factory = GitHubClientFactory.Create(handler);
         var logger = NullLogger<Program>.Instance;
 
@@ -151,7 +164,7 @@ public class GitHubActivityEndpoint_RateLimitTests
     public async Task RateLimited_ReturnsOkWithRateLimitedTrue(HttpStatusCode status)
     {
         var handler = StubHandler.Json("{}", status);
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        var cache = TestHybridCache.Create();
         var factory = GitHubClientFactory.Create(handler);
         var logger = NullLogger<Program>.Instance;
 
@@ -197,14 +210,14 @@ public class GitHubActivityEndpoint_RateLimitTests
         });
 
         // Use very short cooldown: set via MemoryCache with sliding expiration of 0
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        var cache = TestHybridCache.Create();
         var factory = GitHubClientFactory.Create(handler);
         var logger = NullLogger<Program>.Instance;
 
         // First call → rate limited
         await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints.InvokeAsync("owner/repo", factory, cache, logger);
         // Evict the short-lived cache entry manually
-        cache.Remove("github-activity:owner/repo");
+        await cache.RemoveAsync("github-activity:owner/repo");
         // Second call → should reach network and get real data
         var result = await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints.InvokeAsync("owner/repo", factory, cache, logger);
 
@@ -313,7 +326,7 @@ public class GitHubActivityEndpoint_HealthScoreTests
 
     private static async Task<IResult> InvokeAsync(string repo, HttpMessageHandler handler)
     {
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        var cache = TestHybridCache.Create();
         var factory = GitHubClientFactory.Create(handler);
         var logger = NullLogger<Program>.Instance;
         return await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints

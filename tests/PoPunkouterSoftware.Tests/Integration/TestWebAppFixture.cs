@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 
-namespace PoPunkouterSoftware.IntegrationTests;
+namespace PoPunkouterSoftware.Tests.Integration;
 
 public class TestWebApp : WebApplicationFactory<Program>
 {

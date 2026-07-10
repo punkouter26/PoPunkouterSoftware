@@ -6,5 +6,17 @@ internal sealed class RefreshSessionManager
     private volatile CancellationTokenSource? _activeCts;
 
     public void SetActiveCts(CancellationTokenSource? cts) => _activeCts = cts;
-    public void Cancel() => _activeCts?.Cancel();
+
+    public void Cancel()
+    {
+        try
+        {
+            _activeCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The refresh completed and disposed its CTS between our read and Cancel().
+            // Nothing left to cancel — treat as a no-op instead of a 500.
+        }
+    }
 }

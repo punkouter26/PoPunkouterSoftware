@@ -44,7 +44,9 @@
         {
             // Fetch environment mode from server — shows MOCK DATA banner when server
             // runs in "Testing" environment (integration / E2E test runs). Rule 10.
-            var cfg = await Http.GetFromJsonAsync("/api/config", AppJsonContext.Default.ConfigResponse);
+            // 10s budget: the shared client's 5-minute timeout is for the report endpoint.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var cfg = await Http.GetFromJsonAsync("/api/config", AppJsonContext.Default.ConfigResponse, cts.Token);
             _isMockMode = cfg?.IsMockMode ?? false;
         }
         catch

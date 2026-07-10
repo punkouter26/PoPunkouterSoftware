@@ -17,10 +17,16 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="FluentAssertions" />
-    <!-- Access internals -->
-    <ProjectReference Include="..\..\PoPunkouterSoftware\PoPunkouterSoftware.csproj" />
-    <ProjectReference Include="..\..\PoPunkouterSoftware.Client\PoPunkouterSoftware.Client.csproj" />
-    <ProjectReference Include="..\..\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
+    <!-- Integration tier: in-process host + real Azurite via Testcontainers -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers" />
+    <PackageReference Include="Testcontainers.Azurite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PoPunkouterSoftware\PoPunkouterSoftware.csproj" />
+    <ProjectReference Include="..\..\src\PoPunkouterSoftware.Client\PoPunkouterSoftware.Client.csproj" />
+    <ProjectReference Include="..\..\src\PoPunkouterSoftware.Shared\PoPunkouterSoftware.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

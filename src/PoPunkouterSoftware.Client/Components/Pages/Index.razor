@@ -23,7 +23,7 @@
             <strong>@apps.Count apps</strong>
             @if (generatedAt is DateTime updated)
             {
-                <span class="@(stale ? "is-stale" : "")">Inventory updated @FormatAge(updated)@(stale ? " · stale" : "")</span>
+                <span class="@(stale ? "is-stale" : "")">Inventory updated @RelativeTime.Format(updated)@(stale ? " · stale" : "")</span>
             }
             <button type="button" @onclick="LoadAppsAsync" disabled="@_loading"><RadzenIcon Icon="refresh" /> Refresh list</button>
         </div>
@@ -31,17 +31,11 @@
 
     @if (_loading && apps is null)
     {
-        <div class="portfolio-skeleton-grid" aria-label="Loading portfolio">
-            @for (var i = 0; i < 6; i++) { <div class="portfolio-skeleton"></div> }
-        </div>
+        <LoadingSkeleton Variant="cards" TileCount="6" AriaLabel="Loading portfolio" />
     }
     else if (!string.IsNullOrWhiteSpace(_loadError))
     {
-        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true">
-            <strong>The app list could not be updated.</strong>
-            <span>@_loadError</span>
-            <RadzenButton Text="Retry" Icon="refresh" Size="ButtonSize.Small" Click="LoadAppsAsync" />
-        </RadzenAlert>
+        <ErrorRetryBanner Title="The app list could not be updated." Message="@_loadError" OnRetry="LoadAppsAsync" />
     }
     else if (apps?.Count == 0)
     {
@@ -71,7 +65,10 @@
         _loadError = null;
         try
         {
-            apps = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.ListPortfolioApp) ?? new();
+            // Per-call budget: the shared HttpClient's 5-minute timeout is sized for the
+            // huge report endpoint; a hung portfolio call should fail in seconds, not minutes.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            apps = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.ListPortfolioApp, cts.Token) ?? new();
         }
         catch (Exception ex)
         {
@@ -81,12 +78,5 @@
         {
             _loading = false;
         }
-    }
-
-    private static string FormatAge(DateTime generatedAt)
-    {
-        var age = DateTime.UtcNow - generatedAt;
-        return age.TotalMinutes < 60 ? $"{(int)age.TotalMinutes}m ago" :
-            age.TotalHours < 24 ? $"{(int)age.TotalHours}h ago" : $"{(int)age.TotalDays}d ago";
     }
 }

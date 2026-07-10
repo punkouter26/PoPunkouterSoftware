@@ -13,23 +13,16 @@
 <div class="app-page azure-ops-page">
 @if (_loading)
 {
-    <div class="azure-summary-skeleton" aria-label="Loading Azure status">
-        <div></div><div></div><div></div><div></div>
-    </div>
+    <LoadingSkeleton Variant="summary" TileCount="4" AriaLabel="Loading Azure status" />
 }
 else if (!string.IsNullOrWhiteSpace(_loadError) || _summary is null)
 {
-    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true">
-        <strong>Azure status is unavailable.</strong>
-        <span>@_loadError</span>
-        <RadzenButton Text="Retry" Icon="refresh" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="LoadSummaryAsync" />
-    </RadzenAlert>
+    <ErrorRetryBanner Title="Azure status is unavailable." Message="@_loadError" OnRetry="LoadSummaryAsync" />
 }
 else
 {
     var summary = _summary;
-    var age = summary.GeneratedAt is DateTime generated ? DateTime.UtcNow - generated : TimeSpan.MaxValue;
-    var ageLabel = age == TimeSpan.MaxValue ? "Unknown age" : age.TotalMinutes < 60 ? $"{(int)age.TotalMinutes}m ago" : age.TotalHours < 24 ? $"{(int)age.TotalHours}h ago" : $"{(int)age.TotalDays}d ago";
+    var ageLabel = RelativeTime.Format(summary.GeneratedAt);
     var costSeries = summary.CostHistory.Count > 1 ? summary.CostHistory : summary.CostDrivers;
 
     <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")">
@@ -49,11 +42,18 @@ else
             <div><strong>@summary.TotalResources</strong><span>Resources</span></div>
         </div>
         <div class="azure-command-actions">
-            <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh")" Icon="refresh"
-                          ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Disabled="@_refreshing" Click="RefreshAsync" />
-            @if (_refreshing)
+            @if (_managementActionsEnabled)
             {
-                <RadzenButton Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="CancelRefreshAsync" />
+                <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh")" Icon="refresh"
+                              ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Disabled="@_refreshing" Click="RefreshAsync" />
+                @if (_refreshing)
+                {
+                    <RadzenButton Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="CancelRefreshAsync" />
+                }
+            }
+            else
+            {
+                <span class="app-note" title="Management actions are disabled on this deployment.">Read-only view</span>
             }
         </div>
     </header>
@@ -61,7 +61,16 @@ else
     @if (_refreshing)
     {
         <section class="azure-refresh-progress" aria-live="polite">
-            <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" Style="height:18px" />
+            @* Percent values only arrive over the hub; when it is down (HTTP-polling
+               fallback) a determinate bar would sit at a lying 0% for the whole scan. *@
+            @if (_hub?.State == HubConnectionState.Connected)
+            {
+                <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" Style="height:18px" />
+            }
+            else
+            {
+                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="height:18px" />
+            }
             <span><RadzenIcon Icon="sync" class="app-progress-icon" /> @_progressStep — you can leave this page while the scan continues.</span>
         </section>
     }
@@ -152,7 +161,7 @@ else
         }
         else if (!string.IsNullOrWhiteSpace(_advancedError) || report is null)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Warning" ShowIcon="true"><span>@_advancedError</span><RadzenButton Text="Retry" Click="LoadReportAsync" /></RadzenAlert>
+            <ErrorRetryBanner Message="@_advancedError" OnRetry="LoadReportAsync" />
         }
         else
         {
@@ -191,7 +200,7 @@ else
             <section class="azure-anchor-section">
                 <div class="azure-section-heading azure-resource-heading"><div><div class="app-kicker">Resource explorer</div><h2>All resources</h2></div><span class="azure-result-count">@FilteredResourceExplorerItems.Count of @ResourceExplorerItems.Count</span></div>
                 <div class="azure-filter-bar" role="group" aria-label="Filter resources">
-                    @foreach (var view in ResourceViews) { <RadzenButton Text="@view" Size="ButtonSize.Small" ButtonStyle="@(_resourceView == view ? ButtonStyle.Primary : ButtonStyle.Light)" Variant="@(_resourceView == view ? Variant.Filled : Variant.Outlined)" Click="@(() => _resourceView = view)" /> }
+                    @foreach (var view in ResourceViews) { <RadzenButton Text="@view" Size="ButtonSize.Small" ButtonStyle="@(_resourceView == view ? ButtonStyle.Primary : ButtonStyle.Light)" Variant="@(_resourceView == view ? Variant.Filled : Variant.Outlined)" Click="@(() => SetResourceView(view))" /> }
                 </div>
                 <div class="azure-resource-grid">
                     <RadzenDataGrid Data="@FilteredResourceExplorerItems" TItem="ResourceExplorerItem" AllowSorting="true" AllowFiltering="true" AllowPaging="true" PageSize="12" Density="Density.Compact" GridLines="DataGridGridLines.Horizontal" Style="width:100%;min-width:900px">

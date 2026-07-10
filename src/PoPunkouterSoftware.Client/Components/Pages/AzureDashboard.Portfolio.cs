@@ -165,11 +165,9 @@ public partial class AzureDashboard
             });
         }
 
-        items.Sort((a, b) =>
-        {
-            var o = new Dictionary<string, int> { ["high"] = 0, ["medium"] = 1, ["low"] = 2 };
-            return o.GetValueOrDefault(a.Confidence) - o.GetValueOrDefault(b.Confidence);
-        });
+        // Rank-based compare — the previous comparer allocated a fresh Dictionary on every
+        // single comparison during the sort.
+        items.Sort(static (a, b) => SeverityLevel.Rank(a.Confidence) - SeverityLevel.Rank(b.Confidence));
         return items
             .GroupBy(i => $"{i.Type}|{i.ResourceGroup}|{i.Name}", StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())

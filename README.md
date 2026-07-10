@@ -4,14 +4,12 @@ PoPunkouterSoftware is a .NET 10 Blazor Web App with a server host, a WebAssembl
 
 ## Solution Layout
 
-- `PoPunkouterSoftware/`: ASP.NET Core host, API endpoints, diagnostics, and Blazor shell.
-- `PoPunkouterSoftware.Client/`: WASM UI, layouts, pages, and static assets.
-- `PoPunkouterSoftware.Shared/`: contracts and models shared between the host and client.
-- `PoPunkouterSoftware.Infrastructure/`: Azure and integration adapters.
-- `tests/UnitTests/`: xUnit unit tests.
-- `tests/IntegrationTests/`: integration tests with `WebApplicationFactory` and Azurite (Testcontainers).
-- `tests/E2EAPI/`: pure HTTP API end-to-end tests that emulate front-end functionality.
-- `tests/E2EUI/`: C# Playwright browser tests (run on demand against a live instance).
+- `src/PoPunkouterSoftware/`: ASP.NET Core host, API endpoints, diagnostics, and Blazor shell.
+- `src/PoPunkouterSoftware.Client/`: WASM UI, layouts, pages, and static assets.
+- `src/PoPunkouterSoftware.Shared/`: contracts and models shared between the host and client.
+- `src/PoPunkouterSoftware.Infrastructure/`: Azure and integration adapters.
+- `tests/PoPunkouterSoftware.Tests/`: xUnit unit and integration tests (`WebApplicationFactory` + Azurite Testcontainers).
+- `tests/PoPunkouterSoftware.Tests.E2E/`: C# Playwright browser tests (run on demand against a live instance).
 - `SCRIPTS/`: setup and automation helpers.
 
 ## Local Development
@@ -25,10 +23,8 @@ Prerequisites:
 Common commands:
 
 ```powershell
-dotnet build .\PoPunkouterSoftware\PoPunkouterSoftware.csproj
-dotnet test .\tests\UnitTests
-dotnet test .\tests\IntegrationTests
-dotnet test .\tests\E2EAPI
+dotnet build .\src\PoPunkouterSoftware\PoPunkouterSoftware.csproj
+dotnet test .\tests\PoPunkouterSoftware.Tests
 ```
 
 Available VS Code tasks in this workspace include:
@@ -56,6 +52,6 @@ The app runs locally on HTTP port `8000`.
 
 ## Developer Guidance
 
-- Read `architecture.md` and `AGENT.MD` before broad changes.
+- Read `AGENT.MD` before broad changes.
 - Keep diagnostics endpoints available but do not link them from the UI.
 - Preserve Po-prefixed naming and strict build quality defaults from `Directory.Build.props`.

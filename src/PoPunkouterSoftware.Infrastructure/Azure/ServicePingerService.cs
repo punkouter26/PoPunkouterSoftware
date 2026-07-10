@@ -69,7 +69,22 @@ public sealed partial class ServicePingerService : BackgroundService
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                await PingAllServicesAsync(stoppingToken);
+                try
+                {
+                    await PingAllServicesAsync(stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    throw; // graceful shutdown — handled by the outer catch
+                }
+                catch (Exception ex)
+                {
+                    // A single failed sweep must never escape ExecuteAsync: the default
+                    // BackgroundServiceExceptionBehavior is StopHost, so an unguarded throw
+                    // here would take down the whole web app (or silently end pinging).
+                    _logger.LogError(ex, "Pinger sweep failed — retrying on the next interval");
+                }
+
                 await Task.Delay(_interval, stoppingToken);
             }
         }
@@ -119,7 +134,11 @@ public sealed partial class ServicePingerService : BackgroundService
 
         results.AddRange(await Task.WhenAll(tasks));
 
-        _cache.Set(CacheKey, new PingerSnapshot(DateTime.UtcNow, results), TimeSpan.FromMinutes(30));
+        _cache.Set(CacheKey, new PingerSnapshot(DateTime.UtcNow, results), new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+            Size = 1, // cache has a SizeLimit; every entry must declare a size
+        });
         // Heartbeat: a flat sweep-counter rate means the background loop has silently died. (question 5)
         Telemetry.PingerSweeps.Add(1);
         LogSweepComplete(results.Count);

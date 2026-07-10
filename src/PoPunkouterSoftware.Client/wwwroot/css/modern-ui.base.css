@@ -153,19 +153,6 @@ a {
     min-width: 0;
 }
 
-.app-topbar-session-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.35rem 0.7rem;
-    border-radius: 999px;
-    background: rgba(141, 226, 197, 0.12);
-    color: var(--app-accent);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-}
-
 .app-topbar-link {
     display: inline-flex;
     align-items: center;
@@ -213,11 +200,7 @@ a {
     padding: 1.25rem;
 }
 
-.app-card,
-.app-service-card,
-.app-metric-card,
-.app-priority-item,
-.app-banner {
+.app-card {
     animation: app-fade-in 420ms ease both;
 }
 
@@ -325,43 +308,4 @@ a {
     background: rgba(255, 255, 255, 0.025);
 }
 
-.app-shell {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    margin: 0 auto;
-    padding: 0.9rem 1rem 0;
-    backdrop-filter: blur(14px);
-}
-.app-hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.85fr);
-    gap: 1.5rem;
-    padding: clamp(1.35rem, 1rem + 1.2vw, 2rem);
-    border-radius: var(--app-radius-xl);
-    background:
-        linear-gradient(135deg, rgba(73, 199, 163, 0.12), rgba(73, 199, 163, 0) 40%),
-        linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
-        rgba(11, 23, 33, 0.92);
-    border: 1px solid var(--app-border-strong);
-    box-shadow: var(--app-shadow-lg);
-}
-
-.app-hero-title {
-    margin: 0;
-    font-size: clamp(2.6rem, 1.8rem + 2.5vw, 4.5rem);
-    line-height: 0.95;
-}
-
-.app-hero-copy {
-    font-size: clamp(1rem, 0.92rem + 0.35vw, 1.18rem);
-    line-height: 1.7;
-    color: var(--app-text-muted);
-    max-width: 50rem;
-}
-.app-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
 

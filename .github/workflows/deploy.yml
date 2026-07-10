@@ -1,7 +1,7 @@
 name: Deploy to Azure App Service
 
 # Trigger only on push to master and manual dispatch.
-# Pull-request builds are handled by a separate lightweight CI workflow (ci.yml).
+# This is the only workflow in this repo: it builds and deploys to Azure App Service.
 on:
   push:
     branches: [master]
@@ -85,8 +85,13 @@ jobs:
       - name: Build
         run: dotnet build PoPunkouterSoftware.sln -c Release --no-restore --nologo
 
+      # Gate the deploy on the fast test tier (unit + in-process integration).
+      # Playwright E2E needs a live deployment and runs out-of-band.
+      - name: Test
+        run: dotnet test tests/PoPunkouterSoftware.Tests/PoPunkouterSoftware.Tests.csproj -c Release --no-build --nologo
+
       - name: Publish
-        run: dotnet publish PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish --nologo
+        run: dotnet publish src/PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish --nologo
 
       # NOTE: 'secrets' is intentionally NOT referenced in any 'if:' expression —
       # GitHub Actions blocks it there to avoid leaking secret existence.

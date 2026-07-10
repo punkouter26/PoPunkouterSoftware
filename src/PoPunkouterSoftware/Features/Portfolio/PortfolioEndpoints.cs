@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Infrastructure.Screenshots;
 using PoPunkouterSoftware.Shared.Azure;
@@ -16,13 +15,13 @@ internal static partial class PortfolioEndpoints
 {
     internal static WebApplication MapPortfolioEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/portfolio", GetPortfolio)
-            .WithName("GetPortfolio")
-            .WithTags("Portfolio");
+        var portfolio = app.MapGroup("/api/portfolio").WithTags("Portfolio");
 
-        app.MapGet("/api/portfolio/screenshots/{host}", GetScreenshot)
-            .WithName("GetPortfolioScreenshot")
-            .WithTags("Portfolio");
+        portfolio.MapGet("", GetPortfolio)
+            .WithName("GetPortfolio");
+
+        portfolio.MapGet("/screenshots/{host}", GetScreenshot)
+            .WithName("GetPortfolioScreenshot");
 
         return app;
     }
@@ -31,8 +30,8 @@ internal static partial class PortfolioEndpoints
         IWebHostEnvironment env, AzureReportStore store, AppScreenshotService screenshots,
         ILogger<Program> logger, CancellationToken ct)
     {
-        var (report, services) = await LoadInventoryAsync(env, store, ct);
-        var metadata = await LoadMetadataAsync(env, ct);
+        var (report, services) = await LoadInventoryAsync(env, store, logger, ct);
+        var metadata = await LoadMetadataAsync(env, logger, ct);
         var screenshotVersions = await screenshots.ListVersionsAsync(ct);
         var metaByName = metadata
             .GroupBy(m => NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
@@ -108,8 +107,13 @@ internal static partial class PortfolioEndpoints
     /// counts as Operational (HttpStatus == "active"). Falls back to the cached report
     /// file when table storage is unavailable; empty when no report exists at all.
     /// </summary>
+    private static readonly JsonSerializerOptions FileReadJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private static async Task<(AzureReport? Report, List<WebService> Services)> LoadInventoryAsync(
-        IWebHostEnvironment env, AzureReportStore store, CancellationToken ct)
+        IWebHostEnvironment env, AzureReportStore store, ILogger logger, CancellationToken ct)
     {
         AzureReport? report = null;
         var result = await store.LoadAsync(ct);
@@ -119,12 +123,11 @@ internal static partial class PortfolioEndpoints
         }
         else
         {
-            var reportPath = Path.Combine(DiagEndpoints.GetDataDir(env), "azure-full-report.json");
+            var reportPath = ReportFileCache.GetReportPath(env);
             if (File.Exists(reportPath))
             {
                 var json = await File.ReadAllTextAsync(reportPath, ct);
-                report = JsonSerializer.Deserialize<AzureReport>(
-                    json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                report = ReportFileCache.TryDeserializeReport(json, logger);
             }
         }
 
@@ -132,17 +135,25 @@ internal static partial class PortfolioEndpoints
     }
 
     private static async Task<List<AppMeta>> LoadMetadataAsync(
-        IWebHostEnvironment env, CancellationToken ct)
+        IWebHostEnvironment env, ILogger logger, CancellationToken ct)
     {
-        var path = Path.Combine(DiagEndpoints.GetDataDir(env), "apps.json");
+        var path = Path.Combine(ReportFileCache.GetDataDir(env), "apps.json");
         if (!File.Exists(path))
             return new List<AppMeta>();
 
-        var json = await File.ReadAllTextAsync(path, ct);
-        var wrapper = JsonSerializer.Deserialize<AppsFile>(
-            json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-        return wrapper?.Apps ?? new List<AppMeta>();
+        try
+        {
+            var json = await File.ReadAllTextAsync(path, ct);
+            var wrapper = JsonSerializer.Deserialize<AppsFile>(json, FileReadJsonOptions);
+            return wrapper?.Apps ?? new List<AppMeta>();
+        }
+        catch (JsonException ex)
+        {
+            // A malformed catalog file must degrade to "no metadata", never take down the
+            // home page — the class contract says the catalog stays visible during outages.
+            logger.LogWarning(ex, "apps.json is malformed — serving portfolio without catalog metadata");
+            return new List<AppMeta>();
+        }
     }
 
     private static PortfolioApp ToPortfolioApp(
@@ -154,7 +165,7 @@ internal static partial class PortfolioEndpoints
         long version = 0;
         var hasScreenshot = host is not null && screenshotVersions.TryGetValue(host, out version);
         var status = service is null ? "not-monitored" :
-            string.Equals(service.HttpStatus, "active", StringComparison.OrdinalIgnoreCase) ? "healthy" : "unavailable";
+            ServiceHealth.IsHealthy(service.HttpStatus) ? "healthy" : "unavailable";
 
         return new PortfolioApp
         {

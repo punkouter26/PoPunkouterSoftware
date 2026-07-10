@@ -21,50 +21,71 @@ public partial class AzureDashboard
     private bool _advancedLoading;
     private string? _advancedError;
 
-    private List<ConsolidatedService> ConsolidatedServices => BuildConsolidatedServices(report);
+    // ── Memoized analysis model ────────────────────────────────────────────────
+    // These were previously expression-bodied properties that re-ran the full
+    // GroupBy/median/sort pipeline on EVERY property access — and the markup reads
+    // them several times per render, with a render per SignalR progress tick. On the
+    // single WASM thread that meant ~10 full model rebuilds per progress update.
+    // They are now computed exactly once per report load (RebuildDerivedState) and
+    // once per filter change (ApplyResourceFilter).
+    private List<ConsolidatedService> _consolidatedServices = new();
+    private List<PriorityQueueItem> _priorityQueue = new();
+    private List<ResourceExplorerItem> _resourceExplorerItems = new();
+    private List<ResourceExplorerItem> _filteredResourceExplorerItems = new();
+    private List<WebService> _sortedServices = new();
 
-    private IEnumerable<WebService> SortedServices =>
-        services.OrderBy(s => s.HttpStatus == "active" ? 0 : 1).ThenBy(s => s.FriendlyName ?? s.Name);
-
-    private List<PriorityQueueItem> PriorityQueue => BuildPriorityQueue(report, ConsolidatedServices, safeToRemove);
+    private List<ConsolidatedService> ConsolidatedServices => _consolidatedServices;
+    private IEnumerable<WebService> SortedServices => _sortedServices;
+    private List<PriorityQueueItem> PriorityQueue => _priorityQueue;
+    private List<ResourceExplorerItem> ResourceExplorerItems => _resourceExplorerItems;
+    private List<ResourceExplorerItem> FilteredResourceExplorerItems => _filteredResourceExplorerItems;
 
     private static readonly string[] ResourceViews = ["All", "Unhealthy", "Waste", "Security", "Drift"];
     private string _resourceView = "All";
-    private List<ResourceExplorerItem> ResourceExplorerItems => BuildResourceExplorerItems(report, ConsolidatedServices, safeToRemove);
-    private List<ResourceExplorerItem> FilteredResourceExplorerItems => ResourceExplorerItems
-        .Where(item => _resourceView switch
-        {
-            "Unhealthy" => item.Risk.Contains("Unhealthy", StringComparison.OrdinalIgnoreCase),
-            "Waste" => item.Risk.Contains("Waste", StringComparison.OrdinalIgnoreCase),
-            "Security" => item.Risk.Contains("Security", StringComparison.OrdinalIgnoreCase),
-            "Drift" => item.Risk.Contains("Drift", StringComparison.OrdinalIgnoreCase),
-            _ => true,
-        })
-        .ToList();
 
-    private static string ReliabilityClass(int score) =>
-        score < 70 ? "app-tone-danger" : score < 85 ? "app-tone-warning" : "app-tone-success";
+    private void RebuildDerivedState()
+    {
+        _consolidatedServices = BuildConsolidatedServices(report);
+        _priorityQueue = BuildPriorityQueue(report, _consolidatedServices, safeToRemove);
+        _resourceExplorerItems = BuildResourceExplorerItems(report, _consolidatedServices, safeToRemove);
+        _sortedServices = services
+            .OrderBy(s => s.HttpStatus == "active" ? 0 : 1)
+            .ThenBy(s => s.FriendlyName ?? s.Name)
+            .ToList();
+        ApplyResourceFilter();
+    }
 
-    private static string ResponseTimeClass(int responseTime) =>
-        responseTime < 1000 ? "app-tone-success" : responseTime < 3000 ? "app-tone-warning" : "app-tone-danger";
+    private void SetResourceView(string view)
+    {
+        _resourceView = view;
+        ApplyResourceFilter();
+    }
+
+    private void ApplyResourceFilter() =>
+        _filteredResourceExplorerItems = _resourceExplorerItems
+            .Where(item => _resourceView switch
+            {
+                "Unhealthy" => item.Risk.Contains("Unhealthy", StringComparison.OrdinalIgnoreCase),
+                "Waste" => item.Risk.Contains("Waste", StringComparison.OrdinalIgnoreCase),
+                "Security" => item.Risk.Contains("Security", StringComparison.OrdinalIgnoreCase),
+                "Drift" => item.Risk.Contains("Drift", StringComparison.OrdinalIgnoreCase),
+                _ => true,
+            })
+            .ToList();
 
     private bool _refreshing;
     private int _progressPercent;
     private string _progressStep = "";
     private bool _refreshFailed;
     private string? _refreshFailureMessage;
+    private bool _userCancelled;
     private CancellationTokenSource? _refreshCts;
     private const int RefreshTimeoutSeconds = 120;
-    private static string FormatAge(TimeSpan age)
-    {
-        if (age.TotalMinutes < 1)
-            return "just now";
-        if (age.TotalMinutes < 60)
-            return $"{(int)age.TotalMinutes}m ago";
-        if (age.TotalHours < 24)
-            return $"{(int)age.TotalHours}h {age.Minutes}m ago";
-        return $"{(int)age.TotalDays}d {age.Hours}h ago";
-    }
+
+    // Whether the server allows management actions (POST /refresh etc.). In Production the
+    // ManagementActionFilter rejects them with 403 unless explicitly enabled — showing an
+    // active Refresh button that can only ever fail is a lie, so it is hidden instead.
+    private bool _managementActionsEnabled = true;
 
     private async Task DownloadReportAsync()
     {
@@ -84,8 +105,20 @@ public partial class AzureDashboard
 
     private async Task CopyText(string text)
     {
-        await JS.InvokeVoidAsync("copyToClipboard", text);
-        NotificationService.Notify(NotificationSeverity.Success, "Copied", "Azure CLI command copied to the clipboard.");
+        bool copied;
+        try
+        {
+            copied = await JS.InvokeAsync<bool>("copyToClipboard", text);
+        }
+        catch (JSException)
+        {
+            copied = false;
+        }
+
+        if (copied)
+            NotificationService.Notify(NotificationSeverity.Success, "Copied", "Azure CLI command copied to the clipboard.");
+        else
+            NotificationService.Notify(NotificationSeverity.Error, "Copy failed", "The clipboard is unavailable — copy the command manually.");
     }
 
     // ── SignalR hub connection ─────────────────────────────────────────────────
@@ -93,7 +126,22 @@ public partial class AzureDashboard
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadConfigAsync();
         await LoadSummaryAsync();
+    }
+
+    private async Task LoadConfigAsync()
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var cfg = await Http.GetFromJsonAsync("/api/config", AppJsonContext.Default.ConfigResponse, cts.Token);
+            _managementActionsEnabled = cfg?.ManagementActionsEnabled ?? false;
+        }
+        catch
+        {
+            // Non-fatal: keep the button visible; a rejected POST is still handled gracefully.
+        }
     }
 
     private async Task LoadSummaryAsync()
@@ -138,6 +186,7 @@ public partial class AzureDashboard
 
             services = report.WebServices?.Services ?? new List<WebService>();
             safeToRemove = BuildSafeToRemove(report);
+            RebuildDerivedState();
             await LoadHistoryAsync();
         }
         catch (Exception ex)
@@ -145,6 +194,7 @@ public partial class AzureDashboard
             report = null;
             services = new List<WebService>();
             safeToRemove = new List<SafeToRemoveItem>();
+            RebuildDerivedState();
             _advancedError = ex.Message;
             Console.Error.WriteLine($"Azure dashboard load error: {ex}");
         }
@@ -160,6 +210,7 @@ public partial class AzureDashboard
         _refreshing = true;
         _refreshFailed = false;
         _refreshFailureMessage = null;
+        _userCancelled = false;
         _progressPercent = 0;
         _progressStep = "Starting…";
         // Keep the previous report in view during the scan — do not null it here.
@@ -180,6 +231,19 @@ public partial class AzureDashboard
                 return;
             }
 
+            if (!resp.IsSuccessStatusCode)
+            {
+                // 403 (management actions disabled), 401 (bad key), 5xx — previously only 409
+                // was handled, so these fell into the polling loop and were misreported as a
+                // 120-second "timeout" every single time.
+                var detail = await ReadProblemDetailAsync(resp);
+                NotificationService.Notify(NotificationSeverity.Error, "Refresh rejected",
+                    detail ?? $"The server rejected the refresh request ({(int)resp.StatusCode}).");
+                _refreshing = false;
+                StateHasChanged();
+                return;
+            }
+
             if (_hub?.State == HubConnectionState.Connected)
                 await WaitForRefreshCompletionAsync(_refreshCts!.Token);
             else
@@ -193,9 +257,18 @@ public partial class AzureDashboard
             else if (!_refreshCts.Token.IsCancellationRequested)
                 NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure report refreshed successfully.");
         }
+        catch (OperationCanceledException) when (_userCancelled)
+        {
+            // The user clicked Cancel — the cancellation toast was already shown; a second,
+            // contradictory "Timeout" toast here would tell them it timed out instead.
+        }
         catch (OperationCanceledException)
         {
-            NotificationService.Notify(NotificationSeverity.Warning, "Timeout", "Refresh took too long (120s limit). Partial results may be available.");
+            // Client-side timeout. The server scan would otherwise keep running (and keep the
+            // refresh lock) for up to 10 minutes — tell it to stop instead of walking away.
+            try { await Http.PostAsync("/api/diag/cancel-refresh", null); } catch { }
+            NotificationService.Notify(NotificationSeverity.Warning, "Timeout",
+                "Refresh took too long (120s limit); the server scan was cancelled.");
         }
         catch (Exception ex)
         {
@@ -210,10 +283,25 @@ public partial class AzureDashboard
         }
     }
 
+    private static async Task<string?> ReadProblemDetailAsync(HttpResponseMessage resp)
+    {
+        try
+        {
+            var problem = JsonSerializer.Deserialize(
+                await resp.Content.ReadAsStringAsync(), AppJsonContext.Default.ProblemResponse);
+            return string.IsNullOrWhiteSpace(problem?.Detail) ? null : problem.Detail;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private async Task CancelRefreshAsync()
     {
         if (_refreshCts is not null)
         {
+            _userCancelled = true;
             _refreshCts.Cancel();
             NotificationService.Notify(NotificationSeverity.Warning, "Cancelled", "Refresh operation cancelled.");
         }
@@ -302,6 +390,9 @@ public partial class AzureDashboard
 
     public async ValueTask DisposeAsync()
     {
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+        _refreshCts = null;
         if (_hub is not null)
             await _hub.DisposeAsync();
     }

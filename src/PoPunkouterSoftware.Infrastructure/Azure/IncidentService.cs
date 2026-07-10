@@ -22,46 +22,54 @@ public sealed class IncidentService(
     private readonly IHttpClientFactory _httpFactory = httpFactory;
     private readonly ILogger<IncidentService> _logger = logger;
 
-    // Table Storage constants
-    private const string PartitionKey = "incidents";
+    // Cached after first successful init — this is a singleton, so re-walking the
+    // DefaultAzureCredential chain and calling CreateIfNotExists per refresh is pure waste.
+    private TableClient? _cachedClient;
+    private readonly SemaphoreSlim _clientLock = new(1, 1);
 
     /// <summary>
-    /// Compares <paramref name="current"/> report with the previous persisted report,
-    /// detects health transitions and writes incident rows to Table Storage.
+    /// Compares <paramref name="current"/> report with <paramref name="previous"/> (the report
+    /// that was "latest" before this refresh), detects health transitions and writes incident
+    /// rows to Table Storage. Falls back to loading history when no previous report is supplied.
     /// </summary>
-    public async Task DetectAndRecordAsync(AzureReport current, CancellationToken ct = default)
+    public async Task DetectAndRecordAsync(AzureReport current, AzureReport? previous = null, CancellationToken ct = default)
     {
-        // Load the previous report from history (second entry — index 1 after saving current)
-        var historyResult = await _repository.LoadHistoryAsync(2, ct);
-        if (!historyResult.IsSuccess || historyResult.Value is null || historyResult.Value.Count < 2)
+        if (previous is null)
         {
-            _logger.LogDebug("Incident detection skipped — not enough history yet");
-            return;
+            // Legacy path: the caller saved `current` first, so history[1] is the previous run.
+            var historyResult = await _repository.LoadHistoryAsync(2, ct);
+            if (!historyResult.IsSuccess || historyResult.Value is null || historyResult.Value.Count < 2)
+            {
+                _logger.LogDebug("Incident detection skipped — not enough history yet");
+                return;
+            }
+            previous = historyResult.Value[1];
         }
-
-        var previous = historyResult.Value[1]; // [0] is the newly saved current report
 
         var prevServices = previous.WebServices?.Services ?? new List<WebService>();
         var currServices = current.WebServices?.Services ?? new List<WebService>();
 
         var prevMap = prevServices.ToDictionary(s => s.Name, StringComparer.OrdinalIgnoreCase);
         var incidents = new List<IncidentEntry>();
+        // One timestamp per detection run: several services breaking at once is the normal
+        // case, and their rows are disambiguated by the service-name RowKey suffix below.
+        var occurredAt = DateTime.UtcNow;
 
         foreach (var svc in currServices)
         {
             if (!prevMap.TryGetValue(svc.Name, out var prev))
                 continue;
 
-            var wasHealthy = prev.HttpStatus == "active";
-            var isHealthy = svc.HttpStatus == "active";
-            var wasBroken = prev.HttpStatus is "broken" or "unreachable";
-            var isBroken = svc.HttpStatus is "broken" or "unreachable";
+            var wasHealthy = ServiceHealth.IsHealthy(prev.HttpStatus);
+            var isHealthy = ServiceHealth.IsHealthy(svc.HttpStatus);
+            var wasBroken = ServiceHealth.IsBroken(prev.HttpStatus);
+            var isBroken = ServiceHealth.IsBroken(svc.HttpStatus);
 
             string? type = null;
             if (wasHealthy && isBroken)
-                type = "new-incident";
+                type = IncidentTypes.NewIncident;
             if (wasBroken && isHealthy)
-                type = "recovery";
+                type = IncidentTypes.Recovery;
 
             if (type is null)
                 continue;
@@ -71,7 +79,7 @@ public sealed class IncidentService(
                 ServiceName = svc.Name,
                 FriendlyName = svc.FriendlyName ?? svc.Name,
                 Type = type,
-                OccurredAt = DateTime.UtcNow,
+                OccurredAt = occurredAt,
                 PreviousStatus = prev.HttpStatus,
                 CurrentStatus = svc.HttpStatus,
             };
@@ -85,18 +93,17 @@ public sealed class IncidentService(
 
         // Resolve TableClient supporting both connection string (local/dev) and
         // Managed Identity endpoint (production — no secret needed at runtime).
-        var tableClient = ResolveTableClient();
+        var tableClient = await GetTableClientAsync(ct);
         if (tableClient is null)
             return;
         try
         {
-            await EnsureTableExistsAsync(tableClient, ct);
-
             foreach (var inc in incidents)
             {
-                // RowKey uses inverse ticks for newest-first ordering
-                var rowKey = (DateTime.MaxValue.Ticks - inc.OccurredAt.Ticks).ToString("D19");
-                var entity = new TableEntity(PartitionKey, rowKey)
+                // Inverse-ticks prefix gives newest-first ordering; the service-name suffix
+                // keeps same-tick incidents from overwriting each other under Upsert Replace.
+                var rowKey = new ReverseChronoRowKey(inc.OccurredAt).WithSuffix(SanitizeKey(inc.ServiceName));
+                var entity = new TableEntity(TablePartitions.Incidents, rowKey)
                 {
                     ["ServiceName"] = inc.ServiceName,
                     ["FriendlyName"] = inc.FriendlyName,
@@ -122,17 +129,16 @@ public sealed class IncidentService(
     /// <summary>Loads the most recent incidents from Table Storage.</summary>
     public async Task<List<IncidentEntry>> LoadRecentAsync(int limit = 50, CancellationToken ct = default)
     {
-        var tableClient = ResolveTableClient();
+        var tableClient = await GetTableClientAsync(ct);
         if (tableClient is null)
             return new List<IncidentEntry>();
 
         try
         {
-            await EnsureTableExistsAsync(tableClient, ct);
             var entries = new List<IncidentEntry>();
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>(
-                filter: $"PartitionKey eq '{PartitionKey}'",
+                filter: $"PartitionKey eq '{TablePartitions.Incidents}'",
                 maxPerPage: limit,
                 cancellationToken: ct))
             {
@@ -153,7 +159,7 @@ public sealed class IncidentService(
         }
         catch (RequestFailedException ex) when (IsTableMissing(ex))
         {
-            await EnsureTableExistsAsync(tableClient, ct);
+            await tableClient.CreateIfNotExistsAsync(ct);
             return new List<IncidentEntry>();
         }
         catch (Exception ex)
@@ -174,6 +180,36 @@ public sealed class IncidentService(
     /// </list>
     /// Returns <see langword="null"/> and logs a warning when neither is set.
     /// </summary>
+    private async Task<TableClient?> GetTableClientAsync(CancellationToken ct)
+    {
+        if (_cachedClient is not null)
+            return _cachedClient;
+
+        await _clientLock.WaitAsync(ct);
+        try
+        {
+            if (_cachedClient is not null)
+                return _cachedClient;
+
+            var client = ResolveTableClient();
+            if (client is null)
+                return null;
+
+            await client.CreateIfNotExistsAsync(ct);
+            _cachedClient = client;
+            return _cachedClient;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Incident table unavailable — incidents will not be persisted this run");
+            return null;
+        }
+        finally
+        {
+            _clientLock.Release();
+        }
+    }
+
     private TableClient? ResolveTableClient()
     {
         var connStr = _config["AzureTableStorage:ConnectionString"];
@@ -187,6 +223,20 @@ public sealed class IncidentService(
         _logger.LogWarning(
             "AzureTableStorage is not configured (neither ConnectionString nor Endpoint) — incidents will not be persisted");
         return null;
+    }
+
+    /// <summary>Strips characters Table Storage forbids in keys ('/', '\', '#', '?', control chars).</summary>
+    private static string SanitizeKey(string value)
+    {
+        Span<char> buffer = stackalloc char[value.Length];
+        var length = 0;
+        foreach (var c in value)
+        {
+            if (c is '/' or '\\' or '#' or '?' || char.IsControl(c))
+                continue;
+            buffer[length++] = c;
+        }
+        return length == value.Length ? value : new string(buffer[..length]);
     }
 
     private async Task PostWebhookAsync(string webhookUrl, List<IncidentEntry> incidents, CancellationToken ct)
@@ -204,11 +254,6 @@ public sealed class IncidentService(
         {
             _logger.LogWarning(ex, "Incident webhook POST failed");
         }
-    }
-
-    private async Task EnsureTableExistsAsync(TableClient tableClient, CancellationToken ct)
-    {
-        await tableClient.CreateIfNotExistsAsync(ct);
     }
 
     private static bool IsTableMissing(RequestFailedException ex) =>

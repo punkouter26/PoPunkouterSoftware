@@ -1,6 +1,6 @@
 using Microsoft.Playwright;
 
-namespace PoPunkouterSoftware.E2EUI;
+namespace PoPunkouterSoftware.Tests.E2E;
 
 /// <summary>
 /// E2EUI — C# Playwright tests driving a real browser against the running app.

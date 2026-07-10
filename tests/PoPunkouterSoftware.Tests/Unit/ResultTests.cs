@@ -1,6 +1,6 @@
 using PoPunkouterSoftware.Shared.Azure;
 
-namespace PoPunkouterSoftware.UnitTests;
+namespace PoPunkouterSoftware.Tests.Unit;
 
 // SOLID: Single Responsibility — each test class focuses on one behaviour of Result<T>.
 // Target: shared result carrier logic — no I/O, no external dependencies.

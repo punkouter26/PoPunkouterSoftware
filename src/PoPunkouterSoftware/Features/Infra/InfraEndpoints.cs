@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Hybrid;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Shared.Azure;
 using System.Diagnostics;
@@ -65,7 +65,7 @@ internal static class InfraEndpoints
 
         group.MapGet("/cicd-review", async (
             IHttpClientFactory httpClientFactory,
-            IMemoryCache cache,
+            HybridCache cache,
             IConfiguration config,
             ILogger<Program> logger,
             CancellationToken ct) =>
@@ -89,74 +89,19 @@ internal static class InfraEndpoints
                 });
             }
 
-            // ── Cache hit ─────────────────────────────────────────────────────
-            if (cache.TryGetValue(CacheKey, out List<InfraReview>? cached))
-                return Results.Ok(new { disabled = false, reviews = cached });
-
-            // ── Build authenticated GitHub API client ─────────────────────────
-            var http = httpClientFactory.CreateClient("github");
-            http.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", pat);
-
             try
             {
-                // ── 1. List all owned repos (paginated) ───────────────────────
-                var repos = await FetchAllReposAsync(http, ct);
-                logger.LogInformation("InfraEndpoints: scanning {Count} repos", repos.Count);
+                // HybridCache.GetOrCreateAsync adds stampede protection: concurrent misses
+                // share a single multi-minute GitHub scan instead of each starting one.
+                var cacheTtl = TimeSpan.FromHours(config.GetValue<int>("Infra:CiCdCacheHours", 6));
+                var reviews = await cache.GetOrCreateAsync(
+                    CacheKey,
+                    (httpClientFactory, pat, logger),
+                    static async (state, token) =>
+                        await ScanAllReposAsync(state.httpClientFactory, state.pat, state.logger, token),
+                    new HybridCacheEntryOptions { Expiration = cacheTtl, LocalCacheExpiration = cacheTtl },
+                    cancellationToken: ct);
 
-                // ── 2. Scan each repo ─────────────────────────────────────────
-                var reviews = new List<InfraReview>();
-                foreach (var repo in repos)
-                {
-                    var repoName = repo["name"]?.GetValue<string>() ?? "";
-                    var fullName = repo["full_name"]?.GetValue<string>() ?? "";
-                    var owner = fullName.Split('/')[0];
-                    var defaultBranch = repo["default_branch"]?.GetValue<string>() ?? "main";
-                    var isPrivate = repo["private"]?.GetValue<bool>() ?? false;
-                    var repoUrl = repo["html_url"]?.GetValue<string>();
-
-                    try
-                    {
-                        var review = await ScanRepoAsync(
-                            http, owner, repoName, defaultBranch, isPrivate, repoUrl, logger, ct);
-
-                        var (wfStatus, wfConclusion, wfCompleted, wfUrl, wfName) =
-                            await FetchLatestWorkflowRunAsync(http, fullName, defaultBranch, ct);
-
-                        review = review with
-                        {
-                            LatestWorkflowRunStatus = wfStatus,
-                            LatestWorkflowRunConclusion = wfConclusion,
-                            LatestWorkflowRunCompletedAt = wfCompleted,
-                            LatestWorkflowRunUrl = wfUrl,
-                            LatestWorkflowRunName = wfName,
-                        };
-
-                        reviews.Add(review);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to scan repo {Repo}", repoName);
-                        reviews.Add(new InfraReview
-                        {
-                            RepoName = repoName,
-                            DefaultBranch = defaultBranch,
-                            IsPrivate = isPrivate,
-                            RepoUrl = repoUrl,
-                            ScannedAt = DateTime.UtcNow,
-                            Error = ex.Message,
-                        });
-                    }
-                }
-
-                // Sort: repos with CI/CD first, then alphabetical
-                reviews = reviews
-                    .OrderBy(r => r.CiCdFiles.Count == 0 ? 1 : 0)
-                    .ThenBy(r => r.RepoName)
-                    .ToList();
-
-                var cacheTtlHours = config.GetValue<int>("Infra:CiCdCacheHours", 6);
-                cache.Set(CacheKey, reviews, TimeSpan.FromHours(cacheTtlHours));
                 return Results.Ok(new { disabled = false, reviews });
             }
             catch (Exception ex)
@@ -168,15 +113,83 @@ internal static class InfraEndpoints
         .WithName("GetCiCdReview");
 
         // ── Force-refresh (clears cache and re-scans) ─────────────────────────
-        group.MapPost("/cicd-review/refresh", (IMemoryCache cache) =>
+        group.MapPost("/cicd-review/refresh", async (HybridCache cache, CancellationToken ct) =>
         {
-            cache.Remove(CacheKey);
+            await cache.RemoveAsync(CacheKey, ct);
             return Results.Ok(new { cleared = true });
         })
         .RequireManagementActions()
         .WithName("RefreshCiCdReview");
 
         return app;
+    }
+
+    /// <summary>
+    /// Full scan: builds the authenticated client, lists every owned repo, and scans each
+    /// for CI/CD + infra files. Extracted so the cache factory owns the whole pipeline.
+    /// </summary>
+    private static async Task<List<InfraReview>> ScanAllReposAsync(
+        IHttpClientFactory httpClientFactory, string pat, ILogger logger, CancellationToken ct)
+    {
+        // ── Build authenticated GitHub API client ─────────────────────────
+        var http = httpClientFactory.CreateClient("github");
+        http.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", pat);
+
+        // ── 1. List all owned repos (paginated) ───────────────────────────
+        var repos = await FetchAllReposAsync(http, ct);
+        logger.LogInformation("InfraEndpoints: scanning {Count} repos", repos.Count);
+
+        // ── 2. Scan each repo ─────────────────────────────────────────────
+        var reviews = new List<InfraReview>();
+        foreach (var repo in repos)
+        {
+            var repoName = repo["name"]?.GetValue<string>() ?? "";
+            var fullName = repo["full_name"]?.GetValue<string>() ?? "";
+            var owner = fullName.Split('/')[0];
+            var defaultBranch = repo["default_branch"]?.GetValue<string>() ?? "main";
+            var isPrivate = repo["private"]?.GetValue<bool>() ?? false;
+            var repoUrl = repo["html_url"]?.GetValue<string>();
+
+            try
+            {
+                var review = await ScanRepoAsync(
+                    http, owner, repoName, defaultBranch, isPrivate, repoUrl, logger, ct);
+
+                var (wfStatus, wfConclusion, wfCompleted, wfUrl, wfName) =
+                    await FetchLatestWorkflowRunAsync(http, fullName, defaultBranch, ct);
+
+                review = review with
+                {
+                    LatestWorkflowRunStatus = wfStatus,
+                    LatestWorkflowRunConclusion = wfConclusion,
+                    LatestWorkflowRunCompletedAt = wfCompleted,
+                    LatestWorkflowRunUrl = wfUrl,
+                    LatestWorkflowRunName = wfName,
+                };
+
+                reviews.Add(review);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to scan repo {Repo}", repoName);
+                reviews.Add(new InfraReview
+                {
+                    RepoName = repoName,
+                    DefaultBranch = defaultBranch,
+                    IsPrivate = isPrivate,
+                    RepoUrl = repoUrl,
+                    ScannedAt = DateTime.UtcNow,
+                    Error = ex.Message,
+                });
+            }
+        }
+
+        // Sort: repos with CI/CD first, then alphabetical
+        return reviews
+            .OrderBy(r => r.CiCdFiles.Count == 0 ? 1 : 0)
+            .ThenBy(r => r.RepoName)
+            .ToList();
     }
 
     // ── GitHub API helpers ────────────────────────────────────────────────────

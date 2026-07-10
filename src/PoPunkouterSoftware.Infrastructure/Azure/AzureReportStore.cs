@@ -17,9 +17,6 @@ namespace PoPunkouterSoftware.Infrastructure.Azure;
 public class AzureReportStore
 {
     private const string DefaultTableName = "PoPunkouterSoftwareReport";
-    private const string PartitionKey = "report";
-    private const string RowKey = "latest";
-    private const string HistoryPartitionKey = "history";
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -34,6 +31,18 @@ public class AzureReportStore
     private TableClient? _cachedClient;
     private readonly SemaphoreSlim _clientLock = new(1, 1);
 
+    // When client creation fails (storage outage), short-circuit for a cooldown window instead
+    // of serializing every request behind the semaphore while each pays a full connect timeout.
+    private DateTimeOffset _lastClientFailureAt = DateTimeOffset.MinValue;
+    private static readonly TimeSpan ClientRetryCooldown = TimeSpan.FromSeconds(30);
+
+    // The report changes at most once per scan; every hot GET (portfolio home page, diag
+    // report/summary) used to re-download + gunzip + deserialize the full multi-MB graph.
+    // A short-TTL cache of the deserialized report removes ~all of that per-request cost.
+    private sealed record CachedReport(AzureReport? Report, DateTimeOffset At);
+    private volatile CachedReport? _reportCache;
+    private static readonly TimeSpan ReportCacheTtl = TimeSpan.FromSeconds(60);
+
     public AzureReportStore(ILogger<AzureReportStore> logger, IConfiguration config)
     {
         _logger = logger;
@@ -42,21 +51,26 @@ public class AzureReportStore
 
     public async Task<Result<AzureReport?>> LoadAsync(CancellationToken ct = default)
     {
+        var cached = _reportCache;
+        if (cached is not null && DateTimeOffset.UtcNow - cached.At < ReportCacheTtl)
+            return Result<AzureReport?>.Success(cached.Report);
+
         var tableClient = await GetTableClientAsync(ct);
         if (tableClient is null)
             return Result<AzureReport?>.Failure("Table client not available - check Azure Table Storage configuration.");
 
         try
         {
-            var response = await tableClient.GetEntityIfExistsAsync<TableEntity>(PartitionKey, RowKey, cancellationToken: ct);
+            var response = await tableClient.GetEntityIfExistsAsync<TableEntity>(
+                TablePartitions.Report, TableRowKeys.Latest, cancellationToken: ct);
             if (!response.HasValue)
+            {
+                _reportCache = new CachedReport(null, DateTimeOffset.UtcNow);
                 return Result<AzureReport?>.Success(null);
+            }
 
-            var json = DecompressEntity(response.Value!);
-            if (string.IsNullOrWhiteSpace(json))
-                return Result<AzureReport?>.Success(null);
-
-            var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
+            var report = DeserializeReportEntity(response.Value!);
+            _reportCache = new CachedReport(report, DateTimeOffset.UtcNow);
             return Result<AzureReport?>.Success(report);
         }
         catch (RequestFailedException ex) when (IsTableMissing(ex))
@@ -85,23 +99,50 @@ public class AzureReportStore
             var json = JsonSerializer.Serialize(report, _jsonOptions);
             var compressed = CompressJson(json);
 
-            var entity = new TableEntity(PartitionKey, RowKey)
+            // Table Storage caps a single property at 64 KiB. Binary storage (rather than the
+            // previous base64 string) buys 33% headroom, but a grown subscription can still
+            // exceed it — surface that loudly instead of silently freezing the dashboard on
+            // the last good report.
+            if (compressed.Length > 60_000)
+                _logger.LogWarning(
+                    "Compressed AzureReport is {Bytes} bytes — approaching the 64 KiB Table Storage property limit; consider moving report persistence to Blob storage",
+                    compressed.Length);
+
+            var savedAt = DateTimeOffset.UtcNow;
+            var entity = new TableEntity(TablePartitions.Report, TableRowKeys.Latest)
             {
-                ["ReportJsonGz"] = compressed,
-                ["SavedAt"] = DateTimeOffset.UtcNow,
+                ["ReportGz"] = compressed,
+                ["SavedAt"] = savedAt,
             };
 
             await tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace, ct);
 
             // Also save a timestamped history entry (inverse ticks = newest first in queries)
-            var histRowKey = (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks).ToString("D20");
-            var historyEntity = new TableEntity(HistoryPartitionKey, histRowKey)
+            var histRowKey = new ReverseChronoRowKey(savedAt).ToString();
+            var historyEntity = new TableEntity(TablePartitions.History, histRowKey)
             {
-                ["ReportJsonGz"] = compressed,
-                ["SavedAt"] = DateTimeOffset.UtcNow,
+                ["ReportGz"] = compressed,
+                ["SavedAt"] = savedAt,
             };
             await tableClient.UpsertEntityAsync(historyEntity, TableUpdateMode.Replace, ct);
 
+            // Precomputed chart summary: tiny row the history endpoints can read without
+            // decompressing full report blobs (non-fatal if it fails; readers fall back).
+            try
+            {
+                var summaryEntity = new TableEntity(TablePartitions.HistorySummary, histRowKey)
+                {
+                    ["SummaryJson"] = JsonSerializer.Serialize(HistorySummaryMapper.FromReport(report), _jsonOptions),
+                    ["SavedAt"] = savedAt,
+                };
+                await tableClient.UpsertEntityAsync(summaryEntity, TableUpdateMode.Replace, ct);
+            }
+            catch (Exception sumEx)
+            {
+                _logger.LogWarning(sumEx, "Failed to save history summary row (non-fatal)");
+            }
+
+            _reportCache = new CachedReport(report, DateTimeOffset.UtcNow);
             _logger.LogInformation("AzureReport saved to Table Storage (including history)");
             return Result<bool>.Success(true);
         }
@@ -122,14 +163,11 @@ public class AzureReportStore
         try
         {
             await foreach (var entity in tableClient.QueryAsync<TableEntity>(
-                filter: $"PartitionKey eq '{HistoryPartitionKey}'",
+                filter: $"PartitionKey eq '{TablePartitions.History}'",
                 maxPerPage: maxEntries,
                 cancellationToken: ct))
             {
-                var json = DecompressEntity(entity);
-                if (string.IsNullOrWhiteSpace(json))
-                    continue;
-                var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
+                var report = DeserializeReportEntity(entity);
                 if (report is not null)
                     results.Add(report);
                 if (results.Count >= maxEntries)
@@ -149,6 +187,64 @@ public class AzureReportStore
         }
     }
 
+    /// <summary>
+    /// Loads precomputed per-scan summaries (newest first). Falls back to projecting full
+    /// history blobs for scans persisted before summary rows existed.
+    /// </summary>
+    public async Task<Result<List<HistorySummary>>> LoadHistorySummariesAsync(int maxEntries = 90, CancellationToken ct = default)
+    {
+        var tableClient = await GetTableClientAsync(ct);
+        if (tableClient is null)
+            return Result<List<HistorySummary>>.Failure("Table client not available - check Azure Table Storage configuration.");
+
+        var results = new List<HistorySummary>();
+        try
+        {
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>(
+                filter: $"PartitionKey eq '{TablePartitions.HistorySummary}'",
+                maxPerPage: maxEntries,
+                cancellationToken: ct))
+            {
+                var json = entity.GetString("SummaryJson");
+                if (string.IsNullOrWhiteSpace(json))
+                    continue;
+                try
+                {
+                    var summary = JsonSerializer.Deserialize<HistorySummary>(json, _jsonOptions);
+                    if (summary is not null)
+                        results.Add(summary);
+                }
+                catch (JsonException jex)
+                {
+                    _logger.LogWarning(jex, "Skipping corrupt history summary row {RowKey}", entity.RowKey);
+                }
+                if (results.Count >= maxEntries)
+                    break;
+            }
+
+            if (results.Count > 0)
+                return Result<List<HistorySummary>>.Success(results);
+
+            // Legacy data path: no summary rows yet — project the full blobs once.
+            var historyResult = await LoadHistoryAsync(maxEntries, ct);
+            if (!historyResult.IsSuccess)
+                return Result<List<HistorySummary>>.Failure(historyResult.Error ?? "Failed to load history", historyResult.Exception);
+
+            return Result<List<HistorySummary>>.Success(
+                (historyResult.Value ?? new()).Select(HistorySummaryMapper.FromReport).ToList());
+        }
+        catch (RequestFailedException ex) when (IsTableMissing(ex))
+        {
+            await RecoverMissingTableAsync(ct);
+            return Result<List<HistorySummary>>.Success(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not load history summaries from Table Storage");
+            return Result<List<HistorySummary>>.Failure("Failed to load history summaries from Table Storage", ex);
+        }
+    }
+
     public async Task<Result<AzureReport?>> LoadPreviousAsync(CancellationToken ct = default)
     {
         var tableClient = await GetTableClientAsync(ct);
@@ -159,15 +255,11 @@ public class AzureReportStore
         {
             // History RowKey uses inverse ticks so the first result is the most recent entry
             await foreach (var entity in tableClient.QueryAsync<TableEntity>(
-                filter: $"PartitionKey eq '{HistoryPartitionKey}'",
+                filter: $"PartitionKey eq '{TablePartitions.History}'",
                 maxPerPage: 1,
                 cancellationToken: ct))
             {
-                var json = DecompressEntity(entity);
-                if (string.IsNullOrWhiteSpace(json))
-                    return Result<AzureReport?>.Success(null);
-                var report = JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
-                return Result<AzureReport?>.Success(report);
+                return Result<AzureReport?>.Success(DeserializeReportEntity(entity));
             }
         }
         catch (RequestFailedException ex) when (IsTableMissing(ex))
@@ -183,28 +275,51 @@ public class AzureReportStore
         return Result<AzureReport?>.Success(null);
     }
 
-    private static string CompressJson(string json)
+    private static byte[] CompressJson(string json)
     {
         var bytes = Encoding.UTF8.GetBytes(json);
         using var output = new MemoryStream();
         using (var gz = new GZipStream(output, CompressionLevel.Optimal))
             gz.Write(bytes, 0, bytes.Length);
-        return Convert.ToBase64String(output.ToArray());
+        return output.ToArray();
     }
 
-    private static string? DecompressEntity(TableEntity entity)
+    /// <summary>
+    /// Deserializes a report entity, newest format first: raw gzip bytes ("ReportGz"),
+    /// then legacy base64-gzip string ("ReportJsonGz"), then legacy plain JSON ("ReportJson").
+    /// Streams the gzip payload straight into the serializer — no intermediate LOH string.
+    /// </summary>
+    private AzureReport? DeserializeReportEntity(TableEntity entity)
     {
-        // Try compressed format first, fall back to legacy plain JSON
-        var compressed = entity.GetString("ReportJsonGz");
-        if (!string.IsNullOrWhiteSpace(compressed))
+        try
         {
-            var bytes = Convert.FromBase64String(compressed);
-            using var input = new MemoryStream(bytes);
-            using var gz = new GZipStream(input, CompressionMode.Decompress);
-            using var reader = new StreamReader(gz, Encoding.UTF8);
-            return reader.ReadToEnd();
+            var raw = entity.GetBinary("ReportGz");
+            if (raw is { Length: > 0 })
+            {
+                using var input = new MemoryStream(raw);
+                using var gz = new GZipStream(input, CompressionMode.Decompress);
+                return JsonSerializer.Deserialize<AzureReport>(gz, _jsonOptions);
+            }
+
+            var compressed = entity.GetString("ReportJsonGz");
+            if (!string.IsNullOrWhiteSpace(compressed))
+            {
+                using var input = new MemoryStream(Convert.FromBase64String(compressed));
+                using var gz = new GZipStream(input, CompressionMode.Decompress);
+                return JsonSerializer.Deserialize<AzureReport>(gz, _jsonOptions);
+            }
+
+            var json = entity.GetString("ReportJson");
+            return string.IsNullOrWhiteSpace(json)
+                ? null
+                : JsonSerializer.Deserialize<AzureReport>(json, _jsonOptions);
         }
-        return entity.GetString("ReportJson");
+        catch (Exception ex) when (ex is JsonException or FormatException or InvalidDataException)
+        {
+            // A corrupt row must degrade to "no report", never a 500.
+            _logger.LogWarning(ex, "Skipping corrupt report entity {PartitionKey}/{RowKey}", entity.PartitionKey, entity.RowKey);
+            return null;
+        }
     }
 
     private async Task<TableClient?> GetTableClientAsync(CancellationToken ct)
@@ -212,17 +327,26 @@ public class AzureReportStore
         if (_cachedClient is not null)
             return _cachedClient;
 
+        // Storage is down or misconfigured: don't stampede — one caller retries per cooldown.
+        if (DateTimeOffset.UtcNow - _lastClientFailureAt < ClientRetryCooldown)
+            return null;
+
         await _clientLock.WaitAsync(ct);
         try
         {
             if (_cachedClient is not null)
                 return _cachedClient;
+            if (DateTimeOffset.UtcNow - _lastClientFailureAt < ClientRetryCooldown)
+                return null;
 
             _cachedClient = await CreateTableClientAsync(ct);
+            if (_cachedClient is null)
+                _lastClientFailureAt = DateTimeOffset.UtcNow;
             return _cachedClient;
         }
         catch (Exception ex)
         {
+            _lastClientFailureAt = DateTimeOffset.UtcNow;
             _logger.LogWarning("Table Storage unavailable — report will fall back to file. Reason: {Reason}", ex.Message);
             return null;
         }
@@ -269,6 +393,7 @@ public class AzureReportStore
         catch (Exception ex)
         {
             _cachedClient = null;
+            _lastClientFailureAt = DateTimeOffset.UtcNow;
             _logger.LogWarning(ex, "Could not recreate missing Azure report table");
         }
         finally

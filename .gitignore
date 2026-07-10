@@ -1,36 +1,3 @@
-node_modules/
-playwright-report/
-test-results/
-.playwright-mcp/
-TESTRESULTS/
-
-# VS Code — ignore user-specific settings only; track shared launch/task configs
-.vscode/settings.json
-.vscode/extensions.json
-.vscode/*.code-snippets
-
-# Publish output
-publish*/
-deploy*.zip
-
-# Azure deployment diagnostics
-appservice-logs/
-appservice-logs.zip
-
-# Log files
-logs/
-*.log
-
-# User secrets
-secrets.json
-
-# macOS
-.DS_Store
-
-# Rider/JetBrains
-.idea/
-*.sln.iml
-
 # .NET build artifacts
 bin/
 obj/
@@ -39,69 +6,69 @@ obj/
 *.suo
 *.DotSettings.user
 *.lscache
+*.pubxml.user
+*.rsuser
+*.userosscache
 
-# VS Code workspace-level overrides (shared configs tracked above)
-.vscode/launch.json.bak
+# Publish output
+publish*/
+deploy*.zip
+
+# Test artifacts
+test-results/
+TestResults/
+TESTRESULTS/
+playwright-report/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+tests/PoPunkouterSoftware.Tests.E2E/.playwright/
+tests/PoPunkouterSoftware.Tests.E2E/test-results/
+.playwright-mcp/
+
+# Logs
+logs/
+*.log
+appservice-logs/
+appservice-logs.zip
 
 # Environment / secrets
 .env
 .env.*
+secrets.json
+local.settings.json
 
-# Azure discovery artifacts (root-level only — wwwroot/data/ versions ARE tracked)
+# Azure CLI / azd local state
+.azure/
+.azd/
+
+# Azure discovery artifacts (root-level only — wwwroot/data/ versions ARE tracked:
+# azure-full-report.json there is the seed/fallback the diag endpoints and tests rely on)
 /azure-apps-report.json
 /azure-full-report.json
 /azure-spend-detail-report.json
 /azure-cost-audit-report.json
 AZURE-REPORT.md
-results.txt
 AZURE-ARCHITECTURE.mmd
 AZURE-DEPENDENCIES.mmd
 AZURE-RESOURCE-BREAKDOWN.mmd
 AZURE-SERVICE-HEALTH.mmd
 AZURE-EXPORTS-INDEX.md
-.potune-state.json
-*.log
-*.backup
-*.old
+results.txt
 discovery-log.txt
+.potune-state.json
 
-# Docker
-docker-compose.override.yml
+# Generated outputs from SCRIPTS/New-AzureEfficiencyReport.ps1 (source scripts stay tracked)
+SCRIPTS/azure-inventory-report.html
+SCRIPTS/cleanup_suggestions.ps1
 
-# Azure Functions local settings
-local.settings.json
-.azure/
-.azd/
-
-# Terraform local state
-.terraform/
-*.tfstate
-*.tfstate.*
-crash.log
-
-# Test coverage
-coverage/
-*.coverage
-*.coveragexml
-TestResults/
-*.trx
-
-# Rider / JetBrains
-*.sln.DotSettings
-
-# NuGet
-*.nupkg
-*.snupkg
-
-# Temporary files
-*.tmp
-*.temp
-~$*
-.cache/
+# Local tooling / report artifacts (generated, not source)
 artifacts/
+.porun/
+.cache/
 build_output.txt
 gh_output.txt
-poll_run.py
 
 # Root-level screenshot/image artifacts generated during dev/demos
 /*.png
@@ -110,49 +77,60 @@ poll_run.py
 /*.gif
 /*.webp
 
-# Publish profile user settings
-*.pubxml.user
-*.rsuser
-*.userosscache
+# VS Code — ignore user-specific settings only; track shared launch/task configs
+.vscode/settings.json
+.vscode/extensions.json
+.vscode/*.code-snippets
+.vscode/launch.json.bak
+*.code-workspace
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+*.sln.DotSettings
+
+# Docker
+docker-compose.override.yml
+
+# Terraform local state
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Node
+node_modules/
+package-lock.json.bak
 
 # Blazor / Wasm cache
 .blazor/
 
-# npm/yarn lock artifacts from CI tools
-package-lock.json.bak
+# Temporary files
+*.tmp
+*.temp
+*.backup
+*.old
+~$*
 
-# Playwright Chromium binaries (kept in node_modules, not tracked)
-tests/PoPunkouterSoftware.Tests.E2E/.playwright/
-
-# macOS extended attributes
+# OS metadata
+.DS_Store
 *.AppleDouble
 *.LSOverride
-# Windows thumbnail cache and shell metadata
 Thumbs.db
 ehthumbs.db
 ehthumbs_view.db
 Desktop.ini
-# Vim / Emacs swap / backup files
+
+# Editor swap / backup files
 *.swp
 *.swo
 *~
-# VS Code workspace file (per-user, contains absolute paths)
-*.code-workspace
+
 # .NET process / dump artifacts
 *.dmp
 *.stackdump
 core.*
-
-# Generated outputs from SCRIPTS/New-AzureEfficiencyReport.ps1 (source scripts stay tracked)
-SCRIPTS/azure-inventory-report.html
-SCRIPTS/azure-naming-standardization-plan.csv
-SCRIPTS/azure-naming-standardization-plan.md
-SCRIPTS/cleanup_suggestions.ps1
-
-# Local tooling / report artifacts (generated, not source)
-.porun/
-TESTRESULTS/
-tests/PoPunkouterSoftware.Tests.E2E/test-results/
-# Stray local debug screenshots & docker logs at repo root
-/*.png
-/*.log

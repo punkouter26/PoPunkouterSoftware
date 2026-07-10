@@ -6,11 +6,13 @@ using OpenTelemetry;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Instrumentation.Http;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using PoPunkouterSoftware;
-using PoPunkouterSoftware.Features.Azure;
+using PoPunkouterSoftware.Features.Config;
 using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Features.GitHub;
 using PoPunkouterSoftware.Features.Infra;
+using PoPunkouterSoftware.Features.Pinger;
 using PoPunkouterSoftware.Features.Portfolio;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
@@ -70,6 +72,10 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
+    // writeToProviders: true keeps the OpenTelemetry ILogger provider (registered by
+    // UseAzureMonitor below) in the pipeline. Without it, UseSerilog replaces the logger
+    // factory and application LOGS silently never reach Application Insights — only
+    // traces/metrics do — leaving production logs stranded on the App Service filesystem.
     builder.Host.UseSerilog((ctx, services, cfg) =>
     {
         try
@@ -97,7 +103,7 @@ try
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {CorrelationId} {UserId} {Environment} {Message:lj}{NewLine}{Exception}");
 
 
-    });
+    }, writeToProviders: true);
 
     // ─── .NET 10 TimeProvider abstraction — enables testable time ────────────
     builder.Services.AddSingleton(TimeProvider.System);
@@ -114,7 +120,11 @@ try
     var serviceName = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "PoPunkouterSoftware";
     var otelBuilder = builder.Services.AddOpenTelemetry()
         .ConfigureResource(r => r.AddService(serviceName))
-        .WithMetrics(m => m.AddMeter(PoPunkouterSoftware.Infrastructure.Telemetry.MeterName));
+        .WithMetrics(m => m.AddMeter(PoPunkouterSoftware.Infrastructure.Telemetry.MeterName))
+        // Custom spans (background refresh root + per-step children) — without this source
+        // registration every outbound ARM/GitHub dependency recorded during a refresh is an
+        // orphaned, unparented span in Azure Monitor.
+        .WithTracing(t => t.AddSource(PoPunkouterSoftware.Infrastructure.Telemetry.MeterName));
     if (!string.IsNullOrWhiteSpace(aiConnectionString))
     {
         // ─── Telemetry budgeting (zero-waste) ────────────────────────────────
@@ -204,8 +214,30 @@ try
     builder.Services.AddSingleton<IncidentService>();
     builder.Services.AddSingleton<RefreshSessionManager>();
 
-    // ─── In-process memory cache (GitHub activity + AI fix plans) ────────────
-    builder.Services.AddMemoryCache();
+    // ─── In-process memory cache (pinger snapshots) ──────────────────────────
+    // SizeLimit caps the entry count; every Set site passes Size = 1, so the limit
+    // is simply "max cached entries".
+    builder.Services.AddMemoryCache(o => o.SizeLimit = 2048);
+
+    // ─── HybridCache (GitHub activity + CI/CD review read-through) ───────────
+    // Replaces manual IMemoryCache cache-aside for the expensive GitHub/ARM lookups:
+    // GetOrCreateAsync provides stampede protection, so concurrent misses share one
+    // upstream fetch. The github-activity key is derived from an unauthenticated
+    // user-supplied query param — MaximumKeyLength bounds hostile key growth.
+    builder.Services.AddHybridCache(o =>
+    {
+        o.MaximumKeyLength = 256;
+    });
+
+    // ─── Response compression for dynamic JSON ────────────────────────────────
+    // The report/summary/history payloads are large, highly compressible JSON that
+    // Kestrel does not compress by default.
+    builder.Services.AddResponseCompression(o =>
+    {
+        o.EnableForHttps = true;
+        o.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes
+            .Concat(new[] { "application/json" });
+    });
 
     // ─── HTTP client for GitHub API ───────────────────────────────────
     // Resilience: GitHub is a transient-failure-prone dependency we *want* to succeed,
@@ -223,6 +255,21 @@ try
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ghPat);
         })
         .AddStandardResilienceHandler();
+
+    // ─── HTTP client for raw Azure management-plane REST calls ───────────────
+    // The ArmClient SDK path has built-in retries, but the direct
+    // https://management.azure.com REST calls previously used the unnamed default
+    // client with no pipeline at all — a transient 500/429/socket fault produced an
+    // immediate gap in the report. Standard resilience = retry + circuit breaker +
+    // per-attempt/total timeouts; callers keep their own tighter CancelAfter budgets.
+    builder.Services.AddHttpClient("azure-arm")
+        .ConfigureHttpClient(c => c.Timeout = Timeout.InfiniteTimeSpan)
+        .AddStandardResilienceHandler(o =>
+        {
+            o.AttemptTimeout.Timeout = TimeSpan.FromSeconds(30);
+            o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(90);
+            o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
+        });
 
     // ─── HTTP client for Azure OpenAI ─────────────────────────────────
     builder.Services.AddHttpClient("azure-openai")
@@ -266,8 +313,11 @@ try
             if (ex is OperationCanceledException && ctx.RequestAborted.IsCancellationRequested)
                 return LogEventLevel.Debug;
 
+            // GlobalExceptionHandler already logs the Error with the full exception; a second
+            // Error event here for the same request doubles log volume and muddies triage.
+            // Warning keeps failed requests visible in the request log without duplication.
             if (ex is not null || ctx.Response.StatusCode >= 500)
-                return LogEventLevel.Error;
+                return LogEventLevel.Warning;
             return LogEventLevel.Information;
         };
     });
@@ -287,6 +337,7 @@ try
         }
     });
 
+    app.UseResponseCompression();
     app.UseStaticFiles();
     app.UseAntiforgery();
 
@@ -306,43 +357,7 @@ try
         o.Theme = ScalarTheme.Default;
     });
 
-    // ─── Config — lets the client discover the canonical API base URL and env mode ─
-    // isMockMode=true tells the UI to display the "MOCK DATA" banner (rule 10).
-    // Activated when ASPNETCORE_ENVIRONMENT is "Testing" (integration / E2E test runs).
-    // This site has no authentication — there are deliberately no auth/login flags here.
-    app.MapGet("/api/config",
-        (HttpContext ctx, IWebHostEnvironment env, IConfiguration config) => Results.Ok(new
-        {
-            apiBase = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api",
-            isMockMode = env.IsEnvironment("Testing"),
-            isProduction = env.IsProduction(),
-            aiIntegrationEnabled = config.GetValue<bool>("FeatureFlags:EnableAiIntegration"),
-            azureOpenAIConfigured =
-                !string.IsNullOrWhiteSpace(config["AzureOpenAI:Endpoint"]) &&
-                !string.IsNullOrWhiteSpace(config["AzureOpenAI:ApiKey"]) &&
-                !string.IsNullOrWhiteSpace(config["AzureOpenAI:DeploymentName"]),
-            managementActionsEnabled = config.GetValue<bool>("FeatureFlags:EnableManagementActions", env.IsDevelopment() || env.IsEnvironment("Testing")),
-            modelCatalog = new
-            {
-                remote = new[]
-                {
-                    new { id = "azure-gpt-5.4-nano", label = "Azure OpenAI GPT-5.4 Nano" }
-                },
-                browser = new[]
-                {
-                    new { id = "browser-summarizer", label = "Browser Summarizer" },
-                    new { id = "browser-writer", label = "Browser Writer" }
-                },
-                ollama = new[]
-                {
-                    new { id = "ollama-llama3.1", label = "Ollama llama3.1" },
-                    new { id = "ollama-qwen2.5", label = "Ollama qwen2.5" }
-                }
-            }
-        }))
-        .WithName("GetConfig").WithTags("Config");
-
-    // ─── Feature slices ───────────────────────────────────────────────
+    // ─── Host-level plumbing (not part of any slice) ──────────────────
     app.MapGet("/favicon.ico", () => Results.Redirect("/images/favicon.ico", permanent: false))
         .ExcludeFromDescription();
     app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow:\n", "text/plain"))
@@ -350,6 +365,8 @@ try
     app.MapGet("/robots{suffix}.txt", (string suffix) => Results.NoContent())
         .ExcludeFromDescription();
 
+    // ─── Feature slices ───────────────────────────────────────────────
+    app.MapConfigEndpoints();
     app.MapHealthEndpoints();
     app.MapDiagEndpoints();
     app.MapGitHubEndpoints();

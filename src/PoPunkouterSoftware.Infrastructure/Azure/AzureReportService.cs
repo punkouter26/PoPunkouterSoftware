@@ -63,9 +63,14 @@ public class AzureReportService(
 
         async Task<T> RunTimedStepAsync<T>(string step, Func<Task<T>> action)
         {
+            // Child span per step: every outbound ARM/GitHub dependency call the step makes
+            // is parented under it, so "which step was slow / made these 400 calls" is
+            // answerable in Azure Monitor instead of only via the hand-rolled StepTimings.
+            using var activity = Telemetry.Source.StartActivity($"refresh.step {step}");
             var sw = Stopwatch.StartNew();
             var result = await action();
             sw.Stop();
+            activity?.SetTag("refresh.step.elapsed_ms", sw.ElapsedMilliseconds);
             stepTimings.Add(new StepTimingEntry { Step = step, ElapsedMs = sw.ElapsedMilliseconds });
             _logger.LogInformation("Step '{Step}' completed in {ElapsedMs}ms", step, sw.ElapsedMilliseconds);
             return result;
@@ -363,7 +368,7 @@ public class AzureReportService(
         if (sites.Count == 0)
             return services;
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("azure-arm");
         var planSkus = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         using var gate = new SemaphoreSlim(6);
@@ -384,7 +389,7 @@ public class AzureReportService(
                     return ((RawService?)null, (string?)null, (string?)null);
 
                 var json = await resp.Content.ReadAsStringAsync(cts.Token);
-                var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(json);
                 if (!doc.RootElement.TryGetProperty("properties", out var props))
                     return ((RawService?)null, (string?)null, (string?)null);
 
@@ -409,7 +414,7 @@ public class AzureReportService(
                         if (planResp.IsSuccessStatusCode)
                         {
                             var planJson = await planResp.Content.ReadAsStringAsync(cts.Token);
-                            var planDoc = JsonDocument.Parse(planJson);
+                            using var planDoc = JsonDocument.Parse(planJson);
                             if (planDoc.RootElement.TryGetProperty("sku", out var sku))
                                 planSku = sku.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
                         }
@@ -782,7 +787,7 @@ public class AzureReportService(
         if (storages.Count == 0)
             return results;
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("azure-arm");
 
         async Task<StorageItem?> CheckOneAsync(GenericResourceData sa)
         {
@@ -803,7 +808,7 @@ public class AzureReportService(
                 if (resp.IsSuccessStatusCode)
                 {
                     var json = await resp.Content.ReadAsStringAsync(cts.Token);
-                    var doc = JsonDocument.Parse(json);
+                    using var doc = JsonDocument.Parse(json);
                     if (doc.RootElement.TryGetProperty("properties", out var p))
                     {
                         if (p.TryGetProperty("allowBlobPublicAccess", out var pub))
@@ -862,7 +867,7 @@ public class AzureReportService(
         if (accounts.Count == 0)
             return [];
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("azure-arm");
 
         async Task<AiServiceInventoryItem> InspectAsync(GenericResourceData account)
         {
@@ -927,22 +932,22 @@ public class AzureReportService(
 
             var sku = account.Sku?.Name?.ToString();
             var kind = account.Kind;
-            var risk = "watch";
+            var risk = ResourceRiskLevel.Watch;
             var recommendation = "Track usage and keep budget alerts enabled.";
 
             if (string.Equals(sku, "S0", StringComparison.OrdinalIgnoreCase) && deployments.Count == 0)
             {
-                risk = "cleanup";
+                risk = ResourceRiskLevel.Cleanup;
                 recommendation = "S0 account has no deployments. Confirm it is unused, then delete or downgrade.";
             }
             else if (string.Equals(sku, "S0", StringComparison.OrdinalIgnoreCase))
             {
-                risk = "cost";
+                risk = ResourceRiskLevel.Cost;
                 recommendation = "Paid AI account. Review token/call volume and cap spend with Azure budgets.";
             }
             else if (string.Equals(sku, "F0", StringComparison.OrdinalIgnoreCase))
             {
-                risk = "ok";
+                risk = ResourceRiskLevel.Ok;
                 recommendation = "Free-tier account. Keep unless it duplicates another AI endpoint.";
             }
 
@@ -962,7 +967,10 @@ public class AzureReportService(
         }
 
         var results = await Task.WhenAll(accounts.Select(InspectAsync));
-        return results.OrderBy(x => x.RiskLevel).ThenBy(x => x.Name).ToList();
+        // Rank-based ordering: sorting the raw strings alphabetically happened to yield
+        // cleanup < cost < ok < watch — accidental semantics that broke the moment a new
+        // level was added. Rank() encodes "most actionable first" explicitly.
+        return results.OrderBy(x => ResourceRiskLevel.Rank(x.RiskLevel)).ThenBy(x => x.Name).ToList();
     }
 
     #endregion
@@ -980,7 +988,7 @@ public class AzureReportService(
         if (workspaces.Count == 0)
             return [];
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("azure-arm");
 
         async Task<LogAnalyticsWorkspaceItem> InspectAsync(GenericResourceData workspace)
         {
@@ -1020,21 +1028,21 @@ public class AzureReportService(
                 }
             }
 
-            var risk = "ok";
+            var risk = ResourceRiskLevel.Ok;
             var recommendation = "Retention and cap look reasonable.";
             if (dailyQuota is null or <= 0)
             {
-                risk = "cost";
+                risk = ResourceRiskLevel.Cost;
                 recommendation = "No daily ingestion cap is visible. Set a cap such as 0.5-1 GB/day for hobby apps.";
             }
             else if (retention is > 30)
             {
-                risk = "cost";
+                risk = ResourceRiskLevel.Cost;
                 recommendation = "Retention is above 30 days. Reduce to 7-14 days if long history is not needed.";
             }
             else if (retention is null)
             {
-                risk = "watch";
+                risk = ResourceRiskLevel.Watch;
                 recommendation = "Retention was not reported. Verify retention and daily cap in Azure.";
             }
 
@@ -1052,7 +1060,7 @@ public class AzureReportService(
         }
 
         var results = await Task.WhenAll(workspaces.Select(InspectAsync));
-        return results.OrderByDescending(x => x.RiskLevel == "cost").ThenBy(x => x.Name).ToList();
+        return results.OrderBy(x => ResourceRiskLevel.Rank(x.RiskLevel)).ThenBy(x => x.Name).ToList();
     }
 
     #endregion
@@ -1150,7 +1158,7 @@ public class AzureReportService(
                 return null;
 
             var json = await File.ReadAllTextAsync(path, ct);
-            var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(json);
             var existing = doc.RootElement.TryGetProperty("apps", out var appsEl)
                 ? appsEl.EnumerateArray()
                     .Select(a => a.TryGetProperty("id", out var id) ? id.GetString() : null)
@@ -1185,7 +1193,7 @@ public class AzureReportService(
         var orphans = new List<OrphanedResource>();
         if (armToken is null)
             return orphans;
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("azure-arm");
 
         // 1 — Unattached managed disks
         foreach (var disk in allResources.Where(r =>
@@ -1201,7 +1209,7 @@ public class AzureReportService(
                     continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
-                var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(json);
                 if (!doc.RootElement.TryGetProperty("properties", out var props))
                     continue;
                 if (!props.TryGetProperty("diskState", out var state) || state.GetString() != "Unattached")
@@ -1237,7 +1245,7 @@ public class AzureReportService(
                     continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
-                var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(json);
                 if (!doc.RootElement.TryGetProperty("properties", out var props))
                     continue;
 
@@ -1275,7 +1283,7 @@ public class AzureReportService(
                     continue;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
-                var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(json);
                 var siteCount = doc.RootElement.TryGetProperty("value", out var v) ? v.GetArrayLength() : 1;
                 if (siteCount > 0)
                     continue;
@@ -1330,7 +1338,7 @@ public class AzureReportService(
             if (json is null)
                 return null;
 
-            var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(json);
             var props = doc.RootElement.GetProperty("properties");
             var rows = props.GetProperty("rows").EnumerateArray().ToList();
             var cols = props.GetProperty("columns").EnumerateArray()
@@ -1386,6 +1394,8 @@ public class AzureReportService(
     {
         if (armToken is null)
             return null;
+        // Deliberately the unnamed client: this method owns its own retry loop (429 with
+        // Retry-After can require waits far beyond a generic pipeline's budget).
         var client = _httpClientFactory.CreateClient();
         const int maxRetries = 3;
         for (int attempt = 0; attempt < maxRetries; attempt++)
@@ -1393,28 +1403,52 @@ public class AzureReportService(
             using var req = new HttpRequestMessage(HttpMethod.Post, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
             req.Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
-            using var resp = await client.SendAsync(req, ct);
 
-            if (resp.IsSuccessStatusCode)
-                return await resp.Content.ReadAsStringAsync(ct);
-
-            if (resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxRetries - 1)
+            HttpResponseMessage resp;
+            try
             {
-                int delaySec = 30;
-                if (resp.Headers.RetryAfter?.Delta.HasValue == true)
-                    delaySec = (int)resp.Headers.RetryAfter.Delta!.Value.TotalSeconds;
-                else if (resp.Headers.RetryAfter?.Date.HasValue == true)
-                    delaySec = (int)(resp.Headers.RetryAfter.Date!.Value - DateTimeOffset.UtcNow).TotalSeconds;
-
-                delaySec = Math.Clamp(delaySec, 1, 65);
-                _logger.LogWarning("Cost Management returned TooManyRequests; retrying in {Delay}s (attempt {Attempt}/{Max})",
-                    delaySec, attempt + 1, maxRetries);
-                await Task.Delay(TimeSpan.FromSeconds(delaySec), ct);
+                resp = await client.SendAsync(req, ct);
+            }
+            catch (HttpRequestException ex) when (attempt < maxRetries - 1)
+            {
+                // Transient network fault (socket reset, DNS blip) — not just 429s are transient.
+                _logger.LogWarning(ex, "Cost Management request failed; retrying (attempt {Attempt}/{Max})",
+                    attempt + 1, maxRetries);
+                await Task.Delay(TimeSpan.FromSeconds(5 * (attempt + 1)), ct);
                 continue;
             }
 
-            _logger.LogWarning("Cost Management returned {Status}", resp.StatusCode);
-            return null;
+            using (resp)
+            {
+                if (resp.IsSuccessStatusCode)
+                    return await resp.Content.ReadAsStringAsync(ct);
+
+                if (resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxRetries - 1)
+                {
+                    int delaySec = 30;
+                    if (resp.Headers.RetryAfter?.Delta.HasValue == true)
+                        delaySec = (int)resp.Headers.RetryAfter.Delta!.Value.TotalSeconds;
+                    else if (resp.Headers.RetryAfter?.Date.HasValue == true)
+                        delaySec = (int)(resp.Headers.RetryAfter.Date!.Value - DateTimeOffset.UtcNow).TotalSeconds;
+
+                    delaySec = Math.Clamp(delaySec, 1, 65);
+                    _logger.LogWarning("Cost Management returned TooManyRequests; retrying in {Delay}s (attempt {Attempt}/{Max})",
+                        delaySec, attempt + 1, maxRetries);
+                    await Task.Delay(TimeSpan.FromSeconds(delaySec), ct);
+                    continue;
+                }
+
+                if ((int)resp.StatusCode >= 500 && attempt < maxRetries - 1)
+                {
+                    _logger.LogWarning("Cost Management returned {Status}; retrying (attempt {Attempt}/{Max})",
+                        resp.StatusCode, attempt + 1, maxRetries);
+                    await Task.Delay(TimeSpan.FromSeconds(5 * (attempt + 1)), ct);
+                    continue;
+                }
+
+                _logger.LogWarning("Cost Management returned {Status}", resp.StatusCode);
+                return null;
+            }
         }
         return null;
     }

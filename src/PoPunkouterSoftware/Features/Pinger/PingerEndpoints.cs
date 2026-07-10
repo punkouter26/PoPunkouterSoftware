@@ -1,7 +1,7 @@
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
 
-namespace PoPunkouterSoftware.Features.Azure;
+namespace PoPunkouterSoftware.Features.Pinger;
 
 /// <summary>
 /// Exposes pinger status and per-service toggle via /api/pinger/*.

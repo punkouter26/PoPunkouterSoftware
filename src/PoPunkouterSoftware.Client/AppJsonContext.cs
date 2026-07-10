@@ -11,7 +11,15 @@ namespace PoPunkouterSoftware.Client;
 /// </summary>
 internal sealed record ConfigResponse(
     [property: JsonPropertyName("apiBase")] string ApiBase,
-    [property: JsonPropertyName("isMockMode")] bool IsMockMode);
+    [property: JsonPropertyName("isMockMode")] bool IsMockMode,
+    [property: JsonPropertyName("managementActionsEnabled")] bool ManagementActionsEnabled);
+
+/// <summary>
+/// Minimal RFC 7807 ProblemDetails shape — enough to surface the server's `detail`
+/// message when a management action is rejected (403/409/5xx).
+/// </summary>
+internal sealed record ProblemResponse(
+    [property: JsonPropertyName("detail")] string? Detail);
 
 /// <summary>
 /// Source-generated <see cref="JsonSerializerContext"/> for every type the WASM client
@@ -31,4 +39,5 @@ internal sealed record ConfigResponse(
 [JsonSerializable(typeof(List<PortfolioApp>))]
 [JsonSerializable(typeof(GitHubActivity))]
 [JsonSerializable(typeof(ConfigResponse))]
+[JsonSerializable(typeof(ProblemResponse))]
 internal partial class AppJsonContext : JsonSerializerContext;
