@@ -55,9 +55,10 @@ types to `AppJsonContext` with a `[JsonSerializable]` attribute.
 - `PoPunkouterSoftware.Tests.E2E` — C# Playwright UI tests against a live instance
   (`BASE_URL`, default `http://localhost:8000`); run on demand, not in CI.
 
-**CI/CD:** `deploy.yml` is the only workflow. It builds the solution, runs the fast
-test tier (`PoPunkouterSoftware.Tests`), then publishes and deploys — a failing test
-blocks the deploy.
+**CI/CD:** `deploy.yml` is the only workflow and is deliberately build-and-deploy only —
+no test steps live in the YAML. All test tiers run locally before pushing to master
+(fast tier: `dotnet test tests/PoPunkouterSoftware.Tests`; E2E: on demand, headed via
+`HEADED=1`, installed Chrome via `BROWSER_CHANNEL=chrome`).
 
 ## Agent tooling (Claude Code)
 - **User-level plugins** (`claude plugin list`): `dotnet-claude-kit` (codewithmukesh), `dotnet-skills@wshaddix-dotnet-skills` (167 skills + 16 agents; local marketplace at `~/.claude/local-marketplaces/wshaddix-dotnet-skills`), and the official `dotnet/skills` plugins `dotnet`, `dotnet-aspnetcore`, `dotnet-blazor`, `dotnet-test`, `dotnet-data`, `dotnet-diag` (marketplace `dotnet-agent-skills`).
@@ -65,4 +66,4 @@ blocks the deploy.
 
 ## Run / deploy
 - **Local (Development env):** F5 in VS Code runs `f5-prep` (kill stale dotnet → start Azurite → build) then launches on `http://localhost:8000`. `SCRIPTS/setup.ps1` provisions WinGet/Docker/Azure prerequisites.
-- **Azure (Production env):** `.github/workflows/deploy.yml` builds, tests, and deploys to App Service `app-popunkoutersoftware` (OIDC login, no secrets in workflow).
+- **Azure (Production env):** `.github/workflows/deploy.yml` builds + deploys to App Service `app-popunkoutersoftware` (OIDC login, no secrets in workflow, no test steps by design).

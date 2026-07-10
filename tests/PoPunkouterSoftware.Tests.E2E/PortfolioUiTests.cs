@@ -19,7 +19,13 @@ public class PortfolioUiTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _pw = await Playwright.CreateAsync();
-        _browser = await _pw.Chromium.LaunchAsync(new() { Headless = true });
+        // Headless bundled Chromium by default; HEADED=1 shows the browser and
+        // BROWSER_CHANNEL=chrome drives the installed Google Chrome instead.
+        _browser = await _pw.Chromium.LaunchAsync(new()
+        {
+            Headless = Environment.GetEnvironmentVariable("HEADED") != "1",
+            Channel = Environment.GetEnvironmentVariable("BROWSER_CHANNEL"),
+        });
     }
 
     public async Task DisposeAsync()

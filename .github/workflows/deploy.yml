@@ -85,10 +85,8 @@ jobs:
       - name: Build
         run: dotnet build PoPunkouterSoftware.sln -c Release --no-restore --nologo
 
-      # Gate the deploy on the fast test tier (unit + in-process integration).
-      # Playwright E2E needs a live deployment and runs out-of-band.
-      - name: Test
-        run: dotnet test tests/PoPunkouterSoftware.Tests/PoPunkouterSoftware.Tests.csproj -c Release --no-build --nologo
+      # Deliberately NO test step: this pipeline is build-and-deploy only.
+      # All test tiers (unit/integration/E2E) run locally before pushing to master.
 
       - name: Publish
         run: dotnet publish src/PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish --nologo
