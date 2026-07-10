@@ -130,8 +130,12 @@ try
         // ─── Telemetry budgeting (zero-waste) ────────────────────────────────
         // Fixed-rate sampling caps ingestion (and therefore Application Insights
         // cost) at a fraction of total traffic. Tune via the config key without a
-        // redeploy; default keeps a representative 25% sample.
-        var samplingRatio = builder.Configuration.GetValue<float?>("ApplicationInsights:SamplingRatio") ?? 0.25f;
+        // redeploy; the aggressive 10% default is safe because EXCEPTIONS ARE NOT
+        // LOST to it — GlobalExceptionHandler logs every unhandled exception via
+        // ILogger, and the Azure Monitor logs pipeline is not trace-sampled, so
+        // failures reach Application Insights at 100% while request/dependency
+        // spans are sampled.
+        var samplingRatio = builder.Configuration.GetValue<float?>("ApplicationInsights:SamplingRatio") ?? 0.10f;
         otelBuilder.UseAzureMonitor(o =>
         {
             o.ConnectionString = aiConnectionString;
@@ -272,11 +276,14 @@ try
         });
 
     // ─── HTTP client for Azure OpenAI ─────────────────────────────────
-    builder.Services.AddHttpClient("azure-openai")
+    var aiClientBuilder = builder.Services.AddHttpClient("azure-openai")
         // The resilience pipeline owns all timeouts, so the inner HttpClient timeout is
         // disabled (otherwise it could fire before the pipeline's total-request timeout).
         .ConfigureHttpClient(c => c.Timeout = Timeout.InfiniteTimeSpan)
-        .AddStandardResilienceHandler(o =>
+        // RED metrics at the boundary: every AI call site gets azure_openai_* instruments
+        // without instrumenting itself.
+        .AddHttpMessageHandler(() => new AiTelemetryHandler());
+    aiClientBuilder.AddStandardResilienceHandler(o =>
         {
             // Completions are slow; widen the per-attempt and total timeouts so the
             // pipeline does not abort legitimate long-running model responses.
@@ -284,6 +291,11 @@ try
             o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(120);
             o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(120);
         });
+    // Hard AI mock boundary for test runs: under the Testing environment the primary
+    // handler never opens a socket — requests are answered in-process by the stub, so
+    // tests can never leak tokens or spend against the real AI Foundry endpoint.
+    if (builder.Environment.IsEnvironment("Testing"))
+        aiClientBuilder.ConfigurePrimaryHttpMessageHandler(() => new TestingAiStubHandler());
 
     var app = builder.Build();
 

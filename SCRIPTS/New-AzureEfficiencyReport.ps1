@@ -21,7 +21,11 @@ param(
     [int]$MetricLookbackDays = 30,
     [datetime]$CostStartDate,
     [datetime]$CostEndDate,
-    [double]$IdleCpuThresholdPercent = 5.0
+    [double]$IdleCpuThresholdPercent = 5.0,
+    # Pin the audit to a subscription id/name without prompting — required for automation.
+    [string]$SubscriptionId,
+    # Never prompt: with multiple subscriptions and no -SubscriptionId, audits the current one.
+    [switch]$NonInteractive
 )
 
 $ErrorActionPreference = "Stop"
@@ -187,8 +191,16 @@ if ($subscriptions.Count -eq 0) {
 }
 
 $current = Invoke-AzCliJson @("account", "show")
-if ($subscriptions.Count -eq 1) {
+if (-not [string]::IsNullOrWhiteSpace($SubscriptionId)) {
+    $selected = $subscriptions | Where-Object { $_.id -eq $SubscriptionId -or $_.name -eq $SubscriptionId } | Select-Object -First 1
+    if ($null -eq $selected) { throw "Subscription '$SubscriptionId' not found among enabled subscriptions." }
+}
+elseif ($subscriptions.Count -eq 1) {
     $selected = $subscriptions[0]
+}
+elseif ($NonInteractive) {
+    $selected = $subscriptions | Where-Object { $_.id -eq $current.id } | Select-Object -First 1
+    if ($null -eq $selected) { throw "Current subscription is not enabled; pass -SubscriptionId in non-interactive mode." }
 }
 else {
     Write-Host ""
@@ -342,6 +354,28 @@ foreach ($disk in $disks) {
     if ($detail -and ($detail.diskState -match "Unattached|Reserved") -and $null -eq $detail.managedBy) {
         $wasteItems += [pscustomobject]@{ Type = "Detached Managed Disk"; ResourceGroup = $disk.resourceGroup; Name = $disk.name; ResourceId = $disk.id; Severity = "High" }
         Add-CleanupCommand $cleanupLines "Delete detached disk '$($disk.name)' in '$($disk.resourceGroup)'." "az disk delete --ids '$($disk.id)' --yes"
+    }
+}
+
+Write-Step "Checking Po{Name} naming convention"
+# Estate convention: application resource groups are Po{Name} (PascalCase 'Po' prefix); the
+# shared hub group is PoShared. Azure-managed groups are exempt. Violations are flag-only —
+# renaming most Azure resources means recreate-and-migrate, so no cleanup command is emitted.
+$systemRgPattern = '^(NetworkWatcherRG|DefaultResourceGroup-.*|cloud-shell-storage-.*|MC_.*|AzureBackupRG.*|dashboards|LogAnalyticsDefaultResources)$'
+foreach ($rgInfo in $azureResourceGroups) {
+    if ($rgInfo.name -notmatch '^Po[A-Z0-9]' -and $rgInfo.name -notmatch $systemRgPattern) {
+        $wasteItems += [pscustomobject]@{ Type = "Naming Violation (resource group)"; ResourceGroup = $rgInfo.name; Name = $rgInfo.name; ResourceId = $rgInfo.id; Severity = "Low" }
+    }
+}
+# Primary nameable resource types must carry the po token somewhere in the name
+# (lowercase-only names like 'app-popunkoutersoftware' and 'stpopunkoutersoftware' qualify).
+$namedTypes = @(
+    "microsoft.web/sites", "microsoft.web/serverfarms", "microsoft.storage/storageaccounts",
+    "microsoft.keyvault/vaults", "microsoft.cognitiveservices/accounts", "microsoft.insights/components"
+)
+foreach ($resource in $resources) {
+    if ($namedTypes -contains $resource.type.ToLowerInvariant() -and $resource.name -notmatch '(?i)po') {
+        $wasteItems += [pscustomobject]@{ Type = "Naming Violation (resource)"; ResourceGroup = $resource.resourceGroup; Name = $resource.name; ResourceId = $resource.id; Severity = "Low" }
     }
 }
 

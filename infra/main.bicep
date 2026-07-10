@@ -90,6 +90,37 @@ resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   }
 }
 
+// 30-day blob lifecycle: app screenshots are re-captured daily, so any blob untouched
+// for 30 days belongs to an app no longer in the portfolio. Table data is aged out in
+// code instead (AzureReportStore retention sweep) — lifecycle policies cover blobs only.
+resource storageLifecycle 'Microsoft.Storage/storageAccounts/managementPolicies@2024-01-01' = {
+  parent: storage
+  name: 'default'
+  properties: {
+    policy: {
+      rules: [
+        {
+          name: 'delete-stale-blobs-30d'
+          enabled: true
+          type: 'Lifecycle'
+          definition: {
+            filters: {
+              blobTypes: ['blockBlob']
+            }
+            actions: {
+              baseBlob: {
+                delete: {
+                  daysAfterModificationGreaterThan: 30
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
 // Least-privilege binding: grant the site's system-assigned identity read-only
 // access to secrets in the shared Key Vault — nothing more. Scoped to the shared
 // RG because that is where kv-poshared lives.

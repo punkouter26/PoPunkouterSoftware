@@ -34,8 +34,12 @@ Source projects live under `/src`; tests under `/tests`.
 - **Config:** `Directory.Build.props` (net10, `Nullable`, `TreatWarningsAsErrors`, LangVersion 14) and `Directory.Packages.props` (Central Package Management). Add package **versions** only in `Directory.Packages.props`.
 - **Resilience:** typed `HttpClient`s `github`, `azure-arm`, and `azure-openai` use `AddStandardResilienceHandler`. `health` and `azure-probe` deliberately have **no** resilience — they must report real reachability, not retry through outages.
 - **Caching:** `HybridCache` backs the read-through GitHub-activity and CI/CD-review lookups (stampede protection; outcome-dependent TTL for rate-limited GitHub results). `IMemoryCache` remains only for the pinger snapshot.
+- **AI boundary:** all AI traffic goes through the `azure-openai` typed client. `AiTelemetryHandler` records the `azure_openai_*` metrics at that boundary, and under the `Testing` environment the primary handler is `TestingAiStubHandler` — tests can never reach Azure AI Foundry (verified by `AiBoundaryTests`). Never `new HttpClient()` for AI calls.
+- **Screenshots & disk:** `AppScreenshotService` pins `PLAYWRIGHT_BROWSERS_PATH` to the persistent `%HOME%` share and installs only the Chromium headless shell — the worker's ephemeral disk previously filled with a full Chromium download and broke every deployment ("not enough space on the disk", 2026-07-10). Kill switch: `FeatureFlags:EnableScreenshots=false`.
+- **Retention:** History/HistorySummary table rows are pruned after `Retention:HistoryDays` (default 30) by `AzureReportStore` on each save; blobs age out via the 30-day lifecycle policy in `infra/main.bicep`. Incidents are deliberately never pruned.
+- **Telemetry budget:** fixed-rate trace sampling, default 10% (`ApplicationInsights:SamplingRatio`). Exceptions are never lost to it — `GlobalExceptionHandler` logs them through `ILogger` and the logs pipeline is not trace-sampled.
 - **Telemetry:** Serilog → Console + File; Azure Monitor via OpenTelemetry (the sole App Insights pipeline). `cloud_RoleName` comes from the OTel resource `service.name` (set by reflection in the API only — never in WASM). High-frequency logs use `[LoggerMessage]` source-gen (see `ServicePingerService`).
-- **Secrets:** Azure Key Vault (`kv-poshared`, prefix `PoPunkouterSoftware--`) loaded at startup via Managed Identity; skipped under the `Testing` environment.
+- **Secrets:** Azure Key Vault (`kv-poshared`, prefix `PoPunkouterSoftware--`) loaded at startup via System-Assigned Managed Identity; skipped under the `Testing` environment. DECISION: the grant is a classic **access policy** (get/list secrets), not the RBAC "Key Vault Secrets User" role — `kv-poshared` has RBAC authorization disabled and is shared across Po* apps, so switching models is an estate-wide change, not per-app. The App Service plan (`asp-PoPunkouterSoftware-f1`) is deliberately **app-local**, not in PoShared: F1 is free, and isolation keeps this app's cold starts and quota pressure away from the shared plan.
 - **Storage:** Azure Table Storage. Local dev runs **Azurite in Docker** (`docker-compose.yml`, container `popunkoutersoftware-azurite`). `UseDevelopmentStorage=true` in `appsettings.Development.json`.
 - **Management actions:** there is no login, but mutating / expensive endpoints (`/api/diag/refresh`, `/api/diag/cancel-refresh`, `/api/pinger/toggle/*`, `/api/infra/cicd-review/refresh`) are gated server-side by `ManagementActionFilter` (`.RequireManagementActions()`). It enforces the same `FeatureFlags:EnableManagementActions` flag the UI reads from `/api/config` (on in Development/Testing, otherwise opt-in), plus an optional `Security:ManagementApiKey` checked against the `X-Management-Key` header.
 
@@ -47,13 +51,18 @@ the previous `IL2026`/`IL2104` `WarningsNotAsErrors` suppression has been remove
 client builds trim-safe under the global `TreatWarningsAsErrors`. Add new client (de)serialised
 types to `AppJsonContext` with a `[JsonSerializable]` attribute.
 
-## Tests (`/tests`) — two-tier layout
-- `PoPunkouterSoftware.Tests` — the fast tier. `Unit/` (isolated, HTTP stubs) and
-  `Integration/` (`WebApplicationFactory` + Testcontainers Azurite). Collections run
-  sequentially (`AssemblyInfo.cs`) because concurrent entry-point boots race.
-  Covers the `ManagementActionFilter` gate, pinger, config, diag, and portfolio contracts.
-- `PoPunkouterSoftware.Tests.E2E` — C# Playwright UI tests against a live instance
-  (`BASE_URL`, default `http://localhost:8000`); run on demand, not in CI.
+## Tests (`/tests`) — two projects, four tiers (target ratio 100/50/25/25)
+- `PoPunkouterSoftware.Tests` — the fast tier. `Unit/` (strictly no-I/O: HTTP stubs,
+  in-memory caches) and `Integration/` (`WebApplicationFactory` + Testcontainers Azurite,
+  including a fixture that runs Azurite INSIDE the factory with explicit teardown).
+  RULE: FluentValidation and DTO-mapping tests live in `Integration/`, never `Unit/`.
+  Collections run sequentially (`AssemblyInfo.cs`) because concurrent entry-point boots race.
+- `PoPunkouterSoftware.Tests.E2E` — against a live instance via `BASE_URL`
+  (default `http://localhost:8000`); run on demand, not in CI.
+  `ApiSmokeTests` = pure-HTTP E2E API tier (also the post-deploy smoke: point `BASE_URL`
+  at production). `PortfolioUiTests` = Playwright UI tier; every UI test runs BOTH
+  mobile-portrait (390×844) and desktop-landscape (1440×1000) via the shared
+  `Viewports` theory data — visual parity is a hard rule.
 
 **CI/CD:** `deploy.yml` is the only workflow and is deliberately build-and-deploy only —
 no test steps live in the YAML. All test tiers run locally before pushing to master

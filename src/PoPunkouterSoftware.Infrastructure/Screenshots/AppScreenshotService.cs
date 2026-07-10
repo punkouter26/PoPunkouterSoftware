@@ -43,11 +43,36 @@ public class AppScreenshotService
     // Newest stored screenshot; lazily seeded from blob timestamps on first staleness check.
     private DateTimeOffset? _newestCaptureUtc;
 
+    /// <summary>
+    /// On Azure App Service the default Playwright install location is the worker's
+    /// ephemeral local disk (%USERPROFILE%), which is tiny and shared with Kudu's deploy
+    /// extraction — a Chromium download there exhausted it and every deployment failed
+    /// with "not enough space on the disk" (2026-07-10). Pin installs to the persistent
+    /// HOME share instead so the browser survives restarts and stays off the deploy path.
+    /// </summary>
+    static AppScreenshotService()
+    {
+        var home = Environment.GetEnvironmentVariable("HOME");
+        if (!string.IsNullOrWhiteSpace(home) &&
+            string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH")))
+        {
+            Environment.SetEnvironmentVariable(
+                "PLAYWRIGHT_BROWSERS_PATH", Path.Combine(home, ".playwright-browsers"));
+        }
+    }
+
     public AppScreenshotService(ILogger<AppScreenshotService> logger, IConfiguration config)
     {
         _logger = logger;
         _config = config;
     }
+
+    /// <summary>
+    /// Kill switch for constrained hosts (F1 quota pressure): screenshots are on by
+    /// default and disabled with FeatureFlags:EnableScreenshots=false. Stored images
+    /// keep serving either way — only staleness checks and new captures stop.
+    /// </summary>
+    private bool ScreenshotsEnabled => _config.GetValue("FeatureFlags:EnableScreenshots", true);
 
     /// <summary>The active (HTTP-reachable) services of a report as capture targets.</summary>
     public static List<(string Host, string Url)> ActiveTargets(AzureReport? report) =>
@@ -64,6 +89,9 @@ public class AppScreenshotService
     /// </summary>
     public async Task<bool> IsStaleAsync(CancellationToken ct = default)
     {
+        if (!ScreenshotsEnabled)
+            return false;
+
         if (DateTimeOffset.UtcNow - _lastAttemptUtc < AttemptCooldown)
             return false;
 
@@ -138,6 +166,12 @@ public class AppScreenshotService
     /// </summary>
     public async Task CaptureAsync(IReadOnlyList<(string Host, string Url)> targets, CancellationToken ct = default)
     {
+        if (!ScreenshotsEnabled)
+        {
+            _logger.LogDebug("Screenshot capture skipped — disabled via FeatureFlags:EnableScreenshots");
+            return;
+        }
+
         if (targets.Count == 0 || !await _captureLock.WaitAsync(0, ct))
             return;
 
@@ -223,8 +257,10 @@ public class AppScreenshotService
         }
         catch (PlaywrightException)
         {
-            _logger.LogInformation("Chromium not found — installing Playwright browser (one-time)");
-            var exitCode = await Task.Run(() => Microsoft.Playwright.Program.Main(new[] { "install", "chromium" }));
+            // Headless shell only — roughly a third of the full Chromium footprint, which
+            // matters on the 1 GB App Service home share. Headless launches use it directly.
+            _logger.LogInformation("Chromium not found — installing Playwright headless shell (one-time)");
+            var exitCode = await Task.Run(() => Microsoft.Playwright.Program.Main(new[] { "install", "chromium-headless-shell" }));
             if (exitCode == 0)
                 return pw;
 

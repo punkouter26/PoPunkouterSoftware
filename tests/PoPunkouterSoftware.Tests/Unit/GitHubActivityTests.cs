@@ -53,67 +53,9 @@ file static class GitHubClientFactory
     }
 }
 
-// ─── Input validation ─────────────────────────────────────────────────────────
-
-public class GitHubActivityEndpoint_ValidationTests
-{
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("no-slash")]
-    [InlineData("has spaces/repo")]
-    [InlineData("owner/has spaces")]
-    [InlineData("../../traversal")]
-    [InlineData("<script>/xss")]
-    public async Task InvalidRepo_ReturnsBadRequest(string? repo)
-    {
-        var result = await InvokeEndpoint(repo, StubHandler.Json("[]"));
-        var statusResult = result.Should().BeAssignableTo<IStatusCodeHttpResult>().Subject;
-        statusResult.StatusCode.Should().Be(400);
-    }
-
-    [Theory]
-    [InlineData("owner/repo")]
-    [InlineData("my-org/My.Repo-123")]
-    [InlineData("a/b")]
-    public async Task ValidRepo_DoesNotReturnBadRequest(string repo)
-    {
-        var commitJson = """[{"commit":{"author":{"date":"2026-01-01T00:00:00Z"}}}]""";
-        var statsJson = """{"all":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8]}""";
-        var repoJson = """{"description":"d","license":{"key":"mit"},"open_issues_count":0}""";
-
-        var handler = new StubHandler(req =>
-        {
-            if (req.RequestUri!.PathAndQuery.Contains("/commits"))
-                return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(commitJson, Encoding.UTF8, "application/json") };
-            if (req.RequestUri.PathAndQuery.Contains("/stats/participation"))
-                return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(statsJson, Encoding.UTF8, "application/json") };
-            if (req.RequestUri.PathAndQuery.Contains("/readme"))
-                return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            { Content = new StringContent(repoJson, Encoding.UTF8, "application/json") };
-        });
-
-        var result = await InvokeEndpoint(repo, handler);
-        var statusResult = result.Should().BeAssignableTo<IStatusCodeHttpResult>().Subject;
-        statusResult.StatusCode.Should().NotBe(400);
-    }
-
-    private static async Task<IResult> InvokeEndpoint(string? repo, HttpMessageHandler handler)
-    {
-        var cache = TestHybridCache.Create();
-        var factory = GitHubClientFactory.Create(handler);
-        var logger = NullLogger<Program>.Instance;
-        return await PoPunkouterSoftware.Features.GitHub.GitHubEndpoints
-            .InvokeAsync(repo, factory, cache, logger);
-    }
-}
-
 // ─── Caching ─────────────────────────────────────────────────────────────────
+// NOTE: validation-rule tests for this endpoint live in
+// Integration\GitHubValidationTests.cs (with their own file-scoped helper copies).
 
 public class GitHubActivityEndpoint_CacheTests
 {

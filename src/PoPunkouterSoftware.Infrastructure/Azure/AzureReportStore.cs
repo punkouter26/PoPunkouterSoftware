@@ -142,6 +142,17 @@ public class AzureReportStore
                 _logger.LogWarning(sumEx, "Failed to save history summary row (non-fatal)");
             }
 
+            // Age out old history rows so the append-only partitions cannot grow without
+            // bound. Piggybacks on the (at most once per scan) save; non-fatal.
+            try
+            {
+                await PruneHistoryAsync(tableClient, ct);
+            }
+            catch (Exception pruneEx)
+            {
+                _logger.LogWarning(pruneEx, "History retention sweep failed (non-fatal)");
+            }
+
             _reportCache = new CachedReport(report, DateTimeOffset.UtcNow);
             _logger.LogInformation("AzureReport saved to Table Storage (including history)");
             return Result<bool>.Success(true);
@@ -151,6 +162,43 @@ public class AzureReportStore
             _logger.LogError(ex, "Failed to save AzureReport to Table Storage");
             return Result<bool>.Failure("Failed to save AzureReport to Table Storage", ex);
         }
+    }
+
+    /// <summary>
+    /// Deletes History/HistorySummary rows older than Retention:HistoryDays (default 30;
+    /// 0 or negative disables). Inverse-ticks row keys sort newest-first, so rows OLDER
+    /// than the cutoff have row keys lexically GREATER than the cutoff's key — an
+    /// efficient range scan rather than a full-partition sweep. Incidents are deliberately
+    /// NOT pruned: the incident log is user-facing history the owner curates.
+    /// Capped per run; the remainder ages out on subsequent scans.
+    /// </summary>
+    private async Task PruneHistoryAsync(TableClient tableClient, CancellationToken ct)
+    {
+        var days = _config.GetValue("Retention:HistoryDays", 30);
+        if (days <= 0)
+            return;
+
+        var cutoffKey = new ReverseChronoRowKey(DateTimeOffset.UtcNow.AddDays(-days)).ToString();
+        var deleted = 0;
+        foreach (var partition in new[] { TablePartitions.History, TablePartitions.HistorySummary })
+        {
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>(
+                filter: $"PartitionKey eq '{partition}' and RowKey gt '{cutoffKey}'",
+                maxPerPage: 100,
+                select: new[] { "PartitionKey", "RowKey" },
+                cancellationToken: ct))
+            {
+                await tableClient.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, cancellationToken: ct);
+                if (++deleted >= 200)
+                {
+                    _logger.LogInformation("History retention: per-run delete cap reached ({Deleted}); remainder next scan", deleted);
+                    return;
+                }
+            }
+        }
+
+        if (deleted > 0)
+            _logger.LogInformation("History retention: deleted {Deleted} rows older than {Days} days", deleted, days);
     }
 
     public async Task<Result<List<AzureReport>>> LoadHistoryAsync(int maxEntries = 90, CancellationToken ct = default)
