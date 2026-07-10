@@ -9,10 +9,8 @@ using PoPunkouterSoftware.Shared.Portfolio;
 namespace PoPunkouterSoftware.Features.Portfolio;
 
 /// <summary>
-/// Serves the merged home-page portfolio: one entry per HTTP-active web service in the
-/// live Azure inventory, decorated with presentation metadata from apps.json matched by
-/// host. Building the list here keeps the client a plain fetch-and-render and keeps the
-/// home page count structurally in lockstep with the Ops dashboard's "Operational" total.
+/// Serves a stable portfolio catalog decorated with live Azure inventory. The catalog
+/// remains visible during an outage; services never disappear merely because a probe fails.
 /// </summary>
 internal static partial class PortfolioEndpoints
 {
@@ -33,30 +31,33 @@ internal static partial class PortfolioEndpoints
         IWebHostEnvironment env, AzureReportStore store, AppScreenshotService screenshots,
         ILogger<Program> logger, CancellationToken ct)
     {
-        var services = await LoadActiveServicesAsync(env, store, ct);
-        var metaByHost = await LoadMetadataByHostAsync(env, ct);
-        var screenshotHosts = await screenshots.ListHostsAsync(ct);
+        var (report, services) = await LoadInventoryAsync(env, store, ct);
+        var metadata = await LoadMetadataAsync(env, ct);
+        var screenshotVersions = await screenshots.ListVersionsAsync(ct);
+        var metaByName = metadata
+            .GroupBy(m => NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderBy(m => StatusRank(m.Status)).First(), StringComparer.OrdinalIgnoreCase);
+        var appsByName = new Dictionary<string, PortfolioApp>(StringComparer.OrdinalIgnoreCase);
 
-        var apps = services
-            .Select(s =>
-            {
-                var host = HostOf(s.Url);
-                var meta = host is not null && metaByHost.TryGetValue(host, out var m) ? m : null;
-                return new PortfolioApp
-                {
-                    Name = meta?.Name
-                        ?? (string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName),
-                    Description = meta?.Description ?? "",
-                    Url = string.IsNullOrEmpty(s.Url) ? meta?.Url ?? "" : s.Url,
-                    Technologies = meta?.Technologies,
-                    GithubRepo = meta?.GithubRepo,
-                    ScreenshotUrl = host is not null && screenshotHosts.Contains(host)
-                        ? $"/api/portfolio/screenshots/{host}"
-                        : null,
-                };
-            })
-            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        // Catalog entries marked active are the stable showcase, even when Azure inventory is stale or unavailable.
+        foreach (var meta in metadata.Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase)))
+        {
+            var key = NormalizeName(meta.Name);
+            if (appsByName.ContainsKey(key))
+                continue;
+            appsByName[key] = ToPortfolioApp(meta, null, report?.GeneratedAt, screenshotVersions);
+        }
+
+        // Every discovered service is also shown, including broken services, and receives catalog metadata by stable name.
+        foreach (var service in services)
+        {
+            var displayName = string.IsNullOrWhiteSpace(service.FriendlyName) ? service.Name : service.FriendlyName;
+            var key = NormalizeName(displayName);
+            metaByName.TryGetValue(key, out var meta);
+            appsByName[key] = ToPortfolioApp(meta, service, report?.GeneratedAt, screenshotVersions);
+        }
+
+        var apps = appsByName.Values.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
         // First page load in 24h with stale screenshots: serve the stored (stale) images
         // now and re-capture in the background for the next visitor. Detached from the
@@ -107,7 +108,7 @@ internal static partial class PortfolioEndpoints
     /// counts as Operational (HttpStatus == "active"). Falls back to the cached report
     /// file when table storage is unavailable; empty when no report exists at all.
     /// </summary>
-    private static async Task<List<WebService>> LoadActiveServicesAsync(
+    private static async Task<(AzureReport? Report, List<WebService> Services)> LoadInventoryAsync(
         IWebHostEnvironment env, AzureReportStore store, CancellationToken ct)
     {
         AzureReport? report = null;
@@ -127,28 +128,59 @@ internal static partial class PortfolioEndpoints
             }
         }
 
-        return (report?.WebServices?.Services ?? new List<WebService>())
-            .Where(s => string.Equals(s.HttpStatus, "active", StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        return (report, report?.WebServices?.Services ?? new List<WebService>());
     }
 
-    private static async Task<Dictionary<string, AppMeta>> LoadMetadataByHostAsync(
+    private static async Task<List<AppMeta>> LoadMetadataAsync(
         IWebHostEnvironment env, CancellationToken ct)
     {
         var path = Path.Combine(DiagEndpoints.GetDataDir(env), "apps.json");
         if (!File.Exists(path))
-            return new Dictionary<string, AppMeta>(StringComparer.OrdinalIgnoreCase);
+            return new List<AppMeta>();
 
         var json = await File.ReadAllTextAsync(path, ct);
         var wrapper = JsonSerializer.Deserialize<AppsFile>(
             json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        return (wrapper?.Apps ?? new List<AppMeta>())
-            .Select(a => (host: HostOf(a.Url), app: a))
-            .Where(x => x.host is not null)
-            .GroupBy(x => x.host!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().app, StringComparer.OrdinalIgnoreCase);
+        return wrapper?.Apps ?? new List<AppMeta>();
     }
+
+    private static PortfolioApp ToPortfolioApp(
+        AppMeta? meta, WebService? service, DateTime? generatedAt, IReadOnlyDictionary<string, long> screenshotVersions)
+    {
+        var name = meta?.Name ?? service?.FriendlyName ?? service?.Name ?? "Unnamed app";
+        var url = !string.IsNullOrWhiteSpace(service?.Url) ? service.Url : meta?.Url ?? "";
+        var host = HostOf(url);
+        long version = 0;
+        var hasScreenshot = host is not null && screenshotVersions.TryGetValue(host, out version);
+        var status = service is null ? "not-monitored" :
+            string.Equals(service.HttpStatus, "active", StringComparison.OrdinalIgnoreCase) ? "healthy" : "unavailable";
+
+        return new PortfolioApp
+        {
+            Id = meta?.Id ?? service?.Name ?? NormalizeName(name),
+            Name = name,
+            Description = !string.IsNullOrWhiteSpace(meta?.Description) ? meta.Description :
+                !string.IsNullOrWhiteSpace(service?.Description) ? service.Description : $"Open {name}.",
+            Url = url,
+            Category = meta?.Category ?? "app",
+            Status = status,
+            InventoryGeneratedAt = generatedAt,
+            Technologies = meta?.Technologies,
+            GithubRepo = meta?.GithubRepo,
+            ScreenshotUrl = hasScreenshot ? $"/api/portfolio/screenshots/{host}?v={version}" : null,
+        };
+    }
+
+    private static string NormalizeName(string? value) =>
+        string.Concat((value ?? "").Where(char.IsLetterOrDigit)).ToLowerInvariant();
+
+    private static int StatusRank(string? status) => status?.ToLowerInvariant() switch
+    {
+        "active" => 0,
+        "inactive" => 1,
+        _ => 2,
+    };
 
     private static string? HostOf(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host.ToLowerInvariant() : null;
@@ -156,8 +188,11 @@ internal static partial class PortfolioEndpoints
     private sealed record AppsFile(List<AppMeta>? Apps);
 
     private sealed record AppMeta(
+        string? Id,
         string? Name,
         string? Description,
+        string? Category,
+        string? Status,
         string? Url,
         List<string>? Technologies,
         string? GithubRepo);

@@ -1,105 +1,33 @@
 @using PoPunkouterSoftware.Shared.Portfolio
 @using Radzen
 
-<RadzenCard class="app-card app-glow app-portfolio-card">
-    <div class="app-status-row">
-        <div>
-            <div class="app-kicker">App</div>
-            <h3 class="app-card-title">@App.Name</h3>
-        </div>
-        @if (!string.IsNullOrEmpty(App.ScreenshotUrl))
-        {
-            <a class="app-screenshot-thumb" href="@App.Url" target="_blank" rel="noopener noreferrer"
-               title="@($"Open {App.Name} app")">
-                <img src="@App.ScreenshotUrl" alt="@($"{App.Name} home page")" loading="lazy"
-                     width="78" height="169" />
-            </a>
-        }
+<article class="app-card app-portfolio-card @StatusClass">
+    @if (!string.IsNullOrEmpty(App.ScreenshotUrl))
+    {
+        <a class="app-screenshot-thumb" href="@App.Url" target="_blank" rel="noopener noreferrer" title="@($"Open {App.Name}")">
+            <img src="@App.ScreenshotUrl" alt="@($"Preview of {App.Name}")" loading="lazy" width="390" height="844" />
+        </a>
+    }
+    <div class="portfolio-card-heading">
+        <div><div class="app-kicker">@(string.IsNullOrWhiteSpace(App.Category) ? "App" : App.Category)</div><h2 class="app-card-title">@App.Name</h2></div>
+        <RadzenBadge Text="@StatusLabel" IsPill="true" BadgeStyle="@StatusBadge" />
     </div>
-
-    <p class="app-card-copy rz-mb-0">@App.Description</p>
-
+    <p class="app-card-copy">@App.Description</p>
     @if (App.Technologies?.Any() == true)
     {
-        <div class="app-chip-row">
-            @foreach (var tech in App.Technologies)
-            {
-                <RadzenBadge Text="@tech" BadgeStyle="BadgeStyle.Light" Variant="Variant.Flat" IsPill="true" />
-            }
+        <div class="app-chip-row" aria-label="Technologies">
+            @foreach (var tech in App.Technologies.Take(3)) { <RadzenBadge Text="@tech" BadgeStyle="BadgeStyle.Light" Variant="Variant.Flat" IsPill="true" /> }
         </div>
     }
-
-    @if (!string.IsNullOrEmpty(App.GithubRepo))
-    {
-        @if (GitHub is not null)
-        {
-            <div class="app-card app-surface-soft app-portfolio-github-card">
-                <div class="app-kicker">GitHub activity</div>
-                <div class="app-status-row">
-                    <a class="app-inline-link" href="@($"https://github.com/{App.GithubRepo}")" target="_blank" rel="noopener noreferrer">
-                        @App.GithubRepo
-                    </a>
-                    @if (GitHub.LastCommitDate.HasValue)
-                    {
-                        var daysAgo = (int)(DateTime.UtcNow - GitHub.LastCommitDate.Value).TotalDays;
-                        var label = daysAgo == 0 ? "today" : daysAgo == 1 ? "1d ago" : $"{daysAgo}d ago";
-                        <span class="app-note" title="Last commit @GitHub.LastCommitDate.Value.ToString("yyyy-MM-dd")">Last commit: @label</span>
-                    }
-                    else
-                    {
-                        <span class="app-note">No commits found</span>
-                    }
-                </div>
-
-                <div class="app-status-row rz-mt-1">
-                    @if (GitHub.WeeklyCommits?.Length > 0)
-                    {
-                        <svg class="app-mini-chart" width="56" height="16" viewBox="0 0 56 16" title="8-week commit activity">
-                            @{ var max = GitHub.WeeklyCommits.Max(); }
-                            @for (int wi = 0; wi < GitHub.WeeklyCommits.Length; wi++)
-                            {
-                                var h = max > 0 ? (int)(GitHub.WeeklyCommits[wi] * 14.0 / max) : 0;
-                                var x = wi * 7;
-                                var y = 14 - h;
-                                <rect x="@x" y="@y" width="5" height="@(h + 1)"
-                                      fill="@(GitHub.WeeklyCommits[wi] > 0 ? "var(--app-accent-strong)" : "rgba(255,255,255,0.16)")"
-                                      rx="1" />
-                            }
-                        </svg>
-                    }
-                    @if (GitHub.HealthScore > 0)
-                    {
-                        var scoreStyle = GitHub.HealthScore >= 70 ? BadgeStyle.Success : GitHub.HealthScore >= 40 ? BadgeStyle.Warning : BadgeStyle.Danger;
-                        <RadzenBadge Text="@($"Health {GitHub.HealthScore}/100")" IsPill="true" BadgeStyle="@scoreStyle" Variant="Variant.Flat" title="Score: commit recency + activity + README + description + license" />
-                    }
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="app-card app-surface-soft app-portfolio-github-card">
-                <div class="app-kicker">GitHub activity</div>
-                <div class="app-status-row">
-                    <a class="app-inline-link" href="@($"https://github.com/{App.GithubRepo}")" target="_blank" rel="noopener noreferrer">@App.GithubRepo</a>
-                    <span class="app-note">@(GitHubLoaded ? "Activity unavailable" : "Loading...")</span>
-                </div>
-            </div>
-        }
-    }
-
-    @if (!string.IsNullOrEmpty(App.Url))
-    {
-        <div class="app-actions">
-            <a class="rz-button rz-button-sm rz-variant-filled rz-primary rz-shade-default" href="@App.Url"
-               target="_blank" rel="noopener noreferrer" aria-label="@($"Open {App.Name} app")">
-                <RadzenIcon Icon="open_in_new" /><span class="rz-button-text">Open App</span>
-            </a>
-        </div>
-    }
-</RadzenCard>
+    <div class="portfolio-card-actions">
+        <a class="rz-button rz-button-sm rz-variant-filled rz-primary rz-shade-default" href="@App.Url" target="_blank" rel="noopener noreferrer" aria-label="@($"Open {App.Name} app")"><RadzenIcon Icon="open_in_new" /><span class="rz-button-text">Open</span></a>
+        @if (!string.IsNullOrEmpty(App.GithubRepo)) { <a class="app-inline-link" href="@($"https://github.com/{App.GithubRepo}")" target="_blank" rel="noopener noreferrer" aria-label="@($"View {App.Name} source on GitHub")"><RadzenIcon Icon="code" /> Source</a> }
+    </div>
+</article>
 
 @code {
     [Parameter, EditorRequired] public PortfolioApp App { get; set; } = default!;
-    [Parameter] public GitHubActivity? GitHub { get; set; }
-    [Parameter] public bool GitHubLoaded { get; set; }
+    private string StatusLabel => App.Status switch { "healthy" => "Live", "unavailable" => "Unavailable", _ => "Catalog" };
+    private string StatusClass => App.Status switch { "healthy" => "is-healthy", "unavailable" => "is-unavailable", _ => "is-unmonitored" };
+    private BadgeStyle StatusBadge => App.Status switch { "healthy" => BadgeStyle.Success, "unavailable" => BadgeStyle.Danger, _ => BadgeStyle.Info };
 }

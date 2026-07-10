@@ -9,6 +9,11 @@ Service health, cost, SSL expiry, zombie-app detection, GitHub activity, and dow
 diagnosis. The backend is a minimal-API **BFF** that reads an Azure inventory report
 from Azure Table Storage (with a local JSON fallback) and proxies GitHub.
 
+The home-page catalog in `apps.json` is authoritative: live Azure inventory decorates
+catalog entries with health and deployment URLs, but probe failures never remove apps
+from the portfolio. `/api/diag/summary` is the compact first-paint contract for `/azure`;
+the full report and history load only when advanced diagnostics is opened.
+
 ## Authentication — NONE (by design)
 This site has **no authentication**. There is no login, no `/auth/*` routes, no
 `AuthenticationStateProvider`, no Microsoft OAuth, and no guest/fake login. Do not
@@ -33,7 +38,8 @@ this decision. `/api/config` deliberately exposes no auth flags.
 - **Management actions:** there is no login, but mutating / expensive endpoints (`/api/diag/refresh`, `/api/diag/cancel-refresh`, `/api/pinger/toggle/*`, `/api/infra/cicd-review/refresh`) are gated server-side by `ManagementActionFilter` (`.RequireManagementActions()`). It enforces the same `FeatureFlags:EnableManagementActions` flag the UI reads from `/api/config` (on in Development/Testing, otherwise opt-in), plus an optional `Security:ManagementApiKey` checked against the `X-Management-Key` header.
 
 ## Trim status
-`EnableTrimAnalyzer` is ON for `.Client` and `.Shared`. All client JSON now flows through
+`EnableTrimAnalyzer` and `PublishTrimmed` are ON for `.Client`; the shared assembly is
+trimmable. All client JSON now flows through
 the source-generated `AppJsonContext` (`AppJsonContext.cs`), so the analyzer runs clean and
 the previous `IL2026`/`IL2104` `WarningsNotAsErrors` suppression has been removed — the
 client builds trim-safe under the global `TreatWarningsAsErrors`. Add new client (de)serialised

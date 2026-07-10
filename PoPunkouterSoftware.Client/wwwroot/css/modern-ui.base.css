@@ -52,17 +52,6 @@ body {
     letter-spacing: 0.01em;
 }
 
-#app-bg-canvas {
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    filter: blur(100px) saturate(150%);
-    opacity: 0.25;
-}
-
 body::before {
     content: "";
     position: fixed;
@@ -91,6 +80,18 @@ h6,
 
 a {
     color: #9fdfff;
+}
+
+.app-sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
 }
 
 .app-page {

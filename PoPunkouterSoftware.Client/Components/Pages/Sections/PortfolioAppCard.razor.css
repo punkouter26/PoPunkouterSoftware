@@ -1,17 +1,11 @@
-/* Layout (display/flex/gap) inherited from global .app-portfolio-card in modern-ui.components.css.
-   Every card shown is a live app, so the accent border is unconditional. */
-::deep .app-portfolio-card {
-    border-left: 4px solid var(--app-accent-strong);
-}
-
-/* Mobile-portrait home-page screenshot, shown at 20% of the 390×844 capture viewport */
-::deep .app-screenshot-thumb img {
-    display: block;
-    width: 78px;
-    height: 169px;
-    object-fit: cover;
-    object-position: top;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
+.app-portfolio-card { display: flex; flex-direction: column; gap: .75rem; min-width: 0; padding: .8rem; border-left: 3px solid var(--app-border-strong); }
+.app-portfolio-card.is-healthy { border-left-color: var(--app-accent-strong); }
+.app-portfolio-card.is-unavailable { border-left-color: var(--app-danger-soft); }
+.app-screenshot-thumb { display: block; height: 138px; overflow: hidden; border-radius: var(--app-radius-md); background: var(--app-surface-soft); }
+.app-screenshot-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.portfolio-card-heading { display: flex; align-items: start; justify-content: space-between; gap: .75rem; }
+.portfolio-card-heading h2 { margin-top: .1rem; }
+.app-card-copy { margin: 0; min-height: 2.7em; line-height: 1.4; }
+.app-chip-row { min-height: 24px; }
+.portfolio-card-actions { display: flex; align-items: center; gap: .8rem; margin-top: auto; }
+.portfolio-card-actions .app-inline-link { display: inline-flex; align-items: center; gap: .25rem; font-size: .82rem; }

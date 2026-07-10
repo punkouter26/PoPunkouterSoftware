@@ -71,6 +71,18 @@ internal static class DiagEndpoints
             return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
         });
 
+        diag.MapGet("/summary", async (IWebHostEnvironment env, AzureReportStore store, CancellationToken ct) =>
+        {
+            var report = await LoadLatestReportAsync(env, store, ct);
+            if (report is null)
+                return Results.Problem(detail: "No Azure report is available.", statusCode: 404);
+
+            var historyResult = await store.LoadHistoryAsync(maxEntries: 30, ct);
+            var history = historyResult.IsSuccess ? historyResult.Value ?? new List<AzureReport>() : new List<AzureReport>();
+            return Results.Json(BuildOpsSummary(report, history));
+        })
+        .WithName("GetOpsSummary");
+
         diag.MapPost("/refresh",
             (IServiceScopeFactory scopeFactory, IWebHostEnvironment env, ILogger<Program> logger,
              Microsoft.AspNetCore.SignalR.IHubContext<PoPunkouterSoftware.Infrastructure.RefreshHub> hubCtx,
@@ -283,6 +295,86 @@ internal static class DiagEndpoints
         env.WebRootPath is not null
             ? Path.Combine(env.WebRootPath, "data")
             : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "data"));
+
+    private static async Task<AzureReport?> LoadLatestReportAsync(
+        IWebHostEnvironment env, AzureReportStore store, CancellationToken ct)
+    {
+        var result = await store.LoadAsync(ct);
+        if (result.IsSuccess && result.Value is not null)
+            return result.Value;
+
+        var reportPath = Path.Combine(GetDataDir(env), "azure-full-report.json");
+        if (!File.Exists(reportPath))
+            return null;
+
+        var json = await File.ReadAllTextAsync(reportPath, ct);
+        return JsonSerializer.Deserialize<AzureReport>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    private static OpsSummary BuildOpsSummary(AzureReport report, IReadOnlyCollection<AzureReport> history)
+    {
+        var services = report.WebServices?.Services ?? new List<WebService>();
+        var total = report.WebServices?.Total ?? services.Count;
+        var active = report.WebServices?.ByStatus?.Active ?? services.Count(s => s.HttpStatus == "active");
+        var broken = report.WebServices?.ByStatus?.Broken ?? Math.Max(0, total - active);
+        var cleanup = (report.OrphanedResources?.Count ?? 0)
+            + (report.ZombieApps?.Count ?? 0)
+            + report.AppServicePlanInventory.Count(p => p.AppCount == 0);
+        var insecureStorage = (report.StorageInventory ?? new()).Count(s =>
+            s.PublicBlobAccess || !s.HttpsOnly || s.MinTls is "TLS1_0" or "TLS1_1");
+        var criticalDrift = (report.ConfigDrift ?? new()).Count(d =>
+            d.Issues?.Any(i => i.Severity is "critical" or "high") == true);
+        var security = insecureStorage + criticalDrift;
+        var attention = new List<string>();
+
+        attention.AddRange(services
+            .Where(s => !string.Equals(s.HttpStatus, "active", StringComparison.OrdinalIgnoreCase))
+            .Take(3)
+            .Select(s => $"{(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName)} is unavailable"));
+        if (security > 0)
+            attention.Add($"{security} security configuration finding(s)");
+        if (cleanup > 0)
+            attention.Add($"{cleanup} cleanup candidate(s)");
+        var isStale = report.GeneratedAt is not DateTime generated || DateTime.UtcNow - generated > TimeSpan.FromHours(12);
+        if (isStale)
+            attention.Add("Azure data is stale and should be refreshed");
+
+        return new OpsSummary
+        {
+            GeneratedAt = report.GeneratedAt,
+            IsStale = isStale,
+            SubscriptionName = report.Subscription?.Name ?? "Azure",
+            TotalServices = total,
+            ActiveServices = active,
+            BrokenServices = broken,
+            HealthPercent = total > 0 ? (int)Math.Round(active * 100d / total) : 100,
+            TotalResources = report.AllResourceSummary?.Total ?? 0,
+            CostFormatted = report.Cost?.TotalFormatted ?? "$0.00",
+            CleanupCandidates = cleanup,
+            SecurityFindings = security,
+            AttentionCount = broken + security + cleanup + (isStale ? 1 : 0),
+            FleetHealth = new List<OpsMetricPoint>
+            {
+                new("Healthy", active),
+                new("Unavailable", broken),
+                new("Other", Math.Max(0, total - active - broken)),
+            }.Where(p => p.Value > 0).ToList(),
+            CostDrivers = (report.Cost?.TopCostDrivers ?? new()).Where(x => x.Cost > 0).Take(5)
+                .Select(x => new OpsMetricPoint(x.Name, Math.Round(x.Cost, 2))).ToList(),
+            ResponseTimes = services.Where(s => s.Connectivity?.ResponseTime > 0)
+                .OrderByDescending(s => s.Connectivity!.ResponseTime).Take(6)
+                .Select(s => new OpsMetricPoint(s.FriendlyName ?? s.Name, s.Connectivity!.ResponseTime)).ToList(),
+            ServerErrors = services.Where(s => s.Metrics7Days?.Http5xx > 0)
+                .OrderByDescending(s => s.Metrics7Days!.Http5xx).Take(6)
+                .Select(s => new OpsMetricPoint(s.FriendlyName ?? s.Name, s.Metrics7Days!.Http5xx)).ToList(),
+            CostHistory = history.Where(h => h.GeneratedAt.HasValue && (h.Cost?.TotalCost30Days ?? 0) > 0)
+                .OrderBy(h => h.GeneratedAt).TakeLast(30)
+                .Select(h => new OpsMetricPoint(h.GeneratedAt!.Value.ToString("MMM dd"),
+                    Math.Round(h.Cost!.TotalCost30Days, 2))).ToList(),
+            AttentionItems = attention.Take(5).ToList(),
+        };
+    }
 
     private static async Task<IResult> GetDiag(HttpContext http, IWebHostEnvironment env, IConfiguration config, AzureReportStore store, CancellationToken ct)
     {

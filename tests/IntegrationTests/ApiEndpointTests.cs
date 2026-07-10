@@ -162,6 +162,54 @@ public class DiagReportEndpointTests
 }
 
 [Collection("WebApp")]
+public class OpsSummaryEndpointTests
+{
+    private readonly HttpClient _client;
+
+    public OpsSummaryEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
+
+    [Fact]
+    public async Task GetSummary_ReturnsCompactStatusContract()
+    {
+        var response = await _client.GetAsync("/api/diag/summary");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.TryGetProperty("healthPercent", out _).Should().BeTrue();
+        doc.RootElement.TryGetProperty("attentionItems", out _).Should().BeTrue();
+        doc.RootElement.TryGetProperty("responseTimes", out _).Should().BeTrue();
+        doc.RootElement.TryGetProperty("webServices", out _).Should().BeFalse(
+            because: "the first-paint summary must not return the full report graph");
+    }
+}
+
+[Collection("WebApp")]
+public class PortfolioEndpointTests
+{
+    private readonly HttpClient _client;
+
+    public PortfolioEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
+
+    [Fact]
+    public async Task GetPortfolio_ReturnsStableDecoratedCatalog()
+    {
+        var response = await _client.GetAsync("/api/portfolio");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+        doc.RootElement.GetArrayLength().Should().BeGreaterThan(0);
+        foreach (var app in doc.RootElement.EnumerateArray())
+        {
+            app.TryGetProperty("id", out _).Should().BeTrue();
+            app.TryGetProperty("description", out var description).Should().BeTrue();
+            description.GetString().Should().NotBeNullOrWhiteSpace();
+            app.TryGetProperty("status", out _).Should().BeTrue();
+        }
+    }
+}
+
+[Collection("WebApp")]
 public class AzStatusEndpointTests
 {
     private readonly HttpClient _client;

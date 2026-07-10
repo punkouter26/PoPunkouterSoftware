@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
 using PoPunkouterSoftware.Client.Components.Pages.Models;
@@ -13,10 +12,14 @@ namespace PoPunkouterSoftware.Client.Components.Pages;
 public partial class AzureDashboard
 {
     private AzureReport? report;
+    private OpsSummary? _summary;
     private List<WebService> services = new();
     private List<SafeToRemoveItem> safeToRemove = new();
     private bool _loading = true;
     private string? _loadError;
+    private bool _advancedOpen;
+    private bool _advancedLoading;
+    private string? _advancedError;
 
     private List<ConsolidatedService> ConsolidatedServices => BuildConsolidatedServices(report);
 
@@ -51,7 +54,6 @@ public partial class AzureDashboard
     private bool _refreshFailed;
     private string? _refreshFailureMessage;
     private CancellationTokenSource? _refreshCts;
-    private IDisposable? _locationChangingRegistration;
     private const int RefreshTimeoutSeconds = 120;
     private static string FormatAge(TimeSpan age)
     {
@@ -66,6 +68,8 @@ public partial class AzureDashboard
 
     private async Task DownloadReportAsync()
     {
+        if (report is null)
+            await LoadReportAsync();
         if (report is null) return;
 
         var json = JsonSerializer.Serialize(report, AppJsonContext.Default.AzureReport);
@@ -89,26 +93,41 @@ public partial class AzureDashboard
 
     protected override async Task OnInitializedAsync()
     {
-        _locationChangingRegistration = NavManager.RegisterLocationChangingHandler(OnLocationChanging);
-        await LoadReportAsync();
-        _ = LoadHistoryAsync();
+        await LoadSummaryAsync();
     }
 
-    private ValueTask OnLocationChanging(LocationChangingContext context)
+    private async Task LoadSummaryAsync()
     {
-        if (_refreshing)
+        _loading = true;
+        _loadError = null;
+        try
         {
-            context.PreventNavigation();
-            NotificationService.Notify(NotificationSeverity.Warning, "Scan in progress",
-                "An Azure scan is running. Cancel it or wait for it to complete before leaving this page.");
+            _summary = await Http.GetFromJsonAsync("/api/diag/summary", AppJsonContext.Default.OpsSummary)
+                ?? throw new InvalidOperationException("The Azure summary endpoint returned no data.");
         }
-        return ValueTask.CompletedTask;
+        catch (Exception ex)
+        {
+            _summary = null;
+            _loadError = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleAdvancedAsync()
+    {
+        _advancedOpen = !_advancedOpen;
+        if (_advancedOpen && report is null)
+            await LoadReportAsync();
     }
 
     private async Task LoadReportAsync()
     {
-        _loading = true;
-        _loadError = null;
+        _advancedLoading = true;
+        _advancedError = null;
         StateHasChanged();
 
         try
@@ -119,18 +138,19 @@ public partial class AzureDashboard
 
             services = report.WebServices?.Services ?? new List<WebService>();
             safeToRemove = BuildSafeToRemove(report);
+            await LoadHistoryAsync();
         }
         catch (Exception ex)
         {
             report = null;
             services = new List<WebService>();
             safeToRemove = new List<SafeToRemoveItem>();
-            _loadError = ex.Message;
+            _advancedError = ex.Message;
             Console.Error.WriteLine($"Azure dashboard load error: {ex}");
         }
         finally
         {
-            _loading = false;
+            _advancedLoading = false;
             StateHasChanged();
         }
     }
@@ -165,7 +185,9 @@ public partial class AzureDashboard
             else
                 await WaitForRefreshCompletionAsync(_refreshCts!.Token, delayMs: 1500);
 
-            await LoadReportAsync();
+            await LoadSummaryAsync();
+            if (_advancedOpen)
+                await LoadReportAsync();
             if (_refreshFailed)
                 NotificationService.Notify(NotificationSeverity.Error, "Refresh failed", _refreshFailureMessage ?? "Refresh failed. Check logs for details.");
             else if (!_refreshCts.Token.IsCancellationRequested)
@@ -203,7 +225,7 @@ public partial class AzureDashboard
 
     private async Task WaitForRefreshCompletionAsync(CancellationToken ct, int delayMs = 2000)
     {
-        var initialGeneratedAt = report?.GeneratedAt;
+        var initialGeneratedAt = _summary?.GeneratedAt ?? report?.GeneratedAt;
         while (_refreshing && !ct.IsCancellationRequested)
         {
             await Task.Delay(delayMs, ct);
@@ -214,7 +236,7 @@ public partial class AzureDashboard
             {
                 try
                 {
-                    var latest = await Http.GetFromJsonAsync("/api/diag/report", AppJsonContext.Default.AzureReport, ct);
+                    var latest = await Http.GetFromJsonAsync("/api/diag/summary", AppJsonContext.Default.OpsSummary, ct);
                     if (latest is not null && latest.GeneratedAt != initialGeneratedAt)
                     {
                         _refreshing = false;
@@ -280,7 +302,6 @@ public partial class AzureDashboard
 
     public async ValueTask DisposeAsync()
     {
-        _locationChangingRegistration?.Dispose();
         if (_hub is not null)
             await _hub.DisposeAsync();
     }

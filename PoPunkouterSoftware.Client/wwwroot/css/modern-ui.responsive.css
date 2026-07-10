@@ -133,9 +133,13 @@
 .rz-layout {
     min-height: 100dvh;
     height: auto;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) !important;
 }
 
 .rz-body {
+    width: 100%;
+    min-width: 0;
     overflow-y: visible !important;
     height: auto !important;
     min-height: 0 !important;

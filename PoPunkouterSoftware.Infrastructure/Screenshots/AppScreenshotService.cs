@@ -87,25 +87,29 @@ public class AppScreenshotService
 
     /// <summary>Hosts that currently have a stored screenshot.</summary>
     public async Task<HashSet<string>> ListHostsAsync(CancellationToken ct = default)
+        => (await ListVersionsAsync(ct)).Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Stored screenshot hosts and a cache-busting version from blob modification time.</summary>
+    public async Task<Dictionary<string, long>> ListVersionsAsync(CancellationToken ct = default)
     {
-        var hosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var versions = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         var container = await GetContainerAsync(ct);
         if (container is null)
-            return hosts;
+            return versions;
 
         try
         {
             await foreach (var blob in container.GetBlobsAsync(cancellationToken: ct))
             {
                 if (blob.Name.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                    hosts.Add(blob.Name[..^4]);
+                    versions[blob.Name[..^4]] = blob.Properties.LastModified?.ToUnixTimeSeconds() ?? 0;
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not list app screenshots");
         }
-        return hosts;
+        return versions;
     }
 
     /// <summary>Opens a stored screenshot for streaming, or null when missing/unavailable.</summary>

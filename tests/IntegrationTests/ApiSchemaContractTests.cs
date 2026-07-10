@@ -73,4 +73,16 @@ public class ApiSchemaContractTests
         ws.TryGetProperty("total", out _)
             .Should().BeTrue(because: "webServices.total must be camelCase");
     }
+
+    [Theory]
+    [InlineData("generatedAt")]
+    [InlineData("isStale")]
+    [InlineData("healthPercent")]
+    [InlineData("attentionCount")]
+    public async Task OpsSummary_HasCamelCaseProperty(string property)
+    {
+        var json = await _client.GetStringAsync("/api/diag/summary");
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.TryGetProperty(property, out _).Should().BeTrue();
+    }
 }

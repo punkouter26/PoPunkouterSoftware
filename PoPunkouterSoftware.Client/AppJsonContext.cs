@@ -26,6 +26,7 @@ internal sealed record ConfigResponse(
     WriteIndented = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AzureReport))]
+[JsonSerializable(typeof(OpsSummary))]
 [JsonSerializable(typeof(List<HistorySummary>))]
 [JsonSerializable(typeof(List<PortfolioApp>))]
 [JsonSerializable(typeof(GitHubActivity))]

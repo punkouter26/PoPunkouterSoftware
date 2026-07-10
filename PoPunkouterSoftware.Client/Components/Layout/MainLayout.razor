@@ -5,8 +5,6 @@
 
 <RadzenComponents />
 
-<canvas id="app-bg-canvas"></canvas>
-
 @if (_isMockMode)
 {
     <div class="app-mock-data-warning">
@@ -20,9 +18,11 @@
             <a href="/" class="app-topbar-brand">PoPunkouterSoftware</a>
             <div class="app-topbar-nav">
                 <a href="/" class="app-topbar-link @NavClass("/")">
-                    <span class="material-symbols-outlined">home</span>Portfolio
+                    <span class="material-symbols-outlined" aria-hidden="true">home</span>Apps
                 </a>
-                @* /azure is a hidden page — reachable by direct URL only, no nav link. *@
+                <a href="/azure" class="app-topbar-link @NavClass("/azure")">
+                    <span class="material-symbols-outlined" aria-hidden="true">monitor_heart</span>Azure
+                </a>
             </div>
         </nav>
     </RadzenHeader>
@@ -57,7 +57,6 @@
     {
         if (firstRender)
         {
-            await JS.InvokeVoidAsync("initBackgroundCanvas");
             await JS.InvokeVoidAsync("initNavbarScroll");
         }
     }

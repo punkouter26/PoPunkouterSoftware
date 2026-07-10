@@ -8,78 +8,49 @@
 @inject NotificationService NotificationService
 @inject NavigationManager NavManager
 
-<PageTitle>Po Software — Azure Monitor</PageTitle>
+<PageTitle>Po Software — Azure Status</PageTitle>
 
 <div class="app-page azure-ops-page">
 @if (_loading)
 {
-    <div class="app-card">
-        <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-3" />
-        <p class="app-note rz-mb-0">Loading Azure report…</p>
+    <div class="azure-summary-skeleton" aria-label="Loading Azure status">
+        <div></div><div></div><div></div><div></div>
     </div>
 }
-else if (!string.IsNullOrWhiteSpace(_loadError))
+else if (!string.IsNullOrWhiteSpace(_loadError) || _summary is null)
 {
-    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true" class="rz-my-4">
-        <div><strong>Azure dashboard load failed.</strong></div>
-        <div class="app-mt-35">@_loadError</div>
-        <div class="app-mt-75">
-            <RadzenButton Text="Retry" Icon="refresh" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(async () => await LoadReportAsync())" />
-        </div>
+    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true">
+        <strong>Azure status is unavailable.</strong>
+        <span>@_loadError</span>
+        <RadzenButton Text="Retry" Icon="refresh" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="LoadSummaryAsync" />
     </RadzenAlert>
 }
 else
 {
-    var currentReport = report ?? new AzureReport();
-    var active = currentReport.WebServices?.ByStatus?.Active ?? 0;
-    var broken = currentReport.WebServices?.ByStatus?.Broken ?? 0;
-    var total = currentReport.WebServices?.Total ?? 0;
-    var healthPct = total > 0 ? (int)(active * 100.0 / total) : 100;
-    var ageMin = currentReport.GeneratedAt is DateTime generated
-        ? (int)(DateTime.UtcNow - generated).TotalMinutes : -1;
-    var ageLabel = ageMin < 0 ? "Unknown age" : ageMin < 60 ? $"{ageMin}m old" : ageMin < 1440 ? $"{ageMin / 60}h {ageMin % 60}m old" : $"{ageMin / 1440}d {ageMin % 1440 / 60}h old";
-    var insecureCount = (currentReport.StorageInventory ?? new()).Count(s => s.PublicBlobAccess || !s.HttpsOnly || s.MinTls is "TLS1_0" or "TLS1_1");
-    var criticalDriftCount = (currentReport.ConfigDrift ?? new()).Count(d => d.Issues?.Any(i => i.Severity is "critical" or "high") == true);
-    var totalSecurityFindings = insecureCount + criticalDriftCount;
-    var securityIssueCount = (currentReport.StorageInventory ?? new()).Sum(s => s.IssueCount)
-        + (currentReport.ConfigDrift ?? new()).Sum(d => d.IssueCount);
+    var summary = _summary;
+    var age = summary.GeneratedAt is DateTime generated ? DateTime.UtcNow - generated : TimeSpan.MaxValue;
+    var ageLabel = age == TimeSpan.MaxValue ? "Unknown age" : age.TotalMinutes < 60 ? $"{(int)age.TotalMinutes}m ago" : age.TotalHours < 24 ? $"{(int)age.TotalHours}h ago" : $"{(int)age.TotalDays}d ago";
+    var costSeries = summary.CostHistory.Count > 1 ? summary.CostHistory : summary.CostDrivers;
 
-    <header class="azure-command-header @(PriorityQueue.Count > 0 ? "has-attention" : "is-healthy")">
+    <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")">
         <div class="azure-command-copy">
-            <div class="app-kicker">Azure · @(currentReport.Subscription?.Name ?? "—")</div>
-            <h1 class="azure-hero-title">Azure operations</h1>
-            <p class="azure-command-summary">
-                @if (PriorityQueue.Count > 0)
-                {
-                    <strong>@PriorityQueue.Count item(s) need review.</strong>
-                    <span> Start with the highest-impact work below.</span>
-                }
-                else
-                {
-                    <strong>All systems operational.</strong>
-                    <span> No immediate actions were detected.</span>
-                }
-            </p>
+            <div class="app-kicker">Azure · @summary.SubscriptionName</div>
+            <h1 class="azure-hero-title">@(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")</h1>
             <div class="azure-command-meta">
-                <span>Generated @(currentReport.GeneratedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—") UTC</span>
-                <RadzenBadge Text="@ageLabel" IsPill="true" BadgeStyle="@(ageMin < 30 ? BadgeStyle.Success : ageMin < 120 ? BadgeStyle.Info : ageMin < 360 ? BadgeStyle.Warning : BadgeStyle.Danger)" />
+                <span>Updated @ageLabel</span>
+                <RadzenBadge Text="@(summary.IsStale ? "Stale data" : "Current")" IsPill="true"
+                              BadgeStyle="@(summary.IsStale ? BadgeStyle.Danger : BadgeStyle.Success)" />
             </div>
         </div>
-        <div class="azure-command-kpis" aria-label="Azure report summary">
-            <div><strong>@healthPct%</strong><span>Fleet health</span></div>
-            <div><strong>@(currentReport.Cost?.TotalFormatted ?? "$0.00")</strong><span>30-day cost</span></div>
-            <div><strong>@CleanupCandidates.Count</strong><span>Cleanup</span></div>
-            <div><strong>@totalSecurityFindings</strong><span>Security</span></div>
+        <div class="azure-command-kpis" aria-label="Azure status summary">
+            <div><strong>@summary.HealthPercent%</strong><span>Service health</span></div>
+            <div><strong>@summary.CostFormatted</strong><span>30-day cost</span></div>
+            <div><strong>@summary.BrokenServices</strong><span>Unavailable</span></div>
+            <div><strong>@summary.TotalResources</strong><span>Resources</span></div>
         </div>
         <div class="azure-command-actions">
-            <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh from Azure")" Icon="refresh"
-                          ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
-                          Disabled="@_refreshing" Click="RefreshAsync" />
-            <RadzenButton Text="Download JSON" Icon="download" ButtonStyle="ButtonStyle.Light"
-                          Variant="Variant.Outlined" Size="ButtonSize.Small"
-                          Disabled="@(report == null)" Click="DownloadReportAsync" />
-            <RadzenButton Text="Download audit script" Icon="terminal" ButtonStyle="ButtonStyle.Light"
-                          Variant="Variant.Outlined" Size="ButtonSize.Small" Click="DownloadAutomationScript" />
+            <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh")" Icon="refresh"
+                          ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Disabled="@_refreshing" Click="RefreshAsync" />
             @if (_refreshing)
             {
                 <RadzenButton Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="CancelRefreshAsync" />
@@ -87,303 +58,188 @@ else
         </div>
     </header>
 
-    <nav class="azure-sticky-nav" aria-label="Azure dashboard sections">
-        <a href="#attention">Attention <span>@PriorityQueue.Count</span></a>
-        <a href="#overview">Overview</a>
-        <a href="#performance">Performance</a>
-        <a href="#resources">Resources <span>@(currentReport.AllResourceSummary?.Total ?? 0)</span></a>
-        <a href="#details">Details</a>
-    </nav>
-
     @if (_refreshing)
     {
-        <section class="app-section azure-refresh-progress" aria-live="polite">
-            <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" Style="height:22px" />
-            <span><RadzenIcon Icon="sync" class="app-progress-icon" /> @_progressStep</span>
+        <section class="azure-refresh-progress" aria-live="polite">
+            <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" Style="height:18px" />
+            <span><RadzenIcon Icon="sync" class="app-progress-icon" /> @_progressStep — you can leave this page while the scan continues.</span>
         </section>
     }
 
-    <section id="attention" class="app-section azure-anchor-section">
-        <div class="azure-section-heading">
-            <div>
-                <div class="app-kicker">Priority queue</div>
-                <h2>Needs attention</h2>
-                <p>Reliability, security, configuration, certificate, and cleanup findings ranked by impact.</p>
+    <section class="azure-glance-grid" aria-label="Azure status charts">
+        <article class="app-card">
+            <h2>Services</h2>
+            <div class="azure-donut-wrap">
+                <RadzenChart Style="height:210px">
+                    <RadzenDonutSeries TItem="OpsMetricPoint" Data="@summary.FleetHealth" CategoryProperty="Label" ValueProperty="Value" InnerRadius="72" />
+                    <RadzenLegend Position="LegendPosition.Bottom" />
+                </RadzenChart>
+                <div class="azure-donut-center"><div class="azure-donut-pct">@summary.ActiveServices/@summary.TotalServices</div><div class="azure-donut-caption">healthy</div></div>
             </div>
-            @if (PriorityQueue.Count > 0)
+            <span class="app-sr-only">@string.Join(", ", summary.FleetHealth.Select(x => $"{x.Label}: {x.Value}"))</span>
+        </article>
+        <article class="app-card">
+            <h2>Cost</h2>
+            @if (costSeries.Count == 0)
             {
-                <RadzenBadge Text="@($"{PriorityQueue.Count} open")" BadgeStyle="BadgeStyle.Danger" IsPill="true" />
+                <div class="azure-compact-state">No cost trend is available.</div>
             }
+            else if (summary.CostHistory.Count > 1)
+            {
+                <RadzenChart Style="height:210px">
+                    <RadzenLineSeries TItem="OpsMetricPoint" Data="@costSeries" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
+                    <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
+                </RadzenChart>
+            }
+            else
+            {
+                <RadzenChart Style="height:210px">
+                    <RadzenBarSeries TItem="OpsMetricPoint" Data="@costSeries" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
+                    <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
+                </RadzenChart>
+            }
+            <span class="app-sr-only">@string.Join(", ", costSeries.Select(x => $"{x.Label}: ${x.Value:F2}"))</span>
+        </article>
+        <article class="app-card">
+            <h2>Response time</h2>
+            @if (summary.ResponseTimes.Count == 0)
+            {
+                <div class="azure-compact-state success">No slow responses detected.</div>
+            }
+            else
+            {
+                <RadzenChart Style="height:210px">
+                    <RadzenBarSeries TItem="OpsMetricPoint" Data="@summary.ResponseTimes" CategoryProperty="Label" ValueProperty="Value" Title="ms" />
+                    <RadzenCategoryAxis /><RadzenValueAxis FormatString="{0:N0} ms"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
+                </RadzenChart>
+            }
+            <span class="app-sr-only">@string.Join(", ", summary.ResponseTimes.Select(x => $"{x.Label}: {x.Value:N0} milliseconds"))</span>
+        </article>
+    </section>
+
+    <section class="azure-attention-summary">
+        <div class="azure-section-heading">
+            <div><div class="app-kicker">Action first</div><h2>Needs attention</h2></div>
+            <div class="azure-signal-badges">
+                <RadzenBadge Text="@($"{summary.SecurityFindings} security")" IsPill="true" BadgeStyle="@(summary.SecurityFindings > 0 ? BadgeStyle.Danger : BadgeStyle.Success)" />
+                <RadzenBadge Text="@($"{summary.CleanupCandidates} cleanup")" IsPill="true" BadgeStyle="@(summary.CleanupCandidates > 0 ? BadgeStyle.Warning : BadgeStyle.Success)" />
+            </div>
         </div>
-        @if (PriorityQueue.Count == 0)
+        @if (summary.AttentionItems.Count == 0)
         {
-            <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No immediate action is required.</div>
+            <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No action is needed.</div>
         }
         else
         {
-            <div class="azure-attention-list">
-                @foreach (var item in PriorityQueue)
-                {
-                    <article class="azure-attention-item">
-                        <div class="azure-item-heading">
-                            <RadzenBadge Text="@item.Actionability" IsPill="true" BadgeStyle="@ActionabilityBadge(item.Actionability)" />
-                            <strong>@item.Item</strong>
-                            <span class="azure-attention-reason">@item.Reason</span>
-                            <span class="azure-impact-score">Impact @item.ImpactScore</span>
-                        </div>
-                        <div class="azure-attention-detail">
-                            <dl>
-                                <div><dt>Source</dt><dd>@item.Source</dd></div>
-                                <div><dt>Confidence</dt><dd>@item.Confidence</dd></div>
-                                <div><dt>Owner</dt><dd>@item.Owner</dd></div>
-                                <div><dt>Environment</dt><dd>@item.Environment</dd></div>
-                            </dl>
-                            @if (!string.IsNullOrWhiteSpace(item.Command))
-                            {
-                                <button class="azure-copy-command" @onclick="@(() => CopyText(item.Command))" title="Copy Azure CLI command">
-                                    <code>@item.Command</code><RadzenIcon Icon="content_copy" />
-                                </button>
-                            }
-                        </div>
-                    </article>
-                }
-            </div>
+            <ol class="azure-simple-attention">
+                @foreach (var item in summary.AttentionItems) { <li>@item</li> }
+            </ol>
         }
     </section>
 
-    <section class="app-section">
-        <div class="app-card">
-            <div class="app-toolbar">
-                <div>
-                    <div class="app-kicker">Subscription automation</div>
-                    <h2 class="app-card-title">Generate a portable Azure efficiency report</h2>
-                    <p class="app-note rz-mb-0">
-                        Download the PowerShell 7 script, run it locally with Azure CLI installed, and select a subscription.
-                        It creates a standalone HTML inventory and a separate cleanup script whose commands remain commented out.
-                    </p>
-                </div>
-                <RadzenButton Text="Download PowerShell script" Icon="download"
-                              ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
-                              Click="DownloadAutomationScript" />
-            </div>
-            <div class="app-callout info rz-mt-3">
-                <strong>Run:</strong> <code>pwsh ./New-AzureEfficiencyReport.ps1</code><br />
-                <span class="app-note">Prerequisites: PowerShell 7 and Azure CLI. The script installs the Resource Graph extension when needed and never reads secret values.</span>
-            </div>
-        </div>
-    </section>
+    <div class="azure-advanced-toggle">
+        <RadzenButton Text="@(_advancedOpen ? "Hide advanced diagnostics" : "Advanced diagnostics")"
+                      Icon="@(_advancedOpen ? "expand_less" : "tune")" ButtonStyle="ButtonStyle.Light"
+                      Variant="Variant.Outlined" Click="ToggleAdvancedAsync" />
+    </div>
 
-    <section id="overview" class="app-section azure-anchor-section">
-        <div class="azure-section-heading">
-            <div><div class="app-kicker">Overview</div><h2>Operational snapshot</h2><p>The four signals most useful for deciding what to investigate next.</p></div>
-        </div>
-        <div class="azure-chart-grid">
-            <article class="app-card">
-                <h3 class="app-card-title">Fleet health</h3>
-                <p class="app-note">Active, broken, and other services.</p>
-                <div class="azure-donut-wrap">
-                    <RadzenChart Style="height:230px">
-                        <RadzenDonutSeries TItem="ChartPoint" Data="@FleetHealthDonutData" CategoryProperty="Label" ValueProperty="Value" InnerRadius="75" />
-                        <RadzenLegend Position="LegendPosition.Bottom" />
-                    </RadzenChart>
-                    <div class="azure-donut-center"><div class="azure-donut-pct">@healthPct%</div><div class="azure-donut-caption">healthy</div></div>
-                </div>
-            </article>
-            <article class="app-card">
-                <h3 class="app-card-title">Top cost drivers</h3>
-                <p class="app-note">Largest contributors to @(currentReport.Cost?.TotalFormatted ?? "—") over 30 days.</p>
-                @if (CostDriversBarData.Count == 0)
-                {
-                    <div class="azure-compact-state">No cost data in the latest report.</div>
-                }
-                else
-                {
-                    <RadzenChart Style="height:230px">
-                        <RadzenBarSeries TItem="ChartPoint" Data="@CostDriversBarData.Take(6)" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
-                        <RadzenValueAxis FormatString="${0:F2}"><RadzenGridLines Visible="true" /></RadzenValueAxis>
-                        <RadzenCategoryAxis /><RadzenLegend Visible="false" />
-                    </RadzenChart>
-                }
-            </article>
-        </div>
-    </section>
-
-    <section id="performance" class="app-section azure-anchor-section">
-        <div class="azure-section-heading">
-            <div><div class="app-kicker">Performance</div><h2>Response time and reliability</h2><p>Slow applications and server errors share one investigation surface.</p></div>
-        </div>
-        <div class="azure-chart-grid">
-            <article class="app-card">
-                <h3 class="app-card-title">Slowest response times</h3>
-                <p class="app-note">Current probe response, highest first.</p>
-                @if (ResponseTimeBarData.Count == 0)
-                {
-                    <div class="azure-compact-state success">No response-time data to review.</div>
-                }
-                else
-                {
-                    <RadzenChart Style="height:240px">
-                        <RadzenBarSeries TItem="ChartPoint" Data="@ResponseTimeBarData.Take(8)" CategoryProperty="Label" ValueProperty="Value" Title="ms" />
-                        <RadzenValueAxis FormatString="{0:N0} ms"><RadzenGridLines Visible="true" /></RadzenValueAxis>
-                        <RadzenCategoryAxis /><RadzenLegend Visible="false" />
-                    </RadzenChart>
-                }
-            </article>
-            <article class="app-card">
-                <h3 class="app-card-title">7-day server errors</h3>
-                <p class="app-note">Services reporting HTTP 5xx responses.</p>
-                @if (ErrorRateBarData.Count == 0)
-                {
-                    <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No 5xx errors detected.</div>
-                }
-                else
-                {
-                    <RadzenChart Style="height:240px">
-                        <RadzenBarSeries TItem="ChartPoint" Data="@ErrorRateBarData.Take(8)" CategoryProperty="Label" ValueProperty="Value" Title="5xx" />
-                        <RadzenValueAxis FormatString="{0:N0}"><RadzenGridLines Visible="true" /></RadzenValueAxis>
-                        <RadzenCategoryAxis /><RadzenLegend Visible="false" />
-                    </RadzenChart>
-                }
-            </article>
-        </div>
-    </section>
-
-    <section id="resources" class="app-section azure-anchor-section">
-        <div class="azure-section-heading azure-resource-heading">
-            <div><div class="app-kicker">Resource explorer</div><h2>One inventory, multiple views</h2><p>Filter the same resource list by operational concern instead of switching reports.</p></div>
-            <span class="azure-result-count">@FilteredResourceExplorerItems.Count of @ResourceExplorerItems.Count resources</span>
-        </div>
-        <div class="azure-filter-bar" role="group" aria-label="Filter resources">
-            @foreach (var view in ResourceViews)
-            {
-                <RadzenButton Text="@view" Size="ButtonSize.Small"
-                              ButtonStyle="@(_resourceView == view ? ButtonStyle.Primary : ButtonStyle.Light)"
-                              Variant="Variant.Outlined" Click="@(() => _resourceView = view)" />
-            }
-        </div>
-        @if (FilteredResourceExplorerItems.Count == 0)
+    @if (_advancedOpen)
+    {
+        <section class="azure-advanced" aria-label="Advanced Azure diagnostics">
+        @if (_advancedLoading)
         {
-            <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No resources match this view.</div>
+            <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" />
+        }
+        else if (!string.IsNullOrWhiteSpace(_advancedError) || report is null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" ShowIcon="true"><span>@_advancedError</span><RadzenButton Text="Retry" Click="LoadReportAsync" /></RadzenAlert>
         }
         else
         {
-            <div class="azure-resource-grid app-table-frame">
-                <RadzenDataGrid Data="@FilteredResourceExplorerItems" TItem="ResourceExplorerItem" AllowSorting="true" AllowFiltering="true"
-                                FilterMode="FilterMode.Simple" AllowPaging="false"
-                                GridLines="DataGridGridLines.Horizontal" Style="width:100%;min-width:900px">
-                    <Columns>
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Name" Title="Resource" Width="210px"><Template Context="item"><strong>@item.Name</strong></Template></RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Type" Title="Type" Width="150px" />
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResourceGroup" Title="Resource group" Width="160px" />
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Location" Title="Location" Width="110px" />
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Sku" Title="SKU" Width="90px" />
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Status" Title="Status" Width="115px"><Template Context="item"><RadzenBadge Text="@item.Status" BadgeStyle="@ExplorerStatusBadge(item.Status)" IsPill="true" /></Template></RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Risk" Title="Concern" Width="130px"><Template Context="item"><span class="azure-risk-label @RiskClass(item.Risk)">@item.Risk</span></Template></RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Requests7d" Title="Req 7d" Width="90px" TextAlign="TextAlign.Right" />
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Errors7d" Title="5xx" Width="70px" TextAlign="TextAlign.Right" />
-                        <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResponseTimeMs" Title="Response" Width="100px" TextAlign="TextAlign.Right"><Template Context="item">@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</Template></RadzenDataGridColumn>
-                    </Columns>
-                </RadzenDataGrid>
+            var currentReport = report;
+            var securityIssueCount = (currentReport.StorageInventory ?? new()).Sum(s => s.IssueCount)
+                + (currentReport.ConfigDrift ?? new()).Sum(d => d.IssueCount);
+
+            <div class="azure-advanced-actions">
+                <RadzenButton Text="Download full JSON" Icon="download" Size="ButtonSize.Small" Click="DownloadReportAsync" />
+                <RadzenButton Text="Download audit script" Icon="terminal" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" Size="ButtonSize.Small" Click="DownloadAutomationScript" />
             </div>
-            <div class="azure-resource-cards">
-                @foreach (var item in FilteredResourceExplorerItems)
+
+            <section class="azure-anchor-section">
+                <div class="azure-section-heading"><div><div class="app-kicker">Ranked evidence</div><h2>Full priority queue</h2></div><RadzenBadge Text="@($"{PriorityQueue.Count} open")" IsPill="true" /></div>
+                @if (PriorityQueue.Count == 0)
                 {
-                    <article class="azure-resource-card">
-                        <div class="azure-resource-card-heading"><strong>@item.Name</strong><RadzenBadge Text="@item.Status" BadgeStyle="@ExplorerStatusBadge(item.Status)" IsPill="true" /></div>
-                        <dl>
-                            <div><dt>Type</dt><dd>@item.Type</dd></div><div><dt>Resource group</dt><dd>@item.ResourceGroup</dd></div>
-                            <div><dt>Location</dt><dd>@item.Location</dd></div><div><dt>SKU</dt><dd>@item.Sku</dd></div>
-                            <div><dt>Concern</dt><dd>@item.Risk</dd></div><div><dt>Requests / 5xx</dt><dd>@item.Requests7d.ToString("N0") / @item.Errors7d.ToString("N0")</dd></div>
-                            <div><dt>Response</dt><dd>@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</dd></div>
-                        </dl>
-                    </article>
+                    <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No immediate action is required.</div>
                 }
-            </div>
+                else
+                {
+                    <div class="azure-attention-list">
+                    @foreach (var item in PriorityQueue)
+                    {
+                        <article class="azure-attention-item">
+                            <div class="azure-item-heading"><RadzenBadge Text="@item.Actionability" IsPill="true" BadgeStyle="@ActionabilityBadge(item.Actionability)" /><strong>@item.Item</strong><span class="azure-attention-reason">@item.Reason</span><span class="azure-impact-score">Impact @item.ImpactScore</span></div>
+                            <div class="azure-attention-detail">
+                                <dl><div><dt>Source</dt><dd>@item.Source</dd></div><div><dt>Confidence</dt><dd>@item.Confidence</dd></div><div><dt>Owner</dt><dd>@item.Owner</dd></div><div><dt>Environment</dt><dd>@item.Environment</dd></div></dl>
+                                @if (!string.IsNullOrWhiteSpace(item.Command)) { <button class="azure-copy-command" @onclick="@(() => CopyText(item.Command))" title="Copy Azure CLI command"><code>@item.Command</code><RadzenIcon Icon="content_copy" /></button> }
+                            </div>
+                        </article>
+                    }
+                    </div>
+                }
+            </section>
+
+            <section class="azure-anchor-section">
+                <div class="azure-section-heading azure-resource-heading"><div><div class="app-kicker">Resource explorer</div><h2>All resources</h2></div><span class="azure-result-count">@FilteredResourceExplorerItems.Count of @ResourceExplorerItems.Count</span></div>
+                <div class="azure-filter-bar" role="group" aria-label="Filter resources">
+                    @foreach (var view in ResourceViews) { <RadzenButton Text="@view" Size="ButtonSize.Small" ButtonStyle="@(_resourceView == view ? ButtonStyle.Primary : ButtonStyle.Light)" Variant="@(_resourceView == view ? Variant.Filled : Variant.Outlined)" Click="@(() => _resourceView = view)" /> }
+                </div>
+                <div class="azure-resource-grid">
+                    <RadzenDataGrid Data="@FilteredResourceExplorerItems" TItem="ResourceExplorerItem" AllowSorting="true" AllowFiltering="true" AllowPaging="true" PageSize="12" Density="Density.Compact" GridLines="DataGridGridLines.Horizontal" Style="width:100%;min-width:900px">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Name" Title="Resource" Width="210px"><Template Context="item"><strong>@item.Name</strong></Template></RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Type" Title="Type" Width="150px" />
+                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResourceGroup" Title="Resource group" Width="160px" />
+                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Status" Title="Status" Width="115px"><Template Context="item"><RadzenBadge Text="@item.Status" BadgeStyle="@ExplorerStatusBadge(item.Status)" IsPill="true" /></Template></RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Risk" Title="Concern" Width="130px"><Template Context="item"><span class="azure-risk-label @RiskClass(item.Risk)">@item.Risk</span></Template></RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Requests7d" Title="Req 7d" Width="90px" TextAlign="TextAlign.Right" />
+                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Errors7d" Title="5xx" Width="70px" TextAlign="TextAlign.Right" />
+                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResponseTimeMs" Title="Response" Width="100px" TextAlign="TextAlign.Right"><Template Context="item">@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</Template></RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </div>
+                <div class="azure-resource-cards">
+                    @foreach (var item in FilteredResourceExplorerItems)
+                    {
+                        <article class="azure-resource-card"><div class="azure-resource-card-heading"><strong>@item.Name</strong><RadzenBadge Text="@item.Status" BadgeStyle="@ExplorerStatusBadge(item.Status)" IsPill="true" /></div><dl><div><dt>Type</dt><dd>@item.Type</dd></div><div><dt>Group</dt><dd>@item.ResourceGroup</dd></div><div><dt>Concern</dt><dd>@item.Risk</dd></div><div><dt>Requests / 5xx</dt><dd>@item.Requests7d.ToString("N0") / @item.Errors7d.ToString("N0")</dd></div></dl></article>
+                    }
+                </div>
+            </section>
+
+            <section class="azure-anchor-section">
+                <div class="azure-section-heading"><div><div class="app-kicker">Evidence</div><h2>Security, cleanup and history</h2></div></div>
+                <div class="azure-disclosure-stack">
+                    <details class="azure-disclosure" open="@(securityIssueCount > 0)"><summary class="azure-disclosure-heading"><span><RadzenIcon Icon="security" /><strong>Security and configuration</strong></span><RadzenBadge Text="@($"{securityIssueCount} findings")" IsPill="true" /></summary><div class="azure-disclosure-body">
+                        @if (securityIssueCount == 0) { <div class="azure-compact-state success">Checks passed.</div> }
+                        @foreach (var storage in (currentReport.StorageInventory ?? new()).Where(s => s.IssueCount > 0)) { <article class="azure-finding"><strong>@storage.Name</strong><span>@storage.ResourceGroup · @storage.MinTls</span><p>@string.Join("; ", storage.Issues?.Select(i => i.Issue) ?? [])</p></article> }
+                        @foreach (var drift in (currentReport.ConfigDrift ?? new()).Where(d => d.IssueCount > 0)) { <article class="azure-finding"><strong>@(drift.FriendlyName ?? drift.Name)</strong><span>@drift.ResourceGroup · Configuration</span><p>@string.Join("; ", drift.Issues?.Select(i => i.Issue) ?? [])</p></article> }
+                    </div></details>
+                    <details class="azure-disclosure"><summary class="azure-disclosure-heading"><span><RadzenIcon Icon="delete_sweep" /><strong>Cleanup evidence</strong></span><RadzenBadge Text="@($"{CleanupCandidates.Count} candidates")" IsPill="true" /></summary><div class="azure-disclosure-body">
+                        @if (CleanupCandidates.Count == 0) { <div class="azure-compact-state success">No cleanup candidates.</div> }
+                        @foreach (var item in CleanupCandidates) { <article class="azure-finding"><strong>@item.Name</strong><span>@item.Type · @item.ResourceGroup</span><p>@item.Reason</p></article> }
+                    </div></details>
+                    @if (currentReport.DowntimeDiagnoses?.Count > 0)
+                    {
+                        <details class="azure-disclosure"><summary class="azure-disclosure-heading"><span><RadzenIcon Icon="troubleshoot" /><strong>Downtime diagnosis</strong></span><RadzenBadge Text="@($"{currentReport.DowntimeDiagnoses.Count} services")" BadgeStyle="BadgeStyle.Danger" IsPill="true" /></summary><div class="azure-disclosure-body">@foreach (var diagnosis in currentReport.DowntimeDiagnoses) { <article class="azure-finding"><strong>@(diagnosis.FriendlyName ?? diagnosis.Name)</strong><span>@diagnosis.HttpStatus</span><p>@diagnosis.LikelyCause<br /><strong>Fix:</strong> @diagnosis.SuggestedFix</p></article> }</div></details>
+                    }
+                    <details class="azure-disclosure"><summary class="azure-disclosure-heading"><span><RadzenIcon Icon="timeline" /><strong>30-day history</strong></span><span class="app-note">@HistoryWindow.Count snapshots</span></summary><div class="azure-disclosure-body">
+                        @if (HasHistory) { <div class="azure-history-grid"><article><h3>Fleet status</h3><RadzenChart Style="height:220px"><RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Active" Title="Active" /><RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Broken" Title="Broken" /><RadzenCategoryAxis /><RadzenValueAxis /></RadzenChart></article><article><h3>Cost</h3><RadzenChart Style="height:220px"><RadzenLineSeries TItem="TimePoint" Data="@CostHistory" CategoryProperty="Label" ValueProperty="Value" Title="USD" /><RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}" /></RadzenChart></article></div> }
+                        else { <div class="azure-compact-state">History appears after two scans.</div> }
+                    </div></details>
+                    <details class="azure-disclosure"><summary class="azure-disclosure-heading"><span><RadzenIcon Icon="speed" /><strong>Scan diagnostics</strong></span><span class="app-note">@StepTimingTotalMs.ToString("N0") ms</span></summary><div class="azure-disclosure-body">@foreach (var timing in (currentReport.StepTimings ?? []).OrderByDescending(t => t.ElapsedMs)) { <div class="azure-timing-row"><span>@timing.Step</span><strong>@timing.ElapsedMs.ToString("N0") ms</strong></div> }</div></details>
+                </div>
+            </section>
         }
-    </section>
-
-    <section id="details" class="app-section azure-anchor-section">
-        <div class="azure-section-heading"><div><div class="app-kicker">Details</div><h2>Evidence and history</h2><p>All report evidence is visible below without tabs or expandable controls.</p></div></div>
-        <div class="azure-disclosure-stack">
-            @if (securityIssueCount == 0)
-            {
-                <div class="azure-compact-state success"><RadzenIcon Icon="verified_user" /> Security configuration checks passed.</div>
-            }
-            else
-            {
-                <section class="azure-disclosure">
-                    <div class="azure-disclosure-heading"><span><RadzenIcon Icon="security" /><strong>Security and configuration</strong></span><RadzenBadge Text="@($"{securityIssueCount} findings")" BadgeStyle="@(totalSecurityFindings > 0 ? BadgeStyle.Danger : BadgeStyle.Warning)" IsPill="true" /></div>
-                    <div class="azure-disclosure-body">
-                        @foreach (var storage in (currentReport.StorageInventory ?? new()).Where(s => s.IssueCount > 0))
-                        {
-                            <article class="azure-finding"><strong>@storage.Name</strong><span>@storage.ResourceGroup · @storage.MinTls</span><p>@string.Join("; ", storage.Issues?.Select(i => i.Issue) ?? [])</p></article>
-                        }
-                        @foreach (var drift in (currentReport.ConfigDrift ?? new()).Where(d => d.IssueCount > 0))
-                        {
-                            <article class="azure-finding"><strong>@(drift.FriendlyName ?? drift.Name)</strong><span>@drift.ResourceGroup · Configuration</span><p>@string.Join("; ", drift.Issues?.Select(i => i.Issue) ?? [])</p></article>
-                        }
-                    </div>
-                </section>
-            }
-
-            @if (CleanupCandidates.Count == 0)
-            {
-                <div class="azure-compact-state success"><RadzenIcon Icon="delete_sweep" /> No cleanup candidates detected.</div>
-            }
-            else
-            {
-                <section class="azure-disclosure">
-                    <div class="azure-disclosure-heading"><span><RadzenIcon Icon="delete_sweep" /><strong>Cleanup evidence</strong></span><RadzenBadge Text="@($"{CleanupCandidates.Count} candidates")" BadgeStyle="BadgeStyle.Warning" IsPill="true" /></div>
-                    <div class="azure-disclosure-body">
-                        @foreach (var item in CleanupCandidates)
-                        {
-                            <article class="azure-finding"><strong>@item.Name</strong><span>@item.Type · @item.ResourceGroup · @item.Confidence confidence</span><p>@item.Reason</p></article>
-                        }
-                    </div>
-                </section>
-            }
-
-            @if (currentReport.DowntimeDiagnoses?.Count > 0)
-            {
-                <section class="azure-disclosure">
-                    <div class="azure-disclosure-heading"><span><RadzenIcon Icon="troubleshoot" /><strong>Downtime diagnosis</strong></span><RadzenBadge Text="@($"{currentReport.DowntimeDiagnoses.Count} services")" BadgeStyle="BadgeStyle.Danger" IsPill="true" /></div>
-                    <div class="azure-disclosure-body">
-                        @foreach (var diagnosis in currentReport.DowntimeDiagnoses)
-                        {
-                            <article class="azure-finding"><strong>@(diagnosis.FriendlyName ?? diagnosis.Name)</strong><span>@diagnosis.HttpStatus</span><p>@diagnosis.LikelyCause</p><p><strong>Suggested fix:</strong> @diagnosis.SuggestedFix</p></article>
-                        }
-                    </div>
-                </section>
-            }
-
-            @if (HasHistory)
-            {
-                <section class="azure-disclosure">
-                    <div class="azure-disclosure-heading"><span><RadzenIcon Icon="timeline" /><strong>30-day history</strong></span><span class="app-note">@HistoryWindow.Count daily snapshots</span></div>
-                    <div class="azure-disclosure-body azure-history-grid">
-                        <article><h3>Fleet status</h3><RadzenChart Style="height:240px"><RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Active" Title="Active" /><RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Broken" Title="Broken" /><RadzenCategoryAxis /><RadzenValueAxis><RadzenGridLines Visible="true" /></RadzenValueAxis></RadzenChart></article>
-                        <article><h3>30-day cost</h3><RadzenChart Style="height:240px"><RadzenLineSeries TItem="TimePoint" Data="@CostHistory" CategoryProperty="Label" ValueProperty="Value" Title="USD" /><RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}"><RadzenGridLines Visible="true" /></RadzenValueAxis></RadzenChart></article>
-                    </div>
-                </section>
-            }
-            else
-            {
-                <div class="azure-compact-state"><RadzenIcon Icon="timeline" /> History appears after two or more scans.</div>
-            }
-
-            @if (currentReport.StepTimings?.Count > 0)
-            {
-                <section class="azure-disclosure">
-                    <div class="azure-disclosure-heading"><span><RadzenIcon Icon="speed" /><strong>Scan diagnostics</strong></span><span class="app-note">@StepTimingTotalMs.ToString("N0") ms total</span></div>
-                    <div class="azure-disclosure-body">
-                        @foreach (var timing in (currentReport.StepTimings ?? []).OrderByDescending(t => t.ElapsedMs))
-                        {
-                            <div class="azure-timing-row"><span>@timing.Step</span><strong>@timing.ElapsedMs.ToString("N0") ms</strong></div>
-                        }
-                    </div>
-                </section>
-            }
-        </div>
-    </section>
+        </section>
+    }
 }
 </div>

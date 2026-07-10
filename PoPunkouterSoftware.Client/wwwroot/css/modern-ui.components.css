@@ -195,10 +195,6 @@
         scrollbar-width: thin;
     }
 
-    .app-card .rz-chart {
-        min-width: 560px;
-    }
-
     .app-card .rz-chart svg text {
         font-size: 10px;
     }

@@ -3,95 +3,90 @@
 @using PoPunkouterSoftware.Shared.Portfolio
 @inject HttpClient Http
 
-<PageTitle>PoPunkouterSoftware - Portfolio</PageTitle>
+<PageTitle>PoPunkouterSoftware — Apps</PageTitle>
 
-<div class="app-page">
-    <section class="app-section app-hero app-glow">
-        <div class="app-grid hero-grid">
-            <span class="app-eyebrow">Modern indie software studio</span>
-            <h1 class="app-hero-title">Punkouter Software</h1>
-            <p class="app-hero-copy">AI-driven apps built and shipped on Azure.</p>
-
-            <div class="app-chip-row">
-                <RadzenBadge Text="C# / .NET 10" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
-                <RadzenBadge Text="Blazor + Radzen" BadgeStyle="BadgeStyle.Primary" Variant="Variant.Flat" IsPill="true" />
-                <RadzenBadge Text="Azure hosted" BadgeStyle="BadgeStyle.Success" Variant="Variant.Flat" IsPill="true" />
-                <RadzenBadge Text="Live diagnostics" BadgeStyle="BadgeStyle.Warning" Variant="Variant.Flat" IsPill="true" />
-            </div>
+<main class="app-page portfolio-page">
+    <header class="portfolio-header">
+        <div>
+            <span class="app-eyebrow">Punkouter Software</span>
+            <h1>Web apps</h1>
+            <p>Small tools and experiments built with .NET and Azure.</p>
         </div>
-    </section>
+        <a class="portfolio-azure-link" href="/azure"><RadzenIcon Icon="monitor_heart" /><span>Azure status</span></a>
+    </header>
 
-    <section id="apps" class="app-section">
-        <div class="app-kicker">Portfolio</div>
-        <h2 class="app-section-heading">Web Apps</h2>
-        @if (apps is not null)
-        {
-            <p class="app-section-copy">@apps.Count live apps</p>
-        }
+    @if (apps is not null && apps.Count > 0)
+    {
+        var generatedAt = apps.Where(a => a.InventoryGeneratedAt.HasValue).Select(a => a.InventoryGeneratedAt).FirstOrDefault();
+        var stale = generatedAt is DateTime dt && DateTime.UtcNow - dt > TimeSpan.FromHours(12);
+        <div class="portfolio-summary" aria-live="polite">
+            <strong>@apps.Count apps</strong>
+            @if (generatedAt is DateTime updated)
+            {
+                <span class="@(stale ? "is-stale" : "")">Inventory updated @FormatAge(updated)@(stale ? " · stale" : "")</span>
+            }
+            <button type="button" @onclick="LoadAppsAsync" disabled="@_loading"><RadzenIcon Icon="refresh" /> Refresh list</button>
+        </div>
+    }
 
-        @if (apps == null)
-        {
-            <div class="app-card">
-                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-2" />
-                <p class="app-note rz-mb-0">Loading portfolio…</p>
-            </div>
-        }
-        else if (apps.Count == 0)
-        {
-            <div class="app-empty-state">No live apps found in the current inventory.</div>
-        }
-        else
-        {
-            <div class="app-grid cards">
-                @foreach (var app in apps)
-                {
-                    _ghActivity.TryGetValue(app.GithubRepo ?? string.Empty, out var gh);
-                    <PortfolioAppCard App="app" GitHub="gh" GitHubLoaded="_ghLoaded" />
-                }
-            </div>
-        }
-    </section>
-</div>
+    @if (_loading && apps is null)
+    {
+        <div class="portfolio-skeleton-grid" aria-label="Loading portfolio">
+            @for (var i = 0; i < 6; i++) { <div class="portfolio-skeleton"></div> }
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" ShowIcon="true">
+            <strong>The app list could not be updated.</strong>
+            <span>@_loadError</span>
+            <RadzenButton Text="Retry" Icon="refresh" Size="ButtonSize.Small" Click="LoadAppsAsync" />
+        </RadzenAlert>
+    }
+    else if (apps?.Count == 0)
+    {
+        <div class="app-empty-state">No apps are configured yet.</div>
+    }
+    else if (apps is not null)
+    {
+        <section class="app-grid cards" aria-label="Web applications">
+            @foreach (var app in apps)
+            {
+                <PortfolioAppCard @key="app.Id" App="app" />
+            }
+        </section>
+    }
+</main>
 
 @code {
     private List<PortfolioApp>? apps;
-    private Dictionary<string, GitHubActivity> _ghActivity = new(StringComparer.OrdinalIgnoreCase);
-    private bool _ghLoaded;
+    private bool _loading;
+    private string? _loadError;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadAppsAsync();
+
+    private async Task LoadAppsAsync()
     {
+        _loading = true;
+        _loadError = null;
         try
         {
             apps = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.ListPortfolioApp) ?? new();
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
-            apps = new();
+            _loadError = ex.Message;
         }
-
-        StateHasChanged(); // show cards while GitHub activity loads
-        await LoadGitHubActivityAsync();
+        finally
+        {
+            _loading = false;
+        }
     }
 
-    private async Task LoadGitHubActivityAsync()
+    private static string FormatAge(DateTime generatedAt)
     {
-        var repos = (apps ?? new())
-            .Where(a => !string.IsNullOrEmpty(a.GithubRepo))
-            .Select(a => a.GithubRepo!)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        await Task.WhenAll(repos.Select(async repo =>
-        {
-            try
-            {
-                var gh = await Http.GetFromJsonAsync($"/api/github-activity?repo={Uri.EscapeDataString(repo)}", AppJsonContext.Default.GitHubActivity);
-                if (gh is not null)
-                    _ghActivity[repo] = gh;
-            }
-            catch { /* non-fatal */ }
-        }));
-
-        _ghLoaded = true;
+        var age = DateTime.UtcNow - generatedAt;
+        return age.TotalMinutes < 60 ? $"{(int)age.TotalMinutes}m ago" :
+            age.TotalHours < 24 ? $"{(int)age.TotalHours}h ago" : $"{(int)age.TotalDays}d ago";
     }
 }
