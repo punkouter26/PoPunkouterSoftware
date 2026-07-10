@@ -29,4 +29,19 @@
 
 @code {
     [Parameter, EditorRequired] public PortfolioApp App { get; set; } = default!;
+
+    private PortfolioApp? _rendered;
+
+    /// <summary>
+    /// The card is a pure projection of <see cref="App"/>. Blazor treats a reference-typed
+    /// parameter as "may have changed" on every parent render, so without this guard any
+    /// parent re-render walks all 23 cards. Identity comparison is sound here: the parent
+    /// replaces the whole <c>PortfolioResponse</c> on reload rather than mutating apps.
+    /// </summary>
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(_rendered, App)) return false;
+        _rendered = App;
+        return true;
+    }
 }

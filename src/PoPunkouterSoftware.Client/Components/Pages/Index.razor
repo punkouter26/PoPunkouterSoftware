@@ -3,7 +3,6 @@
 @using PoPunkouterSoftware.Shared.Portfolio
 @inject HttpClient Http
 @inject IJSRuntime JS
-@implements IAsyncDisposable
 
 <PageTitle>PoPunkouterSoftware — Apps</PageTitle>
 
@@ -14,7 +13,6 @@
             <h1>Web apps</h1>
             <p>Small tools and experiments built with .NET and Azure.</p>
         </div>
-        @* Azure status link removed — hidden per design update. *@
     </header>
 
     @* Cache-mismatch banner: server BuildId has changed since the WASM bundle loaded,
@@ -46,9 +44,8 @@
                     Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
                 </span>
             }
-            <span class="portfolio-summary__next" title="The dashboard auto-refreshes in the background so the freshness badge never rots.">
-                Next refresh in @FormatCountdown(_lastAutoRefresh + AutoRefreshEvery - _now)
-            </span>
+            @* Self-ticking: isolates the 1 Hz countdown from this page's render tree. *@
+            <PortfolioCountdown DueAt="@RefreshDueAt" OnDue="LoadAppsAsync" />
             <button type="button" class="portfolio-summary__btn @(data.Stale ? "is-stale" : "")" @onclick="LoadAppsAsync" disabled="@_loading" aria-busy="@_loading">
                 @if (_loading)
                 {
@@ -94,47 +91,19 @@
     private bool _loading;
     private string? _loadError;
 
-    // Auto-refresh bookkeeping — refreshes the portfolio every 5 minutes so the freshness
-    // badge stays honest without forcing the visitor to interact with the page.
+    // Auto-refresh bookkeeping — the inventory reloads every 5 minutes so the freshness
+    // badge stays honest without forcing the visitor to interact with the page. The tick
+    // that drives it lives in <PortfolioCountdown>, not here.
     private static readonly TimeSpan AutoRefreshEvery = TimeSpan.FromMinutes(5);
     private DateTime _lastAutoRefresh = DateTime.UtcNow;
-    private DateTime _now = DateTime.UtcNow;
-    private Timer? _tickTimer;
-    private DateTime RefreshIn => _lastAutoRefresh + AutoRefreshEvery;
-    private string FormatCountdown(TimeSpan? ts)
-    {
-        var t = ts ?? TimeSpan.Zero;
-        if (t <= TimeSpan.Zero) return "now";
-        if (t.TotalMinutes >= 1) return $"{(int)t.TotalMinutes}m {t.Seconds:D2}s";
-        return $"{t.Seconds}s";
-    }
+    private DateTime RefreshDueAt => _lastAutoRefresh + AutoRefreshEvery;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadAppsAsync();
-        // UI tick for countdown + auto-refresh — keeps the page fresh without losing state.
-        _tickTimer = new Timer(async _ =>
-        {
-            _now = DateTime.UtcNow;
-            if (data is not null && _now - _lastAutoRefresh >= AutoRefreshEvery && !_loading)
-            {
-                await InvokeAsync(LoadAppsAsync);
-            }
-            else
-            {
-                await InvokeAsync(StateHasChanged);
-            }
-        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        _tickTimer?.Dispose();
-        return ValueTask.CompletedTask;
-    }
+    protected override Task OnInitializedAsync() => LoadAppsAsync();
 
     private async Task LoadAppsAsync()
     {
+        if (_loading) return;
+
         _loading = true;
         _loadError = null;
         try
@@ -143,7 +112,6 @@
             // huge report endpoint; a hung portfolio call should fail in seconds, not minutes.
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             data = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.PortfolioResponse, cts.Token);
-            _lastAutoRefresh = DateTime.UtcNow;
             if (_buildIdAtLoad is null && data?.BuildId > 0)
                 _buildIdAtLoad = data.BuildId;
         }
@@ -153,6 +121,9 @@
         }
         finally
         {
+            // Re-arm the countdown even on failure, otherwise a single failed reload
+            // leaves DueAt in the past and the child fires on every tick.
+            _lastAutoRefresh = DateTime.UtcNow;
             _loading = false;
         }
     }
@@ -165,10 +136,7 @@
         await LoadAppsAsync();
         try
         {
-            await JS.InvokeVoidAsync("eval",
-                "if(window.location.search.indexOf('reload=1')===-1){" +
-                "  window.location.replace(window.location.pathname + '?reload=1&t=' + Date.now());" +
-                "} else { window.location.reload(); }");
+            await JS.InvokeVoidAsync("appHardReload");
         }
         catch
         {

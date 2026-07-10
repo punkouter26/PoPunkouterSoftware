@@ -61,13 +61,13 @@ public class PortfolioUiTests : IAsyncLifetime
         response!.Ok.Should().BeTrue();
         (await page.TitleAsync()).Should().Contain("PoPunkouterSoftware");
         await Assertions.Expect(page.GetByText("PoPunkouterSoftware").First).ToBeVisibleAsync();
-        // The Azure link keeps its "Azure status" text on desktop; at the mobile breakpoint
-        // the label collapses to icon-only (Index.razor.css @max-640), so target the link
-        // structurally there instead of by accessible name.
+        // The in-page "Azure status" link was retired in an earlier design pass; the route to
+        // Azure now lives in the top-nav (MainLayout). On mobile that nav collapses into the
+        // hamburger drawer, so assert the trigger there and the link itself on desktop.
         if (isMobile)
-            await Assertions.Expect(page.Locator("a.portfolio-azure-link")).ToBeVisibleAsync();
+            await Assertions.Expect(page.Locator(".app-topbar-menu")).ToBeVisibleAsync();
         else
-            await Assertions.Expect(page.GetByRole(AriaRole.Link, new() { Name = "Azure status" })).ToBeVisibleAsync();
+            await Assertions.Expect(page.Locator("a.app-topbar-link[href='/azure']")).ToBeVisibleAsync();
         await Assertions.Expect(page.Locator(".app-portfolio-card").First).ToBeVisibleAsync();
         await CaptureAsync(page, $"01-home-{label}.png");
     }
@@ -81,7 +81,10 @@ public class PortfolioUiTests : IAsyncLifetime
 
         response.Should().NotBeNull();
         response!.Ok.Should().BeTrue();
-        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Services" })).ToBeVisibleAsync();
+        // "Service health" is the first always-present glance card heading; the hero h1 is
+        // dynamic ("Everything looks good" / "N items need attention") so it is not a stable
+        // anchor. "All resources" only exists once the advanced section is expanded.
+        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Service health" })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Advanced diagnostics" })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "All resources" })).ToHaveCountAsync(0);
         await Assertions.Expect(page.Locator(".azure-glance-grid > article")).ToHaveCountAsync(3);

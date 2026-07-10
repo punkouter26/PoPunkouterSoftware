@@ -10,9 +10,16 @@
     gap: .75rem;
 }
 
-.azure-glance-grid > .app-card { min-width: 0; padding: .9rem; }
+.azure-glance-grid > .app-card { min-width: 0; padding: var(--app-space-sm); }
 .azure-glance-grid h2 { margin: 0; font-size: 1rem; }
-.azure-glance-grid ::deep .rz-chart { min-width: 0; padding: .25rem; border: 0; }
+
+/* Chart heights moved out of `Style="height:210px"` inline attributes. The .app-card
+   parent owns the frame; .rz-chart is frameless (see modern-ui.components.css). */
+.azure-glance-grid ::deep .rz-chart {
+    min-width: 0;
+    height: 210px;
+    padding: var(--app-space-3xs);
+}
 
 /* Each chart card now has a one-line subtitle so the tile says what it measures */
 .azure-glance-title { font-family: var(--app-headline-font); letter-spacing: -.02em; }
@@ -44,14 +51,14 @@
     border: 1px solid var(--app-border-strong);
     border-radius: var(--app-radius-xl);
     background:
-        linear-gradient(135deg, rgba(91, 124, 214, .12), transparent 45%),
+        linear-gradient(135deg, var(--app-accent-wash), transparent 45%),
         var(--app-surface-strong);
     box-shadow: var(--app-shadow-lg);
 }
 
 .azure-command-header.has-attention {
     background:
-        linear-gradient(135deg, rgba(248, 195, 107, .13), transparent 45%),
+        linear-gradient(135deg, var(--app-warm-wash), transparent 45%),
         var(--app-surface-strong);
 }
 
@@ -125,9 +132,14 @@
     background: var(--app-surface-soft);
 }
 
+/* Was `Style="height:18px"` on both RadzenProgressBar branches. */
+.azure-refresh-progress ::deep .rz-progressbar {
+    height: 18px;
+}
+
 .azure-refresh-progress span {
     display: flex;
-    gap: .4rem;
+    gap: var(--app-space-2xs);
     align-items: center;
     color: var(--app-text-muted);
     font-size: .82rem;
@@ -238,7 +250,7 @@
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-md);
     color: var(--app-text-muted);
-    background: rgba(0, 0, 0, .18);
+    background: var(--app-sunken);
     text-align: left;
     cursor: pointer;
 }
@@ -291,12 +303,30 @@
     margin-bottom: .8rem;
 }
 
+/* The grid and the card list are now mutually exclusive branches in the markup
+   (driven by `_isNarrow`), not two always-rendered trees toggled with `display`. */
 .azure-resource-grid {
     overflow-x: auto;
 }
 
+/* Radzen row virtualization needs a bounded scroll container. This replaces the
+   `Style="width:100%;min-width:900px"` inline attribute and the 12-row pager. */
+.azure-resource-grid ::deep .rz-data-grid,
+.azure-resource-grid ::deep .rz-datatable {
+    width: 100%;
+    min-width: 900px;
+    height: 560px;
+}
+
 .azure-resource-cards {
-    display: none;
+    display: grid;
+    gap: var(--app-space-xs);
+}
+
+/* Off-screen resource cards skip layout, style, and paint. */
+.azure-resource-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 190px;
 }
 
 .azure-resource-card-heading,
@@ -344,7 +374,7 @@
 
 .azure-compact-state.success {
     color: var(--app-accent);
-    border-color: color-mix(in srgb, var(--app-accent) 35%, transparent);
+    border-color: var(--app-accent-edge);
 }
 
 .azure-disclosure-heading > span:first-child {
@@ -384,15 +414,23 @@ summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* The <article> owns the frame. .rz-chart used to carry its own border + radius +
+   background as well, producing a concentric double border inside every one of these
+   tiles (and a third ring from the enclosing .azure-disclosure). */
 .azure-history-grid article {
     min-width: 0;
-    padding: .75rem;
+    padding: var(--app-space-sm);
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-md);
 }
 
+.azure-history-grid ::deep .rz-chart {
+    height: 220px;
+    padding: var(--app-space-3xs);
+}
+
 .azure-history-grid h3 {
-    margin: 0 0 .5rem;
+    margin: 0 0 var(--app-space-xs);
     font-size: 1rem;
 }
 
@@ -477,18 +515,12 @@ summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
         margin-top: .4rem;
     }
 
-    .azure-resource-grid {
-        display: none;
-    }
-
-    .azure-resource-cards {
-        display: grid;
-        gap: .55rem;
-    }
+    /* No display toggle here any more — below this breakpoint the markup itself
+       renders the card list instead of the grid (see _isNarrow / NarrowQuery). */
 
     .azure-finding {
         grid-template-columns: 1fr;
-        gap: .25rem;
+        gap: var(--app-space-3xs);
     }
 }
 

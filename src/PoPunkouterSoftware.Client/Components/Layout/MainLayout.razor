@@ -1,7 +1,6 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
-@inject IJSRuntime JS
 
 <RadzenComponents />
 
@@ -10,24 +9,21 @@
    visitor past the chrome directly to <main id="main-content">. *@
 <a href="#main-content" class="app-skip-link">Skip to content</a>
 
-@if (_isMockMode)
-{
-    <div class="app-mock-data-warning">
-        ⚠ MOCK DATA
-    </div>
-}
-
-<RadzenLayout Style="grid-template-areas: 'rz-header' 'rz-body'; grid-template-rows: auto 1fr;">
+@* The header is position:fixed, so RadzenLayout's grid never lays it out — the
+   `grid-template-areas` override that used to sit here was inert. .rz-body reserves
+   the header footprint via --app-header-reserve instead. *@
+<RadzenLayout>
     <RadzenHeader>
+        @* Spatial contract — Left: branding · Center: actions · Right: session.
+           Brand and session are both `flex: 1 1 0` so the centre nav is optically
+           centred. The mock-data guard is embedded in the session region rather than
+           floating over the chrome as a position:fixed overlay. *@
         <nav class="app-topbar" aria-label="Primary navigation">
             <a href="/" class="app-topbar-brand">PoPunkouterSoftware</a>
-            @* Mobile-only hamburger trigger — visible below 768 px only (see modern-ui.responsive.css).
-               Layouts can't carry an InteractiveWebAssembly render mode (Body is a RenderFragment),
-               so the drawer state lives in a tiny bit of inline JS rather than a Blazor field. *@
-            <button type="button" class="app-topbar-menu" aria-expanded="false" aria-controls="app-topbar-drawer"
-                    aria-label="Toggle navigation menu" onclick="document.body.classList.toggle('topbar-open'); this.setAttribute('aria-expanded', document.body.classList.contains('topbar-open')); this.firstElementChild.textContent = document.body.classList.contains('topbar-open') ? 'close' : 'menu';">
-                <span class="material-symbols-outlined" aria-hidden="true">menu</span>
-            </button>
+
+            @* Centre region. Below 768px this collapses into a drawer; the toggle is
+               wired from js/helpers.js (initTopbarDrawer) because MainLayout is
+               statically server-rendered and cannot run Blazor event handlers. *@
             <div id="app-topbar-drawer" class="app-topbar-nav">
                 <a href="/" class="app-topbar-link @NavClass("/")">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>Apps
@@ -35,6 +31,20 @@
                 <a href="/azure" class="app-topbar-link @NavClass("/azure")">
                     <span class="material-symbols-outlined" aria-hidden="true">monitor_heart</span>Azure
                 </a>
+            </div>
+
+            <div class="app-topbar-session">
+                @if (_isMockMode)
+                {
+                    <span class="app-mock-badge" role="status" title="This deployment is serving mock data.">
+                        <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                        <span class="app-mock-badge__text">MOCK DATA</span>
+                    </span>
+                }
+                <button type="button" class="app-topbar-menu" aria-expanded="false" aria-controls="app-topbar-drawer"
+                        aria-label="Toggle navigation menu">
+                    <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+                </button>
             </div>
         </nav>
     </RadzenHeader>
@@ -64,14 +74,6 @@
         catch
         {
             // Non-fatal — banner stays hidden if the call fails.
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initNavbarScroll");
         }
     }
 

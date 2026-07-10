@@ -1,38 +1,109 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — the single source of truth.
+
+   Every colour, radius, shadow, spacing step, and motion curve in the app resolves
+   from this block. Nothing downstream (global or scoped) may hardcode a hex, an
+   rgba(), or a px radius; accent washes are derived with color-mix() from the base
+   accent so they track the light/dark flip automatically instead of drifting.
+   ═══════════════════════════════════════════════════════════════════════════════ */
 :root {
-    /* Professional slate-blue dark palette. The previous mint/teal accent read as
-       "neon dashboard toy" rather than a serious product — swapped for a restrained
-       indigo/blue and softened the warm yellow into amber for occasional warnings.
-       Surface tones are deeper and slightly more opaque so cards sit on the page
-       instead of dissolving into the background. */
+    /* ── Surfaces & text ────────────────────────────────────────────────────── */
     --app-bg: #0b1220;
+    --app-bg-deep: #060a14;
     --app-bg-alt: #131c2e;
-    --app-surface: rgba(20, 30, 45, 0.78);
-    --app-surface-strong: rgba(28, 40, 58, 0.94);
+    /* Cards no longer sit behind a backdrop-filter, so the surface carries its own
+       opacity rather than relying on a blur to separate it from the page. */
+    --app-surface: rgba(20, 30, 45, 0.92);
+    --app-surface-strong: rgba(28, 40, 58, 0.96);
     --app-surface-soft: rgba(255, 255, 255, 0.035);
     --app-border: rgba(148, 163, 184, 0.14);
     --app-border-strong: rgba(148, 163, 184, 0.24);
     --app-text: #f1f5f9;
     --app-text-muted: #94a3b8;
     --app-text-soft: #64748b;
+    --app-on-accent: #051018;
+
+    /* ── Accents ────────────────────────────────────────────────────────────── */
     --app-accent: #93b4f5;
     --app-accent-strong: #5b7cd6;
     --app-accent-warm: #f1b663;
     --app-danger-soft: #f28888;
-    --app-shadow-lg: 0 12px 32px rgba(2, 6, 16, 0.45);
-    --app-shadow-md: 0 8px 20px rgba(2, 6, 16, 0.32);
-    --app-shadow-sm: 0 2px 8px rgba(2, 6, 16, 0.22);
+    --app-danger-strong: #b94a4a;
 
-    /* 2026 Design Tokens */
-    --app-radius-xl: 16px;
-    --app-radius-lg: 12px;
+    /* Derived washes — replace the hand-typed rgba() literals that had already
+       drifted out of sync with their source token (the warm wash was authored as
+       rgb(248,195,107) while --app-accent-warm is rgb(241,182,99)). */
+    --app-accent-wash: color-mix(in srgb, var(--app-accent-strong) 14%, transparent);
+    --app-accent-wash-strong: color-mix(in srgb, var(--app-accent-strong) 24%, transparent);
+    --app-accent-edge: color-mix(in srgb, var(--app-accent) 35%, transparent);
+    --app-warm-wash: color-mix(in srgb, var(--app-accent-warm) 13%, transparent);
+    --app-warm-edge: color-mix(in srgb, var(--app-accent-warm) 35%, transparent);
+    --app-hover-wash: color-mix(in srgb, var(--app-text) 7%, transparent);
+    --app-sunken: color-mix(in srgb, var(--app-bg-deep) 55%, transparent);
+
+    /* ── Elevation ──────────────────────────────────────────────────────────── */
+    --app-shadow-sm: 0 2px 8px rgba(2, 6, 16, 0.22);
+    --app-shadow-md: 0 8px 20px rgba(2, 6, 16, 0.32);
+    --app-shadow-lg: 0 12px 32px rgba(2, 6, 16, 0.45);
+    --app-shadow-chrome: 0 12px 40px rgba(0, 0, 0, 0.3);
+    --app-shadow-chrome-raised: 0 16px 48px rgba(0, 0, 0, 0.45);
+    --app-shadow-accent: 0 8px 20px color-mix(in srgb, var(--app-accent-strong) 22%, transparent);
+
+    /* ── Radii ──────────────────────────────────────────────────────────────── */
+    --app-radius-sm: 6px;
     --app-radius-md: 8px;
+    --app-radius-lg: 12px;
+    --app-radius-xl: 16px;
+    --app-radius-pill: 999px;
+
+    /* ── Spacing scale ──────────────────────────────────────────────────────── */
+    --app-space-3xs: 0.25rem;
+    --app-space-2xs: 0.35rem;
+    --app-space-xs: 0.5rem;
+    --app-space-sm: 0.75rem;
+    --app-space-md: 1rem;
+    --app-space-lg: 1.25rem;
+    --app-space-xl: 2rem;
+
+    /* ── Motion ─────────────────────────────────────────────────────────────── */
+    --app-dur-fast: 120ms;
+    --app-dur-base: 200ms;
+    --app-dur-slow: 380ms;
+    --app-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --app-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --app-ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
+
+    /* ── Layering ───────────────────────────────────────────────────────────── */
+    --app-z-header: 1000;
+    --app-z-drawer: 1010;
+    --app-z-skip: 10000;
+
+    /* Glassmorphism is reserved for chrome (the header). Applying it per-card created
+       one backdrop root per card and was the dominant mobile GPU cost. The chrome fill
+       stays translucent so the blur has something to do; it derives from --app-bg-deep
+       and therefore tracks the light/dark flip. */
+    --app-glass-blur: 18px;
+    --app-chrome: color-mix(in srgb, var(--app-bg-deep) 72%, transparent);
+
+    /* ── Layout ─────────────────────────────────────────────────────────────── */
     --app-content-width: 1280px;
+    --app-header-height: 64px;
+    --app-header-offset: 12px;
+    /* Header is position:fixed, so the body must reserve its footprint. */
+    --app-header-reserve: calc(var(--app-header-height) + var(--app-header-offset) + 4px);
     --app-headline-font: "Aptos Display", "Segoe UI Variable Display", "Bahnschrift", "Trebuchet MS", sans-serif;
     --app-body-font: "Aptos", "Segoe UI Variable Text", "Segoe UI", sans-serif;
 
-    /* Radzen Design Token Unification */
-    --rz-primary-color: var(--app-accent-strong);
-    --rz-primary-hover-color: var(--app-accent);
+    /* ── Radzen token bridge ──────────────────────────────────────────────────
+       Every name below is a variable Radzen's theme actually reads. The previous
+       bridge set `--rz-primary-color` and `--rz-primary-hover-color`, neither of
+       which exists in the theme — so every Radzen button, badge, and selected tab
+       silently kept the theme's stock teal (#598087) instead of the app accent. */
+    --rz-primary: var(--app-accent-strong);
+    --rz-primary-light: var(--app-accent);
+    --rz-primary-lighter: var(--app-accent-wash);
+    --rz-primary-dark: var(--app-accent-strong);
+    --rz-primary-darker: var(--app-accent-strong);
     --rz-border-radius: var(--app-radius-lg);
     --rz-grid-cell-color: var(--app-text-muted);
     --rz-body-background-color: var(--app-bg);
@@ -41,15 +112,28 @@
     --rz-text-color: var(--app-text);
     --rz-text-secondary-color: var(--app-text-muted);
 
-    /* Physics-based Cohesive Motion System */
-    --app-transition-spring: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-    --app-transition-smooth: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+    /* Radzen's theme sheet colours bare `h1`..`h6` from its own display tokens, which
+       are baked for its dark theme. Left unbridged, every heading that does not set an
+       explicit colour renders near-white — invisible against the light-mode surface. */
+    --rz-text-title-color: var(--app-text);
+    --rz-text-display-h1-color: var(--app-text);
+    --rz-text-display-h2-color: var(--app-text);
+    --rz-text-display-h3-color: var(--app-text);
+    --rz-text-display-h4-color: var(--app-text);
+    --rz-text-display-h5-color: var(--app-text);
+    --rz-text-display-h6-color: var(--app-text);
+    --rz-text-h1-color: var(--app-text);
+    --rz-text-h2-color: var(--app-text);
+    --rz-text-h3-color: var(--app-text);
+    --rz-text-h4-color: var(--app-text);
+    --rz-text-h5-color: var(--app-text);
+    --rz-text-h6-color: var(--app-text);
 }
 
 html,
 body {
     min-height: 100%;
-    background: #060a14;
+    background: var(--app-bg-deep);
     color: var(--app-text);
 }
 
@@ -58,30 +142,58 @@ body {
     letter-spacing: 0.01em;
 }
 
+/* Static grid backdrop. Acts as the fallback layer when the GPU canvas
+   (see #app-gpu-backdrop / gpu-backdrop.js) is unavailable or suppressed by
+   prefers-reduced-motion; the canvas sets `data-gpu-backdrop` on <html> to hide it. */
 body::before {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
-    z-index: -1;
+    z-index: -2;
     background-image:
         linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
     background-size: 28px 28px;
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, black 50%, rgba(0, 0, 0, 0.1) 100%);
     mask-image: radial-gradient(circle at 50% 30%, black 50%, rgba(0, 0, 0, 0.1) 100%);
     opacity: 0.32;
 }
 
+html[data-gpu-backdrop] body::before {
+    display: none;
+}
+
+/* Single full-viewport GPU compositing layer. One surface for the whole app —
+   cheaper than the 23 per-card backdrop roots it replaces. */
+#app-gpu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--app-dur-slow) var(--app-ease-out);
+}
+
+#app-gpu-backdrop.is-ready {
+    opacity: 1;
+}
+
+/* Belt and braces: the token bridge above covers Radzen's variables, and this rule
+   (same specificity, later in the cascade) covers any theme sheet that hardcodes a
+   literal colour on bare headings. */
 h1,
 h2,
 h3,
 h4,
 h5,
-h6,
-.app-display,
-.app-title {
+h6 {
     font-family: var(--app-headline-font);
     letter-spacing: -0.025em;
+    color: var(--app-text);
 }
 
 a {
@@ -103,32 +215,35 @@ a {
 .app-page {
     width: min(100%, var(--app-content-width));
     margin: 0 auto;
-    padding: 0 0 4rem;
-    animation: app-fade-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    padding: 0 0 var(--app-space-xl);
+    animation: app-fade-in var(--app-dur-slow) var(--app-ease-spring) both;
 }
 
 .app-shell-body {
-    width: min(100%, calc(var(--app-content-width) + 2rem));
+    width: min(100%, calc(var(--app-content-width) + var(--app-space-xl)));
     margin: 0 auto;
-    padding: 1.25rem 1rem 4rem;
+    padding: var(--app-space-lg) var(--app-space-md) var(--app-space-xl);
 }
 
-/* ── Top navigation bar ──────────────────────────────────────────────────── */
+/* ── Top navigation bar ──────────────────────────────────────────────────────
+   Spatial contract: Left (branding) — Center (actions) — Right (session).
+   Brand and session are both `flex: 1 1 0` so the centre nav is optically dead
+   centre regardless of their differing intrinsic widths. Removing either side
+   silently breaks the contract, which is exactly what happened before.
+*/
 .app-topbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    width: min(100%, calc(var(--app-content-width) + 2rem));
+    gap: var(--app-space-md);
+    width: min(100%, calc(var(--app-content-width) + var(--app-space-xl)));
     margin: 0 auto;
-    padding: 0 1rem;
+    padding: 0 var(--app-space-md);
     height: 100%;
 }
 
-/* Left-Center-Right contract: brand and session take equal flex so the
-   centre nav is always dead-centre regardless of their differing widths. */
 .app-topbar-brand {
     flex: 1 1 0;
+    min-width: 0;
     font-family: var(--app-headline-font);
     font-size: 1rem;
     font-weight: 600;
@@ -148,7 +263,7 @@ a {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
+    gap: var(--app-space-3xs);
 }
 
 .app-topbar-session {
@@ -156,30 +271,32 @@ a {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    gap: var(--app-space-xs);
     min-width: 0;
 }
 
 .app-topbar-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.75rem;
-    border-radius: 8px;
+    gap: var(--app-space-2xs);
+    padding: var(--app-space-2xs) var(--app-space-sm);
+    border-radius: var(--app-radius-md);
     font-size: 0.85rem;
     font-weight: 500;
     color: var(--app-text-muted);
     text-decoration: none;
-    transition: background 0.15s, color 0.15s;
+    transition: background-color var(--app-dur-fast) var(--app-ease-smooth),
+                color var(--app-dur-fast) var(--app-ease-smooth);
 }
 
 .app-topbar-link:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--app-hover-wash);
     color: var(--app-text);
     text-decoration: none;
 }
 
 .app-topbar-link.active {
-    background: rgba(91, 124, 214, 0.16);
+    background: var(--app-accent-wash);
     color: var(--app-accent);
 }
 
@@ -187,52 +304,29 @@ a {
     font-size: 1.1rem;
 }
 
-
-.app-section {
-    margin-bottom: 2rem;
-}
-
-.app-surface,
-.app-card,
-.app-panel {
+/* ── Surfaces ────────────────────────────────────────────────────────────────
+   No backdrop-filter here by design — see --app-glass-blur.
+*/
+.app-card {
+    padding: var(--app-space-lg);
     background: var(--app-surface);
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-lg);
     box-shadow: var(--app-shadow-md);
-    backdrop-filter: blur(18px);
-}
-
-.app-card {
-    padding: 1.25rem;
-}
-
-.app-card {
-    animation: app-fade-in 420ms ease both;
 }
 
 .app-eyebrow {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.7rem;
-    border-radius: 999px;
-    background: rgba(91, 124, 214, 0.14);
+    gap: var(--app-space-xs);
+    padding: var(--app-space-2xs) var(--app-space-sm);
+    border-radius: var(--app-radius-pill);
+    background: var(--app-accent-wash);
     color: var(--app-accent);
     font-size: 0.78rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-}
-
-.app-section-heading {
-    margin: 0 0 0.4rem;
-    font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.6rem);
-    color: var(--app-text);
-}
-
-.app-section-copy,
-.app-muted {
-    color: var(--app-text-muted);
 }
 
 .app-kicker {
@@ -245,73 +339,41 @@ a {
 
 .app-grid {
     display: grid;
-    gap: 1.1rem;
+    gap: var(--app-space-md);
 }
 
 .app-grid.cards {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
-.app-grid.cards > * { height: 100%; }
 
-.app-grid.metrics {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-}
-
-.app-chip-row {
-    display: flex;
-    gap: 0.45rem;
-    flex-wrap: wrap;
-}
-
-.app-glow {
-    position: relative;
-    overflow: hidden;
-}
-
-.app-glow::after {
-    content: "";
-    position: absolute;
-    inset: auto -15% -55% auto;
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(91, 124, 214, 0.18), transparent 70%);
-    pointer-events: none;
-}
-
-.app-stat {
-    display: grid;
-    gap: 0.25rem;
-}
-
-.app-stat-label {
-    color: var(--app-text-soft);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
-.app-stat-value {
-    font-size: clamp(1.45rem, 1.1rem + 1vw, 2.1rem);
-    font-weight: 700;
-    color: var(--app-text);
-}
-
-.app-inline-link {
-    color: var(--app-text-muted);
-    text-decoration: none;
-}
-
-.app-inline-link:hover {
-    color: var(--app-text);
+.app-grid.cards > * {
+    height: 100%;
 }
 
 .app-empty-state {
-    padding: 1.25rem;
+    padding: var(--app-space-lg);
     border: 1px dashed var(--app-border-strong);
     border-radius: var(--app-radius-md);
     color: var(--app-text-muted);
-    background: rgba(255, 255, 255, 0.025);
+    background: var(--app-surface-soft);
 }
 
+.app-note {
+    color: var(--app-text-soft);
+    font-size: 0.83rem;
+}
 
+.app-progress-icon {
+    font-size: 1rem;
+    animation: app-spin 1.4s linear infinite;
+}
+
+.app-card-title {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.app-card-copy {
+    color: var(--app-text-muted);
+    line-height: 1.65;
+}

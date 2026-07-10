@@ -1,143 +1,53 @@
-.app-overflow-top {
-    overflow-x: auto;
-    margin-top: 0.75rem;
-}
-.app-grid-span-all {
-    grid-column: 1 / -1;
-}
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Radzen component skinning. Every value resolves from a token in modern-ui.base.css.
 
-.app-progress-icon {
-    font-size: 1rem;
-    animation: spin 1.4s linear infinite;
-}
+   Removed in the 2026 hygiene pass:
+     • .rz-tabview / .rz-tabs skin — no page uses a Radzen tab component.
+     • 26 unused .app-* utility classes (app-glow, app-stat*, app-surface, app-panel,
+       app-table-frame, app-chip-row, app-badge-*, app-section*, app-break, app-nowrap,
+       app-overflow-top, app-grid-span-all, app-meta-line, app-link-break,
+       app-inline-link, app-muted, app-portfolio-github-card, app-display, app-title).
+     • .rz-chart's own border/background — it nested inside bordered containers and
+       produced concentric double borders. Containers own the frame now.
+   ═══════════════════════════════════════════════════════════════════════════════ */
 
-.app-card-title {
-    margin: 0;
-    font-size: 1.15rem;
-}
-
-.app-card-copy {
-    color: var(--app-text-muted);
-    line-height: 1.65;
-}
-
-.app-table-frame {
-    overflow-x: auto;
-    padding: 0.25rem;
-    border-radius: var(--app-radius-lg);
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid var(--app-border);
-}
-
-@media (max-width: 640px) {
-    .app-card:has(.rz-chart) {
-        overflow-x: auto;
-        scrollbar-width: thin;
-    }
-
-    .app-card .rz-chart svg text {
-        font-size: 10px;
-    }
-
-    .app-table-frame .rz-cell-data,
-    .app-table-frame .rz-column-title {
-        white-space: normal;
-        overflow-wrap: anywhere;
-    }
-}
-.app-meta-line {
-    color: var(--app-text-soft);
-    font-size: 0.76rem;
-}
-.app-link-break {
-    word-break: break-all;
-    font-size: 0.8rem;
-}
-
-.app-badge-xs {
-    font-size: 0.7rem;
-}
-.app-badge-cluster {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-}
-
-.app-nowrap {
-    white-space: nowrap;
-}
-
-.app-break {
-    word-break: break-all;
-    max-width: 320px;
-}
-
-.app-portfolio-github-card {
-    padding: 0.85rem;
-    box-shadow: none;
-}
-.app-note {
-    color: var(--app-text-soft);
-    font-size: 0.83rem;
-}
 .app-page .rz-button {
-    border-radius: 999px;
+    border-radius: var(--app-radius-pill);
     font-weight: 700;
     letter-spacing: 0.01em;
 }
 
 .app-page .rz-button.rz-primary {
-    box-shadow: 0 8px 20px rgba(91, 124, 214, 0.22);
+    box-shadow: var(--app-shadow-accent);
 }
 
 .app-page .rz-badge {
     letter-spacing: 0.02em;
 }
 
-.app-page .rz-tabview,
-.app-page .rz-tabs {
+/* WCAG AA: darken filled danger badges so white text clears 4.5:1. Radzen emits
+   this class at runtime, so it looks unreferenced to a static grep — it is not. */
+.rz-badge-danger.rz-variant-fill {
+    background: var(--app-danger-strong) !important;
+    color: #fff !important;
+}
+
+/* ── Charts ──────────────────────────────────────────────────────────────────
+   Frameless: the surrounding .app-card / <article> supplies border + radius.
+*/
+.app-page .rz-chart {
+    padding: var(--app-space-xs);
     background: transparent;
+    border: 0;
 }
 
-.app-page .rz-tabview-nav,
-.app-page .rz-tabs-nav {
-    gap: 0.45rem;
-    flex-wrap: wrap;
-    padding-bottom: 0.85rem;
-    border-bottom: 1px solid var(--app-border);
-}
-
-.app-page .rz-tabview-nav li a,
-.app-page .rz-tabs-nav li a {
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid transparent;
-    color: var(--app-text-muted);
-    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
-}
-
-.app-page .rz-tabview-nav li.rz-tabview-selected a,
-.app-page .rz-tabs-nav li.rz-tabview-selected a,
-.app-page .rz-tabview-nav li.rz-state-active a,
-.app-page .rz-tabs-nav li.rz-state-active a {
-    background: rgba(91, 124, 214, 0.14);
-    color: var(--app-text);
-    border-color: rgba(91, 124, 214, 0.32);
-}
-
-.app-page .rz-tabview-panels,
-.app-page .rz-tabs-panels {
-    background: transparent;
-    border: none;
-    padding: 0;
-}
-
+/* ── Data grid ───────────────────────────────────────────────────────────── */
 .app-page .rz-datatable,
 .app-page .rz-data-grid {
-    border-radius: 16px;
+    border-radius: var(--app-radius-xl);
     overflow: hidden;
     border: 1px solid var(--app-border);
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--app-surface-soft);
 }
 
 .app-page .rz-datatable table,
@@ -159,102 +69,119 @@
 
 .app-page .rz-datatable-thead th,
 .app-page .rz-data-grid-header th {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--app-hover-wash);
     border-color: var(--app-border);
 }
 
 .app-page .rz-datatable-even,
 .app-page .rz-data-grid-data tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.018);
+    background: var(--app-surface-soft);
 }
 
 .app-page .rz-paginator {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--app-surface-soft);
     border-top: 1px solid var(--app-border);
 }
 
 .app-page .rz-progressbar {
-    border-radius: 999px;
+    border-radius: var(--app-radius-pill);
     overflow: hidden;
-}
-
-.app-page .rz-chart {
-    padding: 0.5rem;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--app-border);
 }
 
 .app-page code {
     font-family: Consolas, "Cascadia Code", monospace;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 0.12rem 0.35rem;
-    border-radius: 6px;
+    background: var(--app-hover-wash);
+    padding: 0.12rem var(--app-space-2xs);
+    border-radius: var(--app-radius-sm);
 }
 
-/* WCAG AA: darken filled danger badges so white text passes 4.5:1 contrast ratio */
-.rz-badge-danger.rz-variant-fill,
-.app-badge-danger {
-    background: #b94a4a !important;
-    color: #fff !important;
-}
-
-/* Floating Navbar Transitions */
+/* ── Floating navbar ─────────────────────────────────────────────────────────
+   The one place glassmorphism is affordable: a single backdrop root for the whole
+   app chrome. Only `transform` is transitioned — animating background-color on a
+   backdrop-filter element repaints the blur every frame.
+*/
 .rz-header {
     position: fixed !important;
-    top: 12px;
+    top: var(--app-header-offset);
     left: 50%;
     transform: translateX(-50%);
-    width: min(calc(var(--app-content-width) + 2rem), 96%) !important;
-    height: 64px !important;
-    border-radius: 999px;
+    width: min(calc(var(--app-content-width) + var(--app-space-xl)), 96%) !important;
+    height: var(--app-header-height) !important;
+    border-radius: var(--app-radius-pill);
     border: 1px solid var(--app-border) !important;
-    background: rgba(10, 22, 33, 0.72) !important;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
-    z-index: 1000;
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s !important;
+    background: var(--app-chrome) !important;
+    backdrop-filter: blur(var(--app-glass-blur));
+    -webkit-backdrop-filter: blur(var(--app-glass-blur));
+    box-shadow: var(--app-shadow-chrome) !important;
+    z-index: var(--app-z-header);
+    will-change: transform;
+    transition: transform var(--app-dur-slow) var(--app-ease-out),
+                box-shadow var(--app-dur-base) var(--app-ease-smooth) !important;
 }
+
 .rz-header.nav-hidden {
-    transform: translate(-50%, -100px);
+    transform: translate(-50%, -140%);
 }
+
 .rz-header.nav-scrolled {
-    background: rgba(7, 15, 23, 0.85) !important;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45) !important;
-}
-/* ── Radzen layout overrides (.rz-layout / .rz-body) — consolidated here so a
-   single commented block owns them (previously split with modern-ui.responsive.css).
-   Covers: floating-navbar body offset, mobile sidebar offset removal, and the
-   scroll-trap fix that lets the page scroll naturally instead of .rz-body. ── */
-.rz-body {
-    padding-top: 80px !important;
+    box-shadow: var(--app-shadow-chrome-raised) !important;
 }
 
-/* Radzen layout: remove sidebar body offset on mobile */
-@media (max-width: 640px) {
-    .rz-layout {
-        grid-template-columns: 1fr !important;
-    }
-
-    .rz-body {
-        margin-left: 0 !important;
-        padding-left: 0 !important;
-        grid-column: 1 !important;
-    }
+/* The drawer overflows the pill; squaring the header's clip while it is open keeps
+   the panel edges from being sliced by the 999px radius. */
+body.topbar-open .rz-header {
+    border-radius: var(--app-radius-xl);
 }
 
-/* Scroll trap fix: let page scroll naturally instead of .rz-body container */
+/* ── Radzen layout overrides ─────────────────────────────────────────────────
+   Covers: sidebar-column removal, the transparent chrome that lets the GPU backdrop
+   show through, and the scroll-trap fix that lets the page scroll naturally instead
+   of .rz-body.
+
+   Radzen's default .rz-layout is a two-column grid:
+       grid-template-columns: auto 1fr;
+       grid-template-areas: "rz-header rz-header" "rz-sidebar rz-body" "rz-footer rz-footer";
+   This app has no sidebar. Collapsing the columns to one WITHOUT also redefining the
+   areas leaves a 2-column area map against a 1-column track list — the map is dropped
+   and .rz-body's `grid-area: rz-body` resolves against implicit lines, pushing the
+   whole page into a phantom right-hand column. Both must be overridden together.
+   (This used to be an inline `Style` on <RadzenLayout>.)
+*/
 .rz-layout {
     min-height: 100dvh;
     height: auto;
     width: 100%;
     grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto 1fr !important;
+    grid-template-areas: "rz-header" "rz-body" !important;
+    /* Transparent so the fixed GPU backdrop behind the layout stays visible. */
+    background: transparent !important;
 }
 
 .rz-body {
     width: 100%;
     min-width: 0;
+    padding-top: var(--app-header-reserve) !important;
+    background: transparent !important;
     overflow-y: visible !important;
     height: auto !important;
     min-height: 0 !important;
+}
+
+@media (max-width: 640px) {
+    .rz-body {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        grid-column: 1 !important;
+    }
+
+    /* Charts stay readable on narrow viewports without forcing a page-level scroll. */
+    .app-card:has(.rz-chart) {
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+
+    .app-card .rz-chart svg text {
+        font-size: 10px;
+    }
 }

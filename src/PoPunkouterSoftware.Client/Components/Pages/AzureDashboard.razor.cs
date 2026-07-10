@@ -4,6 +4,7 @@ using Microsoft.JSInterop;
 using PoPunkouterSoftware.Client.Components.Pages.Models;
 using PoPunkouterSoftware.Shared.Azure;
 using Radzen;
+using Radzen.Blazor;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -42,6 +43,38 @@ public partial class AzureDashboard
 
     private static readonly string[] ResourceViews = ["All", "Unhealthy", "Waste", "Security", "Drift"];
     private string _resourceView = "All";
+
+    // ── Responsive branch ──────────────────────────────────────────────────────
+    // The resource explorer renders as a virtualized grid on wide viewports and as a
+    // card list on narrow ones. Previously BOTH were emitted and one was hidden with
+    // `display: none`, so every row was built into the DOM twice. This mirrors the
+    // 720px breakpoint in AzureDashboard.razor.css — keep the two in sync.
+    private const string NarrowQuery = "(max-width: 720px)";
+    private bool _isNarrow;
+    private int _mediaSubscriptionId;
+    private DotNetObjectReference<AzureDashboard>? _selfRef;
+
+    [JSInvokable]
+    public Task OnNarrowChanged(bool isNarrow)
+    {
+        if (_isNarrow == isNarrow)
+            return Task.CompletedTask;
+
+        _isNarrow = isNarrow;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _selfRef = DotNetObjectReference.Create(this);
+        // appMedia.register fires the callback once with the current match before it
+        // returns, so _isNarrow is correct by the time the explorer is first opened.
+        _mediaSubscriptionId = await JS.InvokeAsync<int>(
+            "appMedia.register", NarrowQuery, _selfRef, nameof(OnNarrowChanged));
+    }
 
     private void RebuildDerivedState()
     {
@@ -102,6 +135,19 @@ public partial class AzureDashboard
 
     private void DownloadAutomationScript() =>
         NavManager.NavigateTo("/api/diag/automation-script", forceLoad: true);
+
+    /// <summary>
+    /// RadzenSplitButton passes <c>null</c> when the primary (left) half is pressed, and the
+    /// selected <see cref="RadzenSplitButtonItem"/> when a menu entry is chosen. The primary
+    /// half performs the common action — downloading the full JSON report.
+    /// </summary>
+    private async Task OnDownloadClick(RadzenSplitButtonItem? item)
+    {
+        if (item?.Value == "script")
+            DownloadAutomationScript();
+        else
+            await DownloadReportAsync();
+    }
 
     private async Task CopyText(string text)
     {
@@ -393,6 +439,17 @@ public partial class AzureDashboard
         _refreshCts?.Cancel();
         _refreshCts?.Dispose();
         _refreshCts = null;
+
+        if (_mediaSubscriptionId != 0)
+        {
+            // Best-effort: the circuit may already be gone during teardown.
+            try { await JS.InvokeVoidAsync("appMedia.unregister", _mediaSubscriptionId); }
+            catch (JSException) { }
+            catch (InvalidOperationException) { }
+            catch (TaskCanceledException) { }
+        }
+        _selfRef?.Dispose();
+
         if (_hub is not null)
             await _hub.DisposeAsync();
     }

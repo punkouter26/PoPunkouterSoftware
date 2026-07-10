@@ -77,11 +77,11 @@ else
                fallback) a determinate bar would sit at a lying 0% for the whole scan. *@
             @if (_hub?.State == HubConnectionState.Connected)
             {
-                <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" Style="height:18px" />
+                <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" />
             }
             else
             {
-                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="height:18px" />
+                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" />
             }
             <span><RadzenIcon Icon="sync" class="app-progress-icon" /> @_progressStep — you can leave this page while the scan continues.</span>
         </section>
@@ -92,7 +92,7 @@ else
             <h2 class="azure-glance-title">Service health</h2>
             <div class="azure-glance-subtitle" aria-hidden="true">@summary.ActiveServices of @summary.TotalServices services</div>
             <div class="azure-donut-wrap">
-                <RadzenChart Style="height:210px">
+                <RadzenChart>
                     <RadzenDonutSeries TItem="OpsMetricPoint" Data="@summary.FleetHealth" CategoryProperty="Label" ValueProperty="Value" InnerRadius="72" />
                     <RadzenLegend Position="LegendPosition.Bottom" />
                 </RadzenChart>
@@ -109,14 +109,14 @@ else
             }
             else if (summary.CostHistory.Count > 1)
             {
-                <RadzenChart Style="height:210px">
+                <RadzenChart>
                     <RadzenLineSeries TItem="OpsMetricPoint" Data="@costSeries" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
                     <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
                 </RadzenChart>
             }
             else
             {
-                <RadzenChart Style="height:210px">
+                <RadzenChart>
                     <RadzenBarSeries TItem="OpsMetricPoint" Data="@costSeries" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
                     <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
                 </RadzenChart>
@@ -132,7 +132,7 @@ else
             }
             else
             {
-                <RadzenChart Style="height:210px">
+                <RadzenChart>
                     <RadzenBarSeries TItem="OpsMetricPoint" Data="@summary.ResponseTimes" CategoryProperty="Label" ValueProperty="Value" Title="ms" />
                     <RadzenCategoryAxis /><RadzenValueAxis FormatString="{0:N0} ms"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
                 </RadzenChart>
@@ -162,9 +162,13 @@ else
         }
     </section>
 
+    @* ButtonStyle.Base (not .Light): Radzen's "Light" style hardcodes `color: var(--rz-base-200)`
+       for the outlined variant in every theme — a near-white label, which is invisible on the
+       light-mode surface. Base resolves to --rz-text-color, which the token bridge maps to
+       --app-text, so it tracks both schemes. *@
     <div class="azure-advanced-toggle">
         <RadzenButton Text="@(_advancedOpen ? "Hide advanced diagnostics" : "Advanced diagnostics")"
-                      Icon="@(_advancedOpen ? "expand_less" : "tune")" ButtonStyle="ButtonStyle.Light"
+                      Icon="@(_advancedOpen ? "expand_less" : "tune")" ButtonStyle="ButtonStyle.Base"
                       Variant="Variant.Outlined" Click="ToggleAdvancedAsync" />
     </div>
 
@@ -185,9 +189,13 @@ else
             var securityIssueCount = (currentReport.StorageInventory ?? new()).Sum(s => s.IssueCount)
                 + (currentReport.ConfigDrift ?? new()).Sum(d => d.IssueCount);
 
+            @* One-tap: the primary action fires on the main button; the secondary export
+               lives behind the same control's caret instead of a second sibling button. *@
             <div class="azure-advanced-actions">
-                <RadzenButton Text="Download full JSON" Icon="download" Size="ButtonSize.Small" Click="DownloadReportAsync" />
-                <RadzenButton Text="Download audit script" Icon="terminal" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" Size="ButtonSize.Small" Click="DownloadAutomationScript" />
+                <RadzenSplitButton Text="Download report" Icon="download" Size="ButtonSize.Small" Click="OnDownloadClick">
+                    <RadzenSplitButtonItem Text="Full report (JSON)" Value="json" Icon="data_object" />
+                    <RadzenSplitButtonItem Text="Audit script (PowerShell)" Value="script" Icon="terminal" />
+                </RadzenSplitButton>
             </div>
 
             <section class="azure-anchor-section">
@@ -215,29 +223,55 @@ else
 
             <section class="azure-anchor-section">
                 <div class="azure-section-heading azure-resource-heading"><div><div class="app-kicker">Resource explorer</div><h2>All resources</h2></div><span class="azure-result-count">@FilteredResourceExplorerItems.Count of @ResourceExplorerItems.Count</span></div>
-                <div class="azure-filter-bar" role="group" aria-label="Filter resources">
-                    @foreach (var view in ResourceViews) { <RadzenButton Text="@view" Size="ButtonSize.Small" ButtonStyle="@(_resourceView == view ? ButtonStyle.Primary : ButtonStyle.Light)" Variant="@(_resourceView == view ? Variant.Filled : Variant.Outlined)" Click="@(() => SetResourceView(view))" /> }
+                @* Segmented control: one tap to switch view, with the selected state carried
+                   by the control itself rather than five buttons each recomputing their own
+                   ButtonStyle/Variant on every render. *@
+                <div class="azure-filter-bar">
+                    <RadzenSelectBar TValue="string" Value="@_resourceView" ValueChanged="SetResourceView"
+                                     Size="ButtonSize.Small" aria-label="Filter resources">
+                        <Items>
+                            @foreach (var view in ResourceViews)
+                            {
+                                <RadzenSelectBarItem Text="@view" Value="@view" />
+                            }
+                        </Items>
+                    </RadzenSelectBar>
                 </div>
-                <div class="azure-resource-grid">
-                    <RadzenDataGrid Data="@FilteredResourceExplorerItems" TItem="ResourceExplorerItem" AllowSorting="true" AllowFiltering="true" AllowPaging="true" PageSize="12" Density="Density.Compact" GridLines="DataGridGridLines.Horizontal" Style="width:100%;min-width:900px">
-                        <Columns>
-                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Name" Title="Resource" Width="210px"><Template Context="item"><strong>@item.Name</strong></Template></RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Type" Title="Type" Width="150px" />
-                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResourceGroup" Title="Resource group" Width="160px" />
-                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Status" Title="Status" Width="115px"><Template Context="item"><RadzenBadge Text="@item.Status" BadgeStyle="@ExplorerStatusBadge(item.Status)" IsPill="true" /></Template></RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Risk" Title="Concern" Width="130px"><Template Context="item"><span class="azure-risk-label @RiskClass(item.Risk)">@item.Risk</span></Template></RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Requests7d" Title="Req 7d" Width="90px" TextAlign="TextAlign.Right" />
-                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Errors7d" Title="5xx" Width="70px" TextAlign="TextAlign.Right" />
-                            <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResponseTimeMs" Title="Response" Width="100px" TextAlign="TextAlign.Right"><Template Context="item">@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</Template></RadzenDataGridColumn>
-                        </Columns>
-                    </RadzenDataGrid>
-                </div>
-                <div class="azure-resource-cards">
-                    @foreach (var item in FilteredResourceExplorerItems)
-                    {
-                        <article class="azure-resource-card"><div class="azure-resource-card-heading"><strong>@item.Name</strong><RadzenBadge Text="@item.Status" BadgeStyle="@ExplorerStatusBadge(item.Status)" IsPill="true" /></div><dl><div><dt>Type</dt><dd>@item.Type</dd></div><div><dt>Group</dt><dd>@item.ResourceGroup</dd></div><div><dt>Concern</dt><dd>@item.Risk</dd></div><div><dt>Requests / 5xx</dt><dd>@item.Requests7d.ToString("N0") / @item.Errors7d.ToString("N0")</dd></div></dl></article>
-                    }
-                </div>
+                @* One source of truth for the explorer. Both branches used to render
+                   unconditionally, with CSS hiding whichever did not match the viewport —
+                   so every row was built twice, into two live DOM trees. `_isNarrow` is
+                   driven by a real matchMedia listener (see appMedia in helpers.js). *@
+                @if (_isNarrow)
+                {
+                    <div class="azure-resource-cards">
+                        @foreach (var item in FilteredResourceExplorerItems)
+                        {
+                            <article class="azure-resource-card" @key="item.Name"><div class="azure-resource-card-heading"><strong>@item.Name</strong><RadzenBadge Text="@item.Status" BadgeStyle="@ExplorerStatusBadge(item.Status)" IsPill="true" /></div><dl><div><dt>Type</dt><dd>@item.Type</dd></div><div><dt>Group</dt><dd>@item.ResourceGroup</dd></div><div><dt>Concern</dt><dd>@item.Risk</dd></div><div><dt>Requests / 5xx</dt><dd>@item.Requests7d.ToString("N0") / @item.Errors7d.ToString("N0")</dd></div></dl></article>
+                        }
+                    </div>
+                }
+                else
+                {
+                    @* Row virtualization replaces paging: the grid keeps a single scroll
+                       container and only materialises the visible rows, so filtering never
+                       reallocates the full row set. Height comes from scoped CSS. *@
+                    <div class="azure-resource-grid">
+                        <RadzenDataGrid Data="@FilteredResourceExplorerItems" TItem="ResourceExplorerItem" AllowSorting="true" AllowFiltering="true"
+                                        AllowVirtualization="true" AllowPaging="false" AllowColumnResize="true"
+                                        FilterMode="FilterMode.SimpleWithMenu" Density="Density.Compact" GridLines="DataGridGridLines.Horizontal">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Name" Title="Resource" Width="210px"><Template Context="item"><strong>@item.Name</strong></Template></RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Type" Title="Type" Width="150px" />
+                                <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResourceGroup" Title="Resource group" Width="160px" />
+                                <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Status" Title="Status" Width="115px"><Template Context="item"><RadzenBadge Text="@item.Status" BadgeStyle="@ExplorerStatusBadge(item.Status)" IsPill="true" /></Template></RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Risk" Title="Concern" Width="130px"><Template Context="item"><span class="azure-risk-label @RiskClass(item.Risk)">@item.Risk</span></Template></RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Requests7d" Title="Req 7d" Width="90px" TextAlign="TextAlign.Right" />
+                                <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Errors7d" Title="5xx" Width="70px" TextAlign="TextAlign.Right" />
+                                <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResponseTimeMs" Title="Response" Width="100px" TextAlign="TextAlign.Right"><Template Context="item">@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</Template></RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    </div>
+                }
             </section>
 
             <section class="azure-anchor-section">
@@ -257,7 +291,7 @@ else
                         <details class="azure-disclosure"><summary class="azure-disclosure-heading"><span><RadzenIcon Icon="troubleshoot" /><strong>Downtime diagnosis</strong></span><RadzenBadge Text="@($"{currentReport.DowntimeDiagnoses.Count} services")" BadgeStyle="BadgeStyle.Danger" IsPill="true" /></summary><div class="azure-disclosure-body">@foreach (var diagnosis in currentReport.DowntimeDiagnoses) { <article class="azure-finding"><strong>@(diagnosis.FriendlyName ?? diagnosis.Name)</strong><span>@diagnosis.HttpStatus</span><p>@diagnosis.LikelyCause<br /><strong>Fix:</strong> @diagnosis.SuggestedFix</p></article> }</div></details>
                     }
                     <details class="azure-disclosure"><summary class="azure-disclosure-heading"><span><RadzenIcon Icon="timeline" /><strong>30-day history</strong></span><span class="app-note">@HistoryWindow.Count snapshots</span></summary><div class="azure-disclosure-body">
-                        @if (HasHistory) { <div class="azure-history-grid"><article><h3>Fleet status</h3><RadzenChart Style="height:220px"><RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Active" Title="Active" /><RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Broken" Title="Broken" /><RadzenCategoryAxis /><RadzenValueAxis /></RadzenChart></article><article><h3>Cost</h3><RadzenChart Style="height:220px"><RadzenLineSeries TItem="TimePoint" Data="@CostHistory" CategoryProperty="Label" ValueProperty="Value" Title="USD" /><RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}" /></RadzenChart></article></div> }
+                        @if (HasHistory) { <div class="azure-history-grid"><article><h3>Fleet status</h3><RadzenChart><RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Active" Title="Active" /><RadzenLineSeries TItem="StatusHistPoint" Data="@ServiceStatusHistory" CategoryProperty="Label" ValueProperty="Broken" Title="Broken" /><RadzenCategoryAxis /><RadzenValueAxis /></RadzenChart></article><article><h3>Cost</h3><RadzenChart><RadzenLineSeries TItem="TimePoint" Data="@CostHistory" CategoryProperty="Label" ValueProperty="Value" Title="USD" /><RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}" /></RadzenChart></article></div> }
                         else { <div class="azure-compact-state">History appears after two scans.</div> }
                     </div></details>
                     <details class="azure-disclosure"><summary class="azure-disclosure-heading"><span><RadzenIcon Icon="speed" /><strong>Scan diagnostics</strong></span><span class="app-note">@StepTimingTotalMs.ToString("N0") ms</span></summary><div class="azure-disclosure-body">@foreach (var timing in (currentReport.StepTimings ?? []).OrderByDescending(t => t.ElapsedMs)) { <div class="azure-timing-row"><span>@timing.Step</span><strong>@timing.ElapsedMs.ToString("N0") ms</strong></div> }</div></details>

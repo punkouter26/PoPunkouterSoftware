@@ -1,0 +1,89 @@
+/* Host-page chrome that must paint before the app stylesheet resolves its @import
+   chain: the first-load splash and the enhanced-navigation progress bar. Linked
+   directly (not @imported) so it is never a second round trip.
+
+   These rules previously lived as inline `style` attributes plus an inline <style>
+   block in App.razor. */
+
+#app-nav-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #5b7cd6, #93b4f5);
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 0.2s, opacity 0.3s;
+}
+
+#app-nav-progress.is-active {
+    width: 40%;
+    opacity: 1;
+}
+
+#app-nav-progress.is-done {
+    width: 100%;
+    opacity: 1;
+}
+
+#app-nav-progress.is-hidden {
+    width: 100%;
+    opacity: 0;
+}
+
+/* Static boot splash: WASM (prerender: false) renders nothing until the runtime
+   downloads, which would otherwise mean a blank dark page for the whole first load.
+   Pure HTML/CSS so it paints immediately; removed once Blazor renders a component. */
+#app-boot-splash {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: #060a14;
+    color: #94a3b8;
+    z-index: 9999;
+    font-family: "Segoe UI", Arial, sans-serif;
+    transition: opacity 0.3s;
+}
+
+#app-boot-splash.is-dismissed {
+    opacity: 0;
+}
+
+.app-boot-spinner {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 3px solid rgba(147, 180, 245, 0.22);
+    border-top-color: #93b4f5;
+    animation: app-boot-spin 0.8s linear infinite;
+}
+
+.app-boot-label {
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+}
+
+@keyframes app-boot-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    #app-boot-splash {
+        background: #f6f8fa;
+        color: #475569;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-boot-spinner {
+        animation: none;
+    }
+}

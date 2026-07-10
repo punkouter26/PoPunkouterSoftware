@@ -1,0 +1,80 @@
+@implements IDisposable
+
+@* Owns the 1 Hz auto-refresh tick.
+
+   The tick used to live on Index and called StateHasChanged() on the page, which
+   re-rendered all 23 PortfolioAppCard components once per second, forever — to
+   update a label that is display:none below 640px. Isolating the timer here means
+   the per-second render is this one <span>; the page re-renders only when the
+   inventory actually reloads (every 5 minutes). *@
+<span class="portfolio-summary__next"
+      title="The dashboard auto-refreshes in the background so the freshness badge never rots.">
+    Next refresh in @Label
+</span>
+
+@code {
+    /// <summary>UTC instant at which the parent should reload the inventory.</summary>
+    [Parameter, EditorRequired] public DateTime DueAt { get; set; }
+
+    /// <summary>Raised once when <see cref="DueAt"/> passes. Re-arms when DueAt moves.</summary>
+    [Parameter] public EventCallback OnDue { get; set; }
+
+    private Timer? _timer;
+    private DateTime _armedFor;
+    private bool _fired;
+    private bool _disposed;
+
+    private string Label => Format(DueAt - DateTime.UtcNow);
+
+    protected override void OnParametersSet()
+    {
+        // A new DueAt means the parent reloaded — re-arm.
+        if (DueAt != _armedFor)
+        {
+            _armedFor = DueAt;
+            _fired = false;
+        }
+    }
+
+    protected override void OnInitialized() =>
+        _timer = new Timer(_ => _ = TickAsync(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+
+    private async Task TickAsync()
+    {
+        // The timer callback can outlive the component by one period; a disposed
+        // renderer throws from InvokeAsync and the exception would be unobserved.
+        if (_disposed) return;
+
+        try
+        {
+            if (!_fired && DateTime.UtcNow >= DueAt)
+            {
+                _fired = true;
+                if (OnDue.HasDelegate)
+                {
+                    await InvokeAsync(() => OnDue.InvokeAsync());
+                    return; // The parent's reload re-renders us with a fresh DueAt.
+                }
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Raced with Dispose — nothing left to update.
+        }
+    }
+
+    private static string Format(TimeSpan t)
+    {
+        if (t <= TimeSpan.Zero) return "now";
+        if (t.TotalMinutes >= 1) return $"{(int)t.TotalMinutes}m {t.Seconds:D2}s";
+        return $"{t.Seconds}s";
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _timer?.Dispose();
+    }
+}

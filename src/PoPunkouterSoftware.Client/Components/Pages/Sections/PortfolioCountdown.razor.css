@@ -1,0 +1,15 @@
+/* The countdown lives in its own component (it owns the 1 Hz tick), so its style must
+   travel with it — Index's scoped stylesheet cannot reach a child component's element. */
+.portfolio-summary__next {
+    color: var(--app-text-soft);
+    font-size: 0.76rem;
+    opacity: 0.85;
+    margin-left: var(--app-space-3xs);
+}
+
+/* Hidden on mobile portrait: the label is the least important thing in the summary row. */
+@media (max-width: 640px) {
+    .portfolio-summary__next {
+        display: none;
+    }
+}

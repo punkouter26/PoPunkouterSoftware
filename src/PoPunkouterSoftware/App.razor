@@ -3,27 +3,38 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
     <base href="/" />
     <title>PoPunkouterSoftware - Ops Dashboard</title>
     <link rel="icon" href="images/favicon.ico" type="image/x-icon" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="_content/Radzen.Blazor/css/software-dark.css" />
+    <link rel="stylesheet" href="css/boot.css" />
+    @* Radzen ships one stylesheet per theme and its component colours are baked in — they
+       do not follow prefers-color-scheme. Loading only software-dark.css meant that in
+       light mode every Radzen surface (data grid, paginator, badges, base text) kept
+       dark-theme values while the page around them flipped. Each sheet is now scoped to
+       the scheme it was built for. *@
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/software.css" media="(prefers-color-scheme: light)" />
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/software-dark.css" media="(prefers-color-scheme: dark)" />
     <link rel="stylesheet" href="css/modern-ui.css" />
     <link rel="stylesheet" href="PoPunkouterSoftware.Client.styles.css" />
     <HeadOutlet />
 </head>
-<body class="rz-background-color-base rz-color-base">
-    <div id="app-nav-progress" style="position:fixed;top:0;left:0;width:0;height:2px;background:linear-gradient(90deg,#5b7cd6,#93b4f5);z-index:10000;transition:width .2s,opacity .3s;opacity:0;pointer-events:none"></div>
-    <!-- Static boot splash: WASM (prerender: false) renders nothing until the runtime
-         downloads, which previously meant a blank dark page for the entire first load.
-         Pure HTML/CSS so it paints immediately; removed by the observer script below
-         the moment Blazor renders its first component. -->
-    <div id="app-boot-splash" aria-label="Loading" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#060a14;color:#94a3b8;z-index:9999;font-family:'Segoe UI',Arial,sans-serif;transition:opacity .3s">
-        <div style="width:38px;height:38px;border-radius:50%;border:3px solid rgba(147,180,245,.22);border-top-color:#93b4f5;animation:app-boot-spin .8s linear infinite"></div>
-        <div style="font-size:.95rem;letter-spacing:.04em">Loading PoPunkouterSoftware…</div>
-        <style>@@keyframes app-boot-spin { to { transform: rotate(360deg); } }</style>
+@* No `rz-background-color-base rz-color-base` here: both resolve to `var(--rz-base)`
+   (#505f65) with `!important`, so every heading that did not set its own colour
+   inherited a mid-slate grey — washed out in light mode and dim in dark. The page's
+   background and text come from --app-bg-deep / --app-text in modern-ui.base.css. *@
+<body>
+    @* Single GPU compositing layer for the whole app — see js/gpu-backdrop.js.
+       Stays invisible (and the CSS grid fallback stays visible) unless WebGL
+       initialises successfully. *@
+    <canvas id="app-gpu-backdrop" aria-hidden="true"></canvas>
+    <div id="app-nav-progress"></div>
+    <div id="app-boot-splash" aria-label="Loading">
+        <div class="app-boot-spinner"></div>
+        <div class="app-boot-label">Loading PoPunkouterSoftware…</div>
     </div>
     <Routes />
     <script>
@@ -41,7 +52,7 @@
             var splash = document.getElementById('app-boot-splash');
             if (!splash) return;
             function dismiss() {
-                splash.style.opacity = '0';
+                splash.classList.add('is-dismissed');
                 setTimeout(function () { splash.remove(); }, 350);
             }
             var observer = new MutationObserver(function () {
@@ -60,21 +71,23 @@
             function getBar() { return bar || (bar = document.getElementById('app-nav-progress')); }
             document.addEventListener('enhancednavigationstart', function () {
                 var b = getBar(); if (!b) return;
-                b.style.width = '40%'; b.style.opacity = '1';
+                b.className = 'is-active';
                 // Close the mobile drawer once a navigation begins, otherwise it stays
                 // open across page changes and looks like a stuck overlay.
-                document.body.classList.remove('topbar-open');
-                var btn = document.querySelector('.app-topbar-menu');
-                if (btn) { btn.setAttribute('aria-expanded', 'false'); if (btn.firstElementChild) btn.firstElementChild.textContent = 'menu'; }
+                if (window.closeTopbarDrawer) window.closeTopbarDrawer();
             });
             document.addEventListener('enhancedload', function () {
                 var b = getBar(); if (!b) return;
-                b.style.width = '100%';
-                setTimeout(function () { b.style.opacity = '0'; setTimeout(function () { b.style.width = '0'; }, 300); }, 200);
+                b.className = 'is-done';
+                setTimeout(function () {
+                    b.className = 'is-hidden';
+                    setTimeout(function () { b.className = ''; }, 300);
+                }, 200);
             });
         })();
     </script>
     <script src="js/helpers.js"></script>
+    <script src="js/gpu-backdrop.js"></script>
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
 </body>

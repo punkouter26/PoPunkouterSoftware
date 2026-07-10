@@ -1,16 +1,25 @@
-.app-mock-data-warning {
-    background: var(--rz-warning);
-    color: #000;
-    padding: .2rem .6rem;
-    font-weight: 600;
-    font-size: .7rem;
-    position: fixed;
-    top: 8px;
-    right: 8px;
-    z-index: 9999;
-    border-radius: 4px;
-    letter-spacing: .04em;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+/* ── Mock-data guard ──────────────────────────────────────────────────────────
+   Embedded in the topbar's right-hand session region. It used to be a
+   position:fixed overlay at z-index 9999, which floated it over the pill header
+   (z-index 1000) instead of inside it.
+*/
+.app-mock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-space-3xs);
+    padding: var(--app-space-3xs) var(--app-space-xs);
+    border: 1px solid var(--app-warm-edge);
+    border-radius: var(--app-radius-pill);
+    background: var(--app-warm-wash);
+    color: var(--app-accent-warm);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.app-mock-badge .material-symbols-outlined {
+    font-size: 0.95rem;
 }
 
 /* ── Skip-to-content link ─────────────────────────────────────────────────────────
@@ -19,17 +28,18 @@
 */
 .app-skip-link {
     position: absolute;
-    left: 0.5rem;
+    left: var(--app-space-xs);
     top: -2.5rem;
-    padding: 0.5rem 0.85rem;
+    padding: var(--app-space-xs) var(--app-space-sm);
     background: var(--app-accent-strong);
-    color: #051018;
+    color: var(--app-on-accent);
     border-radius: 0 0 var(--app-radius-md) var(--app-radius-md);
     font-weight: 600;
     text-decoration: none;
-    z-index: 10000;
-    transition: top 0.18s ease;
+    z-index: var(--app-z-skip);
+    transition: top var(--app-dur-base) var(--app-ease-out);
 }
+
 .app-skip-link:focus,
 .app-skip-link:focus-visible {
     top: 0;
@@ -38,55 +48,98 @@
 }
 
 /* ── Hamburger trigger ───────────────────────────────────────────────────────────
-   Hidden on desktop, appears below 768 px. Toggles the nav drawer open/closed via
-   MainLayout.razor (controlled by aria-expanded).
+   Hidden on desktop, appears below 768 px. Click/Escape/outside-click handling is
+   wired in js/helpers.js — the layout is statically rendered and cannot own it.
 */
 .app-topbar-menu {
     display: none;
     border: 1px solid var(--app-border);
     background: transparent;
     color: var(--app-text);
-    padding: 0.4rem;
-    border-radius: 8px;
+    padding: var(--app-space-2xs);
+    border-radius: var(--app-radius-md);
     cursor: pointer;
+    transition: border-color var(--app-dur-fast) var(--app-ease-smooth);
 }
-.app-topbar-menu:hover { border-color: var(--app-accent); }
+
+.app-topbar-menu:hover {
+    border-color: var(--app-accent);
+}
+
 .app-topbar-menu:focus-visible {
     outline: 2px solid var(--app-accent);
     outline-offset: 2px;
 }
 
 @media (max-width: 768px) {
-    .app-topbar-menu { display: inline-flex; align-items: center; justify-content: center; }
+    .app-topbar-menu {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-    /* Collapse horizontal nav into a vertical drawer below the bar */
+    /* Collapse the centre region into a vertical drawer below the bar. */
     .app-topbar-nav {
         display: none;
         flex-direction: column;
         align-items: stretch;
         width: 100%;
         gap: 0.15rem;
-        padding: 0.5rem 0;
+        padding: var(--app-space-xs) 0;
     }
-    /* Drawer open state — driven by `body.topbar-open` (set by inline `onclick`) so
-       layout-level server-rendered constraints don't prevent click handlers. */
+
+    /* Drawer open state — driven by `body.topbar-open`. No backdrop-filter here: the
+       drawer is a child of .rz-header, which already establishes one backdrop root,
+       and nesting a second blur inside it is the single most expensive compositing
+       pattern on mobile GPUs. An opaque surface reads identically. */
     body.topbar-open .app-topbar-nav {
         display: flex;
         position: absolute;
         top: 100%;
         left: 0;
         right: 0;
-        padding: 0.5rem 1rem 0.85rem;
+        padding: var(--app-space-xs) var(--app-space-md) var(--app-space-sm);
         background: var(--app-surface-strong);
-        backdrop-filter: blur(18px);
-        border-bottom: 1px solid var(--app-border);
+        border: 1px solid var(--app-border);
+        border-top: 0;
+        border-radius: 0 0 var(--app-radius-xl) var(--app-radius-xl);
         box-shadow: var(--app-shadow-md);
-        z-index: 50;
+        z-index: var(--app-z-drawer);
+        animation: app-drawer-in var(--app-dur-base) var(--app-ease-out) both;
     }
 
-    /* Full-width tap targets when the drawer is open */
+    /* Full-width tap targets when the drawer is open. */
     body.topbar-open .app-topbar-nav .app-topbar-link {
-        padding: 0.75rem 0.85rem;
+        padding: var(--app-space-sm) var(--app-space-sm);
         font-size: 0.95rem;
+    }
+}
+
+/* Below 380px the badge label is the first thing to give up its space. */
+@media (max-width: 380px) {
+    .app-mock-badge__text {
+        display: none;
+    }
+}
+
+@keyframes app-drawer-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.topbar-open .app-topbar-nav {
+        animation: none;
+    }
+
+    .app-skip-link {
+        transition: none;
     }
 }

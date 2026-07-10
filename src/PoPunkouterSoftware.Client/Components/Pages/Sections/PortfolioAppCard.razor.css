@@ -1,25 +1,33 @@
-/* Stripped-down portfolio card. The previous build exposed status badges, tech
-   chips, action buttons, and a "checked X ago" timestamp; the card now holds only
-   a screenshot, the app name, and a short description. The hover lift stays
-   because it confirms the screenshot is clickable, but the mint radial glow and
-   green border tint were dropped — they read as toy dashboard chrome. */
+/* Stripped-down portfolio card: screenshot, name, short description.
+
+   No backdrop-filter — the 23-card grid previously created 23 backdrop roots, which
+   was the dominant mobile GPU cost. Depth now comes from the shared elevation tokens
+   plus the app-wide GPU backdrop layer behind the page.
+
+   `content-visibility: auto` lets the browser skip layout, style, and paint for cards
+   below the fold; `contain-intrinsic-size` supplies a placeholder box so the scrollbar
+   does not jump as they materialise. */
 .app-portfolio-card {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--app-space-sm);
     min-width: 0;
-    padding: 0.85rem;
-    border: 1px solid var(--app-border);
-    transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
-                border-color 0.2s,
-                box-shadow 0.2s;
+    padding: var(--app-space-sm);
     box-shadow: var(--app-shadow-sm);
+    content-visibility: auto;
+    contain-intrinsic-size: auto 320px;
+    transition: transform var(--app-dur-base) var(--app-ease-smooth),
+                border-color var(--app-dur-base) var(--app-ease-smooth),
+                box-shadow var(--app-dur-base) var(--app-ease-smooth);
 }
 
+/* Promote only while the pointer is on the card, so 23 idle cards do not each hold a
+   compositing layer. */
 .app-portfolio-card:hover {
     transform: translateY(-2px);
     border-color: var(--app-border-strong);
-    box-shadow: var(--app-shadow-md) !important;
+    box-shadow: var(--app-shadow-md);
+    will-change: transform;
 }
 
 .app-screenshot-thumb {
@@ -36,7 +44,7 @@
     height: 100%;
     object-fit: cover;
     object-position: top;
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: transform var(--app-dur-slow) var(--app-ease-smooth);
 }
 
 .app-portfolio-card:hover .app-screenshot-thumb img {
@@ -57,6 +65,7 @@
        no longer push the row down unevenly. */
     display: -webkit-box;
     -webkit-line-clamp: 4;
+    line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -64,34 +73,42 @@
 .app-card-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--app-space-2xs);
     margin-top: auto;
-    padding: 0.5rem 0.85rem;
+    max-width: 100%;
+    /* The label must never wrap to "Open / app" when the card narrows; the host label
+       absorbs the squeeze by truncating instead. */
+    white-space: nowrap;
+    padding: var(--app-space-xs) var(--app-space-sm);
     border: 1px solid var(--app-border);
-    border-radius: 999px;
+    border-radius: var(--app-radius-pill);
     background: transparent;
     color: var(--app-accent);
     font-size: 0.82rem;
     font-weight: 600;
     text-decoration: none;
     align-self: flex-start;
-    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    transition: border-color var(--app-dur-fast) var(--app-ease-smooth),
+                background-color var(--app-dur-fast) var(--app-ease-smooth);
 }
 
 .app-card-link:hover {
     border-color: var(--app-accent);
-    background: rgba(91, 124, 214, 0.12);
+    background: var(--app-accent-wash);
     color: var(--app-accent);
     text-decoration: none;
 }
 
 .app-card-link .rz-icon {
+    flex: 0 0 auto;
     font-size: 0.95rem;
 }
 
 /* Host label sits to the right of the "Open app" label as secondary text.
-   Truncated at the card edge so a long URL never wraps the row. */
+   It is the only flex child allowed to shrink, so it truncates at the card edge. */
 .app-card-link-host {
+    flex: 0 1 auto;
+    min-width: 0;
     max-width: 12rem;
     overflow: hidden;
     color: var(--app-text-soft);

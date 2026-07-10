@@ -5,7 +5,7 @@
 /* "cards" — shimmering portfolio tiles (moved from Index.razor.css) */
 .loading-skeleton.is-cards {
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: .8rem;
+    gap: var(--app-space-sm);
 }
 
 .loading-skeleton.is-cards > div {
@@ -24,7 +24,7 @@
 /* "summary" — Azure status placeholder (moved from AzureDashboard.razor.css) */
 .loading-skeleton.is-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .75rem;
+    gap: var(--app-space-sm);
 }
 
 .loading-skeleton.is-summary > div {
