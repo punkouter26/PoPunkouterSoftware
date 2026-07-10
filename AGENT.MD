@@ -49,6 +49,10 @@ Four projects, by test tier (not mirrored 1:1 to feature slices):
 The E2E tiers need a running host / Playwright browser and stay manual. The **deploy**
 pipeline (`deploy.yml`) is build-and-deploy only and runs no tests.
 
+## Agent tooling (Claude Code)
+- **User-level plugins** (`claude plugin list`): `dotnet-claude-kit` (codewithmukesh), `dotnet-skills@wshaddix-dotnet-skills` (167 skills + 16 agents; local marketplace at `~/.claude/local-marketplaces/wshaddix-dotnet-skills`), and the official `dotnet/skills` plugins `dotnet`, `dotnet-aspnetcore`, `dotnet-blazor`, `dotnet-test`, `dotnet-data`, `dotnet-diag` (marketplace `dotnet-agent-skills`).
+- **Project-level skills** (`.claude/skills/`): auto-managed by the `dotnet-skills` global tool (managedcode). Refresh with `dotnet skills install --auto --prune --agent claude` after changing package references.
+
 ## Run / deploy
 - **Local (Development env):** F5 in VS Code runs `f5-prep` (kill stale dotnet → start Azurite → build) then launches on `http://localhost:8000`. `SCRIPTS/setup.ps1` provisions WinGet/Docker/Azure prerequisites.
 - **Azure (Production env):** `.github/workflows/deploy.yml` builds + deploys to App Service `app-popunkoutersoftware` (OIDC login, no secrets in workflow, no tests).

@@ -106,39 +106,6 @@ window.initBackgroundCanvas = function () {
 };
 
 /**
- * Attaches a 3D parallax tilt & reflection gloss style tracker.
- */
-window.initTiltCard = function (element) {
-    if (!element) return;
-    const handleMove = (e) => {
-        const rect = element.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const xc = rect.width / 2;
-        const yc = rect.height / 2;
-        const dx = x - xc;
-        const dy = y - yc;
-        const rx = -(dy / yc) * 6; // Limit to 6deg
-        const ry = (dx / xc) * 6;
-        element.style.setProperty('--rx', rx + 'deg');
-        element.style.setProperty('--ry', ry + 'deg');
-        
-        const px = (x / rect.width) * 100;
-        const py = (y / rect.height) * 100;
-        element.style.setProperty('--glow-x', px + '%');
-        element.style.setProperty('--glow-y', py + '%');
-    };
-    const handleLeave = () => {
-        element.style.setProperty('--rx', '0deg');
-        element.style.setProperty('--ry', '0deg');
-        element.style.setProperty('--glow-x', '50%');
-        element.style.setProperty('--glow-y', '50%');
-    };
-    element.addEventListener('mousemove', handleMove);
-    element.addEventListener('mouseleave', handleLeave);
-};
-
-/**
  * Track page scroll state to float/hide navbar navigation bar.
  */
 window.initNavbarScroll = function () {

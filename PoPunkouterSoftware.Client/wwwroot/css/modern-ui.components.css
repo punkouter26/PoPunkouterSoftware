@@ -528,10 +528,8 @@
     padding-top: 80px !important;
 }
 
-/* 3D Tilt Portfolio Card Overrides */
+/* Portfolio card hover lift + glow (pure CSS — no JS tilt tracker) */
 .app-portfolio-card {
-    transform-style: preserve-3d;
-    transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
     transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s, box-shadow 0.3s;
     position: relative;
 }
@@ -539,7 +537,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle 220px at var(--glow-x, 50%) var(--glow-y, 50%), rgba(141, 226, 197, 0.12), transparent 80%);
+    background: radial-gradient(circle 220px at 50% 50%, rgba(141, 226, 197, 0.12), transparent 80%);
     pointer-events: none;
     z-index: 1;
     opacity: 0;
@@ -549,6 +547,7 @@
     opacity: 1;
 }
 .app-portfolio-card:hover {
+    transform: translateY(-4px);
     box-shadow: var(--app-shadow-lg) !important;
     border-color: rgba(141, 226, 197, 0.3) !important;
 }

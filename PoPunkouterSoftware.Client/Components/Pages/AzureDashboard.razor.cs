@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
 using PoPunkouterSoftware.Client.Components.Pages.Models;
@@ -13,12 +12,9 @@ namespace PoPunkouterSoftware.Client.Components.Pages;
 
 public partial class AzureDashboard
 {
-    [Inject] private IWebAssemblyHostEnvironment? HostEnvironment { get; set; }
-
     private AzureReport? report;
     private List<WebService> services = new();
     private List<SafeToRemoveItem> safeToRemove = new();
-    private int _selectedTabIndex = 0;
     private bool _loading = true;
     private string? _loadError;
 
@@ -28,6 +24,20 @@ public partial class AzureDashboard
         services.OrderBy(s => s.HttpStatus == "active" ? 0 : 1).ThenBy(s => s.FriendlyName ?? s.Name);
 
     private List<PriorityQueueItem> PriorityQueue => BuildPriorityQueue(report, ConsolidatedServices, safeToRemove);
+
+    private static readonly string[] ResourceViews = ["All", "Unhealthy", "Waste", "Security", "Drift"];
+    private string _resourceView = "All";
+    private List<ResourceExplorerItem> ResourceExplorerItems => BuildResourceExplorerItems(report, ConsolidatedServices, safeToRemove);
+    private List<ResourceExplorerItem> FilteredResourceExplorerItems => ResourceExplorerItems
+        .Where(item => _resourceView switch
+        {
+            "Unhealthy" => item.Risk.Contains("Unhealthy", StringComparison.OrdinalIgnoreCase),
+            "Waste" => item.Risk.Contains("Waste", StringComparison.OrdinalIgnoreCase),
+            "Security" => item.Risk.Contains("Security", StringComparison.OrdinalIgnoreCase),
+            "Drift" => item.Risk.Contains("Drift", StringComparison.OrdinalIgnoreCase),
+            _ => true,
+        })
+        .ToList();
 
     private static string ReliabilityClass(int score) =>
         score < 70 ? "app-tone-danger" : score < 85 ? "app-tone-warning" : "app-tone-success";
@@ -43,8 +53,6 @@ public partial class AzureDashboard
     private CancellationTokenSource? _refreshCts;
     private IDisposable? _locationChangingRegistration;
     private const int RefreshTimeoutSeconds = 120;
-    private bool ShowAdvancedDiagnostics => string.Equals(HostEnvironment?.Environment, "Development", StringComparison.OrdinalIgnoreCase);
-
     private static string FormatAge(TimeSpan age)
     {
         if (age.TotalMinutes < 1)
@@ -69,6 +77,12 @@ public partial class AzureDashboard
 
     private void DownloadAutomationScript() =>
         NavManager.NavigateTo("/api/diag/automation-script", forceLoad: true);
+
+    private async Task CopyText(string text)
+    {
+        await JS.InvokeVoidAsync("copyToClipboard", text);
+        NotificationService.Notify(NotificationSeverity.Success, "Copied", "Azure CLI command copied to the clipboard.");
+    }
 
     // ── SignalR hub connection ─────────────────────────────────────────────────
     private HubConnection? _hub;

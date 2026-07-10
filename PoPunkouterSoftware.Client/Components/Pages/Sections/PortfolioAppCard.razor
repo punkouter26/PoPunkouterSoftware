@@ -1,32 +1,21 @@
-@using PoPunkouterSoftware.Shared.Azure
+@using PoPunkouterSoftware.Shared.Portfolio
 @using Radzen
-@inject IJSRuntime JS
 
-<RadzenCard @ref="_cardRef" class="app-card app-glow app-portfolio-card" data-status="@DisplayStatus.ToLower()">
+<RadzenCard class="app-card app-glow app-portfolio-card">
     <div class="app-status-row">
         <div>
             <div class="app-kicker">App</div>
             <h3 class="app-card-title">@App.Name</h3>
         </div>
-        <RadzenBadge Text="@DisplayStatus" IsPill="true" BadgeStyle="@StatusBadgeStyle" />
+        @if (!string.IsNullOrEmpty(App.ScreenshotUrl))
+        {
+            <a class="app-screenshot-thumb" href="@App.Url" target="_blank" rel="noopener noreferrer"
+               title="@($"Open {App.Name} app")">
+                <img src="@App.ScreenshotUrl" alt="@($"{App.Name} home page")" loading="lazy"
+                     width="78" height="169" />
+            </a>
+        }
     </div>
-
-    @if (Live is not null)
-    {
-        <div class="app-chip-row">
-            <RadzenBadge Text="@($"HTTP: {Live.HttpStatus.ToUpper()}")" IsPill="true" BadgeStyle="@HttpBadgeStyle" />
-            @if (!string.IsNullOrEmpty(Live.PlatformState))
-            {
-                <RadzenBadge Text="@($"Platform: {Live.PlatformState}")" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
-            }
-            @if ((Live.Connectivity?.ResponseTime ?? 0) > 0)
-            {
-                var rt = Live.Connectivity!.ResponseTime;
-                var isTimeout = rt >= 15000;
-                <RadzenBadge Text="@(isTimeout ? "TIMEOUT" : $"{rt} ms")" BadgeStyle="@(isTimeout ? BadgeStyle.Danger : rt < 1000 ? BadgeStyle.Success : BadgeStyle.Warning)" Variant="Variant.Flat" IsPill="true" />
-            }
-        </div>
-    }
 
     <p class="app-card-copy rz-mb-0">@App.Description</p>
 
@@ -98,57 +87,19 @@
         }
     }
 
-    <div class="app-actions">
-        <RadzenButton Text="Open App" Icon="open_in_new" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary"
-                      Disabled="@(string.IsNullOrEmpty(App.Url))" Click="OnOpenAppClicked"
-                      aria-label="@($"Open {App.Name} app")" title="@($"Open {App.Name} app")" />
-    </div>
+    @if (!string.IsNullOrEmpty(App.Url))
+    {
+        <div class="app-actions">
+            <a class="rz-button rz-button-sm rz-variant-filled rz-primary rz-shade-default" href="@App.Url"
+               target="_blank" rel="noopener noreferrer" aria-label="@($"Open {App.Name} app")">
+                <RadzenIcon Icon="open_in_new" /><span class="rz-button-text">Open App</span>
+            </a>
+        </div>
+    }
 </RadzenCard>
 
 @code {
-    [Parameter, EditorRequired] public AppModel App { get; set; } = default!;
-    [Parameter] public WebService? Live { get; set; }
+    [Parameter, EditorRequired] public PortfolioApp App { get; set; } = default!;
     [Parameter] public GitHubActivity? GitHub { get; set; }
     [Parameter] public bool GitHubLoaded { get; set; }
-    [Parameter] public bool AzureDataLoaded { get; set; }
-    [Parameter] public EventCallback<string> OpenAppRequested { get; set; }
-
-    private RadzenCard? _cardRef;
-
-    private string DisplayStatus =>
-        !string.IsNullOrWhiteSpace(Live?.HttpStatus)
-            ? Live!.HttpStatus
-            : AzureDataLoaded ? "unverified" : (App.Status ?? "unknown");
-
-    private bool IsActive => DisplayStatus.Equals("active", StringComparison.OrdinalIgnoreCase);
-
-    private BadgeStyle StatusBadgeStyle => DisplayStatus.ToLowerInvariant() switch
-    {
-        "active" => BadgeStyle.Success,
-        "broken" => BadgeStyle.Danger,
-        "unreachable" => BadgeStyle.Danger,
-        "unverified" => BadgeStyle.Info,
-        _ => BadgeStyle.Light,
-    };
-
-    private BadgeStyle HttpBadgeStyle => Live?.HttpStatus switch
-    {
-        "active" => BadgeStyle.Success,
-        "broken" => BadgeStyle.Danger,
-        _ => BadgeStyle.Warning,
-    };
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && _cardRef is not null)
-        {
-            await JS.InvokeVoidAsync("initTiltCard", _cardRef.Element);
-        }
-    }
-
-    private async Task OnOpenAppClicked()
-    {
-        if (!string.IsNullOrWhiteSpace(App.Url))
-            await OpenAppRequested.InvokeAsync(App.Url);
-    }
 }

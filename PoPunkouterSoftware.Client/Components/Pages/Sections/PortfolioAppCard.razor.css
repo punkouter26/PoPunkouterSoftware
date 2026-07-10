@@ -1,14 +1,17 @@
 /* Layout (display/flex/gap) inherited from global .app-portfolio-card in modern-ui.components.css.
-   This scoped sheet only adds the status-driven left border accent. */
+   Every card shown is a live app, so the accent border is unconditional. */
 ::deep .app-portfolio-card {
-    border-left: 4px solid var(--app-border-strong);
+    border-left: 4px solid var(--app-accent-strong);
 }
-::deep .app-portfolio-card[data-status="active"] {
-    border-left-color: var(--app-accent-strong);
+
+/* Mobile-portrait home-page screenshot, shown at 20% of the 390×844 capture viewport */
+::deep .app-screenshot-thumb img {
+    display: block;
+    width: 78px;
+    height: 169px;
+    object-fit: cover;
+    object-position: top;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
 }
-::deep .app-portfolio-card[data-status="broken"] {
-    border-left-color: var(--rz-danger);
-}
-::deep .app-portfolio-card[data-status="unreachable"] {
-    border-left-color: var(--rz-danger);
-}
+

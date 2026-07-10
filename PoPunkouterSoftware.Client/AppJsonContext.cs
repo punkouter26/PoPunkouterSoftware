@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using PoPunkouterSoftware.Client.Components.Pages;
 using PoPunkouterSoftware.Shared.Azure;
+using PoPunkouterSoftware.Shared.Portfolio;
 
 namespace PoPunkouterSoftware.Client;
 
@@ -26,7 +27,7 @@ internal sealed record ConfigResponse(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AzureReport))]
 [JsonSerializable(typeof(List<HistorySummary>))]
-[JsonSerializable(typeof(AppsWrapper))]
+[JsonSerializable(typeof(List<PortfolioApp>))]
 [JsonSerializable(typeof(GitHubActivity))]
 [JsonSerializable(typeof(ConfigResponse))]
 internal partial class AppJsonContext : JsonSerializerContext;

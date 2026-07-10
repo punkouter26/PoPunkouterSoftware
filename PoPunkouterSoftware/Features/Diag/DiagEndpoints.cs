@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
+using PoPunkouterSoftware.Infrastructure.Screenshots;
 using PoPunkouterSoftware.Shared.Azure;
 
 namespace PoPunkouterSoftware.Features.Diag;
@@ -124,6 +125,19 @@ internal static class DiagEndpoints
                     var json = JsonSerializer.Serialize(report, opts);
                     var filePath = Path.Combine(GetDataDir(env), "azure-full-report.json");
                     await File.WriteAllTextAsync(filePath, json, ct);
+
+                    // Refresh the home-page screenshots alongside the inventory (non-fatal).
+                    try
+                    {
+                        await hubCtx.Clients.All.SendAsync("RefreshProgress",
+                            new { step = "Capturing app screenshots…", percent = 99, done = false }, CancellationToken.None);
+                        var screenshots = scope.ServiceProvider.GetRequiredService<AppScreenshotService>();
+                        await screenshots.CaptureAsync(AppScreenshotService.ActiveTargets(report), ct);
+                    }
+                    catch (Exception shotEx)
+                    {
+                        logger.LogWarning(shotEx, "App screenshot capture failed (non-fatal)");
+                    }
 
                     sw.Stop();
                     // Metrics: a successful run with its wall-clock duration. (questions 1 & 2)
@@ -265,7 +279,7 @@ internal static class DiagEndpoints
     // env.WebRootPath is null on the server because the server has no wwwroot of its own.
     // In dev, resolve to the Client project's wwwroot; in production, UseStaticWebAssets()
     // publishes client assets under ContentRootPath/wwwroot, so WebRootPath is non-null.
-    private static string GetDataDir(IWebHostEnvironment env) =>
+    internal static string GetDataDir(IWebHostEnvironment env) =>
         env.WebRootPath is not null
             ? Path.Combine(env.WebRootPath, "data")
             : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "data"));

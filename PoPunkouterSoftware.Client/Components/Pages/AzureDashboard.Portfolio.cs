@@ -40,6 +40,19 @@ public partial class AzureDashboard
         string? Command
     );
 
+    private record ResourceExplorerItem(
+        string Name,
+        string Type,
+        string ResourceGroup,
+        string Location,
+        string Sku,
+        string Status,
+        string Risk,
+        int Requests7d,
+        int Errors7d,
+        int? ResponseTimeMs
+    );
+
     // ── Label / badge helpers ─────────────────────────────────────────────────
     private static string TypeLabel(string? t) => t switch
     {
@@ -305,12 +318,140 @@ public partial class AzureDashboard
             ));
         }
 
+        foreach (var storage in r?.StorageInventory?.Where(s => s.IssueCount > 0) ?? Enumerable.Empty<StorageItem>())
+        {
+            var severe = storage.PublicBlobAccess || !storage.HttpsOnly;
+            items.Add(new PriorityQueueItem(
+                Actionability: severe ? "Fix Now" : "Fix Soon",
+                Item: storage.Name,
+                Source: "Security",
+                ImpactScore: severe ? 95 : 72,
+                Confidence: "high",
+                Reason: string.Join("; ", storage.Issues?.Select(i => i.Issue) ?? []),
+                Owner: InferOwner(storage.ResourceGroup, storage.Name),
+                Environment: InferEnvironment(storage.ResourceGroup, storage.Name),
+                Command: null
+            ));
+        }
+
+        foreach (var drift in r?.ConfigDrift?.Where(d => d.Issues?.Any(i => i.Severity is "critical" or "high") == true) ?? Enumerable.Empty<ConfigDriftItem>())
+        {
+            items.Add(new PriorityQueueItem(
+                Actionability: "Fix Now",
+                Item: drift.FriendlyName ?? drift.Name,
+                Source: "Configuration",
+                ImpactScore: 88,
+                Confidence: "high",
+                Reason: string.Join("; ", drift.Issues?.Where(i => i.Severity is "critical" or "high").Select(i => i.Issue) ?? []),
+                Owner: InferOwner(drift.ResourceGroup, drift.Name),
+                Environment: InferEnvironment(drift.ResourceGroup, drift.Name),
+                Command: null
+            ));
+        }
+
         return items
+            .GroupBy(i => $"{i.Source}|{i.Item}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderByDescending(i => i.ImpactScore).First())
             .OrderByDescending(i => i.ImpactScore)
             .ThenBy(i => i.Actionability)
             .Take(150)
             .ToList();
     }
+
+    private static List<ResourceExplorerItem> BuildResourceExplorerItems(
+        AzureReport? r,
+        List<ConsolidatedService> consolidated,
+        List<SafeToRemoveItem> safe)
+    {
+        if (r is null)
+            return [];
+
+        var servicesByName = (r.WebServices?.Services ?? [])
+            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var consolidatedByName = consolidated
+            .GroupBy(s => s.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var cleanupNames = safe.Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var securityNames = (r.StorageInventory ?? [])
+            .Where(s => s.IssueCount > 0)
+            .Select(s => s.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var driftNames = (r.ConfigDrift ?? [])
+            .Where(d => d.IssueCount > 0)
+            .SelectMany(d => new[] { d.Name, d.FriendlyName ?? "" })
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var resources = r.AllResourceSummary?.ResourcesByType.Values.SelectMany(items => items).ToList() ?? [];
+        if (resources.Count == 0)
+        {
+            resources = (r.WebServices?.Services ?? []).Select(s => new ResourceDetail
+            {
+                Name = s.Name,
+                ResourceGroup = s.ResourceGroup,
+                Type = s.ResourceType,
+                Sku = s.AppServicePlanSku,
+            }).ToList();
+        }
+
+        var result = new List<ResourceExplorerItem>();
+        foreach (var resource in resources
+            .GroupBy(x => $"{x.Type}|{x.ResourceGroup}|{x.Name}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First()))
+        {
+            servicesByName.TryGetValue(resource.Name, out var service);
+            var friendlyName = service?.FriendlyName;
+            ConsolidatedService? portfolio = null;
+            if (!string.IsNullOrWhiteSpace(friendlyName))
+                consolidatedByName.TryGetValue(friendlyName, out portfolio);
+
+            var risks = new List<string>();
+            if (service?.HttpStatus is "broken" or "unreachable" || (service?.Metrics7Days?.Http5xx ?? 0) > 0)
+                risks.Add("Unhealthy");
+            if (cleanupNames.Contains(resource.Name) || (!string.IsNullOrWhiteSpace(friendlyName) && cleanupNames.Contains(friendlyName)))
+                risks.Add("Waste");
+            if (securityNames.Contains(resource.Name))
+                risks.Add("Security");
+            if (driftNames.Contains(resource.Name) || (!string.IsNullOrWhiteSpace(friendlyName) && driftNames.Contains(friendlyName)))
+                risks.Add("Drift");
+
+            result.Add(new ResourceExplorerItem(
+                Name: string.IsNullOrWhiteSpace(friendlyName) ? resource.Name : friendlyName,
+                Type: HumanizeResourceType(resource.Type?.Split('/').LastOrDefault() ?? "Resource"),
+                ResourceGroup: resource.ResourceGroup ?? "—",
+                Location: resource.Location ?? "—",
+                Sku: resource.Sku ?? service?.AppServicePlanSku ?? "—",
+                Status: service?.HttpStatus ?? (risks.Count == 0 ? "healthy" : "review"),
+                Risk: risks.Count == 0 ? "None" : string.Join(", ", risks.Distinct()),
+                Requests7d: portfolio?.Requests7d ?? service?.Metrics7Days?.Requests ?? 0,
+                Errors7d: portfolio?.Http5xx7d ?? service?.Metrics7Days?.Http5xx ?? 0,
+                ResponseTimeMs: portfolio?.ResponseTimeMs ?? service?.Connectivity?.ResponseTime
+            ));
+        }
+
+        return result
+            .OrderByDescending(i => i.Risk != "None")
+            .ThenBy(i => i.Name)
+            .ToList();
+    }
+
+    private static BadgeStyle ExplorerStatusBadge(string status) => status switch
+    {
+        "active" or "healthy" => BadgeStyle.Success,
+        "broken" => BadgeStyle.Danger,
+        "unreachable" or "review" => BadgeStyle.Warning,
+        _ => BadgeStyle.Info,
+    };
+
+    private static string RiskClass(string risk) => risk switch
+    {
+        var value when value.Contains("Security", StringComparison.OrdinalIgnoreCase) => "danger",
+        var value when value.Contains("Unhealthy", StringComparison.OrdinalIgnoreCase) => "danger",
+        var value when value.Contains("Waste", StringComparison.OrdinalIgnoreCase) => "warning",
+        var value when value.Contains("Drift", StringComparison.OrdinalIgnoreCase) => "warning",
+        _ => "muted",
+    };
 
     // ── Pure inference helpers ────────────────────────────────────────────────
     private static bool IsAnomalous(ConsolidatedService service, double medianReq, double medianRt)

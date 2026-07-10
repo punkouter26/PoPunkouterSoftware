@@ -6,6 +6,7 @@
     <!-- Blazor / UI -->
     <PackageVersion Include="Azure.Monitor.Query" Version="1.7.1" />
     <PackageVersion Include="Azure.Data.Tables" Version="12.11.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageVersion Include="Azure.ResourceManager" Version="1.14.0" />
     <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.5.0" />
     <PackageVersion Include="Azure.ResourceManager.AppService" Version="1.4.1" />

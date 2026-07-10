@@ -1,7 +1,7 @@
 @page "/"
 @rendermode WasmRenderModes.Interactive
+@using PoPunkouterSoftware.Shared.Portfolio
 @inject HttpClient Http
-@inject NavigationManager NavigationManager
 
 <PageTitle>PoPunkouterSoftware - Portfolio</PageTitle>
 
@@ -10,10 +10,7 @@
         <div class="app-grid hero-grid">
             <span class="app-eyebrow">Modern indie software studio</span>
             <h1 class="app-hero-title">Punkouter Software</h1>
-            <p class="app-hero-copy">
-                A one-person product studio shipping AI-driven apps on Azure with a stronger focus on live operations,
-                usable diagnostics, and portfolio quality instead of demo-only surfaces.
-            </p>
+            <p class="app-hero-copy">AI-driven apps built and shipped on Azure.</p>
 
             <div class="app-chip-row">
                 <RadzenBadge Text="C# / .NET 10" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" IsPill="true" />
@@ -25,55 +22,31 @@
     </section>
 
     <section id="apps" class="app-section">
-        <div class="app-toolbar rz-mb-3">
-            <div>
-                <div class="app-kicker">Portfolio</div>
-                <h2 class="app-section-heading">Web Apps</h2>
-                <p class="app-section-copy rz-mb-0">
-                    AI-powered tools, productivity utilities, and experiments currently surfaced from the live Azure inventory.
-                </p>
-            </div>
+        <div class="app-kicker">Portfolio</div>
+        <h2 class="app-section-heading">Web Apps</h2>
+        @if (apps is not null)
+        {
+            <p class="app-section-copy">@apps.Count live apps</p>
+        }
 
-            <div class="app-grid metrics metrics-grid">
-                <div class="app-metric-card">
-                    <strong>@filteredApps.Count</strong>
-                    <span class="app-note">Healthy apps shown</span>
-                </div>
-                <div class="app-metric-card">
-                    <strong>@AverageResponseLabel</strong>
-                    <span class="app-note">Avg response time</span>
-                </div>
-                <div class="app-metric-card">
-                    <strong>@CountTrackedRepos()</strong>
-                    <span class="app-note">Repos with GitHub activity</span>
-                </div>
-            </div>
-        </div>
-
-        @if (apps == null || !_liveStatusLoaded)
+        @if (apps == null)
         {
             <div class="app-card">
                 <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" class="rz-my-2" />
-                <p class="app-note rz-mb-0">Loading portfolio inventory and live telemetry…</p>
+                <p class="app-note rz-mb-0">Loading portfolio…</p>
             </div>
         }
-        else if (filteredApps.Count == 0)
+        else if (apps.Count == 0)
         {
-            <div class="app-empty-state">No live apps matched the current inventory and health filters.</div>
+            <div class="app-empty-state">No live apps found in the current inventory.</div>
         }
         else
         {
             <div class="app-grid cards">
-                @foreach (var app in filteredApps)
+                @foreach (var app in apps)
                 {
-                    var live = GetLiveStatus(app.Url);
                     _ghActivity.TryGetValue(app.GithubRepo ?? string.Empty, out var gh);
-                    <PortfolioAppCard App="app"
-                                      Live="live"
-                                      GitHub="gh"
-                                      GitHubLoaded="_ghLoaded"
-                                      AzureDataLoaded="_liveStatusLoaded"
-                                      OpenAppRequested="OpenApp" />
+                    <PortfolioAppCard App="app" GitHub="gh" GitHubLoaded="_ghLoaded" />
                 }
             </div>
         }
@@ -81,76 +54,34 @@
 </div>
 
 @code {
-    // ── Apps ─────────────────────────────────────────────────────────
-    private IEnumerable<AppModel>? apps;
-    private List<AppModel> filteredApps = new();
-    private List<WebService> _activeServices = new();
-    private Dictionary<string, WebService> _liveByUrl = new(StringComparer.OrdinalIgnoreCase);
+    private List<PortfolioApp>? apps;
     private Dictionary<string, GitHubActivity> _ghActivity = new(StringComparer.OrdinalIgnoreCase);
     private bool _ghLoaded;
-    private bool _liveStatusLoaded;
 
     protected override async Task OnInitializedAsync()
     {
-        await ReloadAppsAsync();
-        await Task.WhenAll(LoadLiveStatusAsync(), LoadGitHubActivityAsync());
-    }
-
-    private async Task ReloadAppsAsync()
-    {
         try
         {
-            var wrapper = await Http.GetFromJsonAsync("data/apps.json", AppJsonContext.Default.AppsWrapper);
-            apps = wrapper?.Apps ?? new List<AppModel>();
-            ApplyDefaultSort();
+            apps = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.ListPortfolioApp) ?? new();
         }
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
-            apps = new List<AppModel>();
-            filteredApps.Clear();
+            apps = new();
         }
-    }
 
-    private async Task LoadLiveStatusAsync()
-    {
-        try
-        {
-            var report = await Http.GetFromJsonAsync("/api/diag/report", AppJsonContext.Default.AzureReport);
-            var services = report?.WebServices?.Services ?? new List<WebService>();
-            _liveByUrl = services
-                .Where(s => !string.IsNullOrEmpty(s.Url))
-                .ToDictionary(s => s.Url!, StringComparer.OrdinalIgnoreCase);
-            // Single source of truth for "active apps": the exact same predicate the Ops
-            // dashboard counts as Operational (ByStatusInfo.Active = HttpStatus == "active").
-            // Driving the home portfolio off this list keeps "Healthy apps shown" structurally
-            // in lockstep with the dashboard's "Operational" total — they cannot drift.
-            _activeServices = services
-                .Where(s => string.Equals(s.HttpStatus, "active", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            ApplyDefaultSort();
-            await InvokeAsync(StateHasChanged);
-        }
-        catch { /* non-fatal — live status is optional */ }
-        finally
-        {
-            _liveStatusLoaded = true;
-            await InvokeAsync(StateHasChanged);
-        }
+        StateHasChanged(); // show cards while GitHub activity loads
+        await LoadGitHubActivityAsync();
     }
 
     private async Task LoadGitHubActivityAsync()
     {
-        // Derive repos from the full inventory, not filteredApps: this runs concurrently
-        // with LoadLiveStatusAsync, so filteredApps is still empty here (the health filter
-        // hides everything until live status arrives). Using `apps` makes it timing-independent.
-        var repos = (apps ?? Enumerable.Empty<AppModel>())
+        var repos = (apps ?? new())
             .Where(a => !string.IsNullOrEmpty(a.GithubRepo))
             .Select(a => a.GithubRepo!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .Distinct(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var repo in repos)
+        await Task.WhenAll(repos.Select(async repo =>
         {
             try
             {
@@ -159,98 +90,8 @@
                     _ghActivity[repo] = gh;
             }
             catch { /* non-fatal */ }
-        }
+        }));
 
         _ghLoaded = true;
-        await InvokeAsync(StateHasChanged);
     }
-
-    private WebService? GetLiveStatus(string? url)
-    {
-        if (string.IsNullOrEmpty(url) || _liveByUrl.Count == 0) return null;
-        if (_liveByUrl.TryGetValue(url, out var hit)) return hit;
-        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-        {
-            var host = uri.Host;
-            return _liveByUrl.Values.FirstOrDefault(s =>
-                Uri.TryCreate(s.Url, UriKind.Absolute, out var su) &&
-                su.Host.Equals(host, StringComparison.OrdinalIgnoreCase));
-        }
-        return null;
-    }
-
-    private void ApplyDefaultSort()
-    {
-        // Build the portfolio from the live Azure inventory — one card per active web
-        // service — so filteredApps.Count IS the dashboard's "Operational" count by
-        // construction. apps.json is now presentation metadata (description, tech,
-        // GitHub repo), matched onto the service by host; it no longer decides which
-        // apps appear, so the two totals stay in sync as the inventory changes.
-        var metaByHost = (apps ?? Enumerable.Empty<AppModel>())
-            .Select(a => (host: HostOf(a.Url), app: a))
-            .Where(x => x.host is not null)
-            .GroupBy(x => x.host!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().app, StringComparer.OrdinalIgnoreCase);
-
-        filteredApps = _activeServices
-            .Select(s =>
-            {
-                var host = HostOf(s.Url);
-                var meta = host is not null && metaByHost.TryGetValue(host, out var m) ? m : null;
-                var name = meta?.Name
-                    ?? (string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName);
-                return new AppModel
-                {
-                    Name = name,
-                    Status = "active",
-                    Description = meta?.Description ?? "",
-                    Url = s.Url ?? meta?.Url ?? "",
-                    Technologies = meta?.Technologies,
-                    GithubRepo = meta?.GithubRepo,
-                };
-            })
-            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string? HostOf(string? url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host.ToLowerInvariant() : null;
-
-    private void OpenApp(string url)
-    {
-        if (!string.IsNullOrWhiteSpace(url))
-            NavigationManager.NavigateTo(url, forceLoad: true);
-    }
-
-    private int CountRecentRepos(int days) =>
-        _ghActivity.Values.Count(gh => gh.LastCommitDate is DateTime lastCommit && (DateTime.UtcNow - lastCommit).TotalDays <= days);
-
-    private int CountTrackedRepos() =>
-        filteredApps.Count(a => !string.IsNullOrWhiteSpace(a.GithubRepo) && _ghActivity.ContainsKey(a.GithubRepo));
-
-    private string AverageResponseLabel
-    {
-        get
-        {
-            // Exclude cold-start timeouts (≥14 000 ms) — they skew the average
-            // and hide the real response quality of healthy services.
-            const int TimeoutThresholdMs = 14_000;
-
-            var responseTimes = filteredApps
-                .Select(a => GetLiveStatus(a.Url)?.Connectivity?.ResponseTime)
-                .Where(rt => rt is > 0 and < TimeoutThresholdMs)
-                .Select(rt => rt!.Value)
-                .ToList();
-
-            if (responseTimes.Count == 0)
-                return "—";
-
-            var avg = (long)responseTimes.Average();
-            var label = avg < 1000 ? $"{avg} ms" : $"{avg / 1000.0:F1} s";
-            return responseTimes.Count < filteredApps.Count
-                ? $"{label} ({responseTimes.Count} active)"
-                : label;
-        }
-    }
-
 }

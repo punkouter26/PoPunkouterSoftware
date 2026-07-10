@@ -11,8 +11,10 @@ using PoPunkouterSoftware.Features.Azure;
 using PoPunkouterSoftware.Features.Diag;
 using PoPunkouterSoftware.Features.GitHub;
 using PoPunkouterSoftware.Features.Infra;
+using PoPunkouterSoftware.Features.Portfolio;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
+using PoPunkouterSoftware.Infrastructure.Screenshots;
 using Radzen;
 using Scalar.AspNetCore;
 using Serilog;
@@ -192,6 +194,7 @@ try
         new ArmClient(sp.GetRequiredService<TokenCredential>()));
 
     builder.Services.AddSingleton<AzureReportStore>();
+    builder.Services.AddSingleton<AppScreenshotService>();
     builder.Services.AddTransient<AzureReportService>();
     builder.Services.AddTransient<DowntimeDiagnosisService>();
     builder.Services.AddTransient<PlanRecommendationService>();
@@ -350,6 +353,7 @@ try
     app.MapHealthEndpoints();
     app.MapDiagEndpoints();
     app.MapGitHubEndpoints();
+    app.MapPortfolioEndpoints();
     app.MapInfraEndpoints();
     app.MapHub<RefreshHub>("/hubs/refresh");
     app.MapPingerEndpoints();

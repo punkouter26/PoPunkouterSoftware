@@ -1,0 +1,15 @@
+{
+  "Version": 1,
+  "ProjectRoot": "C:\\Users\\punko\\Downloads\\PoPunkouterSoftware",
+  "Skills": [
+    "aspnet-core",
+    "blazor",
+    "coverage-analysis",
+    "coverlet",
+    "microsoft-extensions",
+    "minimal-api-file-upload",
+    "signalr",
+    "xunit"
+  ],
+  "UpdatedAt": "2026-07-10T01:03:27.1573644+00:00"
+}
