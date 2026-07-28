@@ -212,6 +212,27 @@ public class PortfolioEndpointTests
         }
     }
 
+    /// <summary>
+    /// The site must not showcase itself. Removing its apps.json entry is not sufficient —
+    /// the response merges the catalog with EVERY service the Azure scan discovered, and this
+    /// site is a real App Service in the same subscription, so it returns via the inventory
+    /// path. Asserted on both the Azure resource name and the friendly name.
+    /// </summary>
+    [Fact]
+    public async Task GetPortfolio_NeverIncludesThisSiteItself()
+    {
+        var response = await _client.GetAsync("/api/portfolio");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var names = doc.RootElement.GetProperty("apps").EnumerateArray()
+            .Select(a => a.GetProperty("name").GetString() ?? "")
+            .ToList();
+
+        names.Should().NotContain(n => n.Replace("-", "").Equals("PoPunkouterSoftware", StringComparison.OrdinalIgnoreCase));
+        names.Should().NotContain(n => n.Contains("app-popunkoutersoftware", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Fact]
     public async Task GetPortfolio_EnvelopeCarriesFreshness_SoTheUiCanBeHonestAboutLive()
     {

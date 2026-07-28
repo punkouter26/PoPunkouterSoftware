@@ -54,20 +54,6 @@
       "githubRepo": "punkouter26/PoMiniGames"
     },
     {
-      "id": "popunkoutersoftware",
-      "name": "PoPunkouterSoftware",
-      "description": "This portfolio site with a live Azure ops dashboard",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://app-popunkoutersoftware.azurewebsites.net",
-      "githubRepo": "punkouter26/PoPunkouterSoftware"
-    },
-    {
       "id": "potraffic-api",
       "name": "PoTraffic",
       "description": "Traffic monitoring dashboard and API",

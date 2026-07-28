@@ -14,6 +14,26 @@ namespace PoPunkouterSoftware.Features.Portfolio;
 /// </summary>
 internal static partial class PortfolioEndpoints
 {
+    /// <summary>
+    /// This site itself, which must never appear as a card in its own portfolio.
+    ///
+    /// <para>Filtering has to happen here rather than by dropping the apps.json entry: the
+    /// catalog is only ONE of the two sources merged into the response. Every service the
+    /// Azure scan discovers is also shown (that is what keeps broken apps visible), and this
+    /// site is a real App Service in the same subscription — so it comes back through the
+    /// inventory path no matter what the catalog says.</para>
+    /// </summary>
+    /// <remarks>
+    /// Already in <see cref="NormalizeName"/> form (letters and digits only, lower-cased),
+    /// so both the Azure resource name "app-popunkoutersoftware" and the friendly name
+    /// "PoPunkouterSoftware" collapse onto an entry here.
+    /// </remarks>
+    private static readonly HashSet<string> SelfIdentities =
+        new(StringComparer.Ordinal) { "apppopunkoutersoftware", "popunkoutersoftware" };
+
+    private static bool IsSelf(params string?[] candidateNames) =>
+        candidateNames.Any(n => SelfIdentities.Contains(NormalizeName(n)));
+
     internal static WebApplication MapPortfolioEndpoints(this WebApplication app)
     {
         var portfolio = app.MapGroup("/api/portfolio").WithTags("Portfolio");
@@ -52,6 +72,8 @@ internal static partial class PortfolioEndpoints
         // Catalog entries marked active are the stable showcase, even when Azure inventory is stale or unavailable.
         foreach (var meta in metadata.Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase)))
         {
+            if (IsSelf(meta.Name))
+                continue;
             var key = NormalizeName(meta.Name);
             if (appsByName.ContainsKey(key))
                 continue;
@@ -61,6 +83,8 @@ internal static partial class PortfolioEndpoints
         // Every discovered service is also shown, including broken services, and receives catalog metadata by stable name.
         foreach (var service in services)
         {
+            if (IsSelf(service.FriendlyName, service.Name))
+                continue;
             var displayName = string.IsNullOrWhiteSpace(service.FriendlyName) ? service.Name : service.FriendlyName;
             var key = NormalizeName(displayName);
             metaByName.TryGetValue(key, out var meta);
