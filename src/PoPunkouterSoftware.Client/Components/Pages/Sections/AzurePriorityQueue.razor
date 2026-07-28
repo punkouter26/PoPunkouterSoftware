@@ -1,0 +1,57 @@
+@using PoPunkouterSoftware.Client.Components.Pages.Models
+@using Radzen
+
+@* The ranked evidence list: every open item, most actionable first, each carrying the
+   provenance that justifies it (source, confidence, owner, environment) plus a
+   one-tap copy of the Azure CLI command that resolves it. *@
+<section class="azure-anchor-section">
+    <div class="azure-section-heading">
+        <div><div class="app-kicker">Ranked evidence</div><h2>Full priority queue</h2></div>
+        <RadzenBadge Text="@($"{Items.Count} open")" IsPill="true" />
+    </div>
+    @if (Items.Count == 0)
+    {
+        <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No immediate action is required.</div>
+    }
+    else
+    {
+        <div class="azure-attention-list">
+            @foreach (var item in Items)
+            {
+                <article class="azure-attention-item" @key="item.Item">
+                    <div class="azure-item-heading">
+                        <RadzenBadge Text="@item.Actionability" IsPill="true" BadgeStyle="@BadgeFor(item.Actionability)" />
+                        <strong>@item.Item</strong>
+                        <span class="azure-attention-reason">@item.Reason</span>
+                        <span class="azure-impact-score">Impact @item.ImpactScore</span>
+                    </div>
+                    <div class="azure-attention-detail">
+                        <dl>
+                            <div><dt>Source</dt><dd>@item.Source</dd></div>
+                            <div><dt>Confidence</dt><dd>@item.Confidence</dd></div>
+                            <div><dt>Owner</dt><dd>@item.Owner</dd></div>
+                            <div><dt>Environment</dt><dd>@item.Environment</dd></div>
+                        </dl>
+                        @if (!string.IsNullOrWhiteSpace(item.Command))
+                        {
+                            <button class="azure-copy-command" @onclick="@(() => OnCopyCommand.InvokeAsync(item.Command))"
+                                    title="Copy Azure CLI command">
+                                <code>@item.Command</code><RadzenIcon Icon="content_copy" />
+                            </button>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PriorityQueueItem> Items { get; set; } = [];
+
+    /// <summary>Maps an actionability tier to its badge style. Supplied by the page so the
+    /// mapping stays in one place (AzureDashboard.Presentation) rather than forking here.</summary>
+    [Parameter, EditorRequired] public Func<string?, BadgeStyle> BadgeFor { get; set; } = default!;
+
+    [Parameter] public EventCallback<string> OnCopyCommand { get; set; }
+}

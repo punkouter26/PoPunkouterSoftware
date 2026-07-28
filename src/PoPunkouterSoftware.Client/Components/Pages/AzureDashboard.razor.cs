@@ -35,8 +35,6 @@ public partial class AzureDashboard
     private List<ResourceExplorerItem> _filteredResourceExplorerItems = new();
     private List<WebService> _sortedServices = new();
 
-    private List<ConsolidatedService> ConsolidatedServices => _consolidatedServices;
-    private IEnumerable<WebService> SortedServices => _sortedServices;
     private List<PriorityQueueItem> PriorityQueue => _priorityQueue;
     private List<ResourceExplorerItem> ResourceExplorerItems => _resourceExplorerItems;
     private List<ResourceExplorerItem> FilteredResourceExplorerItems => _filteredResourceExplorerItems;
@@ -124,7 +122,8 @@ public partial class AzureDashboard
     {
         if (report is null)
             await LoadReportAsync();
-        if (report is null) return;
+        if (report is null)
+            return;
 
         var json = JsonSerializer.Serialize(report, AppJsonContext.Default.AzureReport);
         var timestamp = (report.GeneratedAt ?? DateTime.UtcNow).ToString("yyyy-MM-dd_HHmm");
@@ -312,7 +311,9 @@ public partial class AzureDashboard
         {
             // Client-side timeout. The server scan would otherwise keep running (and keep the
             // refresh lock) for up to 10 minutes — tell it to stop instead of walking away.
-            try { await Http.PostAsync("/api/diag/cancel-refresh", null); } catch { }
+            try
+            { await Http.PostAsync("/api/diag/cancel-refresh", null); }
+            catch { }
             NotificationService.Notify(NotificationSeverity.Warning, "Timeout",
                 "Refresh took too long (120s limit); the server scan was cancelled.");
         }
@@ -352,7 +353,9 @@ public partial class AzureDashboard
             NotificationService.Notify(NotificationSeverity.Warning, "Cancelled", "Refresh operation cancelled.");
         }
         // Signal the server to stop the in-progress scan (best-effort — swallow errors).
-        try { await Http.PostAsync("/api/diag/cancel-refresh", null); } catch { }
+        try
+        { await Http.PostAsync("/api/diag/cancel-refresh", null); }
+        catch { }
         _refreshing = false;
         StateHasChanged();
     }
@@ -443,7 +446,8 @@ public partial class AzureDashboard
         if (_mediaSubscriptionId != 0)
         {
             // Best-effort: the circuit may already be gone during teardown.
-            try { await JS.InvokeVoidAsync("appMedia.unregister", _mediaSubscriptionId); }
+            try
+            { await JS.InvokeVoidAsync("appMedia.unregister", _mediaSubscriptionId); }
             catch (JSException) { }
             catch (InvalidOperationException) { }
             catch (TaskCanceledException) { }

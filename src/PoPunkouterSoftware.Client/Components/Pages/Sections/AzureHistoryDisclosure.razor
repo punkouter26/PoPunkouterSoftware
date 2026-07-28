@@ -1,0 +1,46 @@
+@using PoPunkouterSoftware.Client.Components.Pages.Models
+@using Radzen
+@using Radzen.Blazor
+
+@* The 30-day trend pair. Collapsed by default: it is corroborating evidence, not a
+   first-paint signal, and the charts are the most expensive thing on the page to draw. *@
+<details class="azure-disclosure">
+    <summary class="azure-disclosure-heading">
+        <span><RadzenIcon Icon="timeline" /><strong>30-day history</strong></span>
+        <span class="app-note">@SnapshotCount snapshots</span>
+    </summary>
+    <div class="azure-disclosure-body">
+        @if (StatusHistory.Count > 1)
+        {
+            <div class="azure-history-grid">
+                <article>
+                    <h3>Fleet status</h3>
+                    <RadzenChart>
+                        <RadzenLineSeries TItem="HistoryStatusPoint" Data="@StatusHistory" CategoryProperty="Label" ValueProperty="Active" Title="Active" />
+                        <RadzenLineSeries TItem="HistoryStatusPoint" Data="@StatusHistory" CategoryProperty="Label" ValueProperty="Broken" Title="Broken" />
+                        <RadzenCategoryAxis /><RadzenValueAxis />
+                    </RadzenChart>
+                </article>
+                <article>
+                    <h3>Cost</h3>
+                    <RadzenChart>
+                        <RadzenLineSeries TItem="HistoryCostPoint" Data="@CostHistory" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
+                        <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}" />
+                    </RadzenChart>
+                </article>
+            </div>
+        }
+        else
+        {
+            <div class="azure-compact-state">History appears after two scans.</div>
+        }
+    </div>
+</details>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<HistoryStatusPoint> StatusHistory { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<HistoryCostPoint> CostHistory { get; set; } = [];
+
+    /// <summary>Number of daily snapshots in the window (shown in the summary line).</summary>
+    [Parameter] public int SnapshotCount { get; set; }
+}

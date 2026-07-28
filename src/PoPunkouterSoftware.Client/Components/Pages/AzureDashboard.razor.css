@@ -4,7 +4,7 @@
     gap: 1rem;
 }
 
-.azure-glance-grid {
+.azure-ops-page ::deep .azure-glance-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: .75rem;
@@ -15,7 +15,7 @@
 
 /* Chart heights moved out of `Style="height:210px"` inline attributes. The .app-card
    parent owns the frame; .rz-chart is frameless (see modern-ui.components.css). */
-.azure-glance-grid ::deep .rz-chart {
+.azure-ops-page ::deep .azure-glance-grid .rz-chart {
     min-width: 0;
     height: 210px;
     padding: var(--app-space-3xs);
@@ -29,7 +29,7 @@
 .azure-hero-title { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: .55rem; }
 .azure-hero-title .rz-badge { transform: translateY(-.15em); }
 
-.azure-attention-summary {
+.azure-ops-page ::deep .azure-attention-summary {
     padding: .9rem;
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-lg);
@@ -42,7 +42,7 @@
 .azure-advanced { display: grid; gap: 1.25rem; padding-top: .5rem; border-top: 1px solid var(--app-border); }
 .azure-advanced-actions { justify-content: flex-end; }
 
-.azure-command-header {
+.azure-ops-page ::deep .azure-command-header {
     display: grid;
     grid-template-columns: minmax(260px, 1.35fr) minmax(320px, .9fr) auto;
     gap: 1.5rem;
@@ -56,13 +56,13 @@
     box-shadow: var(--app-shadow-lg);
 }
 
-.azure-command-header.has-attention {
+.azure-ops-page ::deep .azure-command-header.has-attention {
     background:
         linear-gradient(135deg, var(--app-warm-wash), transparent 45%),
         var(--app-surface-strong);
 }
 
-.azure-hero-title {
+.azure-ops-page ::deep .azure-hero-title {
     margin: .15rem 0 .35rem;
     font-family: var(--app-headline-font);
     font-size: clamp(1.65rem, 3vw, 2.35rem);
@@ -71,27 +71,27 @@
     color: var(--app-text);
 }
 
-.azure-command-meta,
-.azure-command-actions {
+.azure-ops-page ::deep .azure-command-meta,
+.azure-ops-page ::deep .azure-command-actions {
     display: flex;
     flex-wrap: wrap;
     gap: .6rem;
     align-items: center;
 }
 
-.azure-command-meta {
+.azure-ops-page ::deep .azure-command-meta {
     margin-top: .85rem;
     font-size: .82rem;
     color: var(--app-text-soft);
 }
 
-.azure-command-kpis {
+.azure-ops-page ::deep .azure-command-kpis {
     display: grid;
     grid-template-columns: repeat(2, minmax(110px, 1fr));
     gap: .65rem;
 }
 
-.azure-command-kpis > div {
+.azure-ops-page ::deep .azure-command-kpis > div {
     display: grid;
     gap: .15rem;
     padding: .8rem .9rem;
@@ -100,25 +100,25 @@
     background: var(--app-surface-soft);
 }
 
-.azure-command-kpis strong {
+.azure-ops-page ::deep .azure-command-kpis strong {
     font-size: 1.3rem;
     color: var(--app-text);
 }
 
-.azure-command-kpis span {
+.azure-ops-page ::deep .azure-command-kpis span {
     font-size: .75rem;
     color: var(--app-text-soft);
 }
 
-.azure-command-actions {
+.azure-ops-page ::deep .azure-command-actions {
     justify-content: flex-end;
 }
 
-.azure-anchor-section {
+.azure-ops-page ::deep .azure-anchor-section {
     scroll-margin-top: 145px;
 }
 
-.azure-refresh-progress {
+.azure-ops-page ::deep .azure-refresh-progress {
     display: grid;
     gap: .5rem;
     padding: 1rem;
@@ -128,11 +128,11 @@
 }
 
 /* Was `Style="height:18px"` on both RadzenProgressBar branches. */
-.azure-refresh-progress ::deep .rz-progressbar {
+.azure-ops-page ::deep .azure-refresh-progress .rz-progressbar {
     height: 18px;
 }
 
-.azure-refresh-progress span {
+.azure-ops-page ::deep .azure-refresh-progress span {
     display: flex;
     gap: var(--app-space-2xs);
     align-items: center;
@@ -140,7 +140,7 @@
     font-size: .82rem;
 }
 
-.azure-section-heading {
+.azure-ops-page ::deep .azure-section-heading {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
@@ -148,33 +148,33 @@
     margin-bottom: 1rem;
 }
 
-.azure-section-heading h2 {
+.azure-ops-page ::deep .azure-section-heading h2 {
     margin: .15rem 0 .25rem;
     font-size: clamp(1.35rem, 2vw, 1.8rem);
 }
 
-.azure-section-heading p {
+.azure-ops-page ::deep .azure-section-heading p {
     margin: 0;
     max-width: 68ch;
     color: var(--app-text-muted);
 }
 
-.azure-attention-list,
-.azure-disclosure-stack {
+.azure-ops-page ::deep .azure-attention-list,
+.azure-ops-page ::deep .azure-disclosure-stack {
     display: grid;
     gap: .6rem;
 }
 
-.azure-attention-item,
-.azure-disclosure,
-.azure-resource-card {
+.azure-ops-page ::deep .azure-attention-item,
+.azure-ops-page ::deep .azure-disclosure,
+.azure-ops-page ::deep .azure-resource-card {
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-md);
     background: var(--app-surface);
     overflow: clip;
 }
 
-.azure-item-heading {
+.azure-ops-page ::deep .azure-item-heading {
     display: grid;
     grid-template-columns: 150px minmax(150px, .55fr) minmax(260px, 1.5fr) auto;
     gap: .85rem;
@@ -183,7 +183,7 @@
     padding: .7rem .85rem;
 }
 
-.azure-attention-reason {
+.azure-ops-page ::deep .azure-attention-reason {
     min-width: 0;
     overflow: hidden;
     color: var(--app-text-muted);
@@ -192,50 +192,50 @@
     white-space: nowrap;
 }
 
-.azure-impact-score {
+.azure-ops-page ::deep .azure-impact-score {
     color: var(--app-text-soft);
     font-size: .74rem;
     font-weight: 700;
     white-space: nowrap;
 }
 
-.azure-attention-detail {
+.azure-ops-page ::deep .azure-attention-detail {
     display: grid;
     grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.4fr);
     gap: 1rem;
     padding: 0 .9rem .9rem;
 }
 
-.azure-attention-detail dl,
-.azure-resource-card dl {
+.azure-ops-page ::deep .azure-attention-detail dl,
+.azure-ops-page ::deep .azure-resource-card dl {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: .5rem;
     margin: 0;
 }
 
-.azure-attention-detail dl > div,
-.azure-resource-card dl > div {
+.azure-ops-page ::deep .azure-attention-detail dl > div,
+.azure-ops-page ::deep .azure-resource-card dl > div {
     padding: .55rem;
     border-radius: var(--app-radius-md);
     background: var(--app-surface-soft);
 }
 
-.azure-attention-detail dt,
-.azure-resource-card dt {
+.azure-ops-page ::deep .azure-attention-detail dt,
+.azure-ops-page ::deep .azure-resource-card dt {
     color: var(--app-text-soft);
     font-size: .68rem;
     text-transform: uppercase;
 }
 
-.azure-attention-detail dd,
-.azure-resource-card dd {
+.azure-ops-page ::deep .azure-attention-detail dd,
+.azure-ops-page ::deep .azure-resource-card dd {
     margin: .1rem 0 0;
     color: var(--app-text);
     font-size: .82rem;
 }
 
-.azure-copy-command {
+.azure-ops-page ::deep .azure-copy-command {
     display: flex;
     justify-content: space-between;
     gap: .75rem;
@@ -250,16 +250,16 @@
     cursor: pointer;
 }
 
-.azure-copy-command code {
+.azure-ops-page ::deep .azure-copy-command code {
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.azure-donut-wrap {
+.azure-ops-page ::deep .azure-donut-wrap {
     position: relative;
 }
 
-.azure-donut-center {
+.azure-ops-page ::deep .azure-donut-center {
     position: absolute;
     top: 38%;
     left: 50%;
@@ -268,30 +268,30 @@
     pointer-events: none;
 }
 
-.azure-donut-pct {
+.azure-ops-page ::deep .azure-donut-pct {
     color: var(--app-accent);
     font-size: 2rem;
     font-weight: 750;
     line-height: 1;
 }
 
-.azure-donut-caption {
+.azure-ops-page ::deep .azure-donut-caption {
     margin-top: .15rem;
     color: var(--app-text-soft);
     font-size: .72rem;
 }
 
-.azure-resource-heading {
+.azure-ops-page ::deep .azure-resource-heading {
     align-items: end;
 }
 
-.azure-result-count {
+.azure-ops-page ::deep .azure-result-count {
     color: var(--app-text-soft);
     font-size: .8rem;
     white-space: nowrap;
 }
 
-.azure-filter-bar {
+.azure-ops-page ::deep .azure-filter-bar {
     display: flex;
     flex-wrap: wrap;
     gap: .45rem;
@@ -300,32 +300,32 @@
 
 /* The grid and the card list are now mutually exclusive branches in the markup
    (driven by `_isNarrow`), not two always-rendered trees toggled with `display`. */
-.azure-resource-grid {
+.azure-ops-page ::deep .azure-resource-grid {
     overflow-x: auto;
 }
 
 /* Radzen row virtualization needs a bounded scroll container. This replaces the
    `Style="width:100%;min-width:900px"` inline attribute and the 12-row pager. */
-.azure-resource-grid ::deep .rz-data-grid,
-.azure-resource-grid ::deep .rz-datatable {
+.azure-ops-page ::deep .azure-resource-grid .rz-data-grid,
+.azure-ops-page ::deep .azure-resource-grid .rz-datatable {
     width: 100%;
     min-width: 900px;
     height: 560px;
 }
 
-.azure-resource-cards {
+.azure-ops-page ::deep .azure-resource-cards {
     display: grid;
     gap: var(--app-space-xs);
 }
 
 /* Off-screen resource cards skip layout, style, and paint. */
-.azure-resource-card {
+.azure-ops-page ::deep .azure-resource-card {
     content-visibility: auto;
     contain-intrinsic-size: auto 190px;
 }
 
-.azure-resource-card-heading,
-.azure-disclosure-heading {
+.azure-ops-page ::deep .azure-resource-card-heading,
+.azure-ops-page ::deep .azure-disclosure-heading {
     display: flex;
     justify-content: space-between;
     gap: .75rem;
@@ -333,29 +333,29 @@
     padding: .9rem 1rem;
 }
 
-.azure-resource-card-heading > strong {
+.azure-ops-page ::deep .azure-resource-card-heading > strong {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.azure-resource-card dl {
+.azure-ops-page ::deep .azure-resource-card dl {
     padding: 0 .85rem .85rem;
 }
 
-.azure-risk-label {
+.azure-ops-page ::deep .azure-risk-label {
     font-size: .76rem;
     font-weight: 700;
 }
 
-.azure-risk-label.danger { color: var(--app-danger-soft); }
-.azure-risk-label.warning { color: var(--app-accent-warm); }
-.azure-risk-label.muted { color: var(--app-text-soft); }
+.azure-ops-page ::deep .azure-risk-label.danger { color: var(--app-danger-soft); }
+.azure-ops-page ::deep .azure-risk-label.warning { color: var(--app-accent-warm); }
+.azure-ops-page ::deep .azure-risk-label.muted { color: var(--app-text-soft); }
 
 .azure-chart-note { margin: .4rem 0 0; color: var(--app-text-muted); font-size: .74rem; }
 
-.azure-compact-state {
+.azure-ops-page ::deep .azure-compact-state {
     display: flex;
     gap: .5rem;
     align-items: center;
@@ -367,28 +367,28 @@
     background: var(--app-surface-soft);
 }
 
-.azure-compact-state.success {
+.azure-ops-page ::deep .azure-compact-state.success {
     color: var(--app-accent);
     border-color: var(--app-accent-edge);
 }
 
-.azure-disclosure-heading > span:first-child {
+.azure-ops-page ::deep .azure-disclosure-heading > span:first-child {
     display: flex;
     gap: .55rem;
     align-items: center;
 }
 
-summary.azure-disclosure-heading { cursor: pointer; list-style: none; }
-summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
-.azure-disclosure:not([open]) .azure-disclosure-heading { border-bottom: 0; }
+.azure-ops-page ::deep summary.azure-disclosure-heading { cursor: pointer; list-style: none; }
+.azure-ops-page ::deep summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
+.azure-ops-page ::deep .azure-disclosure:not([open]) .azure-disclosure-heading { border-bottom: 0; }
 
-.azure-disclosure-body {
+.azure-ops-page ::deep .azure-disclosure-body {
     display: grid;
     gap: .65rem;
     padding: 0 1rem 1rem;
 }
 
-.azure-finding {
+.azure-ops-page ::deep .azure-finding {
     display: grid;
     grid-template-columns: minmax(180px, .5fr) minmax(180px, .5fr) minmax(260px, 1.5fr);
     gap: .75rem;
@@ -398,38 +398,38 @@ summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
     background: var(--app-surface-soft);
 }
 
-.azure-finding span,
-.azure-finding p {
+.azure-ops-page ::deep .azure-finding span,
+.azure-ops-page ::deep .azure-finding p {
     margin: 0;
     color: var(--app-text-muted);
     font-size: .82rem;
 }
 
-.azure-history-grid {
+.azure-ops-page ::deep .azure-history-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 /* The <article> owns the frame. .rz-chart used to carry its own border + radius +
    background as well, producing a concentric double border inside every one of these
    tiles (and a third ring from the enclosing .azure-disclosure). */
-.azure-history-grid article {
+.azure-ops-page ::deep .azure-history-grid article {
     min-width: 0;
     padding: var(--app-space-sm);
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-md);
 }
 
-.azure-history-grid ::deep .rz-chart {
+.azure-ops-page ::deep .azure-history-grid .rz-chart {
     height: 220px;
     padding: var(--app-space-3xs);
 }
 
-.azure-history-grid h3 {
+.azure-ops-page ::deep .azure-history-grid h3 {
     margin: 0 0 var(--app-space-xs);
     font-size: 1rem;
 }
 
-.azure-timing-row {
+.azure-ops-page ::deep .azure-timing-row {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
@@ -442,15 +442,15 @@ summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
 @media (max-width: 1000px) {
     .azure-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .azure-glance-grid > :last-child { grid-column: 1 / -1; }
-    .azure-command-header {
+    .azure-ops-page ::deep .azure-command-header {
         grid-template-columns: 1fr auto;
     }
 
-    .azure-command-copy {
+    .azure-ops-page ::deep .azure-command-copy {
         grid-column: 1 / -1;
     }
 
-    .azure-item-heading {
+    .azure-ops-page ::deep .azure-item-heading {
         grid-template-columns: 145px minmax(140px, .7fr) minmax(220px, 1.4fr) auto;
     }
 }
@@ -458,54 +458,54 @@ summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
 @media (max-width: 720px) {
     .azure-glance-grid { grid-template-columns: 1fr; }
     .azure-glance-grid > :last-child { grid-column: auto; }
-    .azure-command-header {
+    .azure-ops-page ::deep .azure-command-header {
         display: block;
         padding: 1rem;
     }
 
-    .azure-command-kpis {
+    .azure-ops-page ::deep .azure-command-kpis {
         margin: 1rem 0;
     }
 
-    .azure-command-actions {
+    .azure-ops-page ::deep .azure-command-actions {
         justify-content: flex-start;
     }
 
-    .azure-history-grid,
-    .azure-attention-detail {
+    .azure-ops-page ::deep .azure-history-grid,
+    .azure-ops-page ::deep .azure-attention-detail {
         grid-template-columns: 1fr;
     }
 
-    .azure-item-heading {
+    .azure-ops-page ::deep .azure-item-heading {
         grid-template-columns: 1fr auto;
         gap: .35rem .7rem;
     }
 
-    .azure-item-heading > .rz-badge,
-    .azure-item-heading > strong,
-    .azure-attention-reason {
+    .azure-ops-page ::deep .azure-item-heading > .rz-badge,
+    .azure-ops-page ::deep .azure-item-heading > strong,
+    .azure-ops-page ::deep .azure-attention-reason {
         grid-column: 1;
     }
 
-    .azure-item-heading > .rz-badge {
+    .azure-ops-page ::deep .azure-item-heading > .rz-badge {
         justify-self: start;
     }
 
-    .azure-impact-score {
+    .azure-ops-page ::deep .azure-impact-score {
         grid-column: 2;
         grid-row: 3;
     }
 
-    .azure-attention-reason {
+    .azure-ops-page ::deep .azure-attention-reason {
         white-space: normal;
     }
 
-    .azure-section-heading,
-    .azure-resource-heading {
+    .azure-ops-page ::deep .azure-section-heading,
+    .azure-ops-page ::deep .azure-resource-heading {
         display: block;
     }
 
-    .azure-result-count {
+    .azure-ops-page ::deep .azure-result-count {
         display: block;
         margin-top: .4rem;
     }
@@ -513,19 +513,19 @@ summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
     /* No display toggle here any more — below this breakpoint the markup itself
        renders the card list instead of the grid (see _isNarrow / NarrowQuery). */
 
-    .azure-finding {
+    .azure-ops-page ::deep .azure-finding {
         grid-template-columns: 1fr;
         gap: var(--app-space-3xs);
     }
 }
 
 @media (max-width: 420px) {
-    .azure-attention-detail dl,
-    .azure-resource-card dl {
+    .azure-ops-page ::deep .azure-attention-detail dl,
+    .azure-ops-page ::deep .azure-resource-card dl {
         grid-template-columns: 1fr;
     }
 
-    .azure-filter-bar {
+    .azure-ops-page ::deep .azure-filter-bar {
         flex-wrap: nowrap;
         overflow-x: auto;
         padding-bottom: .2rem;
@@ -533,8 +533,8 @@ summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .azure-attention-item,
-    .azure-disclosure {
+    .azure-ops-page ::deep .azure-attention-item,
+    .azure-ops-page ::deep .azure-disclosure {
         scroll-behavior: auto;
     }
 }

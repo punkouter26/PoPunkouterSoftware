@@ -1,0 +1,100 @@
+@using PoPunkouterSoftware.Client.Components.Pages.Models
+@using Radzen
+@using Radzen.Blazor
+
+@* The resource explorer: a segmented filter over every inventoried resource, rendered
+   as cards on narrow viewports and a virtualized grid on wide ones.
+
+   IsNarrow drives a real @if, not CSS visibility. Both branches used to render
+   unconditionally with CSS hiding whichever did not match, so every row was built twice
+   into two live DOM trees. PortfolioUiTests pins "exactly one tree per viewport". *@
+<section class="azure-anchor-section">
+    <div class="azure-section-heading azure-resource-heading">
+        <div><div class="app-kicker">Resource explorer</div><h2>All resources</h2></div>
+        <span class="azure-result-count">@Items.Count of @TotalCount</span>
+    </div>
+
+    @* Segmented control: one tap to switch view, with the selected state carried by the
+       control itself rather than N buttons each recomputing their own style per render. *@
+    <div class="azure-filter-bar">
+        <RadzenSelectBar TValue="string" Value="@SelectedView" ValueChanged="@(v => SelectedViewChanged.InvokeAsync(v))"
+                         Size="ButtonSize.Small" aria-label="Filter resources">
+            <Items>
+                @foreach (var view in Views)
+                {
+                    <RadzenSelectBarItem Text="@view" Value="@view" />
+                }
+            </Items>
+        </RadzenSelectBar>
+    </div>
+
+    @if (IsNarrow)
+    {
+        <div class="azure-resource-cards">
+            @foreach (var item in Items)
+            {
+                <article class="azure-resource-card" @key="item.Name">
+                    <div class="azure-resource-card-heading">
+                        <strong>@item.Name</strong>
+                        <RadzenBadge Text="@item.Status" BadgeStyle="@StatusBadgeFor(item.Status)" IsPill="true" />
+                    </div>
+                    <dl>
+                        <div><dt>Type</dt><dd>@item.Type</dd></div>
+                        <div><dt>Group</dt><dd>@item.ResourceGroup</dd></div>
+                        <div><dt>Concern</dt><dd>@item.Risk</dd></div>
+                        <div><dt>Requests / 5xx</dt><dd>@item.Requests7d.ToString("N0") / @item.Errors7d.ToString("N0")</dd></div>
+                    </dl>
+                </article>
+            }
+        </div>
+    }
+    else
+    {
+        @* Row virtualization replaces paging: one scroll container, only visible rows
+           materialised, so filtering never reallocates the full row set. Height comes
+           from scoped CSS — an inline style here would collapse the chart box. *@
+        <div class="azure-resource-grid">
+            <RadzenDataGrid Data="@Items" TItem="ResourceExplorerItem" AllowSorting="true" AllowFiltering="true"
+                            AllowVirtualization="true" AllowPaging="false" AllowColumnResize="true"
+                            FilterMode="FilterMode.SimpleWithMenu" Density="Density.Compact" GridLines="DataGridGridLines.Horizontal">
+                <Columns>
+                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Name" Title="Resource" Width="210px">
+                        <Template Context="item"><strong>@item.Name</strong></Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Type" Title="Type" Width="150px" />
+                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResourceGroup" Title="Resource group" Width="160px" />
+                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Status" Title="Status" Width="115px">
+                        <Template Context="item"><RadzenBadge Text="@item.Status" BadgeStyle="@StatusBadgeFor(item.Status)" IsPill="true" /></Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Risk" Title="Concern" Width="130px">
+                        <Template Context="item"><span class="azure-risk-label @RiskClassFor(item.Risk)">@item.Risk</span></Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Requests7d" Title="Req 7d" Width="90px" TextAlign="TextAlign.Right" />
+                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Errors7d" Title="5xx" Width="70px" TextAlign="TextAlign.Right" />
+                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResponseTimeMs" Title="Response" Width="100px" TextAlign="TextAlign.Right">
+                        <Template Context="item">@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </div>
+    }
+</section>
+
+@code {
+    /// <summary>The filtered rows to render.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<ResourceExplorerItem> Items { get; set; } = [];
+
+    /// <summary>Unfiltered row count, for the "N of M" result counter.</summary>
+    [Parameter] public int TotalCount { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<string> Views { get; set; } = [];
+    [Parameter] public string SelectedView { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedViewChanged { get; set; }
+
+    /// <summary>True on narrow viewports. Driven by a real matchMedia listener (appMedia in
+    /// helpers.js), not a CSS breakpoint, because it selects which tree to build at all.</summary>
+    [Parameter] public bool IsNarrow { get; set; }
+
+    [Parameter, EditorRequired] public Func<string, BadgeStyle> StatusBadgeFor { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<string, string> RiskClassFor { get; set; } = default!;
+}

@@ -1,13 +1,32 @@
 using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Client.Components.Pages.Models;
-using Radzen;
 
 namespace PoPunkouterSoftware.Client.Components.Pages;
 
-// Partial class — pure static portfolio-building and inference helpers extracted
-// from AzureDashboard.razor.cs to keep the interactive part under ~400 lines.
+// Partial class — projects the raw AzureReport into the views the page renders:
+// the cleanup candidates, the consolidated per-app rollup, the ranked priority queue,
+// and the resource explorer rows. Deliberately pure and static so it stays testable
+// without a renderer.
+//
+// (Named .Portfolio.cs until 2026-07: it never had anything to do with the app
+// portfolio on Index.razor, which made it unfindable.)
 public partial class AzureDashboard
 {
+    private List<SafeToRemoveItem> CleanupCandidates =>
+        safeToRemove
+            .OrderBy(i => ConfidenceRank(i.Confidence))
+            .ThenBy(i => i.Type)
+            .ThenBy(i => i.Name)
+            .ToList();
+
+    private static int ConfidenceRank(string? confidence) => confidence switch
+    {
+        "high" => 0,
+        "medium" => 1,
+        "low" => 2,
+        _ => 3,
+    };
+
     // ── Records ───────────────────────────────────────────────────────────────
     private record ConsolidatedService(
         string Key,
@@ -28,30 +47,9 @@ public partial class AzureDashboard
         string? Command
     );
 
-    private record PriorityQueueItem(
-        string Actionability,
-        string Item,
-        string Source,
-        int ImpactScore,
-        string Confidence,
-        string Reason,
-        string Owner,
-        string Environment,
-        string? Command
-    );
-
-    private record ResourceExplorerItem(
-        string Name,
-        string Type,
-        string ResourceGroup,
-        string Location,
-        string Sku,
-        string Status,
-        string Risk,
-        int Requests7d,
-        int Errors7d,
-        int? ResponseTimeMs
-    );
+    // PriorityQueueItem and ResourceExplorerItem live in Models/ rather than here: they
+    // cross a component boundary (the AzurePriorityQueue / AzureResourceExplorer sections
+    // take them as parameters), which a private nested record cannot do.
 
     // ── Label / badge helpers ─────────────────────────────────────────────────
     private static string TypeLabel(string? t) => t switch
@@ -60,13 +58,6 @@ public partial class AzureDashboard
         "Microsoft.App/containerApps" => "Container App",
         "Microsoft.Web/staticSites" => "Static Web App",
         _ => t?.Split('/').LastOrDefault() ?? "—",
-    };
-
-    private static BadgeStyle HttpBadgeStyle(string? s) => s switch
-    {
-        "active" => BadgeStyle.Success,
-        "broken" => BadgeStyle.Danger,
-        _ => BadgeStyle.Warning,
     };
 
     // ── Safe-to-remove analysis ───────────────────────────────────────────────
@@ -85,11 +76,16 @@ public partial class AzureDashboard
             if ((broken || unreachable || stopped || azErr) && zero)
             {
                 var reasons = new List<string>();
-                if (broken) reasons.Add("HTTP broken");
-                if (unreachable) reasons.Add("Unreachable (timeout)");
-                if (stopped) reasons.Add("Platform Stopped");
-                if (azErr) reasons.Add("Serving Azure error page");
-                if (zero) reasons.Add("0 requests in 7 days");
+                if (broken)
+                    reasons.Add("HTTP broken");
+                if (unreachable)
+                    reasons.Add("Unreachable (timeout)");
+                if (stopped)
+                    reasons.Add("Platform Stopped");
+                if (azErr)
+                    reasons.Add("Serving Azure error page");
+                if (zero)
+                    reasons.Add("0 requests in 7 days");
                 items.Add(new SafeToRemoveItem
                 {
                     Name = svc.Name,
@@ -433,23 +429,6 @@ public partial class AzureDashboard
             .ThenBy(i => i.Name)
             .ToList();
     }
-
-    private static BadgeStyle ExplorerStatusBadge(string status) => status switch
-    {
-        "active" or "healthy" => BadgeStyle.Success,
-        "broken" => BadgeStyle.Danger,
-        "unreachable" or "review" => BadgeStyle.Warning,
-        _ => BadgeStyle.Info,
-    };
-
-    private static string RiskClass(string risk) => risk switch
-    {
-        var value when value.Contains("Security", StringComparison.OrdinalIgnoreCase) => "danger",
-        var value when value.Contains("Unhealthy", StringComparison.OrdinalIgnoreCase) => "danger",
-        var value when value.Contains("Waste", StringComparison.OrdinalIgnoreCase) => "warning",
-        var value when value.Contains("Drift", StringComparison.OrdinalIgnoreCase) => "warning",
-        _ => "muted",
-    };
 
     // ── Pure inference helpers ────────────────────────────────────────────────
     private static bool IsAnomalous(ConsolidatedService service, double medianReq, double medianRt)
