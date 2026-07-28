@@ -90,7 +90,15 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
         foreach (var prop in config.EnumerateObject().Where(p => p.Name != "ASPNETCORE_ENVIRONMENT"))
         {
             var value = prop.Value.GetString();
-            var isMasked = value is "(not set)" or "****" || (value?.Contains('*') ?? false);
+            // Two masking strategies are in play, and both count as masked:
+            //   SecretMasking.MaskValue  -> "(not set)" / "****" / "abcd****wxyz"
+            //   the App Insights sentinel -> "configured (redacted)", which never reveals
+            //     even the first four characters of a connection string.
+            // Accepting only the '*' forms made this test pass purely because App Insights
+            // happened to be unconfigured; it failed the moment a real connection string was
+            // present — i.e. exactly in production, which this smoke tier is meant to target.
+            var isMasked = value is "(not set)" or "****" or "configured (redacted)"
+                           || (value?.Contains('*') ?? false);
             isMasked.Should().BeTrue(because: $"config key '{prop.Name}' must be masked, got '{value}'");
         }
     }
@@ -167,7 +175,14 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
         using var doc = await ReadJsonAsync(resp);
 
+        // A browser User-Agent, because a browser is what actually follows these links: the
+        // card is an <a href> a visitor clicks. Without one, any app behind an anti-scraping
+        // guard answers 400 and reads as a ghost — PoSeeReview does exactly that, and it is
+        // very much alive. The point of this test is "does the host exist and answer", so the
+        // probe has to look like the client the card is built for.
         using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        probe.DefaultRequestHeaders.UserAgent.ParseAdd(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
         var failures = new List<string>();
         foreach (var item in doc.RootElement.GetProperty("apps").EnumerateArray())
         {
