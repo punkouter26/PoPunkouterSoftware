@@ -37,7 +37,6 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
     [InlineData("/health")]
     [InlineData("/api/config")]
     [InlineData("/api/portfolio")]
-    [InlineData("/api/pinger/status")]
     [InlineData("/robots.txt")]
     [InlineData("/openapi/v1.json")]
     public async Task PublicGetEndpoint_Returns200(string path)
@@ -130,18 +129,18 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
         doc.RootElement.TryGetProperty("microsoftOAuthEnabled", out _).Should().BeFalse();
     }
 
-    [Theory]
-    [InlineData("remote")]
-    [InlineData("browser")]
-    [InlineData("ollama")]
-    public async Task Config_ModelCatalog_ArrayIsNonEmpty(string catalogKey)
+    /// <summary>
+    /// /api/config is exactly the three fields the WASM client binds — see the matching
+    /// integration test. Pinned closed so the response cannot regrow unread payload.
+    /// </summary>
+    [Fact]
+    public async Task Config_ReturnsExactlyTheThreeFieldsTheClientBinds()
     {
         var resp = await _client.GetAsync("/api/config");
 
         using var doc = await ReadJsonAsync(resp);
-        var catalog = doc.RootElement.GetProperty("modelCatalog").GetProperty(catalogKey);
-        catalog.ValueKind.Should().Be(JsonValueKind.Array);
-        catalog.GetArrayLength().Should().BeGreaterThan(0);
+        doc.RootElement.EnumerateObject().Select(p => p.Name)
+            .Should().BeEquivalentTo("apiBase", "isMockMode", "managementActionsEnabled");
     }
 
     // ─── Portfolio ────────────────────────────────────────────────────────────

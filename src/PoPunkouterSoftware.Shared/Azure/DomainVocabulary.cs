@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace PoPunkouterSoftware.Shared.Azure;
 
 /// <summary>
@@ -68,33 +66,4 @@ public static class IncidentTypes
 {
     public const string NewIncident = "new-incident";
     public const string Recovery = "recovery";
-}
-
-/// <summary>
-/// Strongly-typed GitHub repository identifier. A raw "owner/repo" string travels from an
-/// unauthenticated query parameter into a GitHub API URL path — this type makes the
-/// "validated before use" guarantee travel with the value instead of relying on every
-/// call site remembering to run the regex.
-/// </summary>
-public readonly partial record struct RepoId(string Owner, string Name)
-{
-    public static bool TryParse(string? value, out RepoId result)
-    {
-        result = default;
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-
-        var match = RepoPattern().Match(value);
-        if (!match.Success)
-            return false;
-
-        result = new RepoId(match.Groups[1].Value, match.Groups[2].Value);
-        return true;
-    }
-
-    public override string ToString() => $"{Owner}/{Name}";
-
-    // Mirrors RepoQueryValidator.Pattern — each segment limited to GitHub's name characters.
-    [GeneratedRegex(@"^([a-zA-Z0-9_.\-]+)/([a-zA-Z0-9_.\-]+)$")]
-    private static partial Regex RepoPattern();
 }

@@ -119,27 +119,30 @@ public class ConfigEndpointTests
     }
 
     [Fact]
-    public async Task GetConfig_TestEnvironment_IsNotProduction()
+    public async Task GetConfig_TestEnvironment_ReportsMockMode()
     {
         var json = await _client.GetStringAsync("/api/config");
         var doc = JsonDocument.Parse(json);
 
         // This site has no auth — config exposes only environment/feature state.
-        doc.RootElement.GetProperty("isProduction").GetBoolean().Should().BeFalse();
+        doc.RootElement.GetProperty("isMockMode").GetBoolean().Should().BeTrue();
         doc.RootElement.TryGetProperty("guestLoginEnabled", out _).Should().BeFalse();
         doc.RootElement.TryGetProperty("microsoftOAuthEnabled", out _).Should().BeFalse();
     }
 
+    /// <summary>
+    /// The contract is exactly the three fields the WASM client's ConfigResponse binds.
+    /// Anything else is payload nobody reads — this pins the response closed so it cannot
+    /// silently regrow the discarded fields (isProduction, AI flags, model catalogue).
+    /// </summary>
     [Fact]
-    public async Task GetConfig_ReturnsModelCatalog_ForAllThreeCategories()
+    public async Task GetConfig_ReturnsExactlyTheThreeFieldsTheClientBinds()
     {
         var json = await _client.GetStringAsync("/api/config");
         var doc = JsonDocument.Parse(json);
-        var modelCatalog = doc.RootElement.GetProperty("modelCatalog");
 
-        modelCatalog.GetProperty("remote").GetArrayLength().Should().BeGreaterThan(0);
-        modelCatalog.GetProperty("browser").GetArrayLength().Should().BeGreaterThan(0);
-        modelCatalog.GetProperty("ollama").GetArrayLength().Should().BeGreaterThan(0);
+        doc.RootElement.EnumerateObject().Select(p => p.Name)
+            .Should().BeEquivalentTo("apiBase", "isMockMode", "managementActionsEnabled");
     }
 }
 
@@ -244,29 +247,6 @@ public class PortfolioEndpointTests
             Uri.TryCreate(url, UriKind.Absolute, out _).Should().BeTrue(
                 because: $"'{app.GetProperty("name").GetString()}' must have an absolute URL");
         }
-    }
-}
-
-[Collection("WebApp")]
-public class AzStatusEndpointTests
-{
-    private readonly HttpClient _client;
-
-    public AzStatusEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
-
-    [Fact]
-    public async Task GetAzStatus_Returns200()
-    {
-        var response = await _client.GetAsync("/api/diag/az-status");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Fact]
-    public async Task GetAzStatus_ReturnsLoggedInField()
-    {
-        var json = await _client.GetStringAsync("/api/diag/az-status");
-        var doc = JsonDocument.Parse(json);
-        doc.RootElement.TryGetProperty("loggedIn", out _).Should().BeTrue();
     }
 }
 

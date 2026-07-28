@@ -41,24 +41,6 @@ public static class Telemetry
         _ => "other",
     };
 
-    // ─── Azure OpenAI (questions 7 & 8) ──────────────────────────────────────
-    public static readonly Counter<long> AzureOpenAiCalls = Meter.CreateCounter<long>(
-        "azure_openai_calls_total", unit: "{call}",
-        description: "Azure OpenAI chat-completion calls, tagged by status_class and outcome.");
-
-    public static readonly Histogram<double> AzureOpenAiDuration = Meter.CreateHistogram<double>(
-        "azure_openai_call_duration", unit: "ms",
-        description: "Azure OpenAI chat-completion call duration in milliseconds.");
-
-    // ─── GitHub API (question 9) ─────────────────────────────────────────────
-    public static readonly Counter<long> GitHubCalls = Meter.CreateCounter<long>(
-        "github_api_calls_total", unit: "{call}",
-        description: "GitHub API calls, tagged by status_class.");
-
-    public static readonly Gauge<long> GitHubRateLimitRemaining = Meter.CreateGauge<long>(
-        "github_rate_limit_remaining", unit: "{request}",
-        description: "GitHub API requests remaining before rate limiting, from X-RateLimit-Remaining.");
-
     // ─── Service pinger (questions 4, 5 & 6) ─────────────────────────────────
     public static readonly Gauge<int> PingerServiceUp = Meter.CreateGauge<int>(
         "pinger_service_up", unit: "{service}",

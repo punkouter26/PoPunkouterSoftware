@@ -39,6 +39,23 @@
 			"problemMatcher": "$msCompile"
 		},
 		{
+			"label": "deep-clean",
+			"detail": "Removes every bin/ and obj/ in the repo. `dotnet clean` leaves obj/ behind, so stale NuGet asset files and generated sources survive it — this is the task to run when a build misbehaves for no visible reason.",
+			"type": "shell",
+			"command": "Get-ChildItem -Path '${workspaceFolder}' -Recurse -Directory -Include bin,obj -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; exit 0",
+			"windows": {
+				"command": "Get-ChildItem -Path '${workspaceFolder}' -Recurse -Directory -Include bin,obj -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; exit 0"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"close": true
+			},
+			"problemMatcher": []
+		},
+		{
 			"label": "publish-release",
 			"command": "dotnet",
 			"windows": {

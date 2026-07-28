@@ -11,9 +11,8 @@
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
-  <ItemGroup>
-    <!-- Shared validation rules (DTOs + FluentValidation only, per architecture) -->
-    <PackageReference Include="FluentValidation" />
-  </ItemGroup>
+  <!-- No PackageReferences by design: this assembly is DTOs and the domain vocabulary only,
+       and it ships in the WASM bundle. FluentValidation was dropped along with the sole rule
+       that used it (RepoQueryValidator, which guarded the deleted /api/github-activity query). -->
 
 </Project>

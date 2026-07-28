@@ -33,15 +33,6 @@ public class ApiSchemaContractTests
             .Should().BeTrue(because: "/api/config must expose camelCase 'apiBase'");
     }
 
-    [Fact]
-    public async Task AzStatus_HasCamelCase_LoggedIn()
-    {
-        var json = await _client.GetStringAsync("/api/diag/az-status");
-        using var doc = JsonDocument.Parse(json);
-        doc.RootElement.TryGetProperty("loggedIn", out _)
-            .Should().BeTrue(because: "/api/diag/az-status must expose camelCase 'loggedIn'");
-    }
-
     [Theory]
     [InlineData("generatedAt")]
     [InlineData("webServices")]

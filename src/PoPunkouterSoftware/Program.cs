@@ -10,9 +10,6 @@ using OpenTelemetry.Trace;
 using PoPunkouterSoftware;
 using PoPunkouterSoftware.Features.Config;
 using PoPunkouterSoftware.Features.Diag;
-using PoPunkouterSoftware.Features.GitHub;
-using PoPunkouterSoftware.Features.Infra;
-using PoPunkouterSoftware.Features.Pinger;
 using PoPunkouterSoftware.Features.Portfolio;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
@@ -219,21 +216,6 @@ try
     builder.Services.AddSingleton<RefreshSessionManager>();
     builder.Services.AddSingleton<ReportRefreshRunner>();
 
-    // ─── In-process memory cache (pinger snapshots) ──────────────────────────
-    // SizeLimit caps the entry count; every Set site passes Size = 1, so the limit
-    // is simply "max cached entries".
-    builder.Services.AddMemoryCache(o => o.SizeLimit = 2048);
-
-    // ─── HybridCache (GitHub activity + CI/CD review read-through) ───────────
-    // Replaces manual IMemoryCache cache-aside for the expensive GitHub/ARM lookups:
-    // GetOrCreateAsync provides stampede protection, so concurrent misses share one
-    // upstream fetch. The github-activity key is derived from an unauthenticated
-    // user-supplied query param — MaximumKeyLength bounds hostile key growth.
-    builder.Services.AddHybridCache(o =>
-    {
-        o.MaximumKeyLength = 256;
-    });
-
     // ─── Response compression for dynamic JSON only ───────────────────────────
     // The report/summary/history payloads are large, highly compressible JSON that
     // Kestrel does not compress by default. .NET 10's MapStaticAssets already serves
@@ -253,6 +235,11 @@ try
     // so it gets retry + circuit-breaker + timeout. (The "health"/"azure-probe" clients
     // deliberately have NO resilience — their job is to report real reachability, and
     // retries would mask the very outages they exist to detect.)
+    //
+    // The PAT is bound ONCE here, on the client's default headers. Call sites must never
+    // reassign DefaultRequestHeaders on an instance from CreateClient(): handler chains are
+    // pooled and shared, so a per-call mutation leaks that credential to every other caller
+    // of the same named client. Pass a per-request Authorization header instead.
     var ghPat = builder.Configuration["GitHub:PersonalAccessToken"];
     builder.Services.AddHttpClient("github")
         .ConfigureHttpClient(c =>
@@ -279,28 +266,6 @@ try
             o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(90);
             o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
         });
-
-    // ─── HTTP client for Azure OpenAI ─────────────────────────────────
-    var aiClientBuilder = builder.Services.AddHttpClient("azure-openai")
-        // The resilience pipeline owns all timeouts, so the inner HttpClient timeout is
-        // disabled (otherwise it could fire before the pipeline's total-request timeout).
-        .ConfigureHttpClient(c => c.Timeout = Timeout.InfiniteTimeSpan)
-        // RED metrics at the boundary: every AI call site gets azure_openai_* instruments
-        // without instrumenting itself.
-        .AddHttpMessageHandler(() => new AiTelemetryHandler());
-    aiClientBuilder.AddStandardResilienceHandler(o =>
-        {
-            // Completions are slow; widen the per-attempt and total timeouts so the
-            // pipeline does not abort legitimate long-running model responses.
-            o.AttemptTimeout.Timeout = TimeSpan.FromSeconds(60);
-            o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(120);
-            o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(120);
-        });
-    // Hard AI mock boundary for test runs: under the Testing environment the primary
-    // handler never opens a socket — requests are answered in-process by the stub, so
-    // tests can never leak tokens or spend against the real AI Foundry endpoint.
-    if (builder.Environment.IsEnvironment("Testing"))
-        aiClientBuilder.ConfigurePrimaryHttpMessageHandler(() => new TestingAiStubHandler());
 
     var app = builder.Build();
 
@@ -389,11 +354,8 @@ try
     app.MapConfigEndpoints();
     app.MapHealthEndpoints();
     app.MapDiagEndpoints();
-    app.MapGitHubEndpoints();
     app.MapPortfolioEndpoints();
-    app.MapInfraEndpoints();
     app.MapHub<RefreshHub>("/hubs/refresh");
-    app.MapPingerEndpoints();
     app.MapFallback((HttpContext ctx) =>
         Results.NotFound(new
         {

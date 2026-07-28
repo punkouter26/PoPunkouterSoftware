@@ -1,21 +1,23 @@
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using PoPunkouterSoftware.Shared.Azure;
-using System.Collections.Concurrent;
 
 namespace PoPunkouterSoftware.Infrastructure.Azure;
 
 /// <summary>
-/// Background service that periodically pings each Azure web service URL to warm cold-start instances.
-/// Ping results are stored in IMemoryCache for the pinger-status endpoint.
+/// Background service that periodically pings each Azure web service URL to warm cold-start
+/// instances. Its output is telemetry, not a queryable snapshot: each ping records the
+/// <c>pinger_service_up</c> gauge and <c>pinger_response_time_ms</c> histogram, and each
+/// completed sweep bumps <c>pinger_sweeps_total</c> as a liveness heartbeat.
+///
+/// <para>The results were previously also cached in IMemoryCache to back a
+/// <c>/api/pinger/status</c> endpoint, along with a per-service toggle. No UI ever read
+/// either, so the cache, the snapshot accessor and the toggle were removed — the metrics
+/// are the product.</para>
 /// </summary>
 public sealed partial class ServicePingerService : BackgroundService
 {
-    private const string CacheKey = "pinger-status";
-
     // Source-generated logging — zero boxing/allocation on the per-ping hot path.
     [LoggerMessage(Level = LogLevel.Information, Message = "Pinger disabled by configuration.")]
     private partial void LogDisabled();
@@ -28,26 +30,19 @@ public sealed partial class ServicePingerService : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IMemoryCache _cache;
     private readonly ILogger<ServicePingerService> _logger;
     private readonly TimeSpan _interval;
     private readonly bool _enabled;
     private readonly int _maxConcurrency;
 
-    // Per-service opt-out: populated by PingerEndpoints.ToggleService.
-    // ConcurrentDictionary so the endpoint can write from a different thread safely.
-    private readonly ConcurrentDictionary<string, bool> _disabled = new(StringComparer.OrdinalIgnoreCase);
-
     public ServicePingerService(
         IServiceScopeFactory scopeFactory,
         IHttpClientFactory httpClientFactory,
-        IMemoryCache cache,
         IConfiguration config,
         ILogger<ServicePingerService> logger)
     {
         _scopeFactory = scopeFactory;
         _httpClientFactory = httpClientFactory;
-        _cache = cache;
         _logger = logger;
         _interval = TimeSpan.FromMinutes(config.GetValue<int>("Pinger:IntervalMinutes", 10));
         _enabled = config.GetValue("Pinger:Enabled", true);
@@ -105,12 +100,10 @@ public sealed partial class ServicePingerService : BackgroundService
 
         var services = reportResult.Value.WebServices.Services;
         var client = _httpClientFactory.CreateClient("azure-probe");
-        var results = new List<PingResult>();
 
         using var gate = new SemaphoreSlim(_maxConcurrency);
         var tasks = services
             .Where(s => !string.IsNullOrWhiteSpace(s.Url))
-            .Where(s => !_disabled.TryGetValue(s.Name, out var dis) || !dis)
             .Select(async svc =>
         {
             await gate.WaitAsync(ct);
@@ -132,16 +125,11 @@ public sealed partial class ServicePingerService : BackgroundService
             }
         });
 
-        results.AddRange(await Task.WhenAll(tasks));
+        var results = await Task.WhenAll(tasks);
 
-        _cache.Set(CacheKey, new PingerSnapshot(DateTime.UtcNow, results), new MemoryCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
-            Size = 1, // cache has a SizeLimit; every entry must declare a size
-        });
         // Heartbeat: a flat sweep-counter rate means the background loop has silently died. (question 5)
         Telemetry.PingerSweeps.Add(1);
-        LogSweepComplete(results.Count);
+        LogSweepComplete(results.Length);
     }
 
     private static async Task<PingResult> PingOneAsync(
@@ -169,15 +157,6 @@ public sealed partial class ServicePingerService : BackgroundService
         }
     }
 
-    /// <summary>Called by PingerEndpoints to enable/disable a service without restarting.</summary>
-    public void SetDisabled(string serviceName, bool disabled) =>
-        _disabled[serviceName] = disabled;
-
-    public bool IsDisabled(string serviceName) =>
-        _disabled.TryGetValue(serviceName, out var v) && v;
-
-    public PingerSnapshot? CurrentSnapshot() =>
-        _cache.Get<PingerSnapshot>(CacheKey);
 }
 
 public sealed record PingResult(
@@ -188,5 +167,3 @@ public sealed record PingResult(
     long ResponseTimeMs,
     string? Error,
     DateTime PingedAt);
-
-public sealed record PingerSnapshot(DateTime SweptAt, List<PingResult> Results);

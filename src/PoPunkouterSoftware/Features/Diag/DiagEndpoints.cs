@@ -1,7 +1,5 @@
-using System.Diagnostics;
 using System.Net;
 using System.Text;
-using System.Text.Json;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Infrastructure.Configuration;
@@ -76,31 +74,7 @@ internal static class DiagEndpoints
             return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
         });
 
-        // Build fingerprint — used by the client to detect when the server has been
-        // rebuilt but the cached WASM bundle still matches a stale inventory. Cheap to
-        // compute, never cached longer than the build's process lifetime.
-        diag.MapGet("/build", (IWebHostEnvironment env, IConfiguration config) =>
-        {
-            var entry = System.Reflection.Assembly.GetEntryAssembly();
-            var version = entry?.GetName().Version?.ToString() ?? "0.0.0";
-            // Use the file's last-write UTC ticks (clipped to seconds) — stable for the
-            // lifetime of the running process and identical across replicas built together.
-            var buildId = (long)(entry?.Location is { } loc && File.Exists(loc)
-                ? new DateTimeOffset(File.GetLastWriteTimeUtc(loc)).ToUnixTimeSeconds()
-                : DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-            return Results.Json(new
-            {
-                assembly = entry?.GetName().Name ?? "PoPunkouterSoftware",
-                version,
-                buildId,
-                environment = env.EnvironmentName,
-                generatedAt = DateTime.UtcNow,
-            });
-        })
-        .WithName("GetBuildFingerprint")
-        .WithTags("Diag");
-
-        diag.MapGet("/summary", async (IWebHostEnvironment env, AzureReportStore store, ILogger<Program> logger, CancellationToken ct) =>
+        diag.MapGet("/summary",async (IWebHostEnvironment env, AzureReportStore store, ILogger<Program> logger, CancellationToken ct) =>
         {
             var report = await LoadLatestReportAsync(env, store, logger, ct);
             if (report is null)
@@ -126,54 +100,6 @@ internal static class DiagEndpoints
         })
         .RequireManagementActions()
         .WithName("CancelDiagRefresh");
-
-        // ── Az CLI login status ──────────────────────────────────────────────
-        diag.MapGet("/az-status", async (HttpContext ctx) =>
-        {
-            // az.cmd is a batch file on Windows; must run through cmd.exe
-            var azExe = OperatingSystem.IsWindows() ? "az.cmd" : "az";
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = OperatingSystem.IsWindows() ? "cmd.exe" : azExe,
-                    Arguments = OperatingSystem.IsWindows() ? $"/c {azExe} account show --output json" : $"account show --output json",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-
-                using var process = Process.Start(psi)!;
-                var stdoutTask = process.StandardOutput.ReadToEndAsync(ctx.RequestAborted);
-                var stderrTask = process.StandardError.ReadToEndAsync(ctx.RequestAborted);
-                await process.WaitForExitAsync(ctx.RequestAborted);
-                var stdout = await stdoutTask;
-                var stderr = await stderrTask;
-
-                if (process.ExitCode != 0)
-                    return Results.Ok(new { loggedIn = false, error = stderr.Trim() });
-
-                try
-                {
-                    var accountData = System.Text.Json.JsonSerializer
-                        .Deserialize<System.Text.Json.Nodes.JsonObject>(stdout);
-                    return Results.Ok(new { loggedIn = true, account = accountData });
-                }
-                catch (JsonException)
-                {
-                    return Results.Ok(new { loggedIn = false, error = "Unexpected az output format." });
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                return Results.Ok(new { loggedIn = false, error = "Request cancelled." });
-            }
-            catch (Exception ex)
-            {
-                return Results.Ok(new { loggedIn = false, error = ex.Message });
-            }
-        });
 
         // ── History summary for /timebased time-series charts ─────────────────
         // Reads the tiny precomputed summary rows written at save time; the previous

@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using PoPunkouterSoftware.Client.Components.Pages;
 using PoPunkouterSoftware.Shared.Azure;
 using PoPunkouterSoftware.Shared.Portfolio;
 
@@ -37,7 +36,6 @@ internal sealed record ProblemResponse(
 [JsonSerializable(typeof(OpsSummary))]
 [JsonSerializable(typeof(List<HistorySummary>))]
 [JsonSerializable(typeof(PortfolioResponse))]
-[JsonSerializable(typeof(GitHubActivity))]
 [JsonSerializable(typeof(ConfigResponse))]
 [JsonSerializable(typeof(ProblemResponse))]
 internal partial class AppJsonContext : JsonSerializerContext;

@@ -8,9 +8,13 @@ namespace PoPunkouterSoftware.Tests.Integration;
 
 /// <summary>
 /// Covers the <c>ManagementActionFilter</c> boundary — the no-auth site's only
-/// server-side gate for mutating endpoints (pinger toggle, CI/CD cache bust).
-/// Each factory boots with explicit flag/key config so the gate is tested in
-/// every state rather than whatever appsettings happens to say.
+/// server-side gate for mutating endpoints (<c>/api/diag/refresh</c> and
+/// <c>/api/diag/cancel-refresh</c>). Each factory boots with explicit flag/key config
+/// so the gate is tested in every state rather than whatever appsettings happens to say.
+///
+/// <para>Success paths drive <c>cancel-refresh</c> rather than <c>refresh</c>: cancelling
+/// when nothing is running is a no-op that returns 200 without starting a real Azure scan,
+/// so the gate is exercised without any outbound traffic.</para>
 /// </summary>
 public sealed class ManagementGateApp(Dictionary<string, string?>? extra = null) : WebApplicationFactory<Program>
 {
@@ -38,9 +42,11 @@ public sealed class ManagementGateApp(Dictionary<string, string?>? extra = null)
 
 public class ManagementActionFilterTests
 {
+    private const string GatedEndpoint = "/api/diag/cancel-refresh";
+
     [Theory]
-    [InlineData("/api/pinger/toggle/some-service")]
-    [InlineData("/api/infra/cicd-review/refresh")]
+    [InlineData("/api/diag/refresh")]
+    [InlineData("/api/diag/cancel-refresh")]
     public async Task FlagDisabled_ManagementEndpoints_Return403(string path)
     {
         await using var app = new ManagementGateApp(new()
@@ -55,7 +61,7 @@ public class ManagementActionFilterTests
     }
 
     [Fact]
-    public async Task FlagEnabled_PingerToggle_Succeeds()
+    public async Task FlagEnabled_CancelRefresh_Succeeds()
     {
         await using var app = new ManagementGateApp(new()
         {
@@ -63,28 +69,11 @@ public class ManagementActionFilterTests
         });
         var client = app.CreateClient();
 
-        var resp = await client.PostAsync("/api/pinger/toggle/some-service?disable=true", content: null);
+        var resp = await client.PostAsync(GatedEndpoint, content: null);
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("name").GetString().Should().Be("some-service");
-        doc.RootElement.GetProperty("disabled").GetBoolean().Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task FlagEnabled_CiCdRefresh_ClearsCache()
-    {
-        await using var app = new ManagementGateApp(new()
-        {
-            ["FeatureFlags:EnableManagementActions"] = "true",
-        });
-        var client = app.CreateClient();
-
-        var resp = await client.PostAsync("/api/infra/cicd-review/refresh", content: null);
-
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("cleared").GetBoolean().Should().BeTrue();
+        doc.RootElement.GetProperty("cancelled").GetBoolean().Should().BeTrue();
     }
 
     [Fact]
@@ -97,7 +86,7 @@ public class ManagementActionFilterTests
         });
         var client = app.CreateClient();
 
-        var resp = await client.PostAsync("/api/pinger/toggle/some-service", content: null);
+        var resp = await client.PostAsync(GatedEndpoint, content: null);
 
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -113,7 +102,7 @@ public class ManagementActionFilterTests
         var client = app.CreateClient();
         client.DefaultRequestHeaders.Add("X-Management-Key", "wrong-key");
 
-        var resp = await client.PostAsync("/api/pinger/toggle/some-service", content: null);
+        var resp = await client.PostAsync(GatedEndpoint, content: null);
 
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -129,27 +118,8 @@ public class ManagementActionFilterTests
         var client = app.CreateClient();
         client.DefaultRequestHeaders.Add("X-Management-Key", "expected-key");
 
-        var resp = await client.PostAsync("/api/pinger/toggle/some-service", content: null);
+        var resp = await client.PostAsync(GatedEndpoint, content: null);
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-}
-
-/// <summary>Read-side pinger contract: status is public (not management-gated).</summary>
-public class PingerEndpointTests
-{
-    [Fact]
-    public async Task GetStatus_ReturnsSweptContract()
-    {
-        await using var app = new ManagementGateApp();
-        var client = app.CreateClient();
-
-        var resp = await client.GetAsync("/api/pinger/status");
-
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-        doc.RootElement.TryGetProperty("swept", out _).Should().BeTrue();
-        doc.RootElement.TryGetProperty("results", out var results).Should().BeTrue();
-        results.ValueKind.Should().Be(JsonValueKind.Array);
     }
 }
