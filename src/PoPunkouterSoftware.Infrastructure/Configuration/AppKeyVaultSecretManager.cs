@@ -2,7 +2,7 @@ using Azure.Security.KeyVault.Secrets;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Microsoft.Extensions.Configuration;
 
-namespace PoPunkouterSoftware.Infrastructure;
+namespace PoPunkouterSoftware.Infrastructure.Configuration;
 
 /// <summary>
 /// Loads all enabled Key Vault secrets and maps names that use "--"

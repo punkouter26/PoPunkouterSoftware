@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
+using PoPunkouterSoftware.Host;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Infrastructure.Azure;
 using PoPunkouterSoftware.Infrastructure.Screenshots;

@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace PoPunkouterSoftware.Infrastructure;
+namespace PoPunkouterSoftware.Host;
 
 /// <summary>
 /// Server-side gate for mutating / expensive control endpoints.

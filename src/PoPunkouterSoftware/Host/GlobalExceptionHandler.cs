@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace PoPunkouterSoftware.Infrastructure;
+namespace PoPunkouterSoftware.Host;
 
 /// <summary>
 /// Global exception handler — converts unhandled exceptions to RFC 7807 Problem Details.
