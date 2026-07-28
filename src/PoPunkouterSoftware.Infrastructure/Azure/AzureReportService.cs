@@ -1631,42 +1631,27 @@ public class AzureReportService(
 
     #region Supporting Helpers: GitHub Workflow Correlation
 
+    /// <summary>
+    /// Correlates discovered services with their GitHub repo's latest workflow run.
+    ///
+    /// <para>The PAT is bound once, on the "github" client's default headers, in Program.cs.
+    /// This method must NOT reassign <c>DefaultRequestHeaders</c> on the instance returned by
+    /// <c>CreateClient</c>: handler chains are pooled and shared between callers, so mutating
+    /// an instance's defaults leaks that credential to every other consumer of the same named
+    /// client for the lifetime of the handler. It previously did exactly that, and additionally
+    /// shelled out to <c>gh auth token</c> mid-scan — a fallback that can never fire in App
+    /// Service (no gh CLI on the worker) and that blocked the scan on process startup when it
+    /// did. Both are gone: no PAT configured simply means no correlation.</para>
+    /// </summary>
     private async Task<List<InfraReview>> LoadInfraReviewsForCorrelationAsync(
         List<RawService> services, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(_config["GitHub:PersonalAccessToken"]))
+            return [];
+
         try
         {
-            var pat = _config["GitHub:PersonalAccessToken"];
-            if (string.IsNullOrWhiteSpace(pat))
-            {
-                // Try gh CLI token
-                try
-                {
-                    using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = "gh",
-                        Arguments = "auth token",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        CreateNoWindow = true,
-                    });
-                    if (proc is not null)
-                    {
-                        var token = (await proc.StandardOutput.ReadToEndAsync(ct)).Trim();
-                        if (!string.IsNullOrWhiteSpace(token))
-                            pat = token;
-                    }
-                }
-                catch { /* gh not available */ }
-            }
-
-            if (string.IsNullOrWhiteSpace(pat))
-                return [];
-
-            var http = _httpClientFactory.CreateClient("github");
-            http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", pat);
-
-            return await FetchInfraReviewsAsync(http, ct);
+            return await FetchInfraReviewsAsync(_httpClientFactory.CreateClient("github"), ct);
         }
         catch (Exception ex)
         {

@@ -18,10 +18,10 @@ public class ApiSchemaContractTests
     [InlineData("config")]
     public async Task Health_HasCamelCaseProperty(string property)
     {
-        var json = await _client.GetStringAsync("/api/health");
+        var json = await _client.GetStringAsync("/health");
         using var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty(property, out _)
-            .Should().BeTrue(because: $"/api/health must expose camelCase '{property}'");
+            .Should().BeTrue(because: $"/health must expose camelCase '{property}'");
     }
 
     [Fact]

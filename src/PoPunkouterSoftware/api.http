@@ -1,26 +1,36 @@
 ### PoPunkouterSoftware — API Tests
 ### Run these with the REST Client extension (Ctrl+Alt+R) or JetBrains HTTP Client
 ### Server must be running: F5 in VS Code or `dotnet run --project PoPunkouterSoftware/PoPunkouterSoftware.csproj`
+###
+### This file mirrors the live route table. If you add or remove an endpoint, update it here —
+### it drifted badly once before, documenting /api/diag/fix-plan, /api/diag/refresh-progress and
+### an /api/health alias that no longer exist (or never did).
 
 @baseUrl = http://localhost:8000
 
 # ─── Health ───────────────────────────────────────────────────────────────────
 
-### GET /api/health — probe all external connections (Key Vault, Table Storage)
-GET {{baseUrl}}/api/health
+### GET /health — deep probe of all external connections (Key Vault, Table Storage)
+GET {{baseUrl}}/health
 Accept: application/json
 
 ###
 
-### GET /health — alias for /api/health (same handler)
-GET {{baseUrl}}/health
+### GET /healthz — static liveness ping, no outbound calls
+GET {{baseUrl}}/healthz
+Accept: application/json
+
+###
+
+### GET /diag — masked config + cache diagnostics. HTML by default; append ?format=json
+GET {{baseUrl}}/diag
 Accept: application/json
 
 ###
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-### GET /api/config — returns API base URL + isMockMode flag for the WASM client
+### GET /api/config — apiBase, isMockMode, managementActionsEnabled. Nothing else, by design.
 GET {{baseUrl}}/api/config
 Accept: application/json
 
@@ -28,55 +38,51 @@ Accept: application/json
 
 # ─── Azure Report ─────────────────────────────────────────────────────────────
 
-### GET /api/diag/report — load latest Azure report (Table Storage then local file fallback)
+### GET /api/diag/summary — compact first-paint contract for /azure (NOT the full graph)
+GET {{baseUrl}}/api/diag/summary
+Accept: application/json
+
+###
+
+### GET /api/diag/report — full report: Table Storage, then local file fallback. Supports ETag.
 GET {{baseUrl}}/api/diag/report
 Accept: application/json
 
 ###
 
-### POST /api/diag/refresh — trigger live Azure SDK background refresh (202 Accepted immediately)
+### GET /api/diag/history — precomputed history summaries for the trend charts (max 90)
+GET {{baseUrl}}/api/diag/history
+Accept: application/json
+
+###
+
+### GET /api/diag/automation-script — download the Azure efficiency PowerShell script
+GET {{baseUrl}}/api/diag/automation-script
+
+###
+
+### POST /api/diag/refresh — start a background Azure rescan (202, or 409 if already running)
+### Gated by ManagementActionFilter: needs FeatureFlags:EnableManagementActions=true, plus the
+### X-Management-Key header when Security:ManagementApiKey is configured.
 POST {{baseUrl}}/api/diag/refresh
-Content-Type: application/json
-
-{}
 
 ###
 
-### GET /api/diag/refresh-progress — poll during a running refresh
-GET {{baseUrl}}/api/diag/refresh-progress
+### POST /api/diag/cancel-refresh — cancel the in-progress rescan (same gate as above)
+POST {{baseUrl}}/api/diag/cancel-refresh
+
+###
+
+# ─── Portfolio ────────────────────────────────────────────────────────────────
+
+### GET /api/portfolio — the apps.json catalog decorated with live Azure health
+GET {{baseUrl}}/api/portfolio
 Accept: application/json
 
 ###
 
-### GET /api/diag/az-status — check whether a valid Azure credential exists locally
-GET {{baseUrl}}/api/diag/az-status
-Accept: application/json
-
-###
-
-# ─── AI Fix Plans ─────────────────────────────────────────────────────────────
-
-### GET /api/diag/fix-plan/{serviceName} — AI-powered repair steps for a broken App Service
-### Requires FeatureFlags:EnableAiIntegration=true + AzureOpenAI config. Cached 6h.
-GET {{baseUrl}}/api/diag/fix-plan/my-app-service-name
-Accept: application/json
-
-###
-
-# ─── GitHub Activity ──────────────────────────────────────────────────────────
-
-### GET /api/github-activity — last commit date + 8-week sparkline for a public repo
-GET {{baseUrl}}/api/github-activity?repo=punkouter/PoPunkouterSoftware
-Accept: application/json
-
-###
-
-# ─── Infrastructure / CI-CD Review ───────────────────────────────────────────
-
-### GET /api/infra/cicd-review — scans all owned GitHub repos for CI/CD workflows & IaC definitions
-### Requires GitHub:PersonalAccessToken or `gh auth login`. Cached 6h.
-GET {{baseUrl}}/api/infra/cicd-review
-Accept: application/json
+### GET /api/portfolio/screenshots/{host} — stored home-page screenshot for one app
+GET {{baseUrl}}/api/portfolio/screenshots/popunkoutersoftware.azurewebsites.net
 
 ###
 

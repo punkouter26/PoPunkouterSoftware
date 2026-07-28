@@ -146,10 +146,9 @@ try
             o.Filter = ctx =>
             {
                 var path = ctx.Request.Path.Value;
+                // "/health" prefix covers both /health and /healthz.
                 return path is null
-                    || !(path.Equals("/healthz", StringComparison.OrdinalIgnoreCase)
-                         || path.StartsWith("/health", StringComparison.OrdinalIgnoreCase)
-                         || path.StartsWith("/api/health", StringComparison.OrdinalIgnoreCase));
+                    || !path.StartsWith("/health", StringComparison.OrdinalIgnoreCase);
             });
 
         // Drop the outbound reachability-probe dependency spans. The "azure-probe"

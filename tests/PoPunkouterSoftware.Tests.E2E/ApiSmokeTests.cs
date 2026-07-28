@@ -95,18 +95,6 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
         }
     }
 
-    [Fact]
-    public async Task ApiHealth_RedirectsToHealth_FinalResponseIs200()
-    {
-        // HttpClient follows the 302 by default, so the observed response is /health itself.
-        var resp = await _client.GetAsync("/api/health");
-
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var doc = await ReadJsonAsync(resp);
-        doc.RootElement.GetProperty("application").GetString().Should().Be("PoPunkouterSoftware",
-            because: "the redirect must land on the canonical /health payload");
-    }
-
     // ─── Config ───────────────────────────────────────────────────────────────
 
     [Fact]

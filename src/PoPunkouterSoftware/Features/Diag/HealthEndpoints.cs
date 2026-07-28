@@ -126,7 +126,8 @@ internal static class HealthEndpoints
         .WithTags("Health");
 
         // Backward-compatible alias used by tests and external tooling.
-        app.MapGet("/api/health", () => Results.Redirect("/health", permanent: false));
+        // NOTE: there is deliberately no /api/health alias. Two routes for one question is
+        // one route too many — /health is the deep probe, /healthz the static liveness ping.
 
         // Lightweight platform probe — does not call external dependencies.
         app.MapGet("/healthz", () => Results.Ok(new

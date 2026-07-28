@@ -13,13 +13,6 @@ public class HealthEndpointTests
     [Fact]
     public async Task GetHealth_Returns200()
     {
-        var response = await _client.GetAsync("/api/health");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Fact]
-    public async Task GetHealthAlias_Returns200()
-    {
         var response = await _client.GetAsync("/health");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -34,14 +27,14 @@ public class HealthEndpointTests
     [Fact]
     public async Task GetHealth_ContentType_IsJson()
     {
-        var response = await _client.GetAsync("/api/health");
+        var response = await _client.GetAsync("/health");
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
     }
 
     [Fact]
     public async Task GetHealth_ReturnsStatusField()
     {
-        var json = await _client.GetStringAsync("/api/health");
+        var json = await _client.GetStringAsync("/health");
         var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("status", out _).Should().BeTrue();
     }
@@ -49,7 +42,7 @@ public class HealthEndpointTests
     [Fact]
     public async Task GetHealth_ReturnsApplicationField()
     {
-        var json = await _client.GetStringAsync("/api/health");
+        var json = await _client.GetStringAsync("/health");
         var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("application").GetString().Should().Be("PoPunkouterSoftware");
     }
@@ -57,7 +50,7 @@ public class HealthEndpointTests
     [Fact]
     public async Task GetHealth_ReturnsTimestamp()
     {
-        var json = await _client.GetStringAsync("/api/health");
+        var json = await _client.GetStringAsync("/health");
         var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("timestamp", out _).Should().BeTrue();
     }
@@ -65,7 +58,7 @@ public class HealthEndpointTests
     [Fact]
     public async Task GetHealth_ReturnsChecksObject()
     {
-        var json = await _client.GetStringAsync("/api/health");
+        var json = await _client.GetStringAsync("/health");
         var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("checks", out _).Should().BeTrue();
     }
@@ -73,7 +66,7 @@ public class HealthEndpointTests
     [Fact]
     public async Task GetHealth_ReturnsEnvironmentField()
     {
-        var json = await _client.GetStringAsync("/api/health");
+        var json = await _client.GetStringAsync("/health");
         var doc = JsonDocument.Parse(json);
         doc.RootElement.TryGetProperty("environment", out _).Should().BeTrue();
     }
@@ -81,7 +74,7 @@ public class HealthEndpointTests
     [Fact]
     public async Task GetHealth_ConfigMasked_NotEmpty()
     {
-        var json = await _client.GetStringAsync("/api/health");
+        var json = await _client.GetStringAsync("/health");
         var doc = JsonDocument.Parse(json);
         var cfg = doc.RootElement.GetProperty("config");
         cfg.GetProperty("ASPNETCORE_ENVIRONMENT").GetString().Should().NotBeNullOrWhiteSpace();

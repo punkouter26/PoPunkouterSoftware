@@ -112,6 +112,139 @@ public class PortfolioUiTests : IAsyncLifetime
         await CaptureAsync(page, $"05-azure-reflow-{label}.png");
     }
 
+    // ─── Regressions inherited from the 2026 UI pass ──────────────────────────
+    // These four survived the temporary UiRedesignVerification harness because each
+    // guards a defect that can recur from an ordinary CSS or markup edit. The rest of
+    // that harness asserted one-time migration facts (cards no longer carry
+    // backdrop-filter, the rz-sidebar column is collapsed, the topbar's pixel-level
+    // spatial contract) and was retired with it.
+
+    /// <summary>
+    /// The glance charts take their height from scoped CSS. When that rule stops
+    /// matching, Radzen measures a zero-height box and the charts silently collapse to
+    /// an empty strip — visually "present" but drawing nothing.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Viewports))]
+    public async Task Azure_GlanceCharts_HaveHeightAndDrawGeometry(string label, int width, int height, bool isMobile)
+    {
+        var page = await NewPageAsync(width, height, isMobile);
+        await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForSelectorAsync(".azure-glance-grid", new() { Timeout = 40_000 });
+        await page.WaitForSelectorAsync(".rz-chart", new() { Timeout = 40_000 });
+
+        var heights = await page.EvaluateAsync<double[]>(
+            "() => [...document.querySelectorAll('.azure-glance-grid .rz-chart')].map(el => el.getBoundingClientRect().height)");
+        heights.Should().NotBeEmpty();
+        heights.Should().OnlyContain(h => h > 150, $"charts must not collapse at {label}");
+
+        // A reserved box with no marks in it is still a broken chart.
+        var geometryNodes = await page.EvaluateAsync<int>(
+            "() => document.querySelectorAll('.azure-glance-grid .rz-chart svg path, .azure-glance-grid .rz-chart svg rect').length");
+        geometryNodes.Should().BeGreaterThan(0, $"charts rendered no geometry at {label}");
+    }
+
+    /// <summary>
+    /// The resource explorer has a card layout and a grid layout. Both used to render
+    /// unconditionally with CSS hiding the wrong one, so every row was built twice into
+    /// two live DOM trees. Exactly one must exist at any viewport.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Viewports))]
+    public async Task Azure_ResourceExplorer_RendersExactlyOneTree(string label, int width, int height, bool isMobile)
+    {
+        var page = await NewPageAsync(width, height, isMobile);
+        await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.GetByRole(AriaRole.Button, new() { Name = "Advanced diagnostics" }).ClickAsync();
+        await page.WaitForSelectorAsync(".azure-resource-grid, .azure-resource-cards", new() { Timeout = 40_000 });
+
+        var grids = await page.Locator(".azure-resource-grid").CountAsync();
+        var cards = await page.Locator(".azure-resource-cards").CountAsync();
+
+        (grids + cards).Should().Be(1, $"exactly one explorer tree must be in the DOM at {label}");
+        if (isMobile)
+            cards.Should().Be(1, "mobile must render the card list");
+        else
+            grids.Should().Be(1, "desktop must render the virtualized grid");
+    }
+
+    /// <summary>
+    /// Radzen bakes component colours per theme sheet, so a control styled for one scheme
+    /// can render invisible in the other (ButtonStyle.Light was white-on-white in light
+    /// mode). Both schemes must clear the WCAG AA 4.5:1 floor.
+    /// </summary>
+    [Theory]
+    [InlineData("dark")]
+    [InlineData("light")]
+    public async Task Azure_AdvancedToggle_IsLegibleInBothColorSchemes(string scheme)
+    {
+        await using var ctx = await _browser.NewContextAsync(new()
+        {
+            ViewportSize = new() { Width = 1440, Height = 1000 },
+            ColorScheme = scheme == "dark" ? ColorScheme.Dark : ColorScheme.Light,
+        });
+        var page = await ctx.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForSelectorAsync(".azure-advanced-toggle .rz-button", new() { Timeout = 40_000 });
+
+        // Walk up for the first non-transparent ancestor: the button's own background is
+        // transparent in the outlined variant, so comparing against it would always pass.
+        var probe = await page.EvaluateAsync<string[]>(@"() => {
+            const btn = document.querySelector('.azure-advanced-toggle .rz-button');
+            const cs = getComputedStyle(btn);
+            let bg = cs.backgroundColor, el = btn;
+            while ((bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') && el.parentElement) {
+                el = el.parentElement; bg = getComputedStyle(el).backgroundColor;
+            }
+            return [cs.color, bg, getComputedStyle(document.documentElement).getPropertyValue('--rz-primary').trim()];
+        }");
+
+        ContrastRatio(probe[0], probe[1]).Should()
+            .BeGreaterThanOrEqualTo(4.5, $"'Advanced diagnostics' is illegible in {scheme} mode");
+
+        // --rz-primary must resolve to the app accent, not Radzen's stock #598087 teal.
+        probe[2].Should().NotBeNullOrWhiteSpace("--rz-primary is unset");
+        probe[2].Should().NotContain("598087", "the accent silently fell back to Radzen stock");
+    }
+
+    /// <summary>The mobile drawer must open on tap and close on Escape.</summary>
+    [Fact]
+    public async Task Mobile_TopbarDrawer_OpensOnTapAndClosesOnEscape()
+    {
+        var page = await NewPageAsync(390, 844, isMobile: true);
+        await page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForSelectorAsync(".app-portfolio-card", new() { Timeout = 30_000 });
+
+        var trigger = page.Locator(".app-topbar-menu");
+        await Assertions.Expect(trigger).ToBeVisibleAsync();
+        await Assertions.Expect(trigger).ToHaveAttributeAsync("aria-expanded", "false");
+
+        await trigger.ClickAsync();
+        await Assertions.Expect(trigger).ToHaveAttributeAsync("aria-expanded", "true");
+        await Assertions.Expect(page.Locator("#app-topbar-drawer")).ToBeVisibleAsync();
+
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(trigger).ToHaveAttributeAsync("aria-expanded", "false");
+    }
+
+    /// <summary>WCAG relative-luminance contrast ratio between two computed CSS colours.</summary>
+    private static double ContrastRatio(string foreground, string background)
+    {
+        static double Luminance(string css)
+        {
+            var parts = System.Text.RegularExpressions.Regex.Matches(css, @"\d+(\.\d+)?");
+            double Channel(int i)
+            {
+                var c = double.Parse(parts[i].Value) / 255.0;
+                return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+            }
+            return 0.2126 * Channel(0) + 0.7152 * Channel(1) + 0.0722 * Channel(2);
+        }
+
+        var (a, b) = (Luminance(foreground), Luminance(background));
+        return (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
+    }
+
     private static async Task CaptureAsync(IPage page, string filename)
     {
         if (Environment.GetEnvironmentVariable("CAPTURE_SCREENSHOTS") != "1")

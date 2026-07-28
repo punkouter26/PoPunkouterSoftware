@@ -71,11 +71,6 @@
     color: var(--app-text);
 }
 
-.azure-command-summary {
-    margin: 0;
-    color: var(--app-text-muted);
-}
-
 .azure-command-meta,
 .azure-command-actions {
     display: flex;
