@@ -1,6 +1,5 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
-@inject HttpClient Http
 
 <RadzenComponents />
 
@@ -14,10 +13,18 @@
    the header footprint via --app-header-reserve instead. *@
 <RadzenLayout>
     <RadzenHeader>
-        @* Spatial contract — Left: branding · Center: actions · Right: session.
-           Brand and session are both `flex: 1 1 0` so the centre nav is optically
-           centred. The mock-data guard is embedded in the session region rather than
-           floating over the chrome as a position:fixed overlay. *@
+        @* Spatial contract — Left: branding · Center: actions · Right: menu trigger.
+           Brand and the right region are both `flex: 1 1 0` so the centre nav is
+           optically centred.
+
+           This layout is STATICALLY server-rendered (<Routes /> carries no render mode;
+           only the page components are InteractiveWebAssembly). Nothing here may depend
+           on a Blazor event handler or on OnInitializedAsync doing useful work — an
+           @onclick never fires, and the server's injected HttpClient has no BaseAddress
+           so a relative-URI fetch throws. A "MOCK DATA" badge and a Session/Logout slot
+           lived here and could never render for exactly those reasons; both were removed
+           rather than left as chrome that only looks functional. Drawer behaviour is
+           wired from js/helpers.js, which is why it works. *@
         <nav class="app-topbar" aria-label="Primary navigation">
             <a href="/" class="app-topbar-brand">PoPunkouterSoftware</a>
 
@@ -34,30 +41,6 @@
             </div>
 
             <div class="app-topbar-session">
-                @if (_isMockMode)
-                {
-                    <span class="app-mock-badge" role="status" title="This deployment is serving mock data.">
-                        <span class="material-symbols-outlined" aria-hidden="true">warning</span>
-                        <span class="app-mock-badge__text">MOCK DATA</span>
-                    </span>
-                }
-                @* NET_RULES §4: Right region = Session / Logout. *@
-                @if (_whoami?.IsAuthenticated == true)
-                {
-                    <span class="app-topbar-user" title="Signed in via @_whoami.Scheme">
-                        <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
-                        <span class="app-topbar-user-name">@_whoami.Name</span>
-                        @if (_whoami.IsManagement)
-                        {
-                            <span class="app-topbar-role">management</span>
-                        }
-                    </span>
-                    <button type="button" class="app-topbar-logout" @onclick="LogoutAsync"
-                            aria-label="Log out">
-                        <span class="material-symbols-outlined" aria-hidden="true">logout</span>
-                        <span class="app-topbar-logout-text">Logout</span>
-                    </button>
-                }
                 <button type="button" class="app-topbar-menu" aria-expanded="false" aria-controls="app-topbar-drawer"
                         aria-label="Toggle navigation menu">
                     <span class="material-symbols-outlined" aria-hidden="true">menu</span>
@@ -75,56 +58,6 @@
 </RadzenLayout>
 
 @code {
-    private bool _isMockMode;
-    private WhoamiResponse? _whoami;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            // Fetch environment mode from server — shows MOCK DATA banner when server
-            // runs in "Testing" environment (integration / E2E test runs). Rule 10.
-            // 10s budget: the shared client's 5-minute timeout is for the report endpoint.
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var cfg = await Http.GetFromJsonAsync("/api/config", AppJsonContext.Default.ConfigResponse, cts.Token);
-            _isMockMode = cfg?.IsMockMode ?? false;
-        }
-        catch
-        {
-            // Non-fatal — banner stays hidden if the call fails.
-        }
-
-        // Whoami powers the Session / Logout slot. Optional: if the endpoint is
-        // absent (e.g. a pre-FakeAuth build) the slot stays hidden.
-        try
-        {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            _whoami = await Http.GetFromJsonAsync("/api/whoami", AppJsonContext.Default.WhoamiResponse, cts.Token);
-        }
-        catch
-        {
-            _whoami = null;
-        }
-    }
-
-    private async Task LogoutAsync()
-    {
-        try
-        {
-            // POST /api/logout exists for symmetry; FakeAuth is per-request, so
-            // the act of dropping the X-Fake-User / X-Fake-Roles headers on the
-            // next reload is what actually "logs out" the visitor. We still
-            // POST so the audit trail is identical to a real auth flow.
-            await Http.PostAsync("/api/logout", content: null);
-        }
-        catch
-        {
-            // Non-fatal — the reload below is the canonical logout.
-        }
-        _whoami = null;
-        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
-    }
-
     private string NavClass(string href)
     {
         var current = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);

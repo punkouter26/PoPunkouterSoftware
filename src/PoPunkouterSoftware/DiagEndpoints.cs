@@ -150,10 +150,20 @@ internal static class DiagEndpoints
 
     private static OpsSummary BuildOpsSummary(AzureReport report, IReadOnlyCollection<HistorySummary> history)
     {
-        var services = report.WebServices?.Services ?? new List<WebService>();
-        var total = report.WebServices?.Total ?? services.Count;
-        var active = report.WebServices?.ByStatus?.Active ?? services.Count(s => ServiceHealth.IsHealthy(s.HttpStatus));
-        var broken = report.WebServices?.ByStatus?.Broken ?? Math.Max(0, total - active);
+        // The dashboard never reports on the site rendering it, nor on retired apps. Both are
+        // real resources in the scanned subscription, so they arrive through the inventory
+        // path regardless of the catalog — /api/portfolio has always filtered them and this
+        // projection did not, which is how "PoPunkouterSoftware is unavailable" ended up as
+        // the first attention item on a page the visitor was successfully reading.
+        //
+        // Counts are recomputed from the filtered list rather than taken from the report's
+        // precomputed ByStatus, which still includes the excluded services.
+        var services = (report.WebServices?.Services ?? new List<WebService>())
+            .Where(s => !PortfolioIdentity.IsExcluded(s.FriendlyName, s.Name))
+            .ToList();
+        var total = services.Count;
+        var active = services.Count(s => ServiceHealth.IsHealthy(s.HttpStatus));
+        var broken = services.Count(s => ServiceHealth.IsBroken(s.HttpStatus));
         var cleanup = (report.OrphanedResources?.Count ?? 0)
             + (report.ZombieApps?.Count ?? 0)
             + report.AppServicePlanInventory.Count(p => p.AppCount == 0);
@@ -190,6 +200,13 @@ internal static class DiagEndpoints
             CleanupCandidates = cleanup,
             SecurityFindings = security,
             AttentionCount = broken + security + cleanup + (isStale ? 1 : 0),
+            // Everything the operator can actually act on. Staleness is excluded because it
+            // is resolved by refreshing, not by fixing a resource; broken services are very
+            // much included. The hero badge used to render only security + cleanup while its
+            // own tooltip claimed it excluded "the staleness flag itself" — on live data that
+            // read "8 item(s) need attention" beside "3 actionable", silently dropping the
+            // four unavailable services, the most actionable items on the page.
+            ActionableCount = broken + security + cleanup,
             FleetHealth = new List<OpsMetricPoint>
             {
                 new("Healthy", active),
@@ -201,9 +218,6 @@ internal static class DiagEndpoints
             ResponseTimes = services.Where(s => s.Connectivity?.ResponseTime > 0)
                 .OrderByDescending(s => s.Connectivity!.ResponseTime).Take(6)
                 .Select(s => new OpsMetricPoint(s.FriendlyName ?? s.Name, s.Connectivity!.ResponseTime)).ToList(),
-            ServerErrors = services.Where(s => s.Metrics7Days?.Http5xx > 0)
-                .OrderByDescending(s => s.Metrics7Days!.Http5xx).Take(6)
-                .Select(s => new OpsMetricPoint(s.FriendlyName ?? s.Name, s.Metrics7Days!.Http5xx)).ToList(),
             CostHistory = history.Where(h => h.GeneratedAt > DateTime.MinValue && h.TotalCost30Days > 0)
                 .OrderBy(h => h.GeneratedAt).TakeLast(30)
                 .Select(h => new OpsMetricPoint(h.GeneratedAt.ToString("MMM dd"),

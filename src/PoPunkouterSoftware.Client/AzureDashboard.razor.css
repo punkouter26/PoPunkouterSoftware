@@ -10,8 +10,15 @@
     gap: .75rem;
 }
 
-.azure-glance-grid > .app-card { min-width: 0; padding: var(--app-space-sm); }
-.azure-glance-grid h2 { margin: 0; font-size: 1rem; }
+/* Every rule in this file MUST use the `.azure-ops-page ::deep …` form, base rules and
+   media-query overrides alike — see CLAUDE.md. It is not only about crossing component
+   boundaries: `::deep` moves the scope attribute onto `.azure-ops-page`, so a bare
+   `.azure-glance-grid` compiles to `.azure-glance-grid[b-x]` (specificity 0,2,0) while the
+   base rule compiles to `.azure-ops-page[b-x] .azure-glance-grid` (0,3,0). Media queries add
+   no specificity, so a bare override silently loses to its own base rule and the layout
+   never reflows. That is exactly what pinned the glance grid to three columns at 390px. */
+.azure-ops-page ::deep .azure-glance-grid > .app-card { min-width: 0; padding: var(--app-space-sm); }
+.azure-ops-page ::deep .azure-glance-grid h2 { margin: 0; font-size: 1rem; }
 
 /* Chart heights moved out of `Style="height:210px"` inline attributes. The .app-card
    parent owns the frame; .rz-chart is frameless (see modern-ui.components.css). */
@@ -22,12 +29,13 @@
 }
 
 /* Each chart card now has a one-line subtitle so the tile says what it measures */
-.azure-glance-title { font-family: var(--app-headline-font); letter-spacing: -.02em; }
-.azure-glance-subtitle { color: var(--app-text-soft); font-size: .72rem; margin: 0 0 .35rem; letter-spacing: .03em; }
+.azure-ops-page ::deep .azure-glance-title { font-family: var(--app-headline-font); letter-spacing: -.02em; }
+.azure-ops-page ::deep .azure-glance-subtitle { color: var(--app-text-soft); font-size: .72rem; margin: 0 0 .35rem; letter-spacing: .03em; }
 
-/* H1 with embedded badge — keep them on one line at desktop, wrap on mobile */
-.azure-hero-title { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: .55rem; }
-.azure-hero-title .rz-badge { transform: translateY(-.15em); }
+/* H1 with embedded badge — keep them on one line at desktop, wrap on mobile.
+   (The typography half of this rule used to live in a second, near-duplicate
+   `.azure-hero-title` block further down; they are merged here.) */
+.azure-ops-page ::deep .azure-hero-title .rz-badge { transform: translateY(-.15em); }
 
 .azure-ops-page ::deep .azure-attention-summary {
     padding: .9rem;
@@ -36,11 +44,12 @@
     background: var(--app-surface);
 }
 
-.azure-simple-attention { display: grid; gap: .35rem; margin: 0; padding-left: 1.4rem; color: var(--app-text-muted); }
-.azure-signal-badges, .azure-advanced-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
-.azure-advanced-toggle { display: flex; justify-content: center; padding: .25rem; }
-.azure-advanced { display: grid; gap: 1.25rem; padding-top: .5rem; border-top: 1px solid var(--app-border); }
-.azure-advanced-actions { justify-content: flex-end; }
+.azure-ops-page ::deep .azure-simple-attention { display: grid; gap: .35rem; margin: 0; padding-left: 1.4rem; color: var(--app-text-muted); }
+.azure-ops-page ::deep .azure-signal-badges,
+.azure-ops-page ::deep .azure-advanced-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+.azure-ops-page ::deep .azure-advanced-toggle { display: flex; justify-content: center; padding: .25rem; }
+.azure-ops-page ::deep .azure-advanced { display: grid; gap: 1.25rem; padding-top: .5rem; border-top: 1px solid var(--app-border); }
+.azure-ops-page ::deep .azure-advanced-actions { justify-content: flex-end; }
 
 .azure-ops-page ::deep .azure-command-header {
     display: grid;
@@ -63,6 +72,10 @@
 }
 
 .azure-ops-page ::deep .azure-hero-title {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .55rem;
     margin: .15rem 0 .35rem;
     font-family: var(--app-headline-font);
     font-size: clamp(1.65rem, 3vw, 2.35rem);
@@ -353,7 +366,7 @@
 .azure-ops-page ::deep .azure-risk-label.warning { color: var(--app-accent-warm); }
 .azure-ops-page ::deep .azure-risk-label.muted { color: var(--app-text-soft); }
 
-.azure-chart-note { margin: .4rem 0 0; color: var(--app-text-muted); font-size: .74rem; }
+.azure-ops-page ::deep .azure-chart-note { margin: .4rem 0 0; color: var(--app-text-muted); font-size: .74rem; }
 
 .azure-ops-page ::deep .azure-compact-state {
     display: flex;
@@ -440,8 +453,8 @@
 }
 
 @media (max-width: 1000px) {
-    .azure-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .azure-glance-grid > :last-child { grid-column: 1 / -1; }
+    .azure-ops-page ::deep .azure-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .azure-ops-page ::deep .azure-glance-grid > :last-child { grid-column: 1 / -1; }
     .azure-ops-page ::deep .azure-command-header {
         grid-template-columns: 1fr auto;
     }
@@ -456,8 +469,8 @@
 }
 
 @media (max-width: 720px) {
-    .azure-glance-grid { grid-template-columns: 1fr; }
-    .azure-glance-grid > :last-child { grid-column: auto; }
+    .azure-ops-page ::deep .azure-glance-grid { grid-template-columns: 1fr; }
+    .azure-ops-page ::deep .azure-glance-grid > :last-child { grid-column: auto; }
     .azure-ops-page ::deep .azure-command-header {
         display: block;
         padding: 1rem;

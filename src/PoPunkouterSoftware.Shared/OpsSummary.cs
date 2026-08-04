@@ -14,11 +14,18 @@ public record OpsSummary
     public string CostFormatted { get; init; } = "$0.00";
     public int CleanupCandidates { get; init; }
     public int SecurityFindings { get; init; }
+    /// <summary>Everything needing attention, including the staleness flag.</summary>
     public int AttentionCount { get; init; }
+
+    /// <summary>
+    /// The subset an operator can act on directly — <see cref="AttentionCount"/> minus the
+    /// staleness flag. Rendered as the hero badge; kept as a server-computed field so the
+    /// badge and the headline can never disagree about what they are counting.
+    /// </summary>
+    public int ActionableCount { get; init; }
     public List<OpsMetricPoint> FleetHealth { get; init; } = new();
     public List<OpsMetricPoint> CostDrivers { get; init; } = new();
     public List<OpsMetricPoint> ResponseTimes { get; init; } = new();
-    public List<OpsMetricPoint> ServerErrors { get; init; } = new();
     public List<OpsMetricPoint> CostHistory { get; init; } = new();
     public List<string> AttentionItems { get; init; } = new();
 }

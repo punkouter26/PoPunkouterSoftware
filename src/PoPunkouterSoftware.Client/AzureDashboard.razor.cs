@@ -33,7 +33,6 @@ public partial class AzureDashboard
     private List<PriorityQueueItem> _priorityQueue = new();
     private List<ResourceExplorerItem> _resourceExplorerItems = new();
     private List<ResourceExplorerItem> _filteredResourceExplorerItems = new();
-    private List<WebService> _sortedServices = new();
 
     private List<PriorityQueueItem> PriorityQueue => _priorityQueue;
     private List<ResourceExplorerItem> ResourceExplorerItems => _resourceExplorerItems;
@@ -79,10 +78,6 @@ public partial class AzureDashboard
         _consolidatedServices = BuildConsolidatedServices(report);
         _priorityQueue = BuildPriorityQueue(report, _consolidatedServices, safeToRemove);
         _resourceExplorerItems = BuildResourceExplorerItems(report, _consolidatedServices, safeToRemove);
-        _sortedServices = services
-            .OrderBy(s => s.HttpStatus == "active" ? 0 : 1)
-            .ThenBy(s => s.FriendlyName ?? s.Name)
-            .ToList();
         ApplyResourceFilter();
     }
 

@@ -145,6 +145,37 @@ public class PortfolioUiTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// The glance grid must actually reflow, not merely avoid overflowing.
+    ///
+    /// <para>Its responsive rules were written without <c>::deep</c> while the base rule had
+    /// it, which compiles to LOWER specificity for the override — media queries add none, so
+    /// the 3-column base won at every width and a phone rendered three 109px-wide charts side
+    /// by side. Nothing caught it: <c>CoreRoutes_ReflowWithoutHorizontalOverflow</c> passes
+    /// because <c>minmax(0,1fr)</c> squeezes rather than overflows, and
+    /// <c>Azure_GlanceCharts_HaveHeightAndDrawGeometry</c> only checks height.</para>
+    ///
+    /// <para>Asserting the tiles are stacked (equal left edge) rather than reading
+    /// <c>grid-template-columns</c> keeps this about the visible result.</para>
+    /// </summary>
+    [Fact]
+    public async Task Azure_GlanceCards_StackVertically_OnMobile()
+    {
+        var page = await NewPageAsync(390, 844, isMobile: true);
+        await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForSelectorAsync(".azure-glance-grid > article", new() { Timeout = 40_000 });
+
+        var boxes = await page.EvaluateAsync<double[][]>(
+            "() => [...document.querySelectorAll('.azure-glance-grid > article')].map(el => " +
+            "{ const r = el.getBoundingClientRect(); return [r.left, r.width]; })");
+
+        boxes.Should().HaveCount(3);
+        boxes.Select(b => b[0]).Distinct().Should().ContainSingle(
+            "the three glance cards must share a left edge — i.e. be stacked, not side by side");
+        boxes.Should().OnlyContain(b => b[1] > 250,
+            "a full-width card at 390px must be far wider than a 1/3 column");
+    }
+
+    /// <summary>
     /// The resource explorer has a card layout and a grid layout. Both used to render
     /// unconditionally with CSS hiding the wrong one, so every row was built twice into
     /// two live DOM trees. Exactly one must exist at any viewport.

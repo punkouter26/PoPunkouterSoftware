@@ -27,7 +27,7 @@ Source projects live under `/src`; tests under `/tests`.
 | Project | Role |
 |---|---|
 | `src/PoPunkouterSoftware` | API host + BFF. Feature slices under `Features/<Area>/*Endpoints.cs` (**Config, Diag, Portfolio**), each a `Map<Area>Endpoints` extension called from `Program.cs`. Host-level plumbing that belongs to no slice lives in `Host/` (`GlobalExceptionHandler`, `ManagementActionFilter`, `RefreshHub`). Hosts the Blazor WASM app. |
-| `src/PoPunkouterSoftware.Client` | Blazor WASM (Radzen UI, mobile-first). `wwwroot` lives **only** here. Shared UI in `Components/Shared` (`ErrorRetryBanner`, `LoadingSkeleton`, `DevErrorBoundary`); page-specific blocks in `Components/Pages/Sections`; relative-time formatting in `RelativeTime.cs`. |
+| `src/PoPunkouterSoftware.Client` | Blazor WASM (Radzen UI, mobile-first). `wwwroot` lives **only** here. The layout is flat — every component sits in the project root, named for what it is: shared UI (`ErrorRetryBanner`, `LoadingSkeleton`, `DevErrorBoundary`), page-specific blocks (`AzurePriorityQueue`, `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureHistoryDisclosure`), relative-time formatting in `RelativeTime.cs`. |
 | `src/PoPunkouterSoftware.Shared` | Shared DTOs and the domain vocabulary (`DomainVocabulary.cs`) only — no behavior beyond those helpers, and **no PackageReferences at all**. No server/browser-only deps. Ships in the WASM bundle (`IsTrimmable`). |
 | `src/PoPunkouterSoftware.Infrastructure` | Azure services (Table Storage, ARM, pinger, incident, telemetry) plus cross-slice helpers: `ReportFileCache` (report file fallback + data dir), `HistorySummaryMapper`, `AppServicePlanInventory`, `SecretMasking`. Slices must not reference each other — shared logic goes here. |
 
@@ -36,7 +36,7 @@ Source projects live under `/src`; tests under `/tests`.
 - **Partial-class aspect files** are `<Type>.<Aspect>.cs` and the aspect names the concern, not the shape: `AzureReportService.Cost.cs`, `AzureDashboard.DerivedViews.cs`. A file called `.Charts.cs` that holds no charts is the failure mode to avoid.
 - **A file name must be greppable.** If the name does not appear as a type inside the file and is not one of the two exceptions above, the name is wrong.
 - **Test files mirror the source file under test** (`DomainVocabularyTests.cs` holds `ServiceHealthTests`, `SeverityLevelTests`, …), not one file per test class.
-- **Records crossing a component boundary** go in `Components/Pages/Models/` — a private nested record cannot be a Blazor component parameter.
+- **Records crossing a component boundary** are top-level types in their own file (`PriorityQueueItem.cs`, `ResourceExplorerItem.cs`, `SafeToRemoveItem.cs`) — a private nested record cannot be a Blazor component parameter.
 
 ## Cross-cutting conventions
 - **Routing:** slices register via `Map<Area>Endpoints(this WebApplication)`. `/api/diag/*` uses `MapGroup("/api/diag")`. `/health`, `/healthz`, `/diag` are off the `/api` group. `/health` is the deep probe and `/healthz` the static liveness ping; there is deliberately **no** `/api/health` alias.
@@ -62,25 +62,30 @@ the previous `IL2026`/`IL2104` `WarningsNotAsErrors` suppression has been remove
 client builds trim-safe under the global `TreatWarningsAsErrors`. Add new client (de)serialised
 types to `AppJsonContext` with a `[JsonSerializable]` attribute.
 
-## Tests (`/tests`) — two projects, four tiers (target ratio 100/50/25/25)
-- `PoPunkouterSoftware.Tests` — the fast tier. `Unit/` (strictly no-I/O: HTTP stubs,
-  in-memory caches) and `Integration/` (`WebApplicationFactory` + Testcontainers Azurite,
-  including a fixture that runs Azurite INSIDE the factory with explicit teardown).
-  RULE: DTO-mapping tests live in `Integration/`, never `Unit/`.
+## Tests (`/tests`) — four projects, one per tier (target ratio 100/50/25/25)
+One project per tier, each named for the tier it is. The fast tier is the first two.
+- `PoPunkouterSoftware.Unit` — strictly no-I/O (HTTP stubs, in-memory caches).
+  RULE: DTO-mapping tests live in `.Integration`, never here.
+- `PoPunkouterSoftware.Integration` — `WebApplicationFactory` + Testcontainers Azurite,
+  including a fixture that runs Azurite INSIDE the factory with explicit teardown.
   Collections run sequentially (`AssemblyInfo.cs`) because concurrent entry-point boots race.
-- `PoPunkouterSoftware.Tests.E2E` — against a live instance via `BASE_URL`
-  (default `http://localhost:8000`); run on demand, not in CI.
-  `ApiSmokeTests` = pure-HTTP E2E API tier (also the post-deploy smoke: point `BASE_URL`
-  at production). `PortfolioUiTests` = Playwright UI tier; every UI test runs BOTH
-  mobile-portrait (390×844) and desktop-landscape (1440×1000) via the shared
-  `Viewports` theory data — visual parity is a hard rule.
+  `ProductionBootTests` boots the entry point under `Production` with every external
+  dependency blanked — the only coverage of that environment's hosting pipeline.
+- `PoPunkouterSoftware.E2EAPI` — `ApiSmokeTests`, pure-HTTP against a live instance via
+  `BASE_URL` (default `http://localhost:8000`). Also the post-deploy smoke: point
+  `BASE_URL` at production. On demand, not in CI.
+- `PoPunkouterSoftware.E2EUI` — `PortfolioUiTests`, Playwright. Every UI test runs BOTH
+  mobile-portrait (390×844) and desktop-landscape (1440×1000) via the shared `Viewports`
+  theory data — visual parity is a hard rule. On demand, not in CI.
 
 **CI/CD:** two workflows. `deploy.yml` is deliberately build-and-deploy only — no test
 steps live in the YAML. `screenshots.yml` runs nightly (06:17 UTC) to capture the
 portfolio screenshots on a Linux runner, because the production Windows F1 sandbox
 cannot run Chromium. All test tiers run locally before pushing to master
-(fast tier: `dotnet test tests/PoPunkouterSoftware.Tests`; E2E: on demand, headed via
-`HEADED=1`, installed Chrome via `BROWSER_CHANNEL=chrome`).
+(fast tier: `dotnet test tests/PoPunkouterSoftware.Unit` then
+`dotnet test tests/PoPunkouterSoftware.Integration` — `dotnet test` takes ONE project per
+invocation; E2E: on demand, headed via `HEADED=1`, installed Chrome via
+`BROWSER_CHANNEL=chrome`).
 
 ## Agent tooling (Claude Code)
 - **User-level plugins** (`claude plugin list`): `dotnet-claude-kit` (codewithmukesh), `dotnet-skills@wshaddix-dotnet-skills` (167 skills + 16 agents; local marketplace at `~/.claude/local-marketplaces/wshaddix-dotnet-skills`), and the official `dotnet/skills` plugins `dotnet`, `dotnet-aspnetcore`, `dotnet-blazor`, `dotnet-test`, `dotnet-data`, `dotnet-diag` (marketplace `dotnet-agent-skills`).

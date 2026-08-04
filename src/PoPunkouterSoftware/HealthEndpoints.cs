@@ -53,9 +53,24 @@ public sealed class KeyVaultHealthCheck : IHealthCheck
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
+        // Mirrors Program.cs's resolution exactly, including its blank check — the probe must
+        // report on the vault the app actually bound, not a different one.
+        //
+        // `?? default` alone was wrong: the hermetic test config sets these keys to "" (not
+        // null), so the fallback never fired, GetAsync("") threw, and /health returned 503 for
+        // every run under the Testing environment. Program.cs reads a blank value as "no vault"
+        // and skips binding it, so a blank value here is healthy-not-configured, not a failure.
+        var uri = _config["KeyVault:Uri"] ?? _config["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
+        if (string.IsNullOrWhiteSpace(uri))
+        {
+            return HealthCheckResult.Healthy("not-configured", new Dictionary<string, object>
+            {
+                ["note"] = "no Key Vault URI configured",
+            });
+        }
+
         try
         {
-            var uri = _config["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
             var client = _http.CreateClient("health");
@@ -188,12 +203,15 @@ internal static class HealthResponseWriter
 {
     public static async Task WriteAsync(HttpContext context, HealthReport report)
     {
+        var env = context.RequestServices.GetRequiredService<IWebHostEnvironment>();
+        var config = context.RequestServices.GetRequiredService<IConfiguration>();
+
         context.Response.ContentType = "application/json";
         var payload = new
         {
             status = report.Status.ToString().ToLowerInvariant(),
             application = "PoPunkouterSoftware",
-            environment = context.RequestServices.GetRequiredService<IWebHostEnvironment>().EnvironmentName,
+            environment = env.EnvironmentName,
             timestamp = DateTime.UtcNow,
             checks = report.Entries.ToDictionary(
                 kvp => kvp.Key,
@@ -203,8 +221,32 @@ internal static class HealthResponseWriter
                     description = kvp.Value.Description,
                     data = kvp.Value.Data,
                 }),
+            // NET_RULES §3: "/health ... shows all connection status". The masked config
+            // block is part of that contract and is asserted by both the integration and
+            // E2E-API tiers; it was dropped when the checks were rewritten, which is what
+            // left those tests red. Values are masked here exactly as on /diag —
+            // ASPNETCORE_ENVIRONMENT is the one deliberately unmasked key.
+            config = BuildMaskedConfig(env, config),
         };
         await context.Response.WriteAsJsonAsync(payload);
     }
+
+    private static Dictionary<string, string> BuildMaskedConfig(IWebHostEnvironment env, IConfiguration config) =>
+        new()
+        {
+            ["ASPNETCORE_ENVIRONMENT"] = env.EnvironmentName,
+            ["AzureKeyVaultUri"] = SecretMasking.MaskValue(
+                config["KeyVault:Uri"] ?? config["AzureKeyVaultUri"]),
+            ["AzureTableStorage:ConnectionString"] = SecretMasking.MaskValue(
+                config["AzureTableStorage:ConnectionString"]),
+            ["AzureTableStorage:Endpoint"] = SecretMasking.MaskValue(
+                config["AzureTableStorage:Endpoint"]),
+            // Never the masked prefix for App Insights: even four characters of a connection
+            // string reveal the region and the target workspace.
+            ["ApplicationInsights:ConnectionString"] =
+                string.IsNullOrWhiteSpace(config["ApplicationInsights:ConnectionString"])
+                    ? "(not set)"
+                    : "configured (redacted)",
+        };
 }
 

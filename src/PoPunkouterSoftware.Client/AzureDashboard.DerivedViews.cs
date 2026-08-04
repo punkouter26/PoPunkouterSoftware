@@ -39,17 +39,20 @@ public partial class AzureDashboard
         int HealthScore,
         int ReliabilityScore,
         string Actionability,
-        bool HasAnomaly,
         string Owner,
         string Environment,
-        string Criticality,
         string? ResourceGroup,
         string? Command
     );
 
-    // PriorityQueueItem and ResourceExplorerItem live in Models/ rather than here: they
-    // cross a component boundary (the AzurePriorityQueue / AzureResourceExplorer sections
-    // take them as parameters), which a private nested record cannot do.
+    // PriorityQueueItem and ResourceExplorerItem are top-level types in this project rather
+    // than members here: they cross a component boundary (the AzurePriorityQueue /
+    // AzureResourceExplorer sections take them as parameters), which a private nested record
+    // cannot do.
+    //
+    // Removed from this record: `HasAnomaly` and `Criticality`. Both were computed on every
+    // report load and read by nothing — and HasAnomaly is what the median/anomaly pipeline
+    // below existed to feed, so the most expensive derivation in this file was pure waste.
 
     // ── Label / badge helpers ─────────────────────────────────────────────────
     private static string TypeLabel(string? t) => t switch
@@ -222,10 +225,8 @@ public partial class AzureDashboard
                 HealthScore: health,
                 ReliabilityScore: reliability,
                 Actionability: ToActionability(status, http5xx7d, requests7d),
-                HasAnomaly: false,
                 Owner: InferOwner(first.ResourceGroup, first.Name),
                 Environment: InferEnvironment(first.ResourceGroup, first.Name),
-                Criticality: InferCriticality(first.ResourceGroup, first.Name),
                 ResourceGroup: first.ResourceGroup,
                 Command: first.ResourceType == "Microsoft.Web/sites"
                     ? $"az webapp show --name \"{first.Name}\" --resource-group \"{first.ResourceGroup}\""
@@ -233,12 +234,7 @@ public partial class AzureDashboard
             ));
         }
 
-        var medianReq = Median(raw.Select(x => x.Requests7d).ToList());
-        var medianRt = Median(raw.Where(x => x.ResponseTimeMs.HasValue)
-            .Select(x => (double)x.ResponseTimeMs!.Value).ToList());
-
         return raw
-            .Select(x => x with { HasAnomaly = IsAnomalous(x, medianReq, medianRt) })
             .OrderBy(x => x.HealthScore)
             .ThenBy(x => x.DisplayName)
             .ToList();
@@ -431,27 +427,6 @@ public partial class AzureDashboard
     }
 
     // ── Pure inference helpers ────────────────────────────────────────────────
-    private static bool IsAnomalous(ConsolidatedService service, double medianReq, double medianRt)
-    {
-        var requestAnomaly = medianReq > 0 && service.Requests7d > medianReq * 3;
-        var responseAnomaly = service.ResponseTimeMs.HasValue &&
-                              medianRt > 0 &&
-                              service.ResponseTimeMs.Value > medianRt * 2;
-        var errorAnomaly = service.Http5xx7d > 5;
-        return requestAnomaly || responseAnomaly || errorAnomaly;
-    }
-
-    private static double Median(List<double> values)
-    {
-        if (values.Count == 0)
-            return 0;
-        var ordered = values.OrderBy(v => v).ToList();
-        var mid = ordered.Count / 2;
-        return ordered.Count % 2 == 0 ? (ordered[mid - 1] + ordered[mid]) / 2 : ordered[mid];
-    }
-
-    private static double Median(List<int> values) => Median(values.Select(v => (double)v).ToList());
-
     private static string CanonicalAppKey(string? friendly, string? name)
     {
         var source = string.IsNullOrWhiteSpace(friendly) ? (name ?? "unknown") : friendly;
@@ -474,16 +449,6 @@ public partial class AzureDashboard
             .Split(new[] { '-', '_', ' ' }, StringSplitOptions.RemoveEmptyEntries)
             .FirstOrDefault();
         return string.IsNullOrWhiteSpace(token) ? "unassigned" : token.ToLowerInvariant();
-    }
-
-    private static string InferCriticality(string? resourceGroup, string? name)
-    {
-        var text = $"{resourceGroup} {name}".ToLowerInvariant();
-        if (text.Contains("prod") || text.Contains("core") || text.Contains("api"))
-            return "high";
-        if (text.Contains("dev") || text.Contains("test"))
-            return "low";
-        return "medium";
     }
 
     private static string ToActionability(string status, int http5xx7d, int req7d)

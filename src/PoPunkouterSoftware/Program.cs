@@ -175,17 +175,40 @@ try
     // FakeAuthHandler reads X-Fake-User / X-Fake-Roles and is registered ONLY
     // outside Production. The handler constructor itself throws on Production
     // initialization — a guardrail against environmental misconfiguration.
-    // In Production the scheme is absent, so [Authorize] attributes always
-    // fail closed (401 → the management endpoints stay blocked).
-    builder.Services
-        .AddAuthentication(FakeAuthHandler.SchemeName)
-        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, FakeAuthHandler>(FakeAuthHandler.SchemeName, _ => { });
+    //
+    // That guardrail only works if the registration is actually conditional. It was
+    // not: the scheme was added unconditionally AND named as the default, so
+    // UseAuthentication resolved it on EVERY request and the constructor threw —
+    // turning the guardrail into a site-wide 500 in Production instead of a
+    // fail-closed management gate.
+    //
+    // In Production no scheme is registered at all, so the default-scheme lookup
+    // returns null and UseAuthentication no-ops. The Management policy must not name
+    // the absent scheme either: AddAuthenticationSchemes("Fake") with no handler
+    // throws "No authentication handler is registered" (another 500). It denies
+    // outright instead, which is the same answer a real fail-closed gate would give.
+    var isProduction = builder.Environment.IsProduction();
+    if (isProduction)
+    {
+        builder.Services.AddAuthentication();
+    }
+    else
+    {
+        builder.Services
+            .AddAuthentication(FakeAuthHandler.SchemeName)
+            .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, FakeAuthHandler>(FakeAuthHandler.SchemeName, _ => { });
+    }
     builder.Services.AddAuthorization(options =>
     {
-        options.AddPolicy("Management", p => p
-            .AddAuthenticationSchemes(FakeAuthHandler.SchemeName)
-            .RequireAuthenticatedUser()
-            .RequireRole(FakeAuthHandler.ManagementRole));
+        options.AddPolicy("Management", p =>
+        {
+            if (isProduction)
+                p.RequireAssertion(_ => false);
+            else
+                p.AddAuthenticationSchemes(FakeAuthHandler.SchemeName)
+                    .RequireAuthenticatedUser()
+                    .RequireRole(FakeAuthHandler.ManagementRole);
+        });
     });
 
     // ─── HTTP clients for Azure services ──────────────────────────────────────

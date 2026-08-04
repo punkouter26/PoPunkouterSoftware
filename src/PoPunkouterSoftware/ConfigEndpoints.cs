@@ -65,16 +65,25 @@ internal static class ConfigEndpoints
         app.MapPost("/api/logout", () => Results.NoContent())
             .WithName("Logout").WithTags("Config");
 
-        // Impersonation — a management-only action that lets an admin drop
-        // their X-Fake-User header to temporarily take a non-elevated
-        // identity. Gated by the management policy.
-        app.MapPost("/api/impersonate",
-            [Authorize(Policy = "Management")] (HttpContext ctx) =>
-            {
-                var user = ctx.User.Identity?.Name ?? FakeAuthHandler.AnonymousUser;
-                return Results.Ok(new { impersonatedAs = user });
-            })
-            .WithName("Impersonate").WithTags("Config");
+        // Impersonation — a management-only action that lets an admin drop their
+        // X-Fake-User header to temporarily take a non-elevated identity. Gated by the
+        // management policy.
+        //
+        // Mapped ONLY outside Production, because it is an affordance of FakeAuth and
+        // FakeAuth does not exist there. Left mapped, it would not merely fail closed: with
+        // no authentication scheme registered, a failed policy evaluation on an
+        // unauthenticated caller challenges rather than forbids, and ChallengeAsync() with
+        // no default challenge scheme throws — turning a 403 into a 500.
+        if (!app.Environment.IsProduction())
+        {
+            app.MapPost("/api/impersonate",
+                [Authorize(Policy = "Management")] (HttpContext ctx) =>
+                {
+                    var user = ctx.User.Identity?.Name ?? FakeAuthHandler.AnonymousUser;
+                    return Results.Ok(new { impersonatedAs = user });
+                })
+                .WithName("Impersonate").WithTags("Config");
+        }
 
         return app;
     }

@@ -1,15 +1,16 @@
 @page "/"
 @rendermode WasmRenderModes.Interactive
 @using PoPunkouterSoftware.Shared
+@implements IDisposable
 @inject HttpClient Http
 @inject IJSRuntime JS
 
-<PageTitle>PoPunkouterSoftware — Apps</PageTitle>
+<PageTitle>PoPunkouterSoftware — Web apps</PageTitle>
 
 <main id="main-content" class="app-page portfolio-page" tabindex="-1">
     <header class="portfolio-header">
         <div>
-            <span class="app-eyebrow">Punkouter Software</span>
+            <span class="app-eyebrow">PoPunkouterSoftware</span>
             <h1>Web apps</h1>
             <p>Small tools and experiments built with .NET and Azure.</p>
         </div>
@@ -44,8 +45,6 @@
                     Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
                 </span>
             }
-            @* Self-ticking: isolates the 1 Hz countdown from this page's render tree. *@
-            <PortfolioCountdown DueAt="@RefreshDueAt" OnDue="LoadAppsAsync" />
             <button type="button" class="portfolio-summary__btn @(data.Stale ? "is-stale" : "")" @onclick="LoadAppsAsync" disabled="@_loading" aria-busy="@_loading">
                 @if (_loading)
                 {
@@ -61,13 +60,20 @@
         </div>
     }
 
+    @* The error banner sits ALONGSIDE the catalog, never instead of it. This used to be an
+       `else if` ahead of the render branch while `data` was left populated, so one failed
+       background auto-refresh — which fires unattended every 5 minutes — replaced every
+       rendered card with a banner and threw away catalog data still held in memory. A
+       refresh that fails is a stale list, not an empty one. *@
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <ErrorRetryBanner Title="@(data is null ? "The app list could not be loaded." : "The app list could not be updated — showing the last known catalog.")"
+                          Message="@_loadError" OnRetry="LoadAppsAsync" />
+    }
+
     @if (_loading && data is null)
     {
         <LoadingSkeleton Variant="cards" TileCount="6" AriaLabel="Loading portfolio" />
-    }
-    else if (!string.IsNullOrWhiteSpace(_loadError))
-    {
-        <ErrorRetryBanner Title="The app list could not be updated." Message="@_loadError" OnRetry="LoadAppsAsync" />
     }
     else if (data?.Apps.Count == 0)
     {
@@ -91,14 +97,26 @@
     private bool _loading;
     private string? _loadError;
 
-    // Auto-refresh bookkeeping — the inventory reloads every 5 minutes so the freshness
-    // badge stays honest without forcing the visitor to interact with the page. The tick
-    // that drives it lives in <PortfolioCountdown>, not here.
+    // Auto-refresh: the inventory reloads every 5 minutes so the freshness badge stays
+    // honest without the visitor touching the page.
+    //
+    // This used to be driven by a <PortfolioCountdown> child that rendered a live
+    // "Next refresh in 4m 58s" label. That label was `display:none` below 640px yet the
+    // component still ticked once a second and re-rendered forever — and on any viewport
+    // it counted down to a background reload the visitor cannot act on or care about. The
+    // countdown is gone; the reload it existed to trigger is now a plain 5-minute timer
+    // that renders nothing.
     private static readonly TimeSpan AutoRefreshEvery = TimeSpan.FromMinutes(5);
-    private DateTime _lastAutoRefresh = DateTime.UtcNow;
-    private DateTime RefreshDueAt => _lastAutoRefresh + AutoRefreshEvery;
+    private Timer? _autoRefreshTimer;
 
-    protected override Task OnInitializedAsync() => LoadAppsAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAppsAsync();
+        _autoRefreshTimer = new Timer(
+            _ => _ = InvokeAsync(LoadAppsAsync), null, AutoRefreshEvery, AutoRefreshEvery);
+    }
+
+    public void Dispose() => _autoRefreshTimer?.Dispose();
 
     private async Task LoadAppsAsync()
     {
@@ -121,9 +139,6 @@
         }
         finally
         {
-            // Re-arm the countdown even on failure, otherwise a single failed reload
-            // leaves DueAt in the past and the child fires on every tick.
-            _lastAutoRefresh = DateTime.UtcNow;
             _loading = false;
         }
     }

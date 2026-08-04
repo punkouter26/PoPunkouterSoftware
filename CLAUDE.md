@@ -17,22 +17,25 @@ This file covers commands and the cross-file data flow that AGENT.MD does not sp
 # Build (TreatWarningsAsErrors is ON solution-wide — a warning fails the build)
 dotnet build PoPunkouterSoftware.sln
 
-# Fast tier: unit + integration. Integration needs Docker (Testcontainers Azurite).
-dotnet test tests/PoPunkouterSoftware.Tests
+# Fast tier: unit + integration. One project per invocation — `dotnet test` rejects two
+# project paths in one command (MSB1008). Integration needs Docker (Testcontainers Azurite).
+dotnet test tests/PoPunkouterSoftware.Unit
+dotnet test tests/PoPunkouterSoftware.Integration
 
-# A single test / class / namespace
-dotnet test tests/PoPunkouterSoftware.Tests --filter "FullyQualifiedName~GetConfig_ReturnsExactlyTheThreeFieldsTheClientBinds"
-dotnet test tests/PoPunkouterSoftware.Tests --filter "FullyQualifiedName~ConfigEndpointTests"
-dotnet test tests/PoPunkouterSoftware.Tests --filter "FullyQualifiedName~PoPunkouterSoftware.Tests.Unit"
+# A single test / class
+dotnet test tests/PoPunkouterSoftware.Integration --filter "FullyQualifiedName~GetConfig_ReturnsExactlyTheThreeFieldsTheClientBinds"
+dotnet test tests/PoPunkouterSoftware.Integration --filter "FullyQualifiedName~ConfigEndpointTests"
 
 # Run locally. Use this, not `dotnet run` — see the footguns below.
 ./SCRIPTS/run-dev.ps1              # kills stale instance, starts Azurite, watch-run on :8000
 ./SCRIPTS/run-dev.ps1 -NoWatch
 
 # E2E (on demand only, never in CI). Requires the app already running.
-pwsh tests/PoPunkouterSoftware.Tests.E2E/bin/Debug/net10.0/playwright.ps1 install   # once
-dotnet test tests/PoPunkouterSoftware.Tests.E2E                                     # BASE_URL, default http://localhost:8000
-$env:HEADED=1; $env:BROWSER_CHANNEL='chrome'; dotnet test tests/PoPunkouterSoftware.Tests.E2E
+# BASE_URL for both, default http://localhost:8000.
+dotnet test tests/PoPunkouterSoftware.E2EAPI                                      # pure HTTP
+pwsh tests/PoPunkouterSoftware.E2EUI/bin/Debug/net10.0/playwright.ps1 install     # once
+dotnet test tests/PoPunkouterSoftware.E2EUI                                       # Playwright
+$env:HEADED=1; $env:BROWSER_CHANNEL='chrome'; dotnet test tests/PoPunkouterSoftware.E2EUI
 
 # `dotnet clean` leaves obj/ behind. When a build misbehaves for no visible reason:
 Get-ChildItem -Recurse -Directory -Include bin,obj | Remove-Item -Recurse -Force
@@ -84,7 +87,9 @@ Both use `<Type>.<Concern>.cs`. Find the concern, not the file:
   `.Helpers`. The primary constructor is declared in the orchestrator file **and only there**.
 - `AzureDashboard.razor.cs` — state, lifecycle, loading, refresh, SignalR. Projections in
   `.DerivedViews` (priority queue, resource explorer, cleanup candidates), display mapping in
-  `.Presentation`, history in `.Trends`. Markup blocks are components under `Components/Pages/Sections/`.
+  `.Presentation`, history in `.Trends`. Markup blocks are sibling components in the client
+  project root (`AzurePriorityQueue`, `AzureResourceExplorer`, `AzureEvidenceDisclosures`,
+  `AzureHistoryDisclosure`) — the layout is flat, there is no `Components/` tree.
 
 ## Things that will bite you
 
@@ -94,7 +99,14 @@ Both use `<Type>.<Concern>.cs`. Find the concern, not the file:
 - **Scoped CSS does not cross component boundaries.** Blazor stamps the scope attribute only on the
   owning component's own elements. If you move markup from a page into a child component, every
   scoped rule that styled it silently stops applying. `AzureDashboard.razor.css` is written on
-  `.azure-ops-page ::deep …` for exactly this reason — keep new rules in that form.
+  `.azure-ops-page ::deep …` for exactly this reason — keep **every** rule in that form,
+  media-query overrides included. `::deep` also *moves* the scope attribute leftward, so mixing
+  the two forms silently breaks specificity: `.azure-ops-page ::deep .x` compiles to
+  `.azure-ops-page[b-id] .x` (0,3,0) while a bare `.x` compiles to `.x[b-id]` (0,2,0). Media
+  queries add no specificity, so a bare override **loses to its own base rule** and the layout
+  never reflows — that is how the Azure glance grid stayed 3-up at 390px while the responsive
+  rules sat there looking correct. Two E2E tests passed straight through it, because
+  `minmax(0,1fr)` prevents the overflow they check for.
 - **Named `HttpClient`s are pooled and shared.** Never reassign `DefaultRequestHeaders` on an
   instance from `CreateClient(name)`; it leaks the header (including credentials) to every other
   consumer. Set per-call values on the `HttpRequestMessage`.

@@ -12,26 +12,6 @@ namespace PoPunkouterSoftware;
 /// </summary>
 internal static partial class PortfolioEndpoints
 {
-    /// <summary>
-    /// This site itself, which must never appear as a card in its own portfolio.
-    ///
-    /// <para>Filtering has to happen here rather than by dropping the apps.json entry: the
-    /// catalog is only ONE of the two sources merged into the response. Every service the
-    /// Azure scan discovers is also shown (that is what keeps broken apps visible), and this
-    /// site is a real App Service in the same subscription — so it comes back through the
-    /// inventory path no matter what the catalog says.</para>
-    /// </summary>
-    /// <remarks>
-    /// Already in <see cref="NormalizeName"/> form (letters and digits only, lower-cased),
-    /// so both the Azure resource name "app-popunkoutersoftware" and the friendly name
-    /// "PoPunkouterSoftware" collapse onto an entry here.
-    /// </remarks>
-    private static readonly HashSet<string> SelfIdentities =
-        new(StringComparer.Ordinal) { "apppopunkoutersoftware", "popunkoutersoftware" };
-
-    private static bool IsSelf(params string?[] candidateNames) =>
-        candidateNames.Any(n => SelfIdentities.Contains(NormalizeName(n)));
-
     internal static WebApplication MapPortfolioEndpoints(this WebApplication app)
     {
         var portfolio = app.MapGroup("/api/portfolio").WithTags("Portfolio");
@@ -63,30 +43,30 @@ internal static partial class PortfolioEndpoints
         var metadata = await LoadMetadataAsync(env, logger, ct);
         var screenshotVersions = await screenshots.ListVersionsAsync(ct);
         var metaByName = metadata
-            .GroupBy(m => NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(m => PortfolioIdentity.NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.OrderBy(m => StatusRank(m.Status)).First(), StringComparer.OrdinalIgnoreCase);
         var appsByName = new Dictionary<string, PortfolioApp>(StringComparer.OrdinalIgnoreCase);
 
         // Catalog entries marked active are the stable showcase, even when Azure inventory is stale or unavailable.
         foreach (var meta in metadata.Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase)))
         {
-            if (IsSelf(meta.Name))
+            if (PortfolioIdentity.IsExcluded(meta.Name))
                 continue;
-            var key = NormalizeName(meta.Name);
+            var key = PortfolioIdentity.NormalizeName(meta.Name);
             if (appsByName.ContainsKey(key))
                 continue;
-            appsByName[key] = ToPortfolioApp(meta, null, report?.GeneratedAt, screenshotVersions);
+            appsByName[key] = ToPortfolioApp(meta, null, screenshotVersions);
         }
 
         // Every discovered service is also shown, including broken services, and receives catalog metadata by stable name.
         foreach (var service in services)
         {
-            if (IsSelf(service.FriendlyName, service.Name))
+            if (PortfolioIdentity.IsExcluded(service.FriendlyName, service.Name))
                 continue;
             var displayName = string.IsNullOrWhiteSpace(service.FriendlyName) ? service.Name : service.FriendlyName;
-            var key = NormalizeName(displayName);
+            var key = PortfolioIdentity.NormalizeName(displayName);
             metaByName.TryGetValue(key, out var meta);
-            appsByName[key] = ToPortfolioApp(meta, service, report?.GeneratedAt, screenshotVersions);
+            appsByName[key] = ToPortfolioApp(meta, service, screenshotVersions);
         }
 
         var apps = appsByName.Values.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();
@@ -201,7 +181,7 @@ internal static partial class PortfolioEndpoints
     }
 
     private static PortfolioApp ToPortfolioApp(
-        AppMeta? meta, WebService? service, DateTime? generatedAt, IReadOnlyDictionary<string, long> screenshotVersions)
+        AppMeta? meta, WebService? service, IReadOnlyDictionary<string, long> screenshotVersions)
     {
         var name = meta?.Name ?? service?.FriendlyName ?? service?.Name ?? "Unnamed app";
         // The curated catalog URL wins over the scanned one: inventory can lag reality by
@@ -215,22 +195,15 @@ internal static partial class PortfolioEndpoints
 
         return new PortfolioApp
         {
-            Id = meta?.Id ?? service?.Name ?? NormalizeName(name),
+            Id = meta?.Id ?? service?.Name ?? PortfolioIdentity.NormalizeName(name),
             Name = name,
             Description = !string.IsNullOrWhiteSpace(meta?.Description) ? meta.Description :
                 !string.IsNullOrWhiteSpace(service?.Description) ? service.Description : $"Open {name}.",
             Url = url,
-            Category = meta?.Category ?? "app",
             Status = status,
-            InventoryGeneratedAt = generatedAt,
-            Technologies = meta?.Technologies,
-            GithubRepo = meta?.GithubRepo,
             ScreenshotUrl = hasScreenshot ? $"/api/portfolio/screenshots/{host}?v={version}" : null,
         };
     }
-
-    private static string NormalizeName(string? value) =>
-        string.Concat((value ?? "").Where(char.IsLetterOrDigit)).ToLowerInvariant();
 
     private static int StatusRank(string? status) => status?.ToLowerInvariant() switch
     {

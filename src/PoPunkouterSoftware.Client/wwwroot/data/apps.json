@@ -252,19 +252,6 @@
       "githubRepo": "punkouter26/PoRedoImage"
     },
     {
-      "id": "porepolinetracker",
-      "name": "PoRepoLineTracker",
-      "description": "Repository line count tracking tool",
-      "category": "productivity",
-      "status": "disabled",
-      "technologies": [
-        "Azure App Service",
-        "Blazor"
-      ],
-      "url": "https://app-porepolinetracker.azurewebsites.net",
-      "githubRepo": null
-    },
-    {
       "id": "poseereview",
       "name": "PoSeeReview",
       "description": "Review and feedback productivity tool",

@@ -8,7 +8,7 @@
 @inject NotificationService NotificationService
 @inject NavigationManager NavManager
 
-<PageTitle>Po Software — Azure Status</PageTitle>
+<PageTitle>PoPunkouterSoftware — Azure status</PageTitle>
 
 <div class="app-page azure-ops-page">
 @if (_loading)
@@ -32,9 +32,9 @@ else
                 @(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")
                 @if (summary.AttentionCount > 0)
                 {
-                    <RadzenBadge Text="@($"{summary.SecurityFindings + summary.CleanupCandidates} actionable")" IsPill="true"
+                    <RadzenBadge Text="@($"{summary.ActionableCount} actionable")" IsPill="true"
                                   BadgeStyle="BadgeStyle.Warning"
-                                  title="Actionable items exclude the staleness flag itself; they are the security + cleanup count from the JSON." />
+                                  title="Unavailable services plus security and cleanup findings — everything in the headline count except the staleness flag, which is cleared by refreshing rather than by fixing a resource." />
                 }
             </h1>
             <div class="azure-command-meta">
