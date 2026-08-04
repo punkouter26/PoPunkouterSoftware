@@ -1,7 +1,9 @@
 <Project>
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <!-- C# 14: explicit lock types, params collections, ref struct interfaces, field keyword -->
+    <!-- C# 14: NET_RULES §1 mandates C# 15, but the installed .NET 10 SDK
+         (10.0.302 as of 2026-08-03) does not yet expose a C# 15 compiler.
+         Pin to C# 14 now and bump to C# 15 the first time the SDK accepts it. -->
     <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

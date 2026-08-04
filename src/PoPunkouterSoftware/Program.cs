@@ -8,13 +8,7 @@ using OpenTelemetry.Instrumentation.Http;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using PoPunkouterSoftware;
-using PoPunkouterSoftware.Features.Config;
-using PoPunkouterSoftware.Features.Diag;
-using PoPunkouterSoftware.Features.Portfolio;
-using PoPunkouterSoftware.Host;
-using PoPunkouterSoftware.Infrastructure.Azure;
-using PoPunkouterSoftware.Infrastructure.Configuration;
-using PoPunkouterSoftware.Infrastructure.Screenshots;
+using PoPunkouterSoftware.Infrastructure;
 using Radzen;
 using Scalar.AspNetCore;
 using Serilog;
@@ -177,6 +171,23 @@ try
     // so there is no cross-origin caller to authorize. Adding CORS here would be
     // dead configuration and needless attack surface.
 
+    // ─── Authentication / Authorization (NET_RULES §3) ───────────────────────
+    // FakeAuthHandler reads X-Fake-User / X-Fake-Roles and is registered ONLY
+    // outside Production. The handler constructor itself throws on Production
+    // initialization — a guardrail against environmental misconfiguration.
+    // In Production the scheme is absent, so [Authorize] attributes always
+    // fail closed (401 → the management endpoints stay blocked).
+    builder.Services
+        .AddAuthentication(FakeAuthHandler.SchemeName)
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, FakeAuthHandler>(FakeAuthHandler.SchemeName, _ => { });
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("Management", p => p
+            .AddAuthenticationSchemes(FakeAuthHandler.SchemeName)
+            .RequireAuthenticatedUser()
+            .RequireRole(FakeAuthHandler.ManagementRole));
+    });
+
     // ─── HTTP clients for Azure services ──────────────────────────────────────
     builder.Services.AddHttpClient("health")
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
@@ -215,6 +226,16 @@ try
     builder.Services.AddSingleton<IncidentService>();
     builder.Services.AddSingleton<RefreshSessionManager>();
     builder.Services.AddSingleton<ReportRefreshRunner>();
+    builder.Services.AddSingleton<AiTriageService>();
+
+    // ─── Health checks (NET_RULES §3) ─────────────────────────────────────────
+    // One check per external dependency. The /health endpoint renders the
+    // HealthReport and the /diag Blazor page renders the same data with
+    // masked config values.
+    builder.Services.AddHealthChecks()
+        .AddCheck<KeyVaultHealthCheck>("KeyVault", tags: new[] { "external", "kv" })
+        .AddCheck<TableStorageHealthCheck>("TableStorage", tags: new[] { "external", "storage" })
+        .AddCheck<AppInsightsHealthCheck>("ApplicationInsights", tags: new[] { "external", "telemetry" });
 
     // ─── Response compression for dynamic JSON only ───────────────────────────
     // The report/summary/history payloads are large, highly compressible JSON that
@@ -265,6 +286,18 @@ try
             o.AttemptTimeout.Timeout = TimeSpan.FromSeconds(30);
             o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(90);
             o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
+        });
+
+    // ─── HTTP client for Hugging Face Inference API (cheapest viable AI) ─────
+    // Deliberately NO resilience: an AI outage must degrade to "AI summary
+    // unavailable", not retry-storm the model and burn the free-tier quota.
+    // Mirrors the `health` / `azure-probe` deliberate-no-resilience pattern.
+    builder.Services.AddHttpClient(AiTriageService.HttpClientName)
+        .ConfigureHttpClient(c =>
+        {
+            c.BaseAddress = new Uri("https://api-inference.huggingface.co/");
+            c.Timeout = TimeSpan.FromSeconds(15);
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("PoPunkouterSoftware/1.0");
         });
 
     var app = builder.Build();
@@ -325,6 +358,8 @@ try
     // above is the second guard rail; ordering is the first.
     app.UseResponseCompression();
     app.UseAntiforgery();
+    app.UseAuthentication();
+    app.UseAuthorization();
 
     // MapStaticAssets serves compressed + fingerprinted static web assets from the client WASM project.
     // Must be called before MapRazorComponents per framework requirement.
@@ -332,7 +367,7 @@ try
 
     app.MapRazorComponents<PoPunkouterSoftware.App>()
        .AddInteractiveWebAssemblyRenderMode()
-       .AddAdditionalAssemblies(typeof(PoPunkouterSoftware.Client.Components.Layout.MainLayout).Assembly);
+       .AddAdditionalAssemblies(typeof(PoPunkouterSoftware.Client.MainLayout).Assembly);
 
     // ─── OpenAPI / Scalar UI ─────────────────────────────────────────
     app.MapOpenApi();
@@ -375,3 +410,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+

@@ -1,0 +1,146 @@
+@page "/"
+@rendermode WasmRenderModes.Interactive
+@using PoPunkouterSoftware.Shared
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>PoPunkouterSoftware — Apps</PageTitle>
+
+<main id="main-content" class="app-page portfolio-page" tabindex="-1">
+    <header class="portfolio-header">
+        <div>
+            <span class="app-eyebrow">Punkouter Software</span>
+            <h1>Web apps</h1>
+            <p>Small tools and experiments built with .NET and Azure.</p>
+        </div>
+    </header>
+
+    @* Cache-mismatch banner: server BuildId has changed since the WASM bundle loaded,
+       meaning what is on screen was rendered against outdated server state — offer a
+       gentle "reload" that doesn't punish the visitor with a hard refresh. *@
+    @if (data is not null
+         && _buildIdAtLoad is not null
+         && data.BuildId != _buildIdAtLoad
+         && !_buildMismatchDismissed)
+    {
+        <div class="portfolio-build-banner" role="status">
+            <RadzenIcon Icon="cloud_sync" />
+            <div class="portfolio-build-banner__copy">
+                <strong>The dashboard has been updated since this page loaded.</strong>
+                <span>A newer build is live; click "Reload" to pick up the freshest inventory and live status.</span>
+            </div>
+            <button type="button" class="portfolio-build-banner__action" @onclick="HardReloadAsync">Reload</button>
+            <button type="button" class="portfolio-build-banner__dismiss" aria-label="Dismiss update banner" @onclick="@(() => _buildMismatchDismissed = true)">×</button>
+        </div>
+    }
+
+    @if (data is not null && data.Apps.Count > 0)
+    {
+        <div class="portfolio-summary" aria-live="polite">
+            <strong>@data.Apps.Count apps</strong>
+            @if (data.GeneratedAt is DateTime updated)
+            {
+                <span class="@(data.Stale ? "is-stale" : "")" title="@updated.ToString("u")">
+                    Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
+                </span>
+            }
+            @* Self-ticking: isolates the 1 Hz countdown from this page's render tree. *@
+            <PortfolioCountdown DueAt="@RefreshDueAt" OnDue="LoadAppsAsync" />
+            <button type="button" class="portfolio-summary__btn @(data.Stale ? "is-stale" : "")" @onclick="LoadAppsAsync" disabled="@_loading" aria-busy="@_loading">
+                @if (_loading)
+                {
+                    <span class="portfolio-summary__spinner" aria-hidden="true"></span>
+                    <span>Refreshing…</span>
+                }
+                else
+                {
+                    <RadzenIcon Icon="refresh" />
+                    <span>Refresh list</span>
+                }
+            </button>
+        </div>
+    }
+
+    @if (_loading && data is null)
+    {
+        <LoadingSkeleton Variant="cards" TileCount="6" AriaLabel="Loading portfolio" />
+    }
+    else if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <ErrorRetryBanner Title="The app list could not be updated." Message="@_loadError" OnRetry="LoadAppsAsync" />
+    }
+    else if (data?.Apps.Count == 0)
+    {
+        <div class="app-empty-state">No apps are configured yet.</div>
+    }
+    else if (data is not null)
+    {
+        <section class="app-grid cards" aria-label="Web applications">
+            @foreach (var app in data.Apps)
+            {
+                <PortfolioAppCard @key="app.Id" App="app" />
+            }
+        </section>
+    }
+</main>
+
+@code {
+    private PortfolioResponse? data;
+    private long? _buildIdAtLoad;
+    private bool _buildMismatchDismissed;
+    private bool _loading;
+    private string? _loadError;
+
+    // Auto-refresh bookkeeping — the inventory reloads every 5 minutes so the freshness
+    // badge stays honest without forcing the visitor to interact with the page. The tick
+    // that drives it lives in <PortfolioCountdown>, not here.
+    private static readonly TimeSpan AutoRefreshEvery = TimeSpan.FromMinutes(5);
+    private DateTime _lastAutoRefresh = DateTime.UtcNow;
+    private DateTime RefreshDueAt => _lastAutoRefresh + AutoRefreshEvery;
+
+    protected override Task OnInitializedAsync() => LoadAppsAsync();
+
+    private async Task LoadAppsAsync()
+    {
+        if (_loading) return;
+
+        _loading = true;
+        _loadError = null;
+        try
+        {
+            // Per-call budget: the shared HttpClient's 5-minute timeout is sized for the
+            // huge report endpoint; a hung portfolio call should fail in seconds, not minutes.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            data = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.PortfolioResponse, cts.Token);
+            if (_buildIdAtLoad is null && data?.BuildId > 0)
+                _buildIdAtLoad = data.BuildId;
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex.Message;
+        }
+        finally
+        {
+            // Re-arm the countdown even on failure, otherwise a single failed reload
+            // leaves DueAt in the past and the child fires on every tick.
+            _lastAutoRefresh = DateTime.UtcNow;
+            _loading = false;
+        }
+    }
+
+    private async Task HardReloadAsync()
+    {
+        // Refresh inventory view first; if user dismisses without reloading, at least the
+        // data is fresh. If the build id is genuinely different, force a hard reload so
+        // the WASM bundle matches the server.
+        await LoadAppsAsync();
+        try
+        {
+            await JS.InvokeVoidAsync("appHardReload");
+        }
+        catch
+        {
+            // swallow — we re-rendered the latest data above already
+        }
+    }
+}

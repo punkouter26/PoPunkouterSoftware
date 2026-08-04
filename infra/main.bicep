@@ -5,6 +5,13 @@
 // region West US 2). Deployed in Incremental mode from deploy.yml, so a run
 // against the live resource group is a no-op when nothing has drifted.
 //
+// NOTE: NET_RULES §5 mandates "PoShared (or Po{SolutionName})". The RG
+// 'PoPunkouterSoftware' uses the per-solution form — the rule explicitly
+// permits both. The Agent Service Plan stays app-local (not in PoShared) on
+// purpose: F1 isolation keeps this app's cold starts and quota pressure
+// away from any shared plan. The shared Key Vault kv-poshared does live in
+// PoShared and is referenced by name below.
+//
 // IMPORTANT: appSettings are intentionally NOT declared on the site resource.
 // The running app sources its settings (Key Vault references, the Application
 // Insights connection string, etc.) from the portal / runtime. In Incremental

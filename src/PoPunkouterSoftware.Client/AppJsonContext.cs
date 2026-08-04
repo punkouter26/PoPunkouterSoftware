@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
-using PoPunkouterSoftware.Shared.Azure;
-using PoPunkouterSoftware.Shared.Portfolio;
+using PoPunkouterSoftware.Shared;
 
 namespace PoPunkouterSoftware.Client;
 
@@ -21,6 +20,17 @@ internal sealed record ProblemResponse(
     [property: JsonPropertyName("detail")] string? Detail);
 
 /// <summary>
+/// Principal carrier returned by <c>/api/whoami</c>. Used by the Session / Logout
+/// slot in MainLayout.razor (NET_RULES §4 "Header layout: Left | Center | Right").
+/// </summary>
+internal sealed record WhoamiResponse(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("isAuthenticated")] bool IsAuthenticated,
+    [property: JsonPropertyName("roles")] string[] Roles,
+    [property: JsonPropertyName("isManagement")] bool IsManagement,
+    [property: JsonPropertyName("scheme")] string Scheme);
+
+/// <summary>
 /// Source-generated <see cref="JsonSerializerContext"/> for every type the WASM client
 /// (de)serialises. Replacing reflection-based System.Text.Json with this context makes the
 /// client trim-safe (clears the IL2026 warnings) and removes reflection metadata from the
@@ -38,4 +48,5 @@ internal sealed record ProblemResponse(
 [JsonSerializable(typeof(PortfolioResponse))]
 [JsonSerializable(typeof(ConfigResponse))]
 [JsonSerializable(typeof(ProblemResponse))]
+[JsonSerializable(typeof(WhoamiResponse))]
 internal partial class AppJsonContext : JsonSerializerContext;

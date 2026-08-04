@@ -1,0 +1,169 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace PoPunkouterSoftware.Infrastructure;
+
+/// <summary>
+/// Background service that periodically pings each Azure web service URL to warm cold-start
+/// instances. Its output is telemetry, not a queryable snapshot: each ping records the
+/// <c>pinger_service_up</c> gauge and <c>pinger_response_time_ms</c> histogram, and each
+/// completed sweep bumps <c>pinger_sweeps_total</c> as a liveness heartbeat.
+///
+/// <para>The results were previously also cached in IMemoryCache to back a
+/// <c>/api/pinger/status</c> endpoint, along with a per-service toggle. No UI ever read
+/// either, so the cache, the snapshot accessor and the toggle were removed — the metrics
+/// are the product.</para>
+/// </summary>
+public sealed partial class ServicePingerService : BackgroundService
+{
+    // Source-generated logging — zero boxing/allocation on the per-ping hot path.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Pinger disabled by configuration.")]
+    private partial void LogDisabled();
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Pinger: {Name} -> {Status} ({Ms} ms)")]
+    private partial void LogPing(string name, string status, long ms);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Pinger sweep complete: {Total} services probed")]
+    private partial void LogSweepComplete(int total);
+
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<ServicePingerService> _logger;
+    private readonly TimeSpan _interval;
+    private readonly bool _enabled;
+    private readonly int _maxConcurrency;
+
+    public ServicePingerService(
+        IServiceScopeFactory scopeFactory,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration config,
+        ILogger<ServicePingerService> logger)
+    {
+        _scopeFactory = scopeFactory;
+        _httpClientFactory = httpClientFactory;
+        _logger = logger;
+        _interval = TimeSpan.FromMinutes(config.GetValue<int>("Pinger:IntervalMinutes", 10));
+        _enabled = config.GetValue("Pinger:Enabled", true);
+        _maxConcurrency = Math.Clamp(config.GetValue("Pinger:MaxConcurrency", 4), 1, 12);
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (!_enabled)
+        {
+            LogDisabled();
+            return;
+        }
+
+        try
+        {
+            // Delay 30 s on startup so the app fully initialises before the first sweep.
+            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await PingAllServicesAsync(stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    throw; // graceful shutdown — handled by the outer catch
+                }
+                catch (Exception ex)
+                {
+                    // A single failed sweep must never escape ExecuteAsync: the default
+                    // BackgroundServiceExceptionBehavior is StopHost, so an unguarded throw
+                    // here would take down the whole web app (or silently end pinging).
+                    _logger.LogError(ex, "Pinger sweep failed — retrying on the next interval");
+                }
+
+                await Task.Delay(_interval, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal graceful shutdown — host cancellation token fired. Do not rethrow.
+        }
+    }
+
+    private async Task PingAllServicesAsync(CancellationToken ct)
+    {
+        // Load the latest report to get the current service list.
+        using var scope = _scopeFactory.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<AzureReportStore>();
+        var reportResult = await repository.LoadAsync(ct);
+        if (!reportResult.IsSuccess || reportResult.Value?.WebServices is null)
+            return;
+
+        var services = reportResult.Value.WebServices.Services;
+        var client = _httpClientFactory.CreateClient("azure-probe");
+
+        using var gate = new SemaphoreSlim(_maxConcurrency);
+        var tasks = services
+            .Where(s => !string.IsNullOrWhiteSpace(s.Url))
+            .Select(async svc =>
+        {
+            await gate.WaitAsync(ct);
+            try
+            {
+                var result = await PingOneAsync(client, svc.Name, svc.FriendlyName, svc.Url!, ct);
+                LogPing(svc.Name, result.Status, result.ResponseTimeMs);
+
+                // Metrics: per-service up/down gauge + response-time histogram so reachability
+                // and latency trends are alertable without parsing logs. (questions 4 & 6)
+                var serviceTag = new KeyValuePair<string, object?>("service", svc.Name);
+                Telemetry.PingerServiceUp.Record(result.Status == "reachable" ? 1 : 0, serviceTag);
+                Telemetry.PingerResponseTime.Record(result.ResponseTimeMs, serviceTag);
+                return result;
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+
+        // Heartbeat: a flat sweep-counter rate means the background loop has silently died. (question 5)
+        Telemetry.PingerSweeps.Add(1);
+        LogSweepComplete(results.Length);
+    }
+
+    private static async Task<PingResult> PingOneAsync(
+        HttpClient client, string name, string friendlyName, string url, CancellationToken ct)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(14));
+            var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            sw.Stop();
+            var status = (int)resp.StatusCode < 500 ? "reachable" : "degraded";
+            return new PingResult(name, friendlyName, url, status, sw.ElapsedMilliseconds, null, DateTime.UtcNow);
+        }
+        catch (OperationCanceledException)
+        {
+            sw.Stop();
+            return new PingResult(name, friendlyName, url, "timeout", sw.ElapsedMilliseconds, "Request timed out", DateTime.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            return new PingResult(name, friendlyName, url, "unreachable", sw.ElapsedMilliseconds, ex.Message, DateTime.UtcNow);
+        }
+    }
+
+}
+
+public sealed record PingResult(
+    string Name,
+    string FriendlyName,
+    string Url,
+    string Status,
+    long ResponseTimeMs,
+    string? Error,
+    DateTime PingedAt);
