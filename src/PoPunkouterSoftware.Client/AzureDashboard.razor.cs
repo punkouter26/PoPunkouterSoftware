@@ -22,6 +22,13 @@ public partial class AzureDashboard
     private bool _advancedLoading;
     private string? _advancedError;
 
+    // ── AI triage (see AzureAiSummary.razor) ────────────────────────────────────
+    // The persisted per-scan summary comes from whichever of the two read contracts is
+    // freshest in view: the full report once advanced diagnostics has been opened, otherwise
+    // the compact first-paint summary — both project the identical AzureReport.AiSummary
+    // field, so this never disagrees with what the server most recently computed.
+    private AiSummaryResult? CurrentAiSummary => report?.AiSummary ?? _summary?.AiSummary;
+
     // ── Memoized analysis model ────────────────────────────────────────────────
     // These were previously expression-bodied properties that re-ran the full
     // GroupBy/median/sort pipeline on EVERY property access — and the markup reads
@@ -40,6 +47,16 @@ public partial class AzureDashboard
 
     private static readonly string[] ResourceViews = ["All", "Unhealthy", "Waste", "Security", "Drift"];
     private string _resourceView = "All";
+
+    // ── Snoozes ─────────────────────────────────────────────────────────────────
+    // Findings have no server identity (see SnoozeStore / AGENT.MD "Snoozes"), so the
+    // priority queue and cleanup list are filtered client-side against each item's own
+    // dedup key — the same formats DerivedViews already groups on ({Source}|{Item} and
+    // {Type}|{ResourceGroup}|{Name}), so a re-scan naturally re-matches a snooze to the
+    // same finding without the server ever knowing what a "finding" is.
+    private const int DefaultSnoozeDurationDays = 7;
+    private List<SnoozeEntry> _activeSnoozes = new();
+    private HashSet<string> _snoozedKeys = new(StringComparer.OrdinalIgnoreCase);
 
     // ── Responsive branch ──────────────────────────────────────────────────────
     // The resource explorer renders as a virtualized grid on wide viewports and as a
@@ -76,7 +93,11 @@ public partial class AzureDashboard
     private void RebuildDerivedState()
     {
         _consolidatedServices = BuildConsolidatedServices(report);
-        _priorityQueue = BuildPriorityQueue(report, _consolidatedServices, safeToRemove);
+        // Post-filter rather than threading _snoozedKeys through the static/pure builder —
+        // BuildPriorityQueue stays testable without a renderer, and this is the smaller change.
+        _priorityQueue = BuildPriorityQueue(report, _consolidatedServices, safeToRemove)
+            .Where(i => !_snoozedKeys.Contains($"{i.Source}|{i.Item}"))
+            .ToList();
         _resourceExplorerItems = BuildResourceExplorerItems(report, _consolidatedServices, safeToRemove);
         ApplyResourceFilter();
     }
@@ -161,6 +182,82 @@ public partial class AzureDashboard
             NotificationService.Notify(NotificationSeverity.Error, "Copy failed", "The clipboard is unavailable — copy the command manually.");
     }
 
+    // ── Snooze / un-snooze ────────────────────────────────────────────────────
+    private async Task LoadSnoozesAsync()
+    {
+        try
+        {
+            var snoozes = await Http.GetFromJsonAsync("/api/diag/snoozes", AppJsonContext.Default.ListSnoozeEntry);
+            _activeSnoozes = snoozes ?? new List<SnoozeEntry>();
+        }
+        catch
+        {
+            // Non-fatal: an empty/stale snooze list just means nothing is hidden — the
+            // priority queue and cleanup list simply show everything, never a 500.
+            _activeSnoozes = new List<SnoozeEntry>();
+        }
+        _snoozedKeys = _activeSnoozes.Select(s => s.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task SnoozeAsync(string key)
+    {
+        try
+        {
+            var payload = JsonSerializer.Serialize(
+                new SnoozeRequest(key, DefaultSnoozeDurationDays, null), AppJsonContext.Default.SnoozeRequest);
+            using var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
+            var resp = await Http.PostAsync("/api/diag/snooze", content);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var detail = await ReadProblemDetailAsync(resp);
+                NotificationService.Notify(NotificationSeverity.Error, "Snooze failed",
+                    detail ?? $"Could not snooze this item ({(int)resp.StatusCode}).");
+                return;
+            }
+
+            await LoadSnoozesAsync();
+            RebuildDerivedState();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Snoozed",
+                Detail = $"Hidden for {DefaultSnoozeDurationDays} days — click to undo.",
+                Duration = 6000,
+                Click = msg => { _ = UnsnoozeAsync(key); },
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Snooze failed", ex.Message);
+        }
+    }
+
+    private Task SnoozePriorityItemAsync(PriorityQueueItem item) =>
+        SnoozeAsync($"{item.Source}|{item.Item}");
+
+    private Task SnoozeCleanupItemAsync(SafeToRemoveItem item) =>
+        SnoozeAsync($"{item.Type}|{item.ResourceGroup}|{item.Name}");
+
+    private async Task UnsnoozeAsync(string key)
+    {
+        try
+        {
+            var payload = JsonSerializer.Serialize(new SnoozeRemoveRequest(key), AppJsonContext.Default.SnoozeRemoveRequest);
+            using var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
+            await Http.PostAsync("/api/diag/snooze/remove", content);
+            await LoadSnoozesAsync();
+            RebuildDerivedState();
+            await InvokeAsync(StateHasChanged);
+            NotificationService.Notify(NotificationSeverity.Success, "Un-snoozed", "The item is back in view.");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Un-snooze failed", ex.Message);
+        }
+    }
+
+    private Task UnsnoozeEntryAsync(SnoozeEntry entry) => UnsnoozeAsync(entry.Key);
+
     // ── SignalR hub connection ─────────────────────────────────────────────────
     private HubConnection? _hub;
 
@@ -226,6 +323,9 @@ public partial class AzureDashboard
 
             services = report.WebServices?.Services ?? new List<WebService>();
             safeToRemove = BuildSafeToRemove(report);
+            // Snoozes can expire between visits, so this is refreshed on every report
+            // load/refresh, not just once at startup.
+            await LoadSnoozesAsync();
             RebuildDerivedState();
             await LoadHistoryAsync();
         }
@@ -372,8 +472,6 @@ public partial class AzureDashboard
                     if (latest is not null && latest.GeneratedAt != initialGeneratedAt)
                     {
                         _refreshing = false;
-                        _progressPercent = 100;
-                        _progressStep = "Done";
                         break;
                     }
                 }

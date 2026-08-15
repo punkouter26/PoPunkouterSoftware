@@ -70,6 +70,8 @@ else
         </div>
     </header>
 
+    <AzureAiSummary Summary="@CurrentAiSummary" AttentionItems="@summary.AttentionItems" />
+
     @if (_refreshing)
     {
         <section class="azure-refresh-progress" aria-live="polite">
@@ -200,7 +202,10 @@ else
 
             <AzurePriorityQueue Items="@PriorityQueue"
                                 BadgeFor="@ActionabilityBadge"
-                                OnCopyCommand="@CopyText" />
+                                OnCopyCommand="@CopyText"
+                                OnSnooze="@SnoozePriorityItemAsync" />
+
+            <AzureSnoozedItems Items="@_activeSnoozes" OnUnsnooze="@UnsnoozeEntryAsync" />
 
             <AzureResourceExplorer Items="@FilteredResourceExplorerItems"
                                    TotalCount="@ResourceExplorerItems.Count"
@@ -214,7 +219,9 @@ else
             <AzureEvidenceDisclosures Report="@currentReport"
                                       CleanupCandidates="@CleanupCandidates"
                                       SecurityIssueCount="@securityIssueCount"
-                                      StepTimingTotalMs="@StepTimingTotalMs">
+                                      StepTimingTotalMs="@StepTimingTotalMs"
+                                      ConfidenceBadgeFor="@ConfidenceBadge"
+                                      OnSnooze="@SnoozeCleanupItemAsync">
                 <HistorySection>
                     <AzureHistoryDisclosure StatusHistory="@ServiceStatusHistory"
                                             CostHistory="@CostHistory"

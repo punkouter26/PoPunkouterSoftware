@@ -1,11 +1,20 @@
 @page "/"
 @rendermode WasmRenderModes.Interactive
 @using PoPunkouterSoftware.Shared
-@implements IDisposable
+@implements IAsyncDisposable
 @inject HttpClient Http
 @inject IJSRuntime JS
 
 <PageTitle>PoPunkouterSoftware — Web apps</PageTitle>
+
+@* 3D starfield/globe backdrop — Three.js, catalog page only. Positioned behind <main>
+   via Index.razor.css (fixed, negative z-index — same stacking tier as the shared
+   #app-gpu-backdrop layer, which js/starfield-backdrop.js suppresses for as long as
+   this canvas is alive so the two WebGL layers never both animate at once). Wired up
+   from OnAfterRenderAsync/DisposeAsync below; see js/starfield-backdrop.js for the
+   cost controls (lazy-loaded Three.js, capped frame rate, full pause on
+   hidden/blur/reduced-motion, graceful no-WebGL degradation). *@
+<canvas id="catalog-starfield" class="catalog-starfield" aria-hidden="true"></canvas>
 
 <main id="main-content" class="app-page portfolio-page" tabindex="-1">
     <header class="portfolio-header">
@@ -116,7 +125,40 @@
             _ => _ = InvokeAsync(LoadAppsAsync), null, AutoRefreshEvery, AutoRefreshEvery);
     }
 
-    public void Dispose() => _autoRefreshTimer?.Dispose();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        // Best-effort: a WebGL/Three.js failure must never break page load. All real
+        // failure handling (no-WebGL, script-load errors, reduced-motion) lives inside
+        // starfieldBackdrop.init() itself and resolves normally either way — this only
+        // guards against the JS interop call itself failing (e.g. the module script
+        // did not load).
+        try
+        {
+            await JS.InvokeVoidAsync("starfieldBackdrop.init");
+        }
+        catch (JSException)
+        {
+            // Decorative layer only — the catalog is fully usable without it.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _autoRefreshTimer?.Dispose();
+
+        // Best-effort: the circuit may already be gone during teardown (mirrors
+        // AzureDashboard.razor.cs's appMedia.unregister cleanup).
+        try
+        {
+            await JS.InvokeVoidAsync("starfieldBackdrop.dispose");
+        }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+        catch (TaskCanceledException) { }
+    }
 
     private async Task LoadAppsAsync()
     {

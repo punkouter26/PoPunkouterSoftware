@@ -1,0 +1,45 @@
+@using PoPunkouterSoftware.Shared
+@using Radzen
+
+@* Items disappearing from the priority queue / cleanup list with no way back is bad UX —
+   this is that way back. Mirrors AzureHistoryDisclosure's <details> pattern: collapsed by
+   default, cheap to render, no dedicated sub-component tree. *@
+<details class="azure-disclosure">
+    <summary class="azure-disclosure-heading">
+        <span><RadzenIcon Icon="snooze" /><strong>Snoozed (@Items.Count)</strong></span>
+    </summary>
+    <div class="azure-disclosure-body">
+        @if (Items.Count == 0)
+        {
+            <div class="azure-compact-state">Nothing is snoozed.</div>
+        }
+        @foreach (var entry in Items)
+        {
+            <article class="azure-finding" @key="entry.Key">
+                <div class="azure-finding-name"><strong>@entry.Key</strong></div>
+                <span>@(string.IsNullOrWhiteSpace(entry.Reason) ? "No reason given" : entry.Reason)</span>
+                <p>Expires @ExpiresLabel(entry.ExpiresAtUtc)</p>
+                <button class="azure-snooze-button" @onclick="@(() => OnUnsnooze.InvokeAsync(entry))" title="Bring this item back now">
+                    <RadzenIcon Icon="alarm_off" /><span>Un-snooze</span>
+                </button>
+            </article>
+        }
+    </div>
+</details>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<SnoozeEntry> Items { get; set; } = [];
+    [Parameter] public EventCallback<SnoozeEntry> OnUnsnooze { get; set; }
+
+    /// <summary>"in Xm/Xh/Xd" for a future expiry, reusing RelativeTime.Format's magnitude
+    /// bucketing (built for past timestamps, hence the "ago" -> "in" flip) rather than
+    /// re-implementing the same m/h/d thresholds here.</summary>
+    private static string ExpiresLabel(DateTimeOffset expiresAtUtc)
+    {
+        var remaining = expiresAtUtc.UtcDateTime - DateTime.UtcNow;
+        if (remaining <= TimeSpan.Zero)
+            return "shortly";
+        var formatted = RelativeTime.Format(remaining);
+        return "in " + formatted.Replace(" ago", "");
+    }
+}

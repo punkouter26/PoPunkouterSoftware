@@ -1,6 +1,6 @@
 namespace PoPunkouterSoftware.Shared;
 
-// Spend: 30-day totals, top drivers, the daily series, burn rate, and free-tier headroom.
+// Spend: 30-day totals, top drivers, the daily series, and burn rate.
 // GoF: Value Object - all records are immutable data carriers with no behaviour.
 
 public record CostInfo
@@ -26,19 +26,3 @@ public record BurnRateInfo
     public string? ProjectedFormatted { get; init; }
 }
 
-public record FreeTierInfo
-{
-    public List<FreeTierItem> OnFree { get; init; } = new();
-    public List<FreeTierItem> CanGoFree { get; init; } = new();
-}
-
-public record FreeTierItem
-{
-    public string Name { get; init; } = "";
-    public string Label { get; init; } = "";
-    public string CurrentSku { get; init; } = "";
-    public string? FreeSku { get; init; }
-    public string? FreeSkuLabel { get; init; }
-    public string? ResourceGroup { get; init; }
-    public string? Recommendation { get; init; }
-}

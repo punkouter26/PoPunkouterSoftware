@@ -44,6 +44,17 @@ public partial class AzureDashboard
         _ => BadgeStyle.Info,
     };
 
+    /// <summary>Maps a cleanup-candidate's confidence (SafeToRemoveItem.Confidence) to its
+    /// badge colour, mirroring ActionabilityBadge/ExplorerStatusBadge above — used by the
+    /// shared SeverityBadge component in AzureEvidenceDisclosures' cleanup-evidence list.</summary>
+    private static BadgeStyle ConfidenceBadge(string? confidence) => confidence?.ToLowerInvariant() switch
+    {
+        "high" => BadgeStyle.Warning,
+        "medium" => BadgeStyle.Info,
+        "low" => BadgeStyle.Secondary,
+        _ => BadgeStyle.Secondary,
+    };
+
     private static string RiskClass(string risk) => risk switch
     {
         var value when value.Contains("Security", StringComparison.OrdinalIgnoreCase) => "danger",

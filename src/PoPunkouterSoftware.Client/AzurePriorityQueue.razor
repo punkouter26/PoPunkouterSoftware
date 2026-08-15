@@ -18,9 +18,9 @@
         <div class="azure-attention-list">
             @foreach (var item in Items)
             {
-                <article class="azure-attention-item" @key="item.Item">
+                <article class="azure-attention-item" @key="@($"{item.Source}|{item.Item}")">
                     <div class="azure-item-heading">
-                        <RadzenBadge Text="@item.Actionability" IsPill="true" BadgeStyle="@BadgeFor(item.Actionability)" />
+                        <SeverityBadge Text="@item.Actionability" Style="@BadgeFor(item.Actionability)" />
                         <strong>@item.Item</strong>
                         <span class="azure-attention-reason">@item.Reason</span>
                         <span class="azure-impact-score">Impact @item.ImpactScore</span>
@@ -32,13 +32,19 @@
                             <div><dt>Owner</dt><dd>@item.Owner</dd></div>
                             <div><dt>Environment</dt><dd>@item.Environment</dd></div>
                         </dl>
-                        @if (!string.IsNullOrWhiteSpace(item.Command))
-                        {
-                            <button class="azure-copy-command" @onclick="@(() => OnCopyCommand.InvokeAsync(item.Command))"
-                                    title="Copy Azure CLI command">
-                                <code>@item.Command</code><RadzenIcon Icon="content_copy" />
+                        <div class="azure-item-actions">
+                            @if (!string.IsNullOrWhiteSpace(item.Command))
+                            {
+                                <button class="azure-copy-command" @onclick="@(() => OnCopyCommand.InvokeAsync(item.Command))"
+                                        title="Copy Azure CLI command">
+                                    <code>@item.Command</code><RadzenIcon Icon="content_copy" />
+                                </button>
+                            }
+                            <button class="azure-snooze-button" @onclick="@(() => OnSnooze.InvokeAsync(item))"
+                                    title="Hide this item from the queue for a few days">
+                                <RadzenIcon Icon="snooze" /><span>Snooze</span>
                             </button>
-                        }
+                        </div>
                     </div>
                 </article>
             }
@@ -54,5 +60,10 @@
     [Parameter, EditorRequired] public Func<string?, BadgeStyle> BadgeFor { get; set; } = default!;
 
     [Parameter] public EventCallback<string> OnCopyCommand { get; set; }
+
+    /// <summary>Snoozes this item for a few days — the page computes its dedup key
+    /// (<c>{Source}|{Item}</c>, matching AzureDashboard.DerivedViews' grouping key) and
+    /// posts it to <c>/api/diag/snooze</c>.</summary>
+    [Parameter] public EventCallback<PriorityQueueItem> OnSnooze { get; set; }
 }
 

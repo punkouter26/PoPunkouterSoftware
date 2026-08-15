@@ -28,6 +28,13 @@ public record OpsSummary
     public List<OpsMetricPoint> ResponseTimes { get; init; } = new();
     public List<OpsMetricPoint> CostHistory { get; init; } = new();
     public List<string> AttentionItems { get; init; } = new();
+
+    /// <summary>
+    /// The precomputed AI (or rule-based) triage paragraph for the latest scan — projected
+    /// straight from <see cref="AzureReport.AiSummary"/> so the first-paint contract carries
+    /// it without shipping the full report graph. Null before any scan has populated it.
+    /// </summary>
+    public AiSummaryResult? AiSummary { get; init; }
 }
 
 public record OpsMetricPoint(string Label, double Value);

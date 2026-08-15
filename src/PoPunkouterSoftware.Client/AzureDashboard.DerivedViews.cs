@@ -12,8 +12,14 @@ namespace PoPunkouterSoftware.Client;
 // portfolio on Index.razor, which made it unfindable.)
 public partial class AzureDashboard
 {
+    // Filtered against _snoozedKeys here rather than at the safeToRemove/BuildSafeToRemove
+    // source: safeToRemove also feeds BuildPriorityQueue (as "SafeToRemove"-sourced items,
+    // keyed "{Source}|{Item}") and BuildResourceExplorerItems' "Waste" risk flag — neither of
+    // which should be affected by a snooze scoped to this list's own dedup key
+    // ({Type}|{ResourceGroup}|{Name}).
     private List<SafeToRemoveItem> CleanupCandidates =>
         safeToRemove
+            .Where(i => !_snoozedKeys.Contains($"{i.Type}|{i.ResourceGroup}|{i.Name}"))
             .OrderBy(i => SeverityLevel.Rank(i.Confidence))
             .ThenBy(i => i.Type)
             .ThenBy(i => i.Name)

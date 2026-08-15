@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
@@ -123,6 +125,124 @@ public sealed class AiTriageService
                 Model: model,
                 Reason: "exception");
         }
+    }
+
+    /// <summary>
+    /// The scan-time entry point (called by <c>ReportRefreshRunner</c>): decides whether the
+    /// Hugging Face model actually needs to run this scan, and always returns a populated
+    /// <see cref="AiSummaryResult"/> — the dashboard never sees a dead "AI summary
+    /// unavailable" state.
+    ///
+    /// <para>Skips the model call (Source <c>"cached"</c>) when <paramref name="previous"/>
+    /// was itself a real generation (<c>Source == "ai"</c>) and the attention items hash is
+    /// unchanged since that run — an unattended fleet with nothing new to report should not
+    /// burn the free-tier HF quota every scan. Any other case (first scan, attention items
+    /// changed, or the previous summary was itself a fallback) calls the model for real.</para>
+    /// </summary>
+    public async Task<AiSummaryResult> GenerateSummaryAsync(
+        IReadOnlyList<string>? attentionItems, AiSummaryResult? previous, CancellationToken ct)
+    {
+        var hash = ComputeAttentionHash(attentionItems);
+        var now = DateTimeOffset.UtcNow;
+
+        if (previous is { Source: "ai" } && previous.AttentionHash == hash)
+        {
+            return previous with { Source = "cached", GeneratedAtUtc = now };
+        }
+
+        if (!IsEnabled)
+        {
+            return new AiSummaryResult
+            {
+                Text = BuildTemplateFallback(attentionItems),
+                Source = "disabled",
+                Model = null,
+                GeneratedAtUtc = now,
+                AttentionHash = hash,
+            };
+        }
+
+        var result = await SummarizeAsync(new AiTriageRequest(attentionItems), ct);
+        if (result.Available && !string.IsNullOrWhiteSpace(result.Summary))
+        {
+            return new AiSummaryResult
+            {
+                Text = result.Summary!,
+                Source = "ai",
+                Model = result.Model,
+                GeneratedAtUtc = now,
+                AttentionHash = hash,
+            };
+        }
+
+        return new AiSummaryResult
+        {
+            Text = BuildTemplateFallback(attentionItems),
+            Source = "template-fallback",
+            Model = result.Model,
+            GeneratedAtUtc = now,
+            AttentionHash = hash,
+        };
+    }
+
+    /// <summary>
+    /// Pure, no-I/O rule-based one-sentence summary built directly from the attention items
+    /// list — the fallback text whenever the real AI path is disabled or fails, so the
+    /// dashboard always has something useful to show instead of a dead state. Parses the
+    /// fixed formats <see cref="AttentionItemsBuilder"/> produces ("{name} is unavailable",
+    /// "{n} security configuration finding(s)", "{n} cleanup candidate(s)", the staleness
+    /// note) rather than requiring structured counts, so it stays usable from anywhere that
+    /// only has the flat string list (e.g. an ad-hoc <c>POST /api/diag/ai</c> caller).
+    /// </summary>
+    public static string BuildTemplateFallback(IReadOnlyList<string>? attentionItems)
+    {
+        var items = attentionItems ?? Array.Empty<string>();
+        if (items.Count == 0)
+            return "No issues detected. No AI summary available.";
+
+        var unavailableCount = items.Count(i => i.EndsWith(" is unavailable", StringComparison.Ordinal));
+        var securityCount = ExtractLeadingCount(items, "security configuration finding");
+        var cleanupCount = ExtractLeadingCount(items, "cleanup candidate");
+        var isStale = items.Any(i => i.Contains("stale", StringComparison.OrdinalIgnoreCase));
+
+        var parts = new List<string>();
+        if (securityCount > 0)
+            parts.Add($"{securityCount} security finding(s)");
+        if (cleanupCount > 0)
+            parts.Add($"{cleanupCount} cleanup candidate(s)");
+        if (unavailableCount > 0)
+            parts.Add($"{unavailableCount} service(s) unavailable");
+
+        var body = parts.Count > 0
+            ? string.Join(", ", parts) + "."
+            : "Attention items present but not individually categorized.";
+        var staleNote = isStale ? " Azure data may be stale." : "";
+
+        return $"{body}{staleNote} No AI summary available.";
+    }
+
+    private static int ExtractLeadingCount(IReadOnlyList<string> items, string marker)
+    {
+        var match = items.FirstOrDefault(i => i.Contains(marker, StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+            return 0;
+
+        var firstToken = match.Split(' ', 2)[0];
+        return int.TryParse(firstToken, out var n) ? n : 0;
+    }
+
+    /// <summary>
+    /// Pure, no-I/O SHA-256 hex digest of the attention items, joined with a control
+    /// character (U+001F) unlikely to appear in generated text so items containing commas,
+    /// pipes, etc. cannot collide two different lists onto the same hash.
+    /// </summary>
+    public static string ComputeAttentionHash(IReadOnlyList<string>? attentionItems)
+    {
+        const char separator = (char)0x1F; // ASCII "unit separator" -- unlikely to appear in generated text
+        var joined = string.Join(separator, attentionItems ?? Array.Empty<string>());
+        var bytes = Encoding.UTF8.GetBytes(joined);
+        var hash = SHA256.HashData(bytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private sealed record HfResponse(

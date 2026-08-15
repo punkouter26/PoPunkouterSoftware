@@ -12,6 +12,7 @@ public static class TablePartitions
     public const string History = "history";
     public const string HistorySummary = "history-summary";
     public const string Incidents = "incidents";
+    public const string Snoozes = "snoozes";
 }
 
 public static class TableRowKeys

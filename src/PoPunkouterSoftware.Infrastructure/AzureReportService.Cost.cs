@@ -22,7 +22,9 @@ using System.Text.Json;
 namespace PoPunkouterSoftware.Infrastructure;
 
 /// <summary>
-/// Steps 5, 9 and 13: 30-day spend from Cost Management, monthly burn rate, and free-tier analysis.
+/// Steps 5 and 9: 30-day spend from Cost Management and monthly burn rate. Also hosts the
+/// per-service free-tier lookup (<see cref="CheckFreeTierForService"/>) shared with the
+/// orchestrator when it decorates each discovered service.
 /// </summary>
 public partial class AzureReportService
 {
@@ -261,42 +263,6 @@ public partial class AzureReportService
             }
         }
         return null;
-    }
-
-    private static FreeTierInfo AnalyzeFreeTiers(List<GenericResourceData> resources)
-    {
-        var onFree = new List<FreeTierItem>();
-        var canGoFree = new List<FreeTierItem>();
-
-        foreach (var r in resources)
-        {
-            var typeKey = r.ResourceType.ToString();
-            if (!FreeTierMap.TryGetValue(typeKey, out var info))
-                continue;
-
-            var currentSku = r.Sku?.Name?.ToString() ?? r.Kind ?? "unknown";
-            var isOnFree = info.FreeSku is not null &&
-                              string.Equals(currentSku, info.FreeSku, StringComparison.OrdinalIgnoreCase);
-            var canGoToFree = info.FreeSku is not null && !isOnFree;
-
-            var entry = new FreeTierItem
-            {
-                Name = r.Name,
-                Label = info.Label,
-                CurrentSku = currentSku,
-                FreeSku = info.FreeSku,
-                FreeSkuLabel = info.FreeSkuLabel,
-                ResourceGroup = r.Id?.ResourceGroupName,
-                Recommendation = info.Note,
-            };
-
-            if (isOnFree)
-                onFree.Add(entry);
-            else if (canGoToFree)
-                canGoFree.Add(entry);
-        }
-
-        return new FreeTierInfo { OnFree = onFree, CanGoFree = canGoFree };
     }
 
     private static FreeTierCheckInfo? CheckFreeTierForService(string typeKey, string? sku)

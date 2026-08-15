@@ -88,15 +88,6 @@ public record OrphanedResource
     public string? Command { get; init; }
 }
 
-public record AppsJsonDiffInfo
-{
-    public int? CurrentCount { get; init; }
-    public int? DiscoveredCount { get; init; }
-    public List<string> NewApps { get; init; } = new();
-    public List<string> RemovedApps { get; init; } = new();
-    public List<string> UpdatedApps { get; init; } = new();
-}
-
 public record AppInsightsMetric
 {
     public string Name { get; init; } = "";

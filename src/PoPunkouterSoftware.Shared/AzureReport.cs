@@ -9,14 +9,12 @@ public record AzureReport
     public SubscriptionInfo? Subscription { get; init; }
     public WebServicesInfo? WebServices { get; init; }
     public CostInfo? Cost { get; init; }
-    public FreeTierInfo? FreeTier { get; init; }
     public AllResourceSummaryInfo? AllResourceSummary { get; init; }
     public List<SslEntry>? SslExpiry { get; init; }
     public List<ConfigDriftItem>? ConfigDrift { get; init; }
     public List<StorageItem>? StorageInventory { get; init; }
     public List<AiServiceInventoryItem> AiServicesInventory { get; init; } = new();
     public List<LogAnalyticsWorkspaceItem> LogAnalyticsInventory { get; init; } = new();
-    public AppsJsonDiffInfo? AppsJsonDiff { get; init; }
     public List<AppInsightsMetric>? AppInsightsMetrics { get; init; }
     public List<ZombieApp>? ZombieApps { get; init; }
     public List<OrphanedResource>? OrphanedResources { get; init; }
@@ -26,8 +24,12 @@ public record AzureReport
     public ReportDelta? Delta { get; init; }
     /// <summary>Root-cause analysis for each broken or unreachable App Service.</summary>
     public List<ServiceDowntimeDiagnosis>? DowntimeDiagnoses { get; init; }
-    /// <summary>Plan tier recommendations for each analysed service — upgrade/downgrade/keep.</summary>
-    public List<PlanRecommendation> PlanRecommendations { get; init; } = new();
+    /// <summary>
+    /// Precomputed AI (or rule-based fallback) triage paragraph for this scan, attached by
+    /// <c>ReportRefreshRunner</c> before the report is saved. Null only for reports persisted
+    /// before this field existed.
+    /// </summary>
+    public AiSummaryResult? AiSummary { get; init; }
 }
 
 public record SubscriptionInfo { public string Name { get; init; } = ""; }

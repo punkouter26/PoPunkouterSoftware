@@ -38,8 +38,7 @@ public partial class AzureReportService(
     AzureReportStore repository,
     ArmClient arm,
     TokenCredential credential,
-    DowntimeDiagnosisService downtimeDiagnosis,
-    PlanRecommendationService planRecommendation)
+    DowntimeDiagnosisService downtimeDiagnosis)
 {
     private readonly ILogger<AzureReportService> _logger = logger;
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
@@ -49,7 +48,6 @@ public partial class AzureReportService(
     private readonly ArmClient _arm = arm;
     private readonly TokenCredential _credential = credential;
     private readonly DowntimeDiagnosisService _downtimeDiagnosis = downtimeDiagnosis;
-    private readonly PlanRecommendationService _planRecommendation = planRecommendation;
 
     /// <summary>Main orchestrator: discovers services, tests connectivity, fetches metrics, costs, and performs comprehensive Azure health analysis.</summary>
     public async Task<AzureReport> RunAsync(IProgress<(string Step, int Percent)>? progress = null, CancellationToken ct = default)
@@ -150,12 +148,8 @@ public partial class AzureReportService(
         Report("Scanning Log Analytics…", 73);
         var logAnalyticsInv = await RunTimedStepAsync("Scanning Log Analytics", () => GetLogAnalyticsInventoryAsync(allResources, armToken, ct));
 
-        Report("Analysing free tiers & zombies…", 74);
-        var freeTier = AnalyzeFreeTiers(allResources);
+        Report("Detecting zombie apps…", 74);
         var zombies = DetectZombies(connectedSvcs, metricsMap);
-
-        Report("Diffing apps.json…", 77);
-        var appsDiff = await RunTimedStepAsync("Diffing apps.json", () => DiffAppsJsonAsync(connectedSvcs, ct));
 
         Report("Calculating burn rate…", 80);
         var burnRate = await RunTimedStepAsync("Calculating burn rate", () => GetBurnRateAsync(subscriptionId, armToken, ct));
@@ -217,10 +211,6 @@ public partial class AzureReportService(
 
         var webServices = servicesList.Select(s => s.ToWebService()).ToList();
 
-        Report("Generating plan recommendations…", 93);
-        var planRecommendations = _planRecommendation.Analyze(webServices, downtimeDiags, configDrift);
-        _logger.LogInformation("Generated {Count} plan recommendations", planRecommendations.Count);
-
         var appServicePlanInventory = AppServicePlanInventory.BuildPoSharedPlanInventory(
             allResources.Select(r => new ResourceDetail
             {
@@ -243,7 +233,6 @@ public partial class AzureReportService(
                 Services = webServices,
             },
             Cost = costInfo,
-            FreeTier = freeTier,
             AllResourceSummary = new AllResourceSummaryInfo
             {
                 Total = allResources.Count,
@@ -268,7 +257,6 @@ public partial class AzureReportService(
             StorageInventory = storageInv,
             AiServicesInventory = aiServicesInv,
             LogAnalyticsInventory = logAnalyticsInv,
-            AppsJsonDiff = appsDiff,
             AppInsightsMetrics = appInsights,
             ZombieApps = zombies,
             OrphanedResources = orphaned,
@@ -276,7 +264,6 @@ public partial class AzureReportService(
             StepTimings = stepTimings.OrderByDescending(x => x.ElapsedMs).ToList(),
             AppServicePlanInventory = appServicePlanInventory,
             DowntimeDiagnoses = downtimeDiags,
-            PlanRecommendations = planRecommendations,
         };
 
         var delta = ComputeDelta(report, previousReport);

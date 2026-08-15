@@ -350,12 +350,18 @@ a {
     height: 100%;
 }
 
+/* Renders directly inside .app-page on Index.razor with no opaque wrapper (.app-card etc.) —
+   i.e. straight over both backdrop layers (gpu-backdrop.js and, on the catalog page,
+   starfield-backdrop.js). --app-surface-soft is a ~3.5-4% wash meant for nesting inside an
+   already-opaque card; used bare, the moving glow/stars could lighten the background enough
+   to drop the muted text below AA's 4.5:1 floor at their brightest point. --app-surface (92%+
+   opaque in both themes) is the same token every standalone panel in the app already uses. */
 .app-empty-state {
     padding: var(--app-space-lg);
     border: 1px dashed var(--app-border-strong);
     border-radius: var(--app-radius-md);
     color: var(--app-text-muted);
-    background: var(--app-surface-soft);
+    background: var(--app-surface);
 }
 
 .app-note {

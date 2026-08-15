@@ -116,6 +116,13 @@ internal static class DiagEndpoints
         // FeatureFlags:EnableAiSummary switch controls availability. The
         // UI never blocks on this — it renders a disabled "AI summary"
         // expander when the feature is off or the upstream model is down.
+        //
+        // This is the ad-hoc consumer only: the AzureAiSummary component's "Regenerate now"
+        // button calls this route directly to get a fresh, unpersisted paragraph without a
+        // full Azure rescan. The persisted-per-scan summary shown by default on the dashboard
+        // is precomputed by ReportRefreshRunner via AiTriageService.GenerateSummaryAsync (which
+        // calls AiTriageService.SummarizeAsync in-process, not this HTTP route) and flows
+        // through AzureReport.AiSummary / OpsSummary.AiSummary — see AGENT.MD.
         diag.MapPost("/ai", async (AiTriageRequest req, AiTriageService ai, CancellationToken ct) =>
         {
             var result = await ai.SummarizeAsync(req, ct);
@@ -123,6 +130,53 @@ internal static class DiagEndpoints
         })
         .WithName("AiTriage")
         .Produces<AiTriageResult>(StatusCodes.Status200OK);
+
+        // ── Snooze / dismiss a finding ───────────────────────────────────────
+        // Findings have no server-side identity — the client synthesizes its own opaque
+        // key per finding (e.g. "Reliability|my-app-name") and the server only persists,
+        // lists, and expires it. Unprivileged (no .RequireManagementActions()): this is a
+        // personal-preference toggle with zero Azure API calls, same tier as POST /api/diag/ai.
+        const int MaxSnoozeDurationDays = 90;
+        diag.MapPost("/snooze", async (SnoozeRequest req, SnoozeStore store, CancellationToken ct) =>
+        {
+            if (req.DurationDays <= 0 || req.DurationDays > MaxSnoozeDurationDays)
+                return Results.Problem(
+                    detail: $"DurationDays must be between 1 and {MaxSnoozeDurationDays}.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            if (string.IsNullOrWhiteSpace(req.Key))
+                return Results.Problem(detail: "Key is required.", statusCode: StatusCodes.Status400BadRequest);
+
+            var expiresAtUtc = DateTimeOffset.UtcNow.AddDays(req.DurationDays);
+            var result = await store.UpsertAsync(req.Key, expiresAtUtc, req.Reason, ct);
+            if (!result.IsSuccess)
+                return Results.Problem(detail: result.Error ?? "Failed to save snooze.", statusCode: StatusCodes.Status503ServiceUnavailable);
+
+            return Results.Json(result.Value);
+        })
+        .WithName("SnoozeFinding")
+        .Produces<SnoozeEntry>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        diag.MapPost("/snooze/remove", async (SnoozeRemoveRequest req, SnoozeStore store, CancellationToken ct) =>
+        {
+            // Idempotent by design: un-snoozing an already-gone (or never-snoozed) key is
+            // not an error, so the client can call this freely without checking state first.
+            await store.RemoveAsync(req.Key, ct);
+            return Results.Json(new { removed = true });
+        })
+        .WithName("RemoveSnooze");
+
+        diag.MapGet("/snoozes", async (SnoozeStore store, CancellationToken ct) =>
+        {
+            var result = await store.GetActiveAsync(ct);
+            if (!result.IsSuccess)
+                return Results.Problem(detail: result.Error ?? "Failed to load snoozes.", statusCode: StatusCodes.Status503ServiceUnavailable);
+
+            return Results.Json(result.Value ?? new List<SnoozeEntry>());
+        })
+        .WithName("GetActiveSnoozes")
+        .Produces<List<SnoozeEntry>>(StatusCodes.Status200OK);
 
         return app;
     }
@@ -146,34 +200,17 @@ internal static class DiagEndpoints
         // the first attention item on a page the visitor was successfully reading.
         //
         // Counts are recomputed from the filtered list rather than taken from the report's
-        // precomputed ByStatus, which still includes the excluded services.
-        var services = (report.WebServices?.Services ?? new List<WebService>())
-            .Where(s => !PortfolioIdentity.IsExcluded(s.FriendlyName, s.Name))
-            .ToList();
-        var total = services.Count;
-        var active = services.Count(s => ServiceHealth.IsHealthy(s.HttpStatus));
-        var broken = services.Count(s => ServiceHealth.IsBroken(s.HttpStatus));
-        var cleanup = (report.OrphanedResources?.Count ?? 0)
-            + (report.ZombieApps?.Count ?? 0)
-            + report.AppServicePlanInventory.Count(p => p.AppCount == 0);
-        var insecureStorage = (report.StorageInventory ?? new()).Count(s =>
-            s.PublicBlobAccess || !s.HttpsOnly || s.MinTls is "TLS1_0" or "TLS1_1");
-        var criticalDrift = (report.ConfigDrift ?? new()).Count(d =>
-            d.Issues?.Any(i => SeverityLevel.Rank(i.Severity) <= SeverityLevel.Rank(SeverityLevel.High)) == true);
-        var security = insecureStorage + criticalDrift;
-        var attention = new List<string>();
-
-        attention.AddRange(services
-            .Where(s => !ServiceHealth.IsHealthy(s.HttpStatus))
-            .Take(3)
-            .Select(s => $"{(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName)} is unavailable"));
-        if (security > 0)
-            attention.Add($"{security} security configuration finding(s)");
-        if (cleanup > 0)
-            attention.Add($"{cleanup} cleanup candidate(s)");
-        var isStale = PortfolioFreshness.IsStale(report.GeneratedAt, DateTime.UtcNow);
-        if (isStale)
-            attention.Add("Azure data is stale and should be refreshed");
+        // precomputed ByStatus, which still includes the excluded services. Extracted into
+        // AttentionItemsBuilder (Infrastructure) so this read-time projection and
+        // ReportRefreshRunner's scan-time AI precompute build the identical list.
+        var built = AttentionItemsBuilder.Build(report, PortfolioIdentity.IsExcluded);
+        var services = built.Services;
+        var total = built.Total;
+        var active = built.Active;
+        var broken = built.Broken;
+        var cleanup = built.CleanupCandidates;
+        var security = built.SecurityFindings;
+        var isStale = built.IsStale;
 
         return new OpsSummary
         {
@@ -211,7 +248,8 @@ internal static class DiagEndpoints
                 .OrderBy(h => h.GeneratedAt).TakeLast(30)
                 .Select(h => new OpsMetricPoint(h.GeneratedAt.ToString("MMM dd"),
                     Math.Round(h.TotalCost30Days, 2))).ToList(),
-            AttentionItems = attention.Take(5).ToList(),
+            AttentionItems = built.AttentionItems.Take(5).ToList(),
+            AiSummary = report.AiSummary,
         };
     }
 

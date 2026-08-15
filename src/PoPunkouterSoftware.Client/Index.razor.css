@@ -1,170 +1,30 @@
-.portfolio-page {
-    display: grid;
-    gap: var(--app-space-lg);
+/* Catalog-page 3D backdrop canvas (js/starfield-backdrop.js). Scoped CSS is safe here
+   without ::deep — the canvas is Index.razor's own markup, not a child component's, so
+   Blazor stamps the scope attribute directly on it (see AGENT.MD's note on scoped CSS
+   not crossing component boundaries).
+
+   Fixed + a negative z-index puts it in the same stacking tier as the shared
+   #app-gpu-backdrop layer (modern-ui.base.css) — the two never render at once (see
+   js/starfield-backdrop.js), but sharing the tier keeps a future stacking change from
+   silently reintroducing a fight between them. */
+.catalog-starfield {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--app-dur-slow) var(--app-ease-out);
 }
 
-.portfolio-header {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: var(--app-space-md);
-    padding: var(--app-space-2xs) 0 var(--app-space-sm);
-}
-
-.portfolio-header h1 {
-    margin: var(--app-space-3xs) 0 0;
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    line-height: 1;
-}
-
-.portfolio-header p {
-    margin: var(--app-space-2xs) 0 0;
-    color: var(--app-text-muted);
-    max-width: 60ch;
-}
-
-.portfolio-summary {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--app-space-sm);
-    min-height: 38px;
-    color: var(--app-text-soft);
-    font-size: 0.82rem;
-}
-
-.portfolio-summary strong {
-    color: var(--app-text);
-}
-
-.portfolio-summary .is-stale {
-    color: var(--app-accent-warm);
-}
-
-.portfolio-summary__btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--app-space-2xs);
-    margin-left: auto;
-    padding: var(--app-space-2xs) var(--app-space-sm);
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-pill);
-    color: var(--app-text-muted);
-    background: transparent;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: background-color var(--app-dur-fast) var(--app-ease-smooth),
-                color var(--app-dur-fast) var(--app-ease-smooth),
-                border-color var(--app-dur-fast) var(--app-ease-smooth);
-}
-
-.portfolio-summary__btn:hover:not(:disabled) {
-    border-color: var(--app-accent);
-    color: var(--app-text);
-}
-
-.portfolio-summary__btn:disabled {
-    opacity: 0.7;
-    cursor: progress;
-}
-
-.portfolio-summary__btn.is-stale {
-    color: var(--app-accent-warm);
-    border-color: var(--app-warm-edge);
-}
-
-.portfolio-summary__btn.is-stale:hover:not(:disabled) {
-    border-color: var(--app-accent-warm);
-}
-
-.portfolio-summary__spinner {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 2px solid var(--app-border-strong);
-    border-top-color: var(--app-accent);
-    animation: app-spin 0.8s linear infinite;
-    display: inline-block;
-}
-
-.portfolio-build-banner {
-    display: flex;
-    align-items: center;
-    gap: var(--app-space-sm);
-    padding: var(--app-space-sm) var(--app-space-sm);
-    border: 1px solid var(--app-border-strong);
-    border-left: 3px solid var(--app-accent);
-    border-radius: var(--app-radius-md);
-    background: var(--app-surface);
-    color: var(--app-text-muted);
-}
-
-.portfolio-build-banner .material-symbols-outlined,
-.portfolio-build-banner .rz-icon {
-    color: var(--app-accent);
-}
-
-.portfolio-build-banner__copy {
-    display: grid;
-    gap: 0.15rem;
-    line-height: 1.3;
-    flex: 1 1 auto;
-}
-
-.portfolio-build-banner__copy strong {
-    color: var(--app-text);
-}
-
-.portfolio-build-banner__copy span {
-    font-size: 0.78rem;
-}
-
-.portfolio-build-banner__action {
-    padding: var(--app-space-2xs) var(--app-space-sm);
-    border: 1px solid var(--app-accent);
-    border-radius: var(--app-radius-pill);
-    background: transparent;
-    color: var(--app-accent);
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 600;
-    transition: background-color var(--app-dur-fast) var(--app-ease-smooth);
-}
-
-.portfolio-build-banner__action:hover {
-    background: var(--app-accent-wash);
-}
-
-.portfolio-build-banner__dismiss {
-    background: transparent;
-    border: 0;
-    color: var(--app-text-muted);
-    font-size: 1.2rem;
-    cursor: pointer;
-    line-height: 1;
-    padding: var(--app-space-3xs) var(--app-space-2xs);
-}
-
-.portfolio-build-banner__dismiss:hover {
-    color: var(--app-text);
-}
-
-@media (max-width: 640px) {
-    .portfolio-header {
-        align-items: start;
-    }
-
-    .portfolio-header p {
-        max-width: 26ch;
-    }
-
-    .portfolio-build-banner__copy span {
-        display: none;
-    }
+.catalog-starfield.is-ready {
+    opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .portfolio-summary__spinner {
-        animation: none;
+    .catalog-starfield {
+        display: none;
     }
 }

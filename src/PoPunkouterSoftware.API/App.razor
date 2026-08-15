@@ -97,6 +97,12 @@
     </script>
     <script src="js/helpers.js"></script>
     <script src="js/gpu-backdrop.js"></script>
+    @* Small wrapper only (no THREE dependency at parse time) — it lazily fetches
+       lib/three/three.min.js itself, and only when starfieldBackdrop.init() is called
+       from Index.razor. Loading it here costs every route a few KB; the actual ~600KB
+       Three.js payload only ever downloads for a visit to "/". See the file header in
+       js/starfield-backdrop.js for the full cost-scoping rationale. *@
+    <script src="js/starfield-backdrop.js"></script>
     <script src="_framework/blazor.web.js"></script>
     @* Enhanced-navigation callbacks are delivered through Blazor's own listener registry,
        NOT as DOM events — `document.addEventListener('enhancedload', ...)` never fires and

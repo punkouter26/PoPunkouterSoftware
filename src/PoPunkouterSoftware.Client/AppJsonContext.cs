@@ -20,6 +20,17 @@ internal sealed record ProblemResponse(
     [property: JsonPropertyName("detail")] string? Detail);
 
 /// <summary>
+/// Request body for the ad-hoc <c>POST /api/diag/ai</c> call made by
+/// <c>AzureAiSummary</c>'s "Regenerate now" button. Mirrors Infrastructure's
+/// <c>AiTriageRequest</c> shape; declared here (rather than referencing Infrastructure
+/// directly, which the Client project deliberately does not) so it can register with the
+/// source-generated <see cref="AppJsonContext"/> — an anonymous object would force
+/// reflection-based serialization, which fails the trim-safe build.
+/// </summary>
+internal sealed record AiTriageAdHocRequest(
+    [property: JsonPropertyName("attentionItems")] IReadOnlyList<string> AttentionItems);
+
+/// <summary>
 /// Source-generated <see cref="JsonSerializerContext"/> for every type the WASM client
 /// (de)serialises. Replacing reflection-based System.Text.Json with this context makes the
 /// client trim-safe (clears the IL2026 warnings) and removes reflection metadata from the
@@ -33,8 +44,14 @@ internal sealed record ProblemResponse(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AzureReport))]
 [JsonSerializable(typeof(OpsSummary))]
+[JsonSerializable(typeof(AiSummaryResult))]
 [JsonSerializable(typeof(List<HistorySummary>))]
 [JsonSerializable(typeof(PortfolioResponse))]
 [JsonSerializable(typeof(ConfigResponse))]
 [JsonSerializable(typeof(ProblemResponse))]
+[JsonSerializable(typeof(AiTriageAdHocRequest))]
+[JsonSerializable(typeof(SnoozeRequest))]
+[JsonSerializable(typeof(SnoozeRemoveRequest))]
+[JsonSerializable(typeof(SnoozeEntry))]
+[JsonSerializable(typeof(List<SnoozeEntry>))]
 internal partial class AppJsonContext : JsonSerializerContext;

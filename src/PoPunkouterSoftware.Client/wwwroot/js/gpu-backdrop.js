@@ -2,17 +2,27 @@
  * GPU backdrop — a single WebGL compositing layer for the whole app.
  *
  * Replaces the 23 per-card `backdrop-filter` roots that previously dominated mobile
- * GPU cost. Two slow-drifting radial fields are blended in a fragment shader and
- * composited once, behind all content.
+ * GPU cost. Three drifting fields are blended in a fragment shader and composited once,
+ * behind all content: two round radial blobs plus a slower, elongated, band-like third
+ * term (stretched and sheared before the distance falloff) so the layer reads more like
+ * an aurora curtain than two circular glows.
  *
  * Cost controls, in order of impact:
  *   • Renders at 50% resolution — the output is a soft gradient, so the upscale is free.
  *   • Frame rate capped at 30fps; the loop is fully stopped (no rAF) when the tab is
  *     hidden, when the document loses focus, or when the reduced-motion query matches.
- *   • Fragment shader is branch-free and uses six transcendentals per pixel.
+ *   • Fragment shader is branch-free and uses nine transcendentals per pixel.
  *
  * Degradation: if WebGL is unavailable the canvas stays hidden and `data-gpu-backdrop`
  * is never set on <html>, so the CSS grid fallback in modern-ui.base.css remains visible.
+ *
+ * Suppression: the catalog page (js/starfield-backdrop.js) runs its own, unrelated
+ * Three.js WebGL layer and does not want this one competing with it for the same GPU
+ * budget. It sets `document.documentElement.dataset.suppressGpuBackdrop` in
+ * Index.razor's OnAfterRenderAsync (cleared on dispose) rather than reaching in here
+ * directly — this file owns pause/play, the other layer only owns the flag. A
+ * MutationObserver below reacts to that flag exactly like the existing
+ * hidden/blur/reduced-motion signals: full rAF stop, not just an opacity fade.
  */
 (function () {
     'use strict';
@@ -28,6 +38,7 @@
         'uniform float u_time;',
         'uniform vec3 u_c1;',
         'uniform vec3 u_c2;',
+        'uniform vec3 u_c3;',
         'void main() {',
         '  vec2 uv = gl_FragCoord.xy / u_res;',
         '  vec2 p = (uv - 0.5) * vec2(u_res.x / u_res.y, 1.0);',
@@ -38,9 +49,15 @@
         '  float d2 = length(p - o2);',
         '  float g1 = exp(-d1 * d1 * 3.5);',
         '  float g2 = exp(-d2 * d2 * 4.0);',
+        '  float t3 = u_time * 0.021;',
+        '  vec2 o3 = vec2(sin(t3 * 0.8) * 0.55, cos(t3 * 0.5) * 0.18 - 0.08);',
+        '  vec2 p3 = p - o3;',
+        '  p3.x += p3.y * 0.4;',
+        '  float d3 = length(p3 * vec2(2.8, 1.0));',
+        '  float g3 = exp(-d3 * d3 * 2.2) * 0.65;',
         '  float vig = smoothstep(1.15, 0.15, length(p));',
-        '  vec3 col = u_c1 * g1 + u_c2 * g2;',
-        '  gl_FragColor = vec4(col * vig, (g1 + g2) * vig * 0.55);',
+        '  vec3 col = u_c1 * g1 + u_c2 * g2 + u_c3 * g3;',
+        '  gl_FragColor = vec4(col * vig, (g1 + g2 + g3) * vig * 0.55);',
         '}'
     ].join('\n');
 
@@ -126,6 +143,7 @@
         var uTime = gl.getUniformLocation(prog, 'u_time');
         var uC1 = gl.getUniformLocation(prog, 'u_c1');
         var uC2 = gl.getUniformLocation(prog, 'u_c2');
+        var uC3 = gl.getUniformLocation(prog, 'u_c3');
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -133,8 +151,13 @@
         function pushColors() {
             var c1 = readColor('--app-accent-strong', [0.357, 0.486, 0.839]);
             var c2 = readColor('--app-accent-warm', [0.945, 0.714, 0.388]);
+            // Third aurora band reuses the plain `--app-accent` token rather than adding a
+            // new required CSS variable — it already exists in both themes (donut center,
+            // filter chips, …), so no theme can forget to define it.
+            var c3 = readColor('--app-accent', [0.576, 0.706, 0.961]);
             gl.uniform3f(uC1, c1[0], c1[1], c1[2]);
             gl.uniform3f(uC2, c2[0], c2[1], c2[2]);
+            gl.uniform3f(uC3, c3[0], c3[1], c3[2]);
         }
 
         function resize() {
@@ -214,6 +237,29 @@
             }
         };
         if (motion.addEventListener) motion.addEventListener('change', onMotion);
+
+        // Honour the catalog page's opt-out (js/starfield-backdrop.js) while its own
+        // Three.js layer owns the frame — see the file-header comment. A
+        // MutationObserver rather than a poll: the flag flips at most twice per visit
+        // to "/" (mount, then dispose), so an observer costs nothing and reacts on the
+        // same tick as the flag change instead of up to one frame later.
+        var suppressObserver = new MutationObserver(function () {
+            if (document.documentElement.dataset.suppressGpuBackdrop) {
+                pause();
+                canvas.classList.remove('is-ready');
+                document.documentElement.removeAttribute('data-gpu-backdrop');
+                status('suppressed');
+            } else if (!motion.matches && !document.hidden) {
+                document.documentElement.setAttribute('data-gpu-backdrop', '');
+                canvas.classList.add('is-ready');
+                status('ready');
+                play();
+            }
+        });
+        suppressObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-suppress-gpu-backdrop']
+        });
 
         gl.canvas.addEventListener('webglcontextlost', function (e) {
             e.preventDefault();

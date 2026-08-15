@@ -36,7 +36,7 @@
                 <article class="azure-resource-card" @key="item.Name">
                     <div class="azure-resource-card-heading">
                         <strong>@item.Name</strong>
-                        <RadzenBadge Text="@item.Status" BadgeStyle="@StatusBadgeFor(item.Status)" IsPill="true" />
+                        <SeverityBadge Text="@item.Status" Style="@StatusBadgeFor(item.Status)" />
                     </div>
                     <dl>
                         <div><dt>Type</dt><dd>@item.Type</dd></div>
@@ -64,7 +64,7 @@
                     <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Type" Title="Type" Width="150px" />
                     <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResourceGroup" Title="Resource group" Width="160px" />
                     <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Status" Title="Status" Width="115px">
-                        <Template Context="item"><RadzenBadge Text="@item.Status" BadgeStyle="@StatusBadgeFor(item.Status)" IsPill="true" /></Template>
+                        <Template Context="item"><SeverityBadge Text="@item.Status" Style="@StatusBadgeFor(item.Status)" /></Template>
                     </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Risk" Title="Concern" Width="130px">
                         <Template Context="item"><span class="azure-risk-label @RiskClassFor(item.Risk)">@item.Risk</span></Template>

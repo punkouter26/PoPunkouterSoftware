@@ -17,7 +17,8 @@ internal sealed class ReportRefreshRunner(
     IWebHostEnvironment env,
     ILogger<ReportRefreshRunner> logger,
     IHubContext<RefreshHub> hubCtx,
-    RefreshSessionManager session)
+    RefreshSessionManager session,
+    AiTriageService aiTriage)
 {
     /// <summary>
     /// Auto-triggered runs must not retry-storm when scans keep failing (bad credentials,
@@ -112,6 +113,18 @@ internal sealed class ReportRefreshRunner(
                     var previousReport = previousResult.IsSuccess ? previousResult.Value : null;
 
                     var report = await azureService.RunAsync(progress, ct);
+
+                    // AI triage precompute: build the attention items from the fresh report
+                    // (the same logic that projects OpsSummary.AttentionItems, see
+                    // AttentionItemsBuilder) and attach the result to the report before it is
+                    // saved, so it persists through the existing store/file-cache paths with
+                    // no new plumbing. GenerateSummaryAsync reuses the previous scan's summary
+                    // (Source "cached") instead of calling the model when nothing
+                    // attention-worthy changed, and never throws for an AI outage — it always
+                    // returns a populated result (falling back to a rule-based sentence).
+                    var attentionItems = AttentionItemsBuilder.Build(report, PortfolioIdentity.IsExcluded).AttentionItems;
+                    var aiSummary = await aiTriage.GenerateSummaryAsync(attentionItems, previousReport?.AiSummary, ct);
+                    report = report with { AiSummary = aiSummary };
 
                     await store.SaveAsync(report, ct);
 

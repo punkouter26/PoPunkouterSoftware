@@ -49,41 +49,6 @@ public partial class AzureReportService
             })
             .ToList();
 
-    /// <summary>Diffs current discovered services against the snapshot stored in apps.json.</summary>
-    private async Task<AppsJsonDiffInfo?> DiffAppsJsonAsync(List<RawService> services, CancellationToken ct)
-    {
-        try
-        {
-            var path = Path.Combine(_env.WebRootPath, "data", "apps.json");
-            if (!File.Exists(path))
-                return null;
-
-            var json = await File.ReadAllTextAsync(path, ct);
-            using var doc = JsonDocument.Parse(json);
-            var existing = doc.RootElement.TryGetProperty("apps", out var appsEl)
-                ? appsEl.EnumerateArray()
-                    .Select(a => a.TryGetProperty("id", out var id) ? id.GetString() : null)
-                    .Where(id => id is not null)
-                    .ToHashSet()!
-                : new HashSet<string?>();
-
-            var discovered = services.Select(s => GetCanonicalName(s.Name)).ToHashSet();
-            return new AppsJsonDiffInfo
-            {
-                CurrentCount = existing.Count,
-                DiscoveredCount = discovered.Count,
-                NewApps = discovered.Except(existing).ToList()!,
-                RemovedApps = existing.Except(discovered).ToList()!,
-                UpdatedApps = discovered.Intersect(existing).ToList()!,
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "apps.json diff failed");
-            return null;
-        }
-    }
-
     private async Task<List<OrphanedResource>> GetOrphanedResourcesAsync(
         List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
     {

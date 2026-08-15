@@ -55,10 +55,17 @@
                 }
                 @foreach (var item in CleanupCandidates)
                 {
-                    <article class="azure-finding">
-                        <strong>@item.Name</strong>
+                    <article class="azure-finding" @key="CleanupKey(item)">
+                        <div class="azure-finding-name">
+                            <SeverityBadge Text="@item.Confidence" Style="@ConfidenceBadgeFor(item.Confidence)" />
+                            <strong>@item.Name</strong>
+                        </div>
                         <span>@item.Type · @item.ResourceGroup</span>
                         <p>@item.Reason</p>
+                        <button class="azure-snooze-button" @onclick="@(() => OnSnooze.InvokeAsync(item))"
+                                title="Hide this candidate for a few days">
+                            <RadzenIcon Icon="snooze" />
+                        </button>
                     </article>
                 }
             </div>
@@ -113,5 +120,17 @@
 
     /// <summary>The 30-day history disclosure, supplied by the page.</summary>
     [Parameter] public RenderFragment? HistorySection { get; set; }
+
+    /// <summary>Maps a cleanup candidate's confidence to its badge style. Supplied by the page
+    /// (AzureDashboard.Presentation.ConfidenceBadge) so the mapping stays in one place rather
+    /// than forking here — mirrors AzurePriorityQueue's BadgeFor parameter.</summary>
+    [Parameter, EditorRequired] public Func<string?, BadgeStyle> ConfidenceBadgeFor { get; set; } = default!;
+
+    /// <summary>Snoozes a cleanup candidate for a few days — the page computes its dedup key
+    /// (<c>{Type}|{ResourceGroup}|{Name}</c>, matching AzureDashboard.DerivedViews' grouping
+    /// key) and posts it to <c>/api/diag/snooze</c>.</summary>
+    [Parameter] public EventCallback<SafeToRemoveItem> OnSnooze { get; set; }
+
+    private static string CleanupKey(SafeToRemoveItem i) => $"{i.Type}|{i.ResourceGroup}|{i.Name}";
 }
 
