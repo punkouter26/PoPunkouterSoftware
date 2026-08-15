@@ -52,10 +52,30 @@ public class PlanRecommendationService(ILogger<PlanRecommendationService> logger
             recommendations.Count, services.Count);
 
         return recommendations
-            .OrderBy(r => r.Priority switch { "high" => 0, "medium" => 1, _ => 2 })
+            .OrderBy(r => SeverityLevel.Rank(r.Priority))
             .ThenBy(r => r.ServiceName)
             .ToList();
     }
+
+    private static PlanRecommendation Build(
+        WebService svc, string planName, string currentSku, string recommendedSku, string action,
+        string reason, string priority, List<string>? triggers = null,
+        string? monthlyCostImpact = null, string? currentMonthlyCost = null, string? recommendedMonthlyCost = null) => new()
+    {
+        ServiceName = svc.Name,
+        FriendlyName = svc.FriendlyName,
+        ResourceGroup = svc.ResourceGroup,
+        CurrentPlanName = planName,
+        CurrentPlanSku = currentSku,
+        RecommendedPlanSku = recommendedSku,
+        Action = action,
+        Reason = reason,
+        Priority = priority,
+        Triggers = triggers ?? [],
+        MonthlyCostImpact = monthlyCostImpact,
+        CurrentMonthlyCost = currentMonthlyCost,
+        RecommendedMonthlyCost = recommendedMonthlyCost,
+    };
 
     private PlanRecommendation? AnalyzeService(
         WebService svc,
@@ -105,40 +125,21 @@ public class PlanRecommendationService(ILogger<PlanRecommendationService> logger
                 var targetSku = currentSku is "D1" ? "B1" : "B2";
                 var targetCost = SkuMonthlyCosts.TryGetValue(targetSku, out var tc) ? tc : 108;
 
-                return new PlanRecommendation
-                {
-                    ServiceName = svc.Name,
-                    FriendlyName = svc.FriendlyName,
-                    ResourceGroup = svc.ResourceGroup,
-                    CurrentPlanName = planName,
-                    CurrentPlanSku = currentSku,
-                    RecommendedPlanSku = targetSku,
-                    Action = "upgrade",
-                    Reason = string.Join("; ", triggers),
-                    Priority = triggers.Any(t => t.Contains("quota", StringComparison.OrdinalIgnoreCase) || t.Contains("suspended", StringComparison.OrdinalIgnoreCase)) ? "high" : "medium",
-                    Triggers = triggers,
-                    MonthlyCostImpact = currentCost.HasValue ? $"+${targetCost - currentCost:0}/mo" : $"+${targetCost:0}/mo",
-                    CurrentMonthlyCost = currentCost.HasValue ? $"${currentCost:0}/mo" : null,
-                    RecommendedMonthlyCost = $"${targetCost:0}/mo",
-                };
+                return Build(svc, planName, currentSku, targetSku, "upgrade",
+                    reason: string.Join("; ", triggers),
+                    priority: triggers.Any(t => t.Contains("quota", StringComparison.OrdinalIgnoreCase) || t.Contains("suspended", StringComparison.OrdinalIgnoreCase)) ? "high" : "medium",
+                    triggers: triggers,
+                    monthlyCostImpact: currentCost.HasValue ? $"+${targetCost - currentCost:0}/mo" : $"+${targetCost:0}/mo",
+                    currentMonthlyCost: currentCost.HasValue ? $"${currentCost:0}/mo" : null,
+                    recommendedMonthlyCost: $"${targetCost:0}/mo");
             }
 
             // No triggers → keep
-            return new PlanRecommendation
-            {
-                ServiceName = svc.Name,
-                FriendlyName = svc.FriendlyName,
-                ResourceGroup = svc.ResourceGroup,
-                CurrentPlanName = planName,
-                CurrentPlanSku = currentSku,
-                RecommendedPlanSku = currentSku,
-                Action = "keep",
-                Reason = "App fits well within F1 limits — no issues detected.",
-                Priority = "low",
-                MonthlyCostImpact = null,
-                CurrentMonthlyCost = $"$0/mo",
-                RecommendedMonthlyCost = $"$0/mo",
-            };
+            return Build(svc, planName, currentSku, currentSku, "keep",
+                reason: "App fits well within F1 limits — no issues detected.",
+                priority: "low",
+                currentMonthlyCost: "$0/mo",
+                recommendedMonthlyCost: "$0/mo");
         }
 
         // ─── Downgrade path: Paid → F1 ─────────────────────────────────
@@ -158,42 +159,23 @@ public class PlanRecommendationService(ILogger<PlanRecommendationService> logger
 
             if (triggers.Count >= 2 || isZombie)
             {
-                return new PlanRecommendation
-                {
-                    ServiceName = svc.Name,
-                    FriendlyName = svc.FriendlyName,
-                    ResourceGroup = svc.ResourceGroup,
-                    CurrentPlanName = planName,
-                    CurrentPlanSku = currentSku,
-                    RecommendedPlanSku = "F1",
-                    Action = "downgrade",
-                    Reason = string.Join("; ", triggers),
-                    Priority = isZombie ? "high" : "medium",
-                    Triggers = triggers,
-                    MonthlyCostImpact = currentCost.HasValue ? $"-${currentCost:0}/mo" : "cost reduction",
-                    CurrentMonthlyCost = currentCost.HasValue ? $"${currentCost:0}/mo" : null,
-                    RecommendedMonthlyCost = "$0/mo",
-                };
+                return Build(svc, planName, currentSku, "F1", "downgrade",
+                    reason: string.Join("; ", triggers),
+                    priority: isZombie ? "high" : "medium",
+                    triggers: triggers,
+                    monthlyCostImpact: currentCost.HasValue ? $"-${currentCost:0}/mo" : "cost reduction",
+                    currentMonthlyCost: currentCost.HasValue ? $"${currentCost:0}/mo" : null,
+                    recommendedMonthlyCost: "$0/mo");
             }
 
             // Paid and no reason to change
-            return new PlanRecommendation
-            {
-                ServiceName = svc.Name,
-                FriendlyName = svc.FriendlyName,
-                ResourceGroup = svc.ResourceGroup,
-                CurrentPlanName = planName,
-                CurrentPlanSku = currentSku,
-                RecommendedPlanSku = currentSku,
-                Action = "keep",
-                Reason = triggers.Count > 0
+            return Build(svc, planName, currentSku, currentSku, "keep",
+                reason: triggers.Count > 0
                     ? string.Join("; ", triggers) + " — but upgrade/downgrade not strongly indicated."
                     : "App is well-provisioned on current paid tier.",
-                Priority = "low",
-                MonthlyCostImpact = null,
-                CurrentMonthlyCost = currentCost.HasValue ? $"${currentCost:0}/mo" : null,
-                RecommendedMonthlyCost = currentCost.HasValue ? $"${currentCost:0}/mo" : null,
-            };
+                priority: "low",
+                currentMonthlyCost: currentCost.HasValue ? $"${currentCost:0}/mo" : null,
+                recommendedMonthlyCost: currentCost.HasValue ? $"${currentCost:0}/mo" : null);
         }
 
         return null;

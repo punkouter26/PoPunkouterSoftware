@@ -84,4 +84,30 @@ public partial class AzureReportService
 
     private static string ShortType(string? t)
         => t?.Split('/').LastOrDefault() ?? t ?? "Unknown";
+
+    /// <summary>
+    /// Runs <paramref name="body"/> over <paramref name="items"/> with at most
+    /// <paramref name="maxConcurrency"/> in flight at once, preserving input order in the
+    /// returned array regardless of completion order. Shared by the scan steps that fan out
+    /// many independent per-item HTTP calls (orphan-resource checks, GitHub workflow-run
+    /// lookups) instead of each hand-rolling its own SemaphoreSlim gate/try/finally.
+    /// </summary>
+    private static async Task<TResult[]> BoundedParallelAsync<TItem, TResult>(
+        IEnumerable<TItem> items, int maxConcurrency, Func<TItem, Task<TResult>> body, CancellationToken ct)
+    {
+        using var gate = new SemaphoreSlim(maxConcurrency);
+        var tasks = items.Select(async item =>
+        {
+            await gate.WaitAsync(ct);
+            try
+            {
+                return await body(item);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+        return await Task.WhenAll(tasks);
+    }
 }

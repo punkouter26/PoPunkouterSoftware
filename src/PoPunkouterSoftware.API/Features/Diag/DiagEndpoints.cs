@@ -48,18 +48,13 @@ internal static class DiagEndpoints
                 return Results.Json(reportResult.Value);
             }
 
-            var reportPath = ReportFileCache.GetReportPath(env);
-            if (File.Exists(reportPath))
-            {
-                var json = await File.ReadAllTextAsync(reportPath);
-                // Deserialize then re-serialize via Results.Json so ASP.NET Core's camelCase
-                // naming policy (JsonSerializerDefaults.Web) is applied consistently.
-                // A corrupt cache file must degrade to "no report", not a 500 — this file
-                // fallback IS the resilience path when Table Storage is down.
-                var fileReport = ReportFileCache.TryDeserializeReport(json, logger);
-                if (fileReport is not null)
-                    return Results.Json(fileReport);
-            }
+            // Deserialize then re-serialize via Results.Json so ASP.NET Core's camelCase naming
+            // policy (JsonSerializerDefaults.Web) is applied consistently. A corrupt cache file
+            // must degrade to "no report", not a 500 — this file fallback IS the resilience
+            // path when Table Storage is down.
+            var fileReport = await ReportFileCache.TryLoadFromFileAsync(env, logger);
+            if (fileReport is not null)
+                return Results.Json(fileReport);
 
             if (!reportResult.IsSuccess)
             {
@@ -139,12 +134,7 @@ internal static class DiagEndpoints
         if (result.IsSuccess && result.Value is not null)
             return result.Value;
 
-        var reportPath = ReportFileCache.GetReportPath(env);
-        if (!File.Exists(reportPath))
-            return null;
-
-        var json = await File.ReadAllTextAsync(reportPath, ct);
-        return ReportFileCache.TryDeserializeReport(json, logger);
+        return await ReportFileCache.TryLoadFromFileAsync(env, logger, ct);
     }
 
     private static OpsSummary BuildOpsSummary(AzureReport report, IReadOnlyCollection<HistorySummary> history)

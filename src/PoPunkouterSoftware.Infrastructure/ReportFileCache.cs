@@ -50,4 +50,20 @@ public static class ReportFileCache
             return null;
         }
     }
+
+    /// <summary>
+    /// Reads and parses the cached report file, or null when it does not exist. The single
+    /// place feature slices (Diag, Portfolio) should call for the Table-Storage-unavailable
+    /// fallback, instead of each re-deriving the path and re-checking existence themselves.
+    /// </summary>
+    public static async Task<AzureReport?> TryLoadFromFileAsync(
+        IWebHostEnvironment env, ILogger logger, CancellationToken ct = default)
+    {
+        var reportPath = GetReportPath(env);
+        if (!File.Exists(reportPath))
+            return null;
+
+        var json = await File.ReadAllTextAsync(reportPath, ct);
+        return TryDeserializeReport(json, logger);
+    }
 }

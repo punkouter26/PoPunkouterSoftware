@@ -313,6 +313,7 @@ public class AppScreenshotService
         }
     }
 
-    private static string? HostOf(string? url) =>
+    /// <summary>Lowercased host from a URL, or null when the URL is missing/invalid. Shared with PortfolioEndpoints.</summary>
+    public static string? HostOf(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host.ToLowerInvariant() : null;
 }

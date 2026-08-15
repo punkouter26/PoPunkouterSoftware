@@ -14,18 +14,10 @@ public partial class AzureDashboard
 {
     private List<SafeToRemoveItem> CleanupCandidates =>
         safeToRemove
-            .OrderBy(i => ConfidenceRank(i.Confidence))
+            .OrderBy(i => SeverityLevel.Rank(i.Confidence))
             .ThenBy(i => i.Type)
             .ThenBy(i => i.Name)
             .ToList();
-
-    private static int ConfidenceRank(string? confidence) => confidence switch
-    {
-        "high" => 0,
-        "medium" => 1,
-        "low" => 2,
-        _ => 3,
-    };
 
     // ── Records ───────────────────────────────────────────────────────────────
     private record ConsolidatedService(

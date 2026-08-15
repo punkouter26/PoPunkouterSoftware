@@ -76,7 +76,9 @@ public partial class AzureReportService
             if (repos.Count == 0)
                 break;
 
-            foreach (var repo in repos)
+            // Gated by BoundedParallelAsync — each repo's workflow-run lookup is independent,
+            // but unbounded concurrency would hammer the GitHub API across a large repo list.
+            var pageReviews = await BoundedParallelAsync(repos, maxConcurrency: 6, async repo =>
             {
                 var fullName = repo.GetProperty("full_name").GetString() ?? "";
                 var repoUrl = repo.TryGetProperty("html_url", out var hu) ? hu.GetString() : null;
@@ -85,7 +87,7 @@ public partial class AzureReportService
                 var (runStatus, runConclusion, runCompleted, runUrl, runName) =
                     await FetchLatestWorkflowRunAsync(http, fullName, defaultBranch, ct);
 
-                reviews.Add(new InfraReview
+                return new InfraReview
                 {
                     RepoName = repo.TryGetProperty("name", out var rn) ? rn.GetString() ?? "" : "",
                     RepoUrl = repoUrl,
@@ -95,8 +97,9 @@ public partial class AzureReportService
                     LatestWorkflowRunCompletedAt = runCompleted,
                     LatestWorkflowRunUrl = runUrl,
                     LatestWorkflowRunName = runName,
-                });
-            }
+                };
+            }, ct);
+            reviews.AddRange(pageReviews);
 
             if (repos.Count < 100)
                 break;
@@ -153,9 +156,7 @@ public partial class AzureReportService
             return direct;
 
         // Fuzzy match: service name contains repo name or vice versa
-        var fuzzy = reviews.FirstOrDefault(r =>
-            svc.Name.Contains(r.RepoName, StringComparison.OrdinalIgnoreCase) ||
-            r.RepoName.Contains(svc.Name, StringComparison.OrdinalIgnoreCase));
+        var fuzzy = reviews.FirstOrDefault(r => NameMatching.FuzzyContains(svc.Name, r.RepoName));
         if (fuzzy is not null)
             return fuzzy;
 
@@ -167,10 +168,7 @@ public partial class AzureReportService
             return byRg;
 
         // Match by friendly name
-        var byFriendly = reviews.FirstOrDefault(r =>
-            !string.IsNullOrEmpty(svc.FriendlyName) &&
-            (svc.FriendlyName.Contains(r.RepoName, StringComparison.OrdinalIgnoreCase) ||
-             r.RepoName.Contains(svc.FriendlyName, StringComparison.OrdinalIgnoreCase)));
-        return byFriendly;
+        return reviews.FirstOrDefault(r =>
+            !string.IsNullOrEmpty(svc.FriendlyName) && NameMatching.FuzzyContains(svc.FriendlyName, r.RepoName));
     }
 }

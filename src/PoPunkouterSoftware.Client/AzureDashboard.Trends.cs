@@ -13,6 +13,18 @@ public partial class AzureDashboard
     // ── State ──────────────────────────────────────────────────────────────────
     private List<HistorySummary> _history = new();
 
+    // Memoized once per history load — HistoryWindow/ServiceStatusHistory/CostHistory used to
+    // be expression-bodied properties that re-ran their GroupBy/OrderBy pipeline on every
+    // access, and the markup reads all three in the same render (see the RebuildDerivedState
+    // comment in AzureDashboard.razor.cs for the same fix applied to the report-derived views).
+    private List<HistorySummary> _historyWindow = new();
+    private List<HistoryStatusPoint> _serviceStatusHistory = new();
+    private List<HistoryCostPoint> _costHistory = new();
+
+    private List<HistorySummary> HistoryWindow => _historyWindow;
+    private List<HistoryStatusPoint> ServiceStatusHistory => _serviceStatusHistory;
+    private List<HistoryCostPoint> CostHistory => _costHistory;
+
     internal async Task LoadHistoryAsync()
     {
         try
@@ -24,41 +36,36 @@ public partial class AzureDashboard
         {
             _history = new();
         }
+        RebuildHistoryDerivedState();
         await InvokeAsync(StateHasChanged);
     }
 
-    private List<HistorySummary> HistoryWindow
+    private void RebuildHistoryDerivedState()
     {
-        get
-        {
-            var cutoffUtc = DateTime.UtcNow.AddDays(-HistoryWindowDays);
+        var cutoffUtc = DateTime.UtcNow.AddDays(-HistoryWindowDays);
 
-            return _history
-                .Where(h => h.GeneratedAt != DateTime.MinValue && h.GeneratedAt >= cutoffUtc)
-                .GroupBy(h => h.GeneratedAt.ToLocalTime().Date)
-                .Select(g => g.OrderByDescending(x => x.GeneratedAt).First())
-                .OrderBy(h => h.GeneratedAt)
-                .ToList();
-        }
-    }
+        _historyWindow = _history
+            .Where(h => h.GeneratedAt != DateTime.MinValue && h.GeneratedAt >= cutoffUtc)
+            .GroupBy(h => h.GeneratedAt.ToLocalTime().Date)
+            .Select(g => g.OrderByDescending(x => x.GeneratedAt).First())
+            .OrderBy(h => h.GeneratedAt)
+            .ToList();
 
-    private static string ToChartDateLabel(DateTime utcDateTime) =>
-        utcDateTime.ToLocalTime().ToString("MMM dd");
-
-    private List<HistoryStatusPoint> ServiceStatusHistory =>
-        HistoryWindow
+        _serviceStatusHistory = _historyWindow
             .Select(h => new HistoryStatusPoint(
                 ToChartDateLabel(h.GeneratedAt),
                 h.ActiveServices,
                 h.BrokenServices))
             .ToList();
 
-    private List<HistoryCostPoint> CostHistory =>
-        HistoryWindow
+        _costHistory = _historyWindow
             .Where(h => h.TotalCost30Days > 0)
             .Select(h => new HistoryCostPoint(
                 ToChartDateLabel(h.GeneratedAt),
                 Math.Round(h.TotalCost30Days, 2)))
             .ToList();
+    }
 
+    private static string ToChartDateLabel(DateTime utcDateTime) =>
+        utcDateTime.ToLocalTime().ToString("MMM dd");
 }

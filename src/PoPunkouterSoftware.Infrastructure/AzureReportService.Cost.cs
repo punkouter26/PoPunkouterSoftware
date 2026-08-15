@@ -55,48 +55,42 @@ public partial class AzureReportService
                 },
             });
 
-            var url = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
-            var json = await PostCostManagementWithRetryAsync(url, body, armToken, ct);
-            if (json is null)
-                return new CostInfo { Note = "Cost data unavailable (rate-limited or request failed)" };
-
-            var doc = JsonDocument.Parse(json);
-            var props = doc.RootElement.GetProperty("properties");
-            var rows = props.GetProperty("rows").EnumerateArray().ToList();
-            var cols = props.GetProperty("columns").EnumerateArray()
-                .Select(c => c.GetProperty("name").GetString()!.ToLowerInvariant()).ToList();
-
-            int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
-            int svcIdx = cols.FindIndex(c => c.Contains("service"));
-            int rgIdx = cols.FindIndex(c => c.Contains("resourcegroup"));
-
-            double totalCost = 0;
-            var byKey = new Dictionary<string, double>();
-            foreach (var row in rows)
+            var result = await QueryCostManagementAsync(subscriptionId, body, armToken, (rows, cols) =>
             {
-                var arr = row.EnumerateArray().ToArray();
-                var cost = costIdx >= 0 ? arr[costIdx].GetDouble() : 0;
-                var svc = svcIdx >= 0 ? arr[svcIdx].GetString() ?? "Unknown" : "Unknown";
-                var rg = rgIdx >= 0 ? arr[rgIdx].GetString() ?? "" : "";
-                var key = string.IsNullOrEmpty(rg) ? svc : $"{svc} ({rg})";
-                byKey[key] = byKey.GetValueOrDefault(key) + cost;
-                totalCost += cost;
-            }
+                int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
+                int svcIdx = cols.FindIndex(c => c.Contains("service"));
+                int rgIdx = cols.FindIndex(c => c.Contains("resourcegroup"));
 
-            var drivers = byKey
-                .Where(kv => kv.Value > 0)
-                .OrderByDescending(kv => kv.Value)
-                .Take(20)
-                .Select(kv => new CostDriver { Name = kv.Key, Cost = Math.Round(kv.Value, 4) })
-                .ToList();
+                double totalCost = 0;
+                var byKey = new Dictionary<string, double>();
+                foreach (var row in rows)
+                {
+                    var arr = row.EnumerateArray().ToArray();
+                    var cost = costIdx >= 0 ? arr[costIdx].GetDouble() : 0;
+                    var svc = svcIdx >= 0 ? arr[svcIdx].GetString() ?? "Unknown" : "Unknown";
+                    var rg = rgIdx >= 0 ? arr[rgIdx].GetString() ?? "" : "";
+                    var key = string.IsNullOrEmpty(rg) ? svc : $"{svc} ({rg})";
+                    byKey[key] = byKey.GetValueOrDefault(key) + cost;
+                    totalCost += cost;
+                }
 
-            return new CostInfo
-            {
-                TotalCost30Days = Math.Round(totalCost, 4),
-                TotalFormatted = $"${totalCost:F2}",
-                TopCostDrivers = drivers,
-                Note = totalCost == 0 ? "All costs $0.00 — subscription may be covered by credits." : null,
-            };
+                var drivers = byKey
+                    .Where(kv => kv.Value > 0)
+                    .OrderByDescending(kv => kv.Value)
+                    .Take(20)
+                    .Select(kv => new CostDriver { Name = kv.Key, Cost = Math.Round(kv.Value, 4) })
+                    .ToList();
+
+                return new CostInfo
+                {
+                    TotalCost30Days = Math.Round(totalCost, 4),
+                    TotalFormatted = $"${totalCost:F2}",
+                    TopCostDrivers = drivers,
+                    Note = totalCost == 0 ? "All costs $0.00 — subscription may be covered by credits." : null,
+                };
+            }, ct);
+
+            return result ?? new CostInfo { Note = "Cost data unavailable (rate-limited or request failed)" };
         }
         catch (Exception ex)
         {
@@ -129,37 +123,33 @@ public partial class AzureReportService
                 },
             });
 
-            var url = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
-            var json = await PostCostManagementWithRetryAsync(url, body, armToken, ct);
-            if (json is null)
+            var result = await QueryCostManagementAsync(subscriptionId, body, armToken, (rows, cols) =>
+            {
+                int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
+                int dateIdx = cols.FindIndex(c => c.Contains("date") || c.Contains("usage"));
+
+                var entries = new List<DailyCostEntry>();
+                foreach (var row in rows)
+                {
+                    var arr = row.EnumerateArray().ToArray();
+                    var cost = costIdx >= 0 ? arr[costIdx].GetDouble() : 0;
+                    var raw = dateIdx >= 0
+                        ? arr[dateIdx].ValueKind == JsonValueKind.Number
+                            ? arr[dateIdx].GetInt32().ToString()
+                            : arr[dateIdx].GetString() ?? ""
+                        : "";
+                    var dateStr = raw.Length == 8 && raw.All(char.IsDigit)
+                        ? $"{raw[..4]}-{raw[4..6]}-{raw[6..8]}"
+                        : raw;
+                    entries.Add(new DailyCostEntry { Date = dateStr, Cost = Math.Round(cost, 4) });
+                }
+                return entries;
+            }, ct);
+
+            if (result is null)
                 return null;
 
-            using var doc = JsonDocument.Parse(json);
-            var props = doc.RootElement.GetProperty("properties");
-            var rows = props.GetProperty("rows").EnumerateArray().ToList();
-            var cols = props.GetProperty("columns").EnumerateArray()
-                .Select(c => c.GetProperty("name").GetString()!.ToLowerInvariant()).ToList();
-
-            int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
-            int dateIdx = cols.FindIndex(c => c.Contains("date") || c.Contains("usage"));
-
-            var daily = new List<DailyCostEntry>();
-            foreach (var row in rows)
-            {
-                var arr = row.EnumerateArray().ToArray();
-                var cost = costIdx >= 0 ? arr[costIdx].GetDouble() : 0;
-                var raw = dateIdx >= 0
-                    ? arr[dateIdx].ValueKind == JsonValueKind.Number
-                        ? arr[dateIdx].GetInt32().ToString()
-                        : arr[dateIdx].GetString() ?? ""
-                    : "";
-                var dateStr = raw.Length == 8 && raw.All(char.IsDigit)
-                    ? $"{raw[..4]}-{raw[4..6]}-{raw[6..8]}"
-                    : raw;
-                daily.Add(new DailyCostEntry { Date = dateStr, Cost = Math.Round(cost, 4) });
-            }
-
-            daily = daily.OrderBy(d => d.Date).ToList();
+            var daily = result.OrderBy(d => d.Date).ToList();
             var totalSoFar = daily.Sum(d => d.Cost);
             var daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
             var daysElapsed = Math.Max(1, (today - startOfMonth).Days + 1);
@@ -177,6 +167,33 @@ public partial class AzureReportService
             _logger.LogDebug(ex, "Burn rate query failed");
             return null;
         }
+    }
+
+    /// <summary>
+    /// POSTs a Cost Management query and hands the parsed rows/column names to
+    /// <paramref name="parseRows"/> while the underlying <see cref="JsonDocument"/> is still
+    /// alive — JsonElements do not survive their document being disposed. Shared by
+    /// <see cref="GetCostAsync"/> and <see cref="GetBurnRateAsync"/>, which previously
+    /// duplicated this POST-then-parse-the-envelope boilerplate; only the row processing
+    /// (grouped service+RG totals vs. a daily series) actually differs between them.
+    /// </summary>
+    private async Task<TResult?> QueryCostManagementAsync<TResult>(
+        string subscriptionId, string requestBody, string? armToken,
+        Func<List<JsonElement>, List<string>, TResult> parseRows, CancellationToken ct)
+        where TResult : class
+    {
+        var url = $"https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01";
+        var json = await PostCostManagementWithRetryAsync(url, requestBody, armToken, ct);
+        if (json is null)
+            return null;
+
+        using var doc = JsonDocument.Parse(json);
+        var props = doc.RootElement.GetProperty("properties");
+        var rows = props.GetProperty("rows").EnumerateArray().ToList();
+        var cols = props.GetProperty("columns").EnumerateArray()
+            .Select(c => c.GetProperty("name").GetString()!.ToLowerInvariant()).ToList();
+
+        return parseRows(rows, cols);
     }
 
     /// <summary>

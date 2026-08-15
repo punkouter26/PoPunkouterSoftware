@@ -28,7 +28,14 @@ internal static partial class PortfolioEndpoints
         IWebHostEnvironment env, IConfiguration config, AzureReportStore store, AppScreenshotService screenshots,
         ReportRefreshRunner refreshRunner, ILogger<Program> logger, CancellationToken ct)
     {
-        var (report, services) = await LoadInventoryAsync(env, store, logger, ct);
+        var inventoryTask = LoadInventoryAsync(env, store, logger, ct);
+        var metadataTask = LoadMetadataAsync(env, logger, ct);
+        var screenshotVersionsTask = screenshots.ListVersionsAsync(ct);
+        await Task.WhenAll(inventoryTask, metadataTask, screenshotVersionsTask);
+        var (report, services) = inventoryTask.Result;
+        var metadata = metadataTask.Result;
+        var screenshotVersions = screenshotVersionsTask.Result;
+
         var stale = PortfolioFreshness.IsStale(report?.GeneratedAt, DateTime.UtcNow);
 
         // Self-healing inventory: production has no interactive refresh (management actions
@@ -39,8 +46,6 @@ internal static partial class PortfolioEndpoints
             if (refreshRunner.TryStartAuto())
                 logger.LogInformation("Inventory is stale — background Azure rescan started");
         }
-        var metadata = await LoadMetadataAsync(env, logger, ct);
-        var screenshotVersions = await screenshots.ListVersionsAsync(ct);
         var metaByName = metadata
             .GroupBy(m => PortfolioIdentity.NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.OrderBy(m => StatusRank(m.Status)).First(), StringComparer.OrdinalIgnoreCase);
@@ -76,7 +81,7 @@ internal static partial class PortfolioEndpoints
         if (await screenshots.IsStaleAsync(ct))
         {
             var targets = services
-                .Select(s => (Host: HostOf(s.Url), s.Url))
+                .Select(s => (Host: AppScreenshotService.HostOf(s.Url), s.Url))
                 .Where(t => t.Host is not null)
                 .Select(t => (t.Host!, t.Url))
                 .ToList();
@@ -138,21 +143,10 @@ internal static partial class PortfolioEndpoints
     private static async Task<(AzureReport? Report, List<WebService> Services)> LoadInventoryAsync(
         IWebHostEnvironment env, AzureReportStore store, ILogger logger, CancellationToken ct)
     {
-        AzureReport? report = null;
         var result = await store.LoadAsync(ct);
-        if (result.IsSuccess && result.Value is not null)
-        {
-            report = result.Value;
-        }
-        else
-        {
-            var reportPath = ReportFileCache.GetReportPath(env);
-            if (File.Exists(reportPath))
-            {
-                var json = await File.ReadAllTextAsync(reportPath, ct);
-                report = ReportFileCache.TryDeserializeReport(json, logger);
-            }
-        }
+        var report = result.IsSuccess && result.Value is not null
+            ? result.Value
+            : await ReportFileCache.TryLoadFromFileAsync(env, logger, ct);
 
         return (report, report?.WebServices?.Services ?? new List<WebService>());
     }
@@ -186,7 +180,7 @@ internal static partial class PortfolioEndpoints
         // The curated catalog URL wins over the scanned one: inventory can lag reality by
         // hours (or weeks), and a card must never send visitors to a decommissioned host.
         var url = !string.IsNullOrWhiteSpace(meta?.Url) ? meta.Url : service?.Url ?? "";
-        var host = HostOf(url);
+        var host = AppScreenshotService.HostOf(url);
         long version = 0;
         var hasScreenshot = host is not null && screenshotVersions.TryGetValue(host, out version);
         var status = service is null ? "not-monitored" :
@@ -210,9 +204,6 @@ internal static partial class PortfolioEndpoints
         "inactive" => 1,
         _ => 2,
     };
-
-    private static string? HostOf(string? url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host.ToLowerInvariant() : null;
 
     private sealed record AppsFile(List<AppMeta>? Apps);
 

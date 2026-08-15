@@ -87,118 +87,112 @@ public partial class AzureReportService
     private async Task<List<OrphanedResource>> GetOrphanedResourcesAsync(
         List<GenericResourceData> allResources, string? armToken, CancellationToken ct)
     {
-        var orphans = new List<OrphanedResource>();
         if (armToken is null)
-            return orphans;
+            return [];
         var client = _httpClientFactory.CreateClient("azure-arm");
 
-        // 1 — Unattached managed disks
-        foreach (var disk in allResources.Where(r =>
-            r.ResourceType.ToString().Equals("Microsoft.Compute/disks", StringComparison.OrdinalIgnoreCase)))
+        // Fetches the ARM detail for one resource and hands the parsed JSON to `evaluate`,
+        // which returns the orphan finding (or null when the resource is not orphaned).
+        // Shared by all three categories below — they previously hand-rolled the same
+        // request/parse/try-catch around three different type filters and evaluations.
+        // Concurrency is gated by the shared BoundedParallelAsync call below, not here.
+        async Task<OrphanedResource?> CheckAsync(
+            GenericResourceData resource, string urlSuffix, string category,
+            Func<JsonElement, GenericResourceData, OrphanedResource?> evaluate)
         {
             try
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get,
-                    $"https://management.azure.com{disk.Id}?api-version=2023-10-02");
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
+                    $"https://management.azure.com{resource.Id}{urlSuffix}");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
                 using var resp = await client.SendAsync(req, ct);
                 if (!resp.IsSuccessStatusCode)
-                    continue;
+                    return null;
 
                 var json = await resp.Content.ReadAsStringAsync(ct);
                 using var doc = JsonDocument.Parse(json);
-                if (!doc.RootElement.TryGetProperty("properties", out var props))
-                    continue;
+                return evaluate(doc.RootElement, resource);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "{Category} orphan check failed for {Name}", category, resource.Name);
+                return null;
+            }
+        }
+
+        var diskItems = allResources
+            .Where(r => r.ResourceType.ToString().Equals("Microsoft.Compute/disks", StringComparison.OrdinalIgnoreCase))
+            .Select(disk => (Resource: disk, UrlSuffix: "?api-version=2023-10-02", Category: "Disk", Evaluate: (Func<JsonElement, GenericResourceData, OrphanedResource?>)((root, r) =>
+            {
+                if (!root.TryGetProperty("properties", out var props))
+                    return null;
                 if (!props.TryGetProperty("diskState", out var state) || state.GetString() != "Unattached")
-                    continue;
+                    return null;
 
                 var sizeGb = props.TryGetProperty("diskSizeGB", out var sz) ? sz.GetInt32() : 0;
-                var sku = doc.RootElement.TryGetProperty("sku", out var skuEl) &&
+                var sku = root.TryGetProperty("sku", out var skuEl) &&
                              skuEl.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
-                orphans.Add(new OrphanedResource
+                return new OrphanedResource
                 {
-                    Name = disk.Name,
-                    ResourceGroup = disk.Id?.ResourceGroupName,
+                    Name = r.Name,
+                    ResourceGroup = r.Id?.ResourceGroupName,
                     Type = "Managed Disk",
                     Reason = $"Unattached ({sizeGb} GB, {sku ?? "unknown SKU"})",
                     EstimatedMonthlyCost = sizeGb > 0 ? $"~${sizeGb * 0.04:F2}/mo" : null,
-                    Command = $"az disk delete --name \"{disk.Name}\" --resource-group \"{disk.Id?.ResourceGroupName}\" --yes",
-                });
-            }
-            catch (Exception ex) { _logger.LogDebug(ex, "Disk orphan check failed for {Name}", disk.Name); }
-        }
+                    Command = $"az disk delete --name \"{r.Name}\" --resource-group \"{r.Id?.ResourceGroupName}\" --yes",
+                };
+            })));
 
-        // 2 — Unattached public IPs
-        foreach (var ip in allResources.Where(r =>
-            r.ResourceType.ToString().Equals("Microsoft.Network/publicIPAddresses", StringComparison.OrdinalIgnoreCase)))
-        {
-            try
+        var ipItems = allResources
+            .Where(r => r.ResourceType.ToString().Equals("Microsoft.Network/publicIPAddresses", StringComparison.OrdinalIgnoreCase))
+            .Select(ip => (Resource: ip, UrlSuffix: "?api-version=2023-11-01", Category: "Public IP", Evaluate: (Func<JsonElement, GenericResourceData, OrphanedResource?>)((root, r) =>
             {
-                using var req = new HttpRequestMessage(HttpMethod.Get,
-                    $"https://management.azure.com{ip.Id}?api-version=2023-11-01");
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
-                using var resp = await client.SendAsync(req, ct);
-                if (!resp.IsSuccessStatusCode)
-                    continue;
-
-                var json = await resp.Content.ReadAsStringAsync(ct);
-                using var doc = JsonDocument.Parse(json);
-                if (!doc.RootElement.TryGetProperty("properties", out var props))
-                    continue;
+                if (!root.TryGetProperty("properties", out var props))
+                    return null;
 
                 var hasIpConfig = props.TryGetProperty("ipConfiguration", out _);
                 var hasNatGateway = props.TryGetProperty("natGateway", out _);
                 if (hasIpConfig || hasNatGateway)
-                    continue;
+                    return null;
 
-                var sku = doc.RootElement.TryGetProperty("sku", out var skuEl) &&
+                var sku = root.TryGetProperty("sku", out var skuEl) &&
                           skuEl.TryGetProperty("name", out var skuName) ? skuName.GetString() : null;
-                orphans.Add(new OrphanedResource
+                return new OrphanedResource
                 {
-                    Name = ip.Name,
-                    ResourceGroup = ip.Id?.ResourceGroupName,
+                    Name = r.Name,
+                    ResourceGroup = r.Id?.ResourceGroupName,
                     Type = "Public IP",
                     Reason = $"Not associated with any NIC or NAT gateway (SKU: {sku ?? "—"})",
                     EstimatedMonthlyCost = sku == "Standard" ? "~$3.65/mo" : null,
-                    Command = $"az network public-ip delete --name \"{ip.Name}\" --resource-group \"{ip.Id?.ResourceGroupName}\"",
-                });
-            }
-            catch (Exception ex) { _logger.LogDebug(ex, "Public IP orphan check failed for {Name}", ip.Name); }
-        }
+                    Command = $"az network public-ip delete --name \"{r.Name}\" --resource-group \"{r.Id?.ResourceGroupName}\"",
+                };
+            })));
 
-        // 3 — Empty App Service Plans
-        foreach (var farm in allResources.Where(r =>
-            r.ResourceType.ToString().Equals("Microsoft.Web/serverFarms", StringComparison.OrdinalIgnoreCase)))
-        {
-            try
+        var farmItems = allResources
+            .Where(r => r.ResourceType.ToString().Equals("Microsoft.Web/serverFarms", StringComparison.OrdinalIgnoreCase))
+            .Select(farm => (Resource: farm, UrlSuffix: "/sites?api-version=2023-12-01", Category: "App Service Plan", Evaluate: (Func<JsonElement, GenericResourceData, OrphanedResource?>)((root, r) =>
             {
-                using var req = new HttpRequestMessage(HttpMethod.Get,
-                    $"https://management.azure.com{farm.Id}/sites?api-version=2023-12-01");
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken!);
-                using var resp = await client.SendAsync(req, ct);
-                if (!resp.IsSuccessStatusCode)
-                    continue;
-
-                var json = await resp.Content.ReadAsStringAsync(ct);
-                using var doc = JsonDocument.Parse(json);
-                var siteCount = doc.RootElement.TryGetProperty("value", out var v) ? v.GetArrayLength() : 1;
+                var siteCount = root.TryGetProperty("value", out var v) ? v.GetArrayLength() : 1;
                 if (siteCount > 0)
-                    continue;
+                    return null;
 
-                var sku = farm.Sku?.Name?.ToString() ?? "unknown";
-                orphans.Add(new OrphanedResource
+                var sku = r.Sku?.Name?.ToString() ?? "unknown";
+                return new OrphanedResource
                 {
-                    Name = farm.Name,
-                    ResourceGroup = farm.Id?.ResourceGroupName,
+                    Name = r.Name,
+                    ResourceGroup = r.Id?.ResourceGroupName,
                     Type = "App Service Plan",
                     Reason = $"No apps deployed (SKU: {sku})",
                     EstimatedMonthlyCost = sku is "F1" or "FREE" ? "$0/mo (Free)" : "Paid tier — check portal",
-                    Command = $"az appservice plan delete --name \"{farm.Name}\" --resource-group \"{farm.Id?.ResourceGroupName}\" --yes",
-                });
-            }
-            catch (Exception ex) { _logger.LogDebug(ex, "App Service Plan orphan check failed for {Name}", farm.Name); }
-        }
+                    Command = $"az appservice plan delete --name \"{r.Name}\" --resource-group \"{r.Id?.ResourceGroupName}\" --yes",
+                };
+            })));
 
-        return orphans;
+        // BoundedParallelAsync preserves input order (disks, then IPs, then plans) regardless
+        // of completion order, so the result ordering matches the previous sequential passes.
+        var results = await BoundedParallelAsync(
+            diskItems.Concat(ipItems).Concat(farmItems), maxConcurrency: 6,
+            item => CheckAsync(item.Resource, item.UrlSuffix, item.Category, item.Evaluate), ct);
+        return results.OfType<OrphanedResource>().ToList();
     }
 }

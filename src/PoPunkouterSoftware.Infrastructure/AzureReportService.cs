@@ -172,9 +172,13 @@ public partial class AzureReportService(
                 && s.ResourceId is not null)
             .ToList();
 
-        // Build GitHub workflow run correlation map for broken services
+        // Build GitHub workflow run correlation map for broken services. Skip the fetch
+        // entirely when there is nothing to correlate against — mirrors the downtimeDiags
+        // guard below.
         var gitHubRuns = new Dictionary<string, GitHubWorkflowRun>(StringComparer.OrdinalIgnoreCase);
-        var infraReviews = await LoadInfraReviewsForCorrelationAsync(connectedSvcs, ct);
+        var infraReviews = brokenAppServices.Count > 0
+            ? await LoadInfraReviewsForCorrelationAsync(connectedSvcs, ct)
+            : [];
         foreach (var svc in brokenAppServices)
         {
             var matched = MatchServiceToInfraReview(svc, infraReviews);

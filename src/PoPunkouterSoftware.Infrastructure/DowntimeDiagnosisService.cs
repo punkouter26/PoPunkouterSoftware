@@ -39,12 +39,12 @@ public class DowntimeDiagnosisService(
         {
             if (appInsightsByName.TryGetValue(svc.Name, out var direct))
                 appInsightsByService[svc.Name] = direct;
-            else if (appInsightsByName.Any(kv =>
-                svc.Name.Contains(kv.Key, StringComparison.OrdinalIgnoreCase) ||
-                kv.Key.Contains(svc.Name, StringComparison.OrdinalIgnoreCase)))
-                appInsightsByService[svc.Name] = appInsightsByName.First(kv =>
-                    svc.Name.Contains(kv.Key, StringComparison.OrdinalIgnoreCase) ||
-                    kv.Key.Contains(svc.Name, StringComparison.OrdinalIgnoreCase)).Value;
+            else
+            {
+                var fuzzy = appInsightsByName.FirstOrDefault(kv => NameMatching.FuzzyContains(svc.Name, kv.Key));
+                if (fuzzy.Key is not null)
+                    appInsightsByService[svc.Name] = fuzzy.Value;
+            }
         }
 
         var client = _httpClientFactory.CreateClient("azure-arm");
