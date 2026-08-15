@@ -2,14 +2,10 @@
 
   <PropertyGroup>
     <!-- TargetFramework, Nullable, ImplicitUsings, TreatWarningsAsErrors inherited from Directory.Build.props -->
-    <RootNamespace>PoPunkouterSoftware</RootNamespace>
-    <AssemblyName>PoPunkouterSoftware</AssemblyName>
+    <RootNamespace>PoPunkouterSoftware.API</RootNamespace>
+    <AssemblyName>PoPunkouterSoftware.API</AssemblyName>
     <UserSecretsId>popunkouter-software-api</UserSecretsId>
   </PropertyGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="PoPunkouterSoftware.Tests" />
-  </ItemGroup>
 
   <ItemGroup>
     <!-- Blazor WASM hosting -->

@@ -4,12 +4,14 @@ PoPunkouterSoftware is a .NET 10 Blazor Web App with a server host, a WebAssembl
 
 ## Solution Layout
 
-- `src/PoPunkouterSoftware/`: ASP.NET Core host, API endpoints, diagnostics, and Blazor shell.
+- `src/PoPunkouterSoftware.API/`: ASP.NET Core host + BFF. Feature slices under `Features/<Area>/` (Config, Diag, Portfolio); host-level plumbing that belongs to no slice lives in `Host/`. Hosts the Blazor WASM shell.
 - `src/PoPunkouterSoftware.Client/`: WASM UI, layouts, pages, and static assets.
 - `src/PoPunkouterSoftware.Shared/`: contracts and models shared between the host and client.
 - `src/PoPunkouterSoftware.Infrastructure/`: Azure and integration adapters.
-- `tests/PoPunkouterSoftware.Tests/`: xUnit unit and integration tests (`WebApplicationFactory` + Azurite Testcontainers).
-- `tests/PoPunkouterSoftware.Tests.E2E/`: C# Playwright browser tests (run on demand against a live instance).
+- `tests/PoPunkouterSoftware.Unit/`: xUnit, strictly no-I/O.
+- `tests/PoPunkouterSoftware.Integration/`: `WebApplicationFactory` + Azurite Testcontainers.
+- `tests/PoPunkouterSoftware.E2EAPI/`: pure-HTTP contract tests against a live instance.
+- `tests/PoPunkouterSoftware.E2EUI/`: C# Playwright browser tests (run on demand against a live instance).
 - `SCRIPTS/`: setup and automation helpers.
 
 ## Local Development
@@ -23,8 +25,9 @@ Prerequisites:
 Common commands:
 
 ```powershell
-dotnet build .\src\PoPunkouterSoftware\PoPunkouterSoftware.csproj
-dotnet test .\tests\PoPunkouterSoftware.Tests
+dotnet build .\PoPunkouterSoftware.sln
+dotnet test .\tests\PoPunkouterSoftware.Unit
+dotnet test .\tests\PoPunkouterSoftware.Integration
 ```
 
 Available VS Code tasks in this workspace include:
@@ -47,9 +50,9 @@ The app runs locally on HTTP port `8000`.
 
 ## Testing Strategy
 
-- Unit tests cover pure logic and API helpers.
-- Integration tests cover host configuration, diagnostics endpoints, and Azure Table Storage behavior.
-- E2E tests cover browser flows and static asset availability.
+- Unit tests (`PoPunkouterSoftware.Unit`) cover pure logic and API helpers, no I/O.
+- Integration tests (`PoPunkouterSoftware.Integration`) cover host configuration, diagnostics endpoints, and Azure Table Storage behavior via `WebApplicationFactory` + Testcontainers Azurite.
+- E2E tests (`PoPunkouterSoftware.E2EAPI`, `PoPunkouterSoftware.E2EUI`) cover the HTTP contract and browser flows against a live instance; on demand, not in CI.
 
 ## Developer Guidance
 

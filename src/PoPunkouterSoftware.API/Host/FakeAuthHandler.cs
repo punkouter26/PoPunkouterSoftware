@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 /// <summary>
 /// NET_RULES §3 auth:

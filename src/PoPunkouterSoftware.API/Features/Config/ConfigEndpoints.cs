@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 /// <summary>
 /// Lets the client discover the canonical API base URL, environment mode, and

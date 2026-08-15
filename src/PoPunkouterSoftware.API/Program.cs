@@ -7,7 +7,7 @@ using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Instrumentation.Http;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using PoPunkouterSoftware;
+using PoPunkouterSoftware.API;
 using PoPunkouterSoftware.Infrastructure;
 using Radzen;
 using Scalar.AspNetCore;
@@ -388,7 +388,7 @@ try
     // Must be called before MapRazorComponents per framework requirement.
     app.MapStaticAssets();
 
-    app.MapRazorComponents<PoPunkouterSoftware.App>()
+    app.MapRazorComponents<PoPunkouterSoftware.API.App>()
        .AddInteractiveWebAssemblyRenderMode()
        .AddAdditionalAssemblies(typeof(PoPunkouterSoftware.Client.MainLayout).Assembly);
 

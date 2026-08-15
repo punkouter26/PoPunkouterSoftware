@@ -1,10 +1,9 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using PoPunkouterSoftware;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Shared;
 
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 /// <summary>
 /// Serves a stable portfolio catalog decorated with live Azure inventory. The catalog

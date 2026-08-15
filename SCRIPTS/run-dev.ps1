@@ -6,7 +6,7 @@
 .DESCRIPTION
     Fixes the three footguns that make a bare `dotnet run` hang or misbehave here:
 
-    1. A previous PoPunkouterSoftware.exe still running keeps port 8000 and the build
+    1. A previous PoPunkouterSoftware.API.exe still running keeps port 8000 and the build
        output DLLs locked — the next build stalls on MSB3026 file-lock retries for ~30s
        and then fails, and a half-replaced wwwroot leaves the browser with WASM 404s /
        SRI integrity errors (the page hangs on the loading skeleton forever).
@@ -28,11 +28,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$project = Join-Path $repoRoot 'src/PoPunkouterSoftware/PoPunkouterSoftware.csproj'
+$project = Join-Path $repoRoot 'src/PoPunkouterSoftware.API/PoPunkouterSoftware.API.csproj'
 
 # ── 1. Kill any stale app instance holding the port or the build outputs ─────
-Get-Process -Name 'PoPunkouterSoftware' -ErrorAction SilentlyContinue | ForEach-Object {
-    Write-Host "Stopping stale PoPunkouterSoftware instance (PID $($_.Id))..." -ForegroundColor Yellow
+Get-Process -Name 'PoPunkouterSoftware.API' -ErrorAction SilentlyContinue | ForEach-Object {
+    Write-Host "Stopping stale PoPunkouterSoftware.API instance (PID $($_.Id))..." -ForegroundColor Yellow
     Stop-Process -Id $_.Id -Force
 }
 # Anything else squatting on the port is a hard error — don't silently fight it.

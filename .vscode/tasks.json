@@ -32,7 +32,7 @@
 			"type": "process",
 			"args": [
 				"clean",
-				"${workspaceFolder}/src/PoPunkouterSoftware",
+				"${workspaceFolder}/src/PoPunkouterSoftware.API",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -64,7 +64,7 @@
 			"type": "process",
 			"args": [
 				"publish",
-				"${workspaceFolder}/src/PoPunkouterSoftware",
+				"${workspaceFolder}/src/PoPunkouterSoftware.API",
 				"--configuration",
 				"Release",
 				"/property:GenerateFullPaths=true",
@@ -82,7 +82,7 @@
 			"type": "process",
 			"args": [
 				"build",
-				"${workspaceFolder}/src/PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+				"${workspaceFolder}/src/PoPunkouterSoftware.API/PoPunkouterSoftware.API.csproj",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -110,9 +110,9 @@
 		{
 			"label": "start-api-server",
 			"type": "shell",
-			"command": "dotnet watch run --project ${workspaceFolder}/src/PoPunkouterSoftware/PoPunkouterSoftware.csproj",
+			"command": "dotnet watch run --project ${workspaceFolder}/src/PoPunkouterSoftware.API/PoPunkouterSoftware.API.csproj",
 			"windows": {
-				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch run --project ${workspaceFolder}/src/PoPunkouterSoftware/PoPunkouterSoftware.csproj"
+				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch run --project ${workspaceFolder}/src/PoPunkouterSoftware.API/PoPunkouterSoftware.API.csproj"
 			},
 			"group": "build",
 			"isBackground": true,
@@ -147,7 +147,7 @@
 			"type": "process",
 			"args": [
 				"test",
-				"${workspaceFolder}/tests/PoPunkouterSoftware.Tests",
+				"${workspaceFolder}/tests/PoPunkouterSoftware.Unit",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -166,9 +166,9 @@
 		{
 			"label": "test-unit-watch",
 			"type": "shell",
-			"command": "dotnet watch test --project ${workspaceFolder}/tests/PoPunkouterSoftware.Tests",
+			"command": "dotnet watch test --project ${workspaceFolder}/tests/PoPunkouterSoftware.Unit",
 			"windows": {
-				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch test --project ${workspaceFolder}/tests/PoPunkouterSoftware.Tests"
+				"command": "\"${env:ProgramFiles}\\dotnet\\x64\\dotnet.exe\" watch test --project ${workspaceFolder}/tests/PoPunkouterSoftware.Unit"
 			},
 			"group": "test",
 			"isBackground": true,

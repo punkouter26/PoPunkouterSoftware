@@ -1,4 +1,4 @@
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 internal sealed class RefreshSessionManager
 {

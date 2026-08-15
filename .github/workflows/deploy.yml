@@ -89,7 +89,7 @@ jobs:
       # All test tiers (unit/integration/E2E) run locally before pushing to master.
 
       - name: Publish
-        run: dotnet publish src/PoPunkouterSoftware/PoPunkouterSoftware.csproj -c Release --no-restore -o ./publish --nologo
+        run: dotnet publish src/PoPunkouterSoftware.API/PoPunkouterSoftware.API.csproj -c Release --no-restore -o ./publish --nologo
 
       # NOTE: 'secrets' is intentionally NOT referenced in any 'if:' expression —
       # GitHub Actions blocks it there to avoid leaking secret existence.

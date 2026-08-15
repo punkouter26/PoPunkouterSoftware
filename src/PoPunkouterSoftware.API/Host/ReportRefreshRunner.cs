@@ -1,10 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
-using PoPunkouterSoftware;
 using PoPunkouterSoftware.Infrastructure;
 
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 /// <summary>
 /// Owns the full Azure inventory refresh run (scan → save → incidents → file cache →

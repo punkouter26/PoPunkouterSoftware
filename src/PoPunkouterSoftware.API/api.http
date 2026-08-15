@@ -1,6 +1,6 @@
 ### PoPunkouterSoftware — API Tests
 ### Run these with the REST Client extension (Ctrl+Alt+R) or JetBrains HTTP Client
-### Server must be running: F5 in VS Code or `dotnet run --project PoPunkouterSoftware/PoPunkouterSoftware.csproj`
+### Server must be running: F5 in VS Code or `dotnet run --project PoPunkouterSoftware.API/PoPunkouterSoftware.API.csproj`
 ###
 ### This file mirrors the live route table. If you add or remove an endpoint, update it here —
 ### it drifted badly once before, documenting /api/diag/fix-plan, /api/diag/refresh-progress and

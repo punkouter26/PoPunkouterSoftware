@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PoPunkouterSoftware.Infrastructure;
 
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 internal static class HealthEndpoints
 {

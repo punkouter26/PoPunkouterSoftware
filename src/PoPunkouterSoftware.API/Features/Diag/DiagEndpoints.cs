@@ -1,10 +1,9 @@
 using System.Net;
 using System.Text;
-using PoPunkouterSoftware;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Shared;
 
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 internal static class DiagEndpoints
 {

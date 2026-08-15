@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 /// <summary>
 /// Simple SignalR hub for pushing live refresh progress updates to connected clients.

@@ -1,4 +1,4 @@
-namespace PoPunkouterSoftware;
+namespace PoPunkouterSoftware.API;
 
 /// <summary>
 /// The two name-based exclusions every read contract has to apply, in one place.
