@@ -22,7 +22,7 @@ public partial class AzureDashboard
     private bool _advancedLoading;
     private string? _advancedError;
 
-    // ── AI triage (see AzureAiSummary.razor) ────────────────────────────────────
+    // ── Status narrative (see AzureStatusNarrative.razor) ───────────────────────
     // The persisted per-scan summary comes from whichever of the two read contracts is
     // freshest in view: the full report once advanced diagnostics has been opened, otherwise
     // the compact first-paint summary — both project the identical AzureReport.AiSummary

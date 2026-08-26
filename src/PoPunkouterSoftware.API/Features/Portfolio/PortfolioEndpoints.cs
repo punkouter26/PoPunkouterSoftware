@@ -154,7 +154,7 @@ internal static partial class PortfolioEndpoints
     private static async Task<List<AppMeta>> LoadMetadataAsync(
         IWebHostEnvironment env, ILogger logger, CancellationToken ct)
     {
-        var path = Path.Combine(ReportFileCache.GetDataDir(env), "apps.json");
+        var path = Path.Combine(ReportFileCache.GetCatalogDir(env), "apps.json");
         if (!File.Exists(path))
             return new List<AppMeta>();
 

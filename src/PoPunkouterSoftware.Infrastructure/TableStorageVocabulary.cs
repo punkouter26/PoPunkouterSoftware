@@ -13,6 +13,13 @@ public static class TablePartitions
     public const string HistorySummary = "history-summary";
     public const string Incidents = "incidents";
     public const string Snoozes = "snoozes";
+
+    /// <summary>
+    /// Per-service, per-day reachability tallies written by <c>ServicePingerService</c>.
+    /// One row per service per day, so a 30-day window over ~8 services is ~240 rows —
+    /// small enough to read whole, unlike a row per sweep (which would be ~35,000).
+    /// </summary>
+    public const string UptimeSamples = "uptime-samples";
 }
 
 public static class TableRowKeys

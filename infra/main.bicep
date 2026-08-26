@@ -40,6 +40,9 @@ param sharedKeyVaultName string = 'kv-poshared'
 @description('Resource group that holds the shared Key Vault.')
 param sharedKeyVaultResourceGroup string = 'PoShared'
 
+@description('Shared Azure AI Services account backing the /azure status narrative.')
+param sharedAiServicesAccountName string = 'po-aiservices-shared'
+
 // Windows App Service Plan, Free (F1) tier.
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: appServicePlanName
@@ -136,6 +139,20 @@ module keyVaultAccess 'modules/keyvault-secrets-user.bicep' = {
   scope: resourceGroup(sharedKeyVaultResourceGroup)
   params: {
     keyVaultName: sharedKeyVaultName
+    principalId: site.identity.principalId
+  }
+}
+
+// Inference-only access to the shared AI Services account, so the /azure status
+// narrative (AiTriageService) can authenticate with the site's managed identity
+// rather than an API key. Without this the app still works — it falls back to the
+// 'PoPunkouterSoftware--AzureOpenAI--ApiKey' vault secret — but the keyless path
+// is the one worth having, and it is the only path that needs no secret at all.
+module aiServicesAccess 'modules/cognitive-services-openai-user.bicep' = {
+  name: 'ai-openai-user-${appName}'
+  scope: resourceGroup(sharedKeyVaultResourceGroup)
+  params: {
+    aiServicesAccountName: sharedAiServicesAccountName
     principalId: site.identity.principalId
   }
 }

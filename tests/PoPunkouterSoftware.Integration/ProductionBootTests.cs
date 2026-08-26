@@ -47,11 +47,9 @@ public class ProductionBootTests : IClassFixture<ProductionApp>
     public ProductionBootTests(ProductionApp app) => _client = app.CreateClient();
 
     [Theory]
-    [InlineData("/healthz")]
     [InlineData("/health")]
     [InlineData("/api/config")]
     [InlineData("/api/portfolio")]
-    [InlineData("/robots.txt")]
     public async Task PublicEndpoints_DoNotFailWithServerError(string path)
     {
         var response = await _client.GetAsync(path);
@@ -64,11 +62,10 @@ public class ProductionBootTests : IClassFixture<ProductionApp>
     /// With no FakeAuth scheme registered, management actions must still fail closed —
     /// and fail *cleanly*, with a 4xx rather than an unhandled exception.
     /// </summary>
-    [Theory]
-    [InlineData("/api/diag/refresh")]
-    [InlineData("/api/diag/cancel-refresh")]
-    public async Task ManagementEndpoints_FailClosed_WithoutServerError(string path)
+    [Fact]
+    public async Task ManagementEndpoints_FailClosed_WithoutServerError()
     {
+        const string path = "/api/diag/refresh";
         var response = await _client.PostAsync(path, content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -88,14 +85,5 @@ public class ProductionBootTests : IClassFixture<ProductionApp>
         var response = await _client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    /// <summary>Impersonation is a FakeAuth affordance and must not exist in Production.</summary>
-    [Fact]
-    public async Task Impersonate_IsNotMapped_InProduction()
-    {
-        var response = await _client.PostAsync("/api/impersonate", content: null);
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

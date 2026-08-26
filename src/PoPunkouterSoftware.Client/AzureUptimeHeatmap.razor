@@ -1,0 +1,97 @@
+@* 30-day uptime grid, one row per app, one cell per day — built entirely from the
+   per-service snapshots already written into every HistorySummary row. No new storage and no
+   new Azure calls: the data has been collected on every scan since history existed and had
+   nowhere to be shown.
+
+   Honesty rules baked into the server-side builder (DashboardInsightsBuilder.BuildUptime),
+   restated here because they are what stop the grid from flattering the fleet:
+     · a day with several scans takes the WORST state observed, not the last one;
+     · a day with no scan is "no data", drawn as an empty cell, and is excluded from the
+       uptime percentage rather than counted as healthy;
+     · rows sort worst-uptime-first, because the grid exists to surface problems.
+
+   The grid scrolls inside its own container: 30 columns cannot fit a 390px viewport, and the
+   page body must never scroll horizontally. *@
+@using PoPunkouterSoftware.Shared
+
+<article class="app-card azure-uptime">
+    <div class="azure-section-heading">
+        <div>
+            <div class="app-kicker">Last @Map.Days.Count days</div>
+            <h2 class="azure-glance-title">Uptime</h2>
+        </div>
+        <span class="app-note" title="Full Azure scans run on demand; the background pinger probes every few minutes while the app is awake. Both feed this grid.">@EvidenceLabel</span>
+    </div>
+
+    @if (Map.Rows.Count == 0)
+    {
+        <div class="azure-compact-state">
+            No history yet. The background pinger fills this in as it runs, and each rescan adds a day.
+        </div>
+    }
+    else
+    {
+        <div class="azure-uptime__scroll">
+            <div class="azure-uptime__grid" style="@GridStyle" role="table" aria-label="Daily uptime by app">
+                @foreach (var row in Map.Rows)
+                {
+                    <div class="azure-uptime__label" role="rowheader" title="@row.Name">@row.Name</div>
+                    @for (var i = 0; i < row.Cells.Count; i++)
+                    {
+                        var state = row.Cells[i];
+                        var day = Map.Days[i];
+                        <div class="azure-uptime__cell @($"is-{state}")" role="cell"
+                             title="@($"{row.Name} — {day:ddd MMM dd}: {Describe(state)}")"></div>
+                    }
+                    <div class="azure-uptime__pct @(row.UptimePercent < 100 ? "is-degraded" : "")" role="cell"
+                         title="@($"Healthy on {row.UptimePercent}% of the {row.ScansObserved} scan(s) that checked it, across {row.DaysWithData} day(s)")">
+                        @row.UptimePercent%
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="azure-uptime__legend" aria-hidden="true">
+            <span><i class="azure-uptime__cell is-healthy"></i> up</span>
+            <span><i class="azure-uptime__cell is-degraded"></i> degraded</span>
+            <span><i class="azure-uptime__cell is-broken"></i> down</span>
+            <span><i class="azure-uptime__cell is-no-data"></i> no scan</span>
+        </div>
+        <p class="azure-chart-note">
+            Built from full Azure scans and from the background pinger, which probes every few
+            minutes. A cell shows the worst state seen that day, so one bad check marks the
+            day; the percentage counts individual checks rather than days, so one bad check
+            among many does not read as a whole day of downtime. Unobserved days stay blank and
+            count for nothing either way, and a ping that times out is recorded as neither —
+            free-tier apps sleep, and a missed cold start is not an outage.
+        </p>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public UptimeHeatmap Map { get; set; } = new();
+
+    /// <summary>
+    /// One label column, one column per day, one percentage column. Set inline rather than in
+    /// CSS because the day count is data-driven; everything else about the grid is styled in
+    /// AzureDashboard.razor.css.
+    /// </summary>
+    private string GridStyle =>
+        $"grid-template-columns: max-content repeat({Map.Days.Count}, var(--uptime-cell)) max-content;";
+
+    /// <summary>
+    /// Names both evidence sources. Reporting scans alone would say "3 scans on record" for a
+    /// grid actually resting on thousands of probes.
+    /// </summary>
+    private string EvidenceLabel => Map.PingCount > 0
+        ? $"{Map.ScanCount} scan(s) · {Map.PingCount:N0} ping(s)"
+        : $"{Map.ScanCount} scan(s) on record";
+
+    private static string Describe(string state) => state switch
+    {
+        UptimeState.Healthy => "healthy",
+        UptimeState.Broken => "unavailable",
+        UptimeState.Degraded => "degraded",
+        _ => "no scan that day",
+    };
+}

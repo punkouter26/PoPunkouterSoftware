@@ -23,11 +23,39 @@ public record OpsSummary
     /// badge and the headline can never disagree about what they are counting.
     /// </summary>
     public int ActionableCount { get; init; }
-    public List<OpsMetricPoint> FleetHealth { get; init; } = new();
     public List<OpsMetricPoint> CostDrivers { get; init; } = new();
     public List<OpsMetricPoint> ResponseTimes { get; init; } = new();
     public List<OpsMetricPoint> CostHistory { get; init; } = new();
     public List<string> AttentionItems { get; init; } = new();
+
+    // ─── Trend series behind the KPI-tile sparklines ─────────────────────────
+    // Each is oldest-first over the same history window as CostHistory, so the four hero
+    // tiles show a shape rather than a bare number. Projected from the precomputed
+    // HistorySummary rows — no extra storage, no extra Azure calls. A series with fewer
+    // than two points is not renderable as a trend; the client hides the sparkline rather
+    // than drawing a single dot.
+
+    /// <summary>Health percentage per scan.</summary>
+    public List<OpsMetricPoint> HealthHistory { get; init; } = new();
+
+    /// <summary>Unavailable-service count per scan.</summary>
+    public List<OpsMetricPoint> BrokenHistory { get; init; } = new();
+
+    /// <summary>Total resource count per scan.</summary>
+    public List<OpsMetricPoint> ResourceHistory { get; init; } = new();
+
+    /// <summary>
+    /// What moved since the previous scan. Never null — a first scan returns a delta with
+    /// <see cref="ScanDelta.HasBaseline"/> false so the UI can say "baseline" instead of
+    /// silently implying nothing changed.
+    /// </summary>
+    public ScanDelta Changes { get; init; } = new();
+
+    /// <summary>Month-end spend projection against the configured budget.</summary>
+    public CostForecast Forecast { get; init; } = new();
+
+    /// <summary>30-day uptime grid built from the per-service snapshots in history.</summary>
+    public UptimeHeatmap Uptime { get; init; } = new();
 
     /// <summary>
     /// The precomputed AI (or rule-based) triage paragraph for the latest scan — projected

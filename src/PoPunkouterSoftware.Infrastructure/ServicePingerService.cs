@@ -34,6 +34,7 @@ public sealed partial class ServicePingerService : BackgroundService
     private readonly TimeSpan _interval;
     private readonly bool _enabled;
     private readonly int _maxConcurrency;
+    private readonly int _retentionDays;
 
     public ServicePingerService(
         IServiceScopeFactory scopeFactory,
@@ -47,6 +48,9 @@ public sealed partial class ServicePingerService : BackgroundService
         _interval = TimeSpan.FromMinutes(config.GetValue<int>("Pinger:IntervalMinutes", 10));
         _enabled = config.GetValue("Pinger:Enabled", true);
         _maxConcurrency = Math.Clamp(config.GetValue("Pinger:MaxConcurrency", 4), 1, 12);
+        // Uptime samples age out on the same schedule as history rows, so the grid's two data
+        // sources cannot disagree about how far back "the last 30 days" reaches.
+        _retentionDays = config.GetValue("Retention:HistoryDays", 30);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -127,10 +131,51 @@ public sealed partial class ServicePingerService : BackgroundService
 
         var results = await Task.WhenAll(tasks);
 
+        // Persist the sweep as a per-day tally so the /azure uptime grid has data on days when
+        // no full Azure scan ran — scans only happen on a manual rescan or a stale-portfolio
+        // page load, so an untrafficked day would otherwise be a blank column. Best-effort:
+        // this loop exists to warm cold-start instances, and a Table Storage blip must not
+        // stop it doing that.
+        //
+        // "reachable" is healthy; "degraded" (5xx) and "unreachable" (DNS/socket) are not.
+        //
+        // "timeout" is deliberately NOT recorded either way. These are F1 apps that sleep when
+        // idle, and a 14-second probe that misses a cold start is not evidence the app is down
+        // — the dashboard says as much under the response-time chart. Counting it as downtime
+        // would paint the grid red every night; counting it as uptime would be a lie. It is
+        // simply not an observation, the same way a day with no scan is not a healthy day.
+        try
+        {
+            var samples = scope.ServiceProvider.GetRequiredService<UptimeSampleStore>();
+            var now = DateTimeOffset.UtcNow;
+            await samples.RecordSweepAsync(
+                results
+                    .Where(r => r.Status != "timeout")
+                    .Select(r => (
+                        ServiceName: NameMatching.ServiceIdentity(r.FriendlyName, r.Name),
+                        Healthy: r.Status == "reachable")),
+                now, ct);
+
+            // No scheduler exists to hang a cleanup job on, so pruning rides the write path —
+            // the same approach AzureReportStore takes for history rows.
+            if (now - _lastPruneAt > PruneEvery)
+            {
+                _lastPruneAt = now;
+                await samples.PruneAsync(_retentionDays, now, ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not persist uptime samples for this sweep (non-fatal)");
+        }
+
         // Heartbeat: a flat sweep-counter rate means the background loop has silently died. (question 5)
         Telemetry.PingerSweeps.Add(1);
         LogSweepComplete(results.Length);
     }
+
+    private DateTimeOffset _lastPruneAt = DateTimeOffset.MinValue;
+    private static readonly TimeSpan PruneEvery = TimeSpan.FromHours(6);
 
     private static async Task<PingResult> PingOneAsync(
         HttpClient client, string name, string friendlyName, string url, CancellationToken ct)

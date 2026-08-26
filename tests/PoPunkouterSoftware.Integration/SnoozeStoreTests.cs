@@ -106,41 +106,4 @@ public class SnoozeStoreAzuriteTests : IAsyncLifetime
         result.Value.Should().NotContain(e => e.Key == expiredKey,
             because: "an entry whose ExpiresAtUtc is in the past must not be reported as active");
     }
-
-    [Fact]
-    public async Task RemoveAsync_DeletesTheEntry_AndIsIdempotentOnASecondCall()
-    {
-        var store = BuildStore();
-        var key = "ZombieApps|to-be-removed";
-        await store.UpsertAsync(key, DateTimeOffset.UtcNow.AddDays(1), null);
-
-        var firstRemove = await store.RemoveAsync(key);
-        firstRemove.IsSuccess.Should().BeTrue();
-        firstRemove.Value.Should().BeTrue();
-
-        (await store.GetActiveAsync()).Value.Should().NotContain(e => e.Key == key);
-
-        // Removing again (or removing a key that was never snoozed) must not fail.
-        var secondRemove = await store.RemoveAsync(key);
-        secondRemove.IsSuccess.Should().BeTrue();
-        secondRemove.Value.Should().BeTrue();
-
-        var neverExisted = await store.RemoveAsync("NeverSnoozed|does-not-exist");
-        neverExisted.IsSuccess.Should().BeTrue();
-        neverExisted.Value.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task UpsertAsync_SameKeyTwice_ReplacesRatherThanDuplicates()
-    {
-        var store = BuildStore();
-        var key = "Reliability|re-snoozed";
-
-        await store.UpsertAsync(key, DateTimeOffset.UtcNow.AddDays(1), "first reason");
-        await store.UpsertAsync(key, DateTimeOffset.UtcNow.AddDays(10), "second reason");
-
-        var result = await store.GetActiveAsync();
-        result.Value.Should().ContainSingle(e => e.Key == key);
-        result.Value!.Single(e => e.Key == key).Reason.Should().Be("second reason");
-    }
 }

@@ -23,7 +23,16 @@ else
 {
     var summary = _summary;
     var ageLabel = RelativeTime.Format(summary.GeneratedAt);
-    var costSeries = summary.CostHistory.Count > 1 ? summary.CostHistory : summary.CostDrivers;
+    // Tone is derived from the counts, never from the narrative text: parsing generated prose
+    // to choose a colour is how a green band ends up above a paragraph about an outage.
+    var narrativeTone = summary.BrokenServices > 0 ? "bad"
+        : summary.ActionableCount > 0 ? "warn"
+        : "good";
+
+    @* The lead paragraph comes before the hero on purpose: it is the one element meant to be
+       read first, and a plain-English sentence answers "what is going on" faster than four
+       numbers do. *@
+    <AzureStatusNarrative Summary="@CurrentAiSummary" AttentionItems="@summary.AttentionItems" Tone="@narrativeTone" />
 
     <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")">
         <div class="azure-command-copy">
@@ -45,17 +54,41 @@ else
         </div>
         @* Health claims inherit the report's age: "100% healthy" from a stale scan is a
            snapshot, not a status — the tiles must not contradict the Stale badge above. *@
+        @* Each tile carries the shape behind its number. The series are projections of the
+           same stored history the charts below use, so a tile and its chart can never
+           disagree; a series with fewer than two points renders nothing at all rather than a
+           misleading single dot. *@
         <div class="azure-command-kpis" aria-label="Azure status summary">
-            <div><strong>@summary.HealthPercent%</strong><span>@(summary.IsStale ? $"Health as of {ageLabel}" : "Service health")</span></div>
-            <div><strong>@summary.CostFormatted</strong><span>30-day cost</span></div>
-            <div><strong>@summary.BrokenServices</strong><span>@(summary.IsStale ? $"Unavailable ({ageLabel})" : "Unavailable")</span></div>
-            <div><strong>@summary.TotalResources</strong><span>Resources</span></div>
+            <div>
+                <strong>@summary.HealthPercent%</strong>
+                <span>@(summary.IsStale ? $"Health as of {ageLabel}" : "Service health")</span>
+                <Sparkline Points="@summary.HealthHistory" Tone="good" AriaLabel="Service health over the last 30 scans" />
+            </div>
+            <div>
+                <strong>@summary.CostFormatted</strong>
+                <span>30-day cost</span>
+                <Sparkline Points="@summary.CostHistory" Tone="accent" AriaLabel="30-day cost over the last 30 scans" />
+            </div>
+            <div>
+                <strong>@summary.BrokenServices</strong>
+                <span>@(summary.IsStale ? $"Unavailable ({ageLabel})" : "Unavailable")</span>
+                <Sparkline Points="@summary.BrokenHistory" Tone="bad" AriaLabel="Unavailable services over the last 30 scans" />
+            </div>
+            <div>
+                <strong>@summary.TotalResources</strong>
+                <span>Resources</span>
+                <Sparkline Points="@summary.ResourceHistory" Tone="accent" AriaLabel="Resource count over the last 30 scans" />
+            </div>
         </div>
         <div class="azure-command-actions">
             @if (_managementActionsEnabled)
             {
-                <RadzenButton Text="@(_refreshing ? "Refreshing…" : "Refresh")" Icon="refresh"
-                              ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Disabled="@_refreshing" Click="RefreshAsync" />
+                @* Named for what it actually does. "Refresh" reads like the page reloads;
+                   this starts a full ARM subscription scan that takes about half a minute,
+                   which is worth knowing before clicking it. *@
+                <RadzenButton Text="@(_refreshing ? "Rescanning Azure…" : "Rescan Azure")" Icon="refresh"
+                              ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Disabled="@_refreshing" Click="RefreshAsync"
+                              title="Runs a full Azure subscription scan (roughly 30 seconds). Progress streams live, and you can leave the page while it runs." />
                 @if (_refreshing)
                 {
                     <RadzenButton Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="CancelRefreshAsync" />
@@ -69,8 +102,6 @@ else
             }
         </div>
     </header>
-
-    <AzureAiSummary Summary="@CurrentAiSummary" AttentionItems="@summary.AttentionItems" />
 
     @if (_refreshing)
     {
@@ -89,41 +120,34 @@ else
         </section>
     }
 
-    <section class="azure-glance-grid" aria-label="Azure status charts">
-        <article class="app-card">
-            <h2 class="azure-glance-title">Service health</h2>
-            <div class="azure-glance-subtitle" aria-hidden="true">@summary.ActiveServices of @summary.TotalServices services</div>
-            <div class="azure-donut-wrap">
-                <RadzenChart>
-                    <RadzenDonutSeries TItem="OpsMetricPoint" Data="@summary.FleetHealth" CategoryProperty="Label" ValueProperty="Value" InnerRadius="72" />
-                    <RadzenLegend Position="LegendPosition.Bottom" />
-                </RadzenChart>
-                <div class="azure-donut-center"><div class="azure-donut-pct">@summary.ActiveServices/@summary.TotalServices</div><div class="azure-donut-caption">healthy</div></div>
-            </div>
-            <span class="app-sr-only">@string.Join(", ", summary.FleetHealth.Select(x => $"{x.Label}: {x.Value}"))</span>
-        </article>
+    @* Placed directly under the hero: "what moved" is the question a returning visitor
+       actually arrives with, and it is answered from stored history with no extra request. *@
+    <AzureWhatChanged Delta="@summary.Changes" />
+
+    @* One grid, three cards. There used to be two grids and four cards, and the extra card
+       was a donut restating the health ratio the hero already gives as a percentage — the
+       same fact appeared in the hero tile, the card subtitle and the donut centre. The cost
+       card likewise drew `CostHistory` whenever it had more than one point, which is the
+       exact series the hero's cost sparkline already draws; it now always shows the per-
+       resource-group breakdown, which appears nowhere else. Trend in the sparkline,
+       breakdown in the chart, ratio in the hero — each fact rendered once. *@
+    <section class="azure-glance-grid" aria-label="Spend forecast and Azure status charts">
+        <AzureCostForecast Forecast="@summary.Forecast" />
         <article class="app-card">
             <h2 class="azure-glance-title">30-day cost by resource group</h2>
-            <div class="azure-glance-subtitle" aria-hidden="true">@(summary.CostHistory.Count > 1 ? "Trend over the past 30 days" : "Snapshot — top cost drivers")</div>
-            @if (costSeries.Count == 0)
+            <div class="azure-glance-subtitle" aria-hidden="true">Top cost drivers this scan</div>
+            @if (summary.CostDrivers.Count == 0)
             {
-                <div class="azure-compact-state">No cost trend is available.</div>
-            }
-            else if (summary.CostHistory.Count > 1)
-            {
-                <RadzenChart>
-                    <RadzenLineSeries TItem="OpsMetricPoint" Data="@costSeries" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
-                    <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
-                </RadzenChart>
+                <div class="azure-compact-state">No cost breakdown is available.</div>
             }
             else
             {
                 <RadzenChart>
-                    <RadzenBarSeries TItem="OpsMetricPoint" Data="@costSeries" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
+                    <RadzenBarSeries TItem="OpsMetricPoint" Data="@summary.CostDrivers" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
                     <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
                 </RadzenChart>
             }
-            <span class="app-sr-only">@string.Join(", ", costSeries.Select(x => $"{x.Label}: ${x.Value:F2}"))</span>
+            <span class="app-sr-only">@string.Join(", ", summary.CostDrivers.Select(x => $"{x.Label}: ${x.Value:F2}"))</span>
         </article>
         <article class="app-card">
             <h2 class="azure-glance-title">Response time · slowest endpoints</h2>
@@ -143,6 +167,10 @@ else
             <span class="app-sr-only">@string.Join(", ", summary.ResponseTimes.Select(x => $"{x.Label}: {x.Value:N0} milliseconds"))</span>
         </article>
     </section>
+
+    @* Full-width on its own row, not a grid cell: 30 day-columns cannot share a row with
+       anything else and still be readable at 390px. *@
+    <AzureUptimeHeatmap Map="@summary.Uptime" />
 
     <section class="azure-attention-summary">
         <div class="azure-section-heading">

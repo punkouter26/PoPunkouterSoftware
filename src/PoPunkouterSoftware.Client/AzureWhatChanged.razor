@@ -1,0 +1,70 @@
+@* "What changed since the last scan" — the single most useful thing an ops dashboard can
+   say, and until now the only thing the stored history could answer that nothing asked.
+
+   The delta is computed server-side (DashboardInsightsBuilder.BuildDelta) and arrives on
+   OpsSummary.Changes, so this component never diffs anything itself. It also never infers
+   meaning from the text: the icon and colour come from Kind and Direction, so a wording
+   change upstream cannot silently turn an outage green. *@
+@using PoPunkouterSoftware.Shared
+
+<section class="azure-changed" aria-label="Changes since the previous scan">
+    <div class="azure-section-heading">
+        <div>
+            <div class="app-kicker">Since last scan</div>
+            <h2>What changed</h2>
+        </div>
+        @if (Delta.HasBaseline && Delta.PreviousScanAt is DateTime prev)
+        {
+            <span class="app-note" title="@prev.ToString("u")">
+                compared with @RelativeTime.Format(prev)
+            </span>
+        }
+    </div>
+
+    @if (!Delta.HasBaseline)
+    {
+        <div class="azure-compact-state">
+            This is the first scan on record — there is nothing to compare it against yet.
+            The next rescan will show what moved.
+        </div>
+    }
+    else if (Delta.Changes.Count == 0)
+    {
+        <div class="azure-compact-state success">
+            <RadzenIcon Icon="check_circle" /> Nothing changed since the previous scan.
+        </div>
+    }
+    else
+    {
+        <ul class="azure-change-list">
+            @foreach (var change in Delta.Changes)
+            {
+                <li class="azure-change @($"dir-{change.Direction}")">
+                    <RadzenIcon Icon="@IconFor(change)" />
+                    <div class="azure-change__copy">
+                        <span class="azure-change__text">@change.Text</span>
+                        @if (!string.IsNullOrWhiteSpace(change.Detail))
+                        {
+                            <span class="azure-change__detail">@change.Detail</span>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public ScanDelta Delta { get; set; } = new();
+
+    private static string IconFor(ScanChange change) => change.Kind switch
+    {
+        ScanChangeKinds.ServiceDown => "cloud_off",
+        ScanChangeKinds.ServiceRecovered => "cloud_done",
+        ScanChangeKinds.Cost => change.Direction == ScanChangeDirection.Worse ? "trending_up" : "trending_down",
+        ScanChangeKinds.Security => "shield",
+        ScanChangeKinds.Cleanup => "delete_sweep",
+        ScanChangeKinds.Performance => "speed",
+        _ => "sync_alt",
+    };
+}

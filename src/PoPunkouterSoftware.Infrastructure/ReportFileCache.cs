@@ -14,17 +14,45 @@ public static class ReportFileCache
 {
     public const string ReportFileName = "azure-full-report.json";
 
+    /// <summary>
+    /// Where the report cache is written and read. Deliberately under the CONTENT root,
+    /// never the web root.
+    /// <para>This file used to live in <c>wwwroot/data</c> beside apps.json, which
+    /// <c>UseStaticFiles()</c> happily served to anyone who asked for
+    /// <c>/data/azure-full-report.json</c> — a full Azure inventory including the raw
+    /// subscription id, every resource id, cost figures and SSL state. It is a server-side
+    /// cache and has never had a browser consumer, so the fix is to move it off the served
+    /// tree rather than to bolt an exclusion onto the static-file pipeline.</para>
+    /// </summary>
+    public static string GetCacheDir(IWebHostEnvironment env) =>
+        Path.Combine(env.ContentRootPath, "App_Data");
+
+    /// <summary>
+    /// The PUBLIC catalog directory — <c>apps.json</c> only. Served as a static asset by
+    /// design; it lists nothing that is not already public.
+    /// </summary>
     // In the unified Blazor WASM model, wwwroot lives in the Client project.
     // env.WebRootPath is null on the server because the server has no wwwroot of its own.
     // In dev, resolve to the Client project's wwwroot; in production, UseStaticWebAssets()
     // publishes client assets under ContentRootPath/wwwroot, so WebRootPath is non-null.
-    public static string GetDataDir(IWebHostEnvironment env) =>
+    public static string GetCatalogDir(IWebHostEnvironment env) =>
         env.WebRootPath is not null
             ? Path.Combine(env.WebRootPath, "data")
             : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "data"));
 
     public static string GetReportPath(IWebHostEnvironment env) =>
-        Path.Combine(GetDataDir(env), ReportFileName);
+        Path.Combine(GetCacheDir(env), ReportFileName);
+
+    /// <summary>
+    /// Creates the cache directory if it does not exist and returns the report path. The
+    /// cache dir is no longer a checked-in folder, so the first write after a clean deploy
+    /// has to make it.
+    /// </summary>
+    public static string EnsureReportPath(IWebHostEnvironment env)
+    {
+        Directory.CreateDirectory(GetCacheDir(env));
+        return GetReportPath(env);
+    }
 
     // Hoisted so System.Text.Json's converter metadata cache is reused instead of being
     // rebuilt for every request that hits the file-fallback path.

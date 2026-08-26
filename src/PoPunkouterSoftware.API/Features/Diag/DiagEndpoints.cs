@@ -66,15 +66,22 @@ internal static class DiagEndpoints
             return Results.Problem(detail: "No report found. Refresh from Azure to generate one.", statusCode: 404);
         });
 
-        diag.MapGet("/summary",async (IWebHostEnvironment env, AzureReportStore store, ILogger<Program> logger, CancellationToken ct) =>
+        diag.MapGet("/summary",async (
+            IWebHostEnvironment env, AzureReportStore store, UptimeSampleStore uptimeSamples,
+            IConfiguration config, TimeProvider clock, ILogger<Program> logger, CancellationToken ct) =>
         {
             var report = await LoadLatestReportAsync(env, store, logger, ct);
             if (report is null)
                 return Results.Problem(detail: "No Azure report is available.", statusCode: 404);
 
+            var now = clock.GetUtcNow();
             var historyResult = await store.LoadHistorySummariesAsync(maxEntries: 30, ct);
             var history = historyResult.IsSuccess ? historyResult.Value ?? new List<HistorySummary>() : new List<HistorySummary>();
-            return Results.Json(BuildOpsSummary(report, history));
+            // The pinger's per-day tallies fill the days no full scan covered. LoadRecentAsync
+            // never throws — an empty list just means the grid falls back to scans alone.
+            var samples = await uptimeSamples.LoadRecentAsync(DashboardInsightsBuilder.UptimeWindowDays, now, ct);
+            return Results.Json(BuildOpsSummary(
+                report, history, config.GetValue<double?>("Budget:MonthlyUsd"), now.UtcDateTime, samples));
         })
         .WithName("GetOpsSummary");
 
@@ -117,7 +124,7 @@ internal static class DiagEndpoints
         // UI never blocks on this — it renders a disabled "AI summary"
         // expander when the feature is off or the upstream model is down.
         //
-        // This is the ad-hoc consumer only: the AzureAiSummary component's "Regenerate now"
+        // This is the ad-hoc consumer only: the AzureStatusNarrative component's "Rewrite this"
         // button calls this route directly to get a fresh, unpersisted paragraph without a
         // full Azure rescan. The persisted-per-scan summary shown by default on the dashboard
         // is precomputed by ReportRefreshRunner via AiTriageService.GenerateSummaryAsync (which
@@ -191,7 +198,9 @@ internal static class DiagEndpoints
         return await ReportFileCache.TryLoadFromFileAsync(env, logger, ct);
     }
 
-    private static OpsSummary BuildOpsSummary(AzureReport report, IReadOnlyCollection<HistorySummary> history)
+    private static OpsSummary BuildOpsSummary(
+        AzureReport report, IReadOnlyCollection<HistorySummary> history, double? budgetUsd, DateTime utcNow,
+        IReadOnlyCollection<UptimeDaySample>? pingSamples = null)
     {
         // The dashboard never reports on the site rendering it, nor on retired apps. Both are
         // real resources in the scanned subscription, so they arrive through the inventory
@@ -233,12 +242,6 @@ internal static class DiagEndpoints
             // read "8 item(s) need attention" beside "3 actionable", silently dropping the
             // four unavailable services, the most actionable items on the page.
             ActionableCount = broken + security + cleanup,
-            FleetHealth = new List<OpsMetricPoint>
-            {
-                new("Healthy", active),
-                new("Unavailable", broken),
-                new("Other", Math.Max(0, total - active - broken)),
-            }.Where(p => p.Value > 0).ToList(),
             CostDrivers = (report.Cost?.TopCostDrivers ?? new()).Where(x => x.Cost > 0).Take(5)
                 .Select(x => new OpsMetricPoint(x.Name, Math.Round(x.Cost, 2))).ToList(),
             ResponseTimes = services.Where(s => s.Connectivity?.ResponseTime > 0)
@@ -250,8 +253,37 @@ internal static class DiagEndpoints
                     Math.Round(h.TotalCost30Days, 2))).ToList(),
             AttentionItems = built.AttentionItems.Take(5).ToList(),
             AiSummary = report.AiSummary,
+
+            // Sparkline series for the hero tiles. Same window and ordering as CostHistory so
+            // all four tiles describe the same span of time; the client hides any series with
+            // fewer than two points rather than drawing a single dot.
+            HealthHistory = TrendSeries(history, h => h.TotalServices > 0
+                ? Math.Round(h.ActiveServices * 100d / h.TotalServices)
+                : 100),
+            BrokenHistory = TrendSeries(history, h => h.BrokenServices),
+            ResourceHistory = TrendSeries(history, h => h.TotalResources),
+
+            Changes = DashboardInsightsBuilder.BuildDelta(report, history, PortfolioIdentity.IsExcluded),
+            Forecast = DashboardInsightsBuilder.BuildForecast(report, history, budgetUsd),
+            Uptime = DashboardInsightsBuilder.BuildUptime(
+                history, utcNow, PortfolioIdentity.IsExcluded,
+                DashboardInsightsBuilder.UptimeWindowDays, pingSamples),
         };
     }
+
+    /// <summary>
+    /// Projects one numeric field of the history window onto a labelled, oldest-first series.
+    /// Rows without a real timestamp are dropped: they would sort to the front and drag every
+    /// sparkline down to a phantom zero at its left edge.
+    /// </summary>
+    private static List<OpsMetricPoint> TrendSeries(
+        IReadOnlyCollection<HistorySummary> history, Func<HistorySummary, double> value) =>
+        history
+            .Where(h => h.GeneratedAt > DateTime.MinValue)
+            .OrderBy(h => h.GeneratedAt)
+            .TakeLast(30)
+            .Select(h => new OpsMetricPoint(h.GeneratedAt.ToString("MMM dd"), Math.Round(value(h), 2)))
+            .ToList();
 
     private static async Task<IResult> GetDiag(HttpContext http, IWebHostEnvironment env, IConfiguration config, AzureReportStore store, CancellationToken ct)
     {

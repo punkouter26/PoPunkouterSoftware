@@ -27,7 +27,9 @@ public static class HistorySummaryMapper
         BrokenDelta = r.Delta?.BrokenServicesDelta,
         Services = (r.WebServices?.Services ?? new()).Select(s => new ServiceHistoryPoint
         {
-            Name = s.FriendlyName ?? s.Name,
+            // Shared with ServicePingerService via NameMatching.ServiceIdentity: the uptime
+            // grid joins scan rows and ping rows on this exact string.
+            Name = NameMatching.ServiceIdentity(s.FriendlyName, s.Name),
             HttpStatus = s.HttpStatus,
             ResponseTimeMs = s.Connectivity?.ResponseTime ?? 0,
             Requests7d = s.Metrics7Days?.Requests ?? 0,

@@ -81,10 +81,10 @@ public class PortfolioUiTests : IAsyncLifetime
 
         response.Should().NotBeNull();
         response!.Ok.Should().BeTrue();
-        // "Service health" is the first always-present glance card heading; the hero h1 is
-        // dynamic ("Everything looks good" / "N items need attention") so it is not a stable
-        // anchor. "All resources" only exists once the advanced section is expanded.
-        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Service health" })).ToBeVisibleAsync();
+        // "Month-end forecast" is the first always-present glance card heading; the hero h1
+        // is dynamic ("Everything looks good" / "N items need attention") so it is not a
+        // stable anchor. "All resources" only exists once the advanced section is expanded.
+        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Month-end forecast" })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Advanced diagnostics" })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "All resources" })).ToHaveCountAsync(0);
         await Assertions.Expect(page.Locator(".azure-glance-grid > article")).ToHaveCountAsync(3);

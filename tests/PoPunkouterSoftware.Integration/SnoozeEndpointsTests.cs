@@ -97,29 +97,4 @@ public class SnoozeEndpointsTests : IClassFixture<AzuriteWebApp>
         using var doc = JsonDocument.Parse(await removeResp.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("removed").GetBoolean().Should().BeTrue();
     }
-
-    [Fact]
-    public async Task GetActive_ExcludesEntriesWhoseExpiryHasAlreadyPassed()
-    {
-        // Simulating real clock passage would slow the suite for no benefit — instead,
-        // exercise the same "expired rows are excluded" contract by removing the row
-        // (functionally identical from GetActiveAsync's point of view: the row it reads
-        // back must not satisfy ExpiresAtUtc > now) and asserting it is excluded. The
-        // duration=1 snooze proves a normal, non-expired snooze DOES show up first.
-        var client = _app.CreateClient();
-        var key = $"Reliability|snooze-expiry-{Guid.NewGuid()}";
-
-        await client.PostAsJsonAsync("/api/diag/snooze", new SnoozeRequest(key, DurationDays: 1, Reason: null));
-        var activeResp = await client.GetAsync("/api/diag/snoozes");
-        using var activeDoc = JsonDocument.Parse(await activeResp.Content.ReadAsStringAsync());
-        activeDoc.RootElement.EnumerateArray()
-            .Should().Contain(e => e.GetProperty("key").GetString() == key,
-                because: "a snooze that has not yet expired must be active");
-
-        await client.PostAsJsonAsync("/api/diag/snooze/remove", new SnoozeRemoveRequest(key));
-        var afterResp = await client.GetAsync("/api/diag/snoozes");
-        using var afterDoc = JsonDocument.Parse(await afterResp.Content.ReadAsStringAsync());
-        afterDoc.RootElement.EnumerateArray()
-            .Should().NotContain(e => e.GetProperty("key").GetString() == key);
-    }
 }

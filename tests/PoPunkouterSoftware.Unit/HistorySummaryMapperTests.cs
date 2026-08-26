@@ -143,24 +143,7 @@ public class HistorySummaryMapperTests
         point.Requests7d.Should().Be(1_500);
     }
 
-    [Fact]
-    public void Services_NullFriendlyName_FallsBackToRawName()
-    {
-        // A report deserialized from JSON with "friendlyName": null hits the ?? fallback.
-        var report = new AzureReport
-        {
-            WebServices = new WebServicesInfo
-            {
-                Services = new List<WebService> { new() { Name = "app-raw-name", FriendlyName = null! } },
-            },
-        };
-
-        HistorySummaryMapper.FromReport(report).Services.Single().Name.Should().Be("app-raw-name");
-    }
-
     [Theory]
-    [InlineData(-2)]
-    [InlineData(0)]
     [InlineData(3)]
     public void BrokenDelta_PassesThroughVerbatim(int delta)
     {

@@ -27,7 +27,7 @@
 @* No `rz-background-color-base rz-color-base` here: both resolve to `var(--rz-base)`
    (#505f65) with `!important`, so every heading that did not set its own colour
    inherited a mid-slate grey — washed out in light mode and dim in dark. The page's
-   background and text come from --app-bg-deep / --app-text in modern-ui.base.css. *@
+   background and text come from --app-bg-deep / --app-text in modern-ui.css. *@
 <body>
     @* Single GPU compositing layer for the whole app — see js/gpu-backdrop.js.
        Stays invisible (and the CSS grid fallback stays visible) unless WebGL

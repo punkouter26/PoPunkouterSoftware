@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using PoPunkouterSoftware.Infrastructure;
+using PoPunkouterSoftware.Shared;
 
 namespace PoPunkouterSoftware.API;
 
@@ -18,7 +19,8 @@ internal sealed class ReportRefreshRunner(
     ILogger<ReportRefreshRunner> logger,
     IHubContext<RefreshHub> hubCtx,
     RefreshSessionManager session,
-    AiTriageService aiTriage)
+    AiTriageService aiTriage,
+    IConfiguration config)
 {
     /// <summary>
     /// Auto-triggered runs must not retry-storm when scans keep failing (bad credentials,
@@ -114,16 +116,38 @@ internal sealed class ReportRefreshRunner(
 
                     var report = await azureService.RunAsync(progress, ct);
 
-                    // AI triage precompute: build the attention items from the fresh report
-                    // (the same logic that projects OpsSummary.AttentionItems, see
-                    // AttentionItemsBuilder) and attach the result to the report before it is
-                    // saved, so it persists through the existing store/file-cache paths with
-                    // no new plumbing. GenerateSummaryAsync reuses the previous scan's summary
-                    // (Source "cached") instead of calling the model when nothing
-                    // attention-worthy changed, and never throws for an AI outage — it always
-                    // returns a populated result (falling back to a rule-based sentence).
-                    var attentionItems = AttentionItemsBuilder.Build(report, PortfolioIdentity.IsExcluded).AttentionItems;
-                    var aiSummary = await aiTriage.GenerateSummaryAsync(attentionItems, previousReport?.AiSummary, ct);
+                    // Status-narrative precompute: assemble every figure the scan produced
+                    // (StatusFactsBuilder — the same projection the read path uses, so the
+                    // paragraph can never contradict the tiles beside it) and attach the
+                    // result to the report before it is saved, so it persists through the
+                    // existing store/file-cache paths with no new plumbing.
+                    //
+                    // GenerateSummaryAsync reuses the previous scan's paragraph (Source
+                    // "cached") instead of calling the model when nothing material changed,
+                    // and never throws for an AI outage — it always returns a populated
+                    // result, falling back to the rule-based narrative.
+                    //
+                    // History is loaded here purely so the narrator can mention what moved
+                    // since the previous scan; a failure to load it degrades the paragraph,
+                    // never the scan.
+                    var historyForFacts = new List<HistorySummary>();
+                    try
+                    {
+                        var historyResult = await store.LoadHistorySummariesAsync(maxEntries: 30, ct);
+                        if (historyResult.IsSuccess && historyResult.Value is not null)
+                            historyForFacts = historyResult.Value;
+                    }
+                    catch (Exception hex)
+                    {
+                        logger.LogWarning(hex, "History load for the status narrative failed (non-fatal)");
+                    }
+
+                    var facts = StatusFactsBuilder.Build(
+                        report,
+                        historyForFacts,
+                        config.GetValue<double?>("Budget:MonthlyUsd"),
+                        PortfolioIdentity.IsExcluded);
+                    var aiSummary = await aiTriage.GenerateSummaryAsync(facts, previousReport?.AiSummary, ct);
                     report = report with { AiSummary = aiSummary };
 
                     await store.SaveAsync(report, ct);
@@ -139,7 +163,7 @@ internal sealed class ReportRefreshRunner(
                     }
 
                     var json = JsonSerializer.Serialize(report, FileCacheJsonOptions);
-                    var filePath = ReportFileCache.GetReportPath(env);
+                    var filePath = ReportFileCache.EnsureReportPath(env);
                     await File.WriteAllTextAsync(filePath, json, ct);
 
                     // Refresh the home-page screenshots alongside the inventory (non-fatal).

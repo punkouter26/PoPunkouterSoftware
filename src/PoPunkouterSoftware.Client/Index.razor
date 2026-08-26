@@ -54,16 +54,25 @@
                     Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
                 </span>
             }
-            <button type="button" class="portfolio-summary__btn @(data.Stale ? "is-stale" : "")" @onclick="LoadAppsAsync" disabled="@_loading" aria-busy="@_loading">
+            <span class="portfolio-summary__auto" title="This list reloads itself every 5 minutes; the button is only for checking sooner.">
+                auto-updates every 5 min
+            </span>
+            @* "Reload catalog", not "Refresh list": this re-reads the inventory the server
+               already has (GET /api/portfolio, ~200 ms). It does NOT rescan Azure — that is
+               the "Rescan Azure" button on /azure, which costs about 30 seconds of live ARM
+               calls. Two buttons that both said "refresh" meant nobody could tell which one
+               they were about to pay for. *@
+            <button type="button" class="portfolio-summary__btn @(data.Stale ? "is-stale" : "")" @onclick="LoadAppsAsync" disabled="@_loading" aria-busy="@_loading"
+                    title="Re-reads the stored inventory from the server. To scan Azure again for fresh data, use Rescan Azure on the Azure page.">
                 @if (_loading)
                 {
                     <span class="portfolio-summary__spinner" aria-hidden="true"></span>
-                    <span>Refreshing…</span>
+                    <span>Reloading…</span>
                 }
                 else
                 {
                     <RadzenIcon Icon="refresh" />
-                    <span>Refresh list</span>
+                    <span>Reload catalog</span>
                 }
             </button>
         </div>

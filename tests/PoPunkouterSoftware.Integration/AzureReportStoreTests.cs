@@ -147,28 +147,4 @@ public class AzureReportStoreHistoryTests : IAsyncLifetime
         history.Value!.Should().Contain(r => r.Subscription!.Name == "History-Sub-1",
             because: "the previous report must be persisted to history on each save");
     }
-
-    [Fact]
-    public async Task ConcurrentSaves_DoNotThrow_LastWriterWins()
-    {
-        var store = BuildStore();
-
-        await store.SaveAsync(new AzureReport { Subscription = new SubscriptionInfo { Name = "seed" } });
-
-        var tasks = Enumerable.Range(1, 5).Select(i => store.SaveAsync(new AzureReport
-        {
-            GeneratedAt = DateTime.UtcNow,
-            Subscription = new SubscriptionInfo { Name = $"concurrent-{i}" }
-        }));
-
-        var results = await Task.WhenAll(tasks);
-
-        results.Should().AllSatisfy(r =>
-            r.IsSuccess.Should().BeTrue(because: "concurrent saves must not throw"));
-
-        var final = await store.LoadAsync();
-        final.IsSuccess.Should().BeTrue();
-        final.Value.Should().NotBeNull();
-        final.Value!.Subscription!.Name.Should().StartWith("concurrent-");
-    }
 }

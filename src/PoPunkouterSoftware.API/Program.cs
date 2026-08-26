@@ -240,6 +240,7 @@ try
 
     builder.Services.AddSingleton<AzureReportStore>();
     builder.Services.AddSingleton<SnoozeStore>();
+    builder.Services.AddSingleton<UptimeSampleStore>();
     builder.Services.AddSingleton<AppScreenshotService>();
     builder.Services.AddTransient<AzureReportService>();
     builder.Services.AddTransient<DowntimeDiagnosisService>();
@@ -311,15 +312,20 @@ try
             o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
         });
 
-    // ─── HTTP client for Hugging Face Inference API (cheapest viable AI) ─────
-    // Deliberately NO resilience: an AI outage must degrade to "AI summary
-    // unavailable", not retry-storm the model and burn the free-tier quota.
-    // Mirrors the `health` / `azure-probe` deliberate-no-resilience pattern.
+    // ─── HTTP client for Azure AI Foundry (chat completions) ────────────────
+    // Targets the shared po-aiservices-shared account in the poshared resource group via
+    // Entra ID (System-Assigned Managed Identity in Azure, az login locally) — the same
+    // shared-estate pattern as kv-poshared. AiTriageService builds the absolute request URL
+    // from StatusNarrator:Endpoint, so no BaseAddress is set here.
+    //
+    // Deliberately NO resilience: an AI outage must degrade to the rule-based narrative,
+    // not retry-storm the deployment. Mirrors the `health` / `azure-probe` pattern.
+    // The timeout is generous because the narrative is generated on the background scan
+    // thread, where a slow completion costs nothing a visitor can feel.
     builder.Services.AddHttpClient(AiTriageService.HttpClientName)
         .ConfigureHttpClient(c =>
         {
-            c.BaseAddress = new Uri("https://api-inference.huggingface.co/");
-            c.Timeout = TimeSpan.FromSeconds(15);
+            c.Timeout = TimeSpan.FromSeconds(45);
             c.DefaultRequestHeaders.UserAgent.ParseAdd("PoPunkouterSoftware/1.0");
         });
 

@@ -21,7 +21,7 @@ internal sealed record ProblemResponse(
 
 /// <summary>
 /// Request body for the ad-hoc <c>POST /api/diag/ai</c> call made by
-/// <c>AzureAiSummary</c>'s "Regenerate now" button. Mirrors Infrastructure's
+/// <c>AzureStatusNarrative</c>'s "Rewrite this" button. Mirrors Infrastructure's
 /// <c>AiTriageRequest</c> shape; declared here (rather than referencing Infrastructure
 /// directly, which the Client project deliberately does not) so it can register with the
 /// source-generated <see cref="AppJsonContext"/> — an anonymous object would force

@@ -29,9 +29,21 @@ internal sealed class ManagementActionFilter : IEndpointFilter
                 detail: "Management actions are disabled in this environment.",
                 statusCode: StatusCodes.Status403Forbidden);
 
+        var adminKey = config["Security:ManagementApiKey"];
+
+        // Fail closed in Production when the flag is on but no key is configured. Outside
+        // Production the flag alone is the gate (local dev has no key and needs none), but a
+        // public deployment with EnableManagementActions=true and no key would leave
+        // /api/diag/refresh open to anonymous callers — a free, repeatable, ~30-second
+        // subscription scan for anyone who finds the route. This became reachable the moment
+        // the nightly uptime-scan workflow needed the flag turned on in Production.
+        if (env.IsProduction() && string.IsNullOrWhiteSpace(adminKey))
+            return Results.Problem(
+                detail: "Management actions require Security:ManagementApiKey to be configured in Production.",
+                statusCode: StatusCodes.Status403Forbidden);
+
         // Defence-in-depth: when a key is configured (e.g. via Key Vault in Production)
         // callers must present it in X-Management-Key. No key configured → flag gate only.
-        var adminKey = config["Security:ManagementApiKey"];
         if (!string.IsNullOrWhiteSpace(adminKey))
         {
             var presented = http.Request.Headers["X-Management-Key"].ToString();

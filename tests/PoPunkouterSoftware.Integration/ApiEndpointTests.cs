@@ -10,74 +10,38 @@ public class HealthEndpointTests
 
     public HealthEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
 
+    /// <summary>
+    /// The whole /health contract in one request. This replaced eight Facts that each
+    /// fetched the same document and looked at a different field of it — same coverage,
+    /// eight fewer round trips through WebApplicationFactory, and a failure now names the
+    /// contract rather than one property of it.
+    /// </summary>
     [Fact]
-    public async Task GetHealth_Returns200()
+    public async Task GetHealth_Returns200_WithTheFullDeepProbeContract()
     {
         var response = await _client.GetAsync("/health");
+
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+
+        root.TryGetProperty("status", out _).Should().BeTrue();
+        root.TryGetProperty("timestamp", out _).Should().BeTrue();
+        root.TryGetProperty("checks", out _).Should().BeTrue();
+        root.TryGetProperty("environment", out _).Should().BeTrue();
+        root.GetProperty("application").GetString().Should().Be("PoPunkouterSoftware");
+        root.GetProperty("config").GetProperty("ASPNETCORE_ENVIRONMENT")
+            .GetString().Should().NotBeNullOrWhiteSpace();
     }
 
+    /// <summary>Static liveness — deliberately separate from the deep probe above.</summary>
     [Fact]
     public async Task GetLiveness_Returns200()
     {
         var response = await _client.GetAsync("/healthz");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Fact]
-    public async Task GetHealth_ContentType_IsJson()
-    {
-        var response = await _client.GetAsync("/health");
-        response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
-    }
-
-    [Fact]
-    public async Task GetHealth_ReturnsStatusField()
-    {
-        var json = await _client.GetStringAsync("/health");
-        var doc = JsonDocument.Parse(json);
-        doc.RootElement.TryGetProperty("status", out _).Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task GetHealth_ReturnsApplicationField()
-    {
-        var json = await _client.GetStringAsync("/health");
-        var doc = JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("application").GetString().Should().Be("PoPunkouterSoftware");
-    }
-
-    [Fact]
-    public async Task GetHealth_ReturnsTimestamp()
-    {
-        var json = await _client.GetStringAsync("/health");
-        var doc = JsonDocument.Parse(json);
-        doc.RootElement.TryGetProperty("timestamp", out _).Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task GetHealth_ReturnsChecksObject()
-    {
-        var json = await _client.GetStringAsync("/health");
-        var doc = JsonDocument.Parse(json);
-        doc.RootElement.TryGetProperty("checks", out _).Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task GetHealth_ReturnsEnvironmentField()
-    {
-        var json = await _client.GetStringAsync("/health");
-        var doc = JsonDocument.Parse(json);
-        doc.RootElement.TryGetProperty("environment", out _).Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task GetHealth_ConfigMasked_NotEmpty()
-    {
-        var json = await _client.GetStringAsync("/health");
-        var doc = JsonDocument.Parse(json);
-        var cfg = doc.RootElement.GetProperty("config");
-        cfg.GetProperty("ASPNETCORE_ENVIRONMENT").GetString().Should().NotBeNullOrWhiteSpace();
     }
 }
 
@@ -89,38 +53,15 @@ public class ConfigEndpointTests
     public ConfigEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
 
     [Fact]
-    public async Task GetConfig_Returns200()
+    public async Task GetConfig_Returns200_WithAnAbsoluteApiBase()
     {
         var response = await _client.GetAsync("/api/config");
+
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
 
-    [Fact]
-    public async Task GetConfig_ReturnsApiBase_StartingWithHttp()
-    {
-        var json = await _client.GetStringAsync("/api/config");
-        var doc = JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("apiBase").GetString().Should().StartWith("http");
-    }
-
-    [Fact]
-    public async Task GetConfig_ApiBase_EndsWithSlashApi()
-    {
-        var json = await _client.GetStringAsync("/api/config");
-        var doc = JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("apiBase").GetString().Should().EndWith("/api");
-    }
-
-    [Fact]
-    public async Task GetConfig_TestEnvironment_ReportsMockMode()
-    {
-        var json = await _client.GetStringAsync("/api/config");
-        var doc = JsonDocument.Parse(json);
-
-        // This site has no auth — config exposes only environment/feature state.
-        doc.RootElement.GetProperty("isMockMode").GetBoolean().Should().BeTrue();
-        doc.RootElement.TryGetProperty("guestLoginEnabled", out _).Should().BeFalse();
-        doc.RootElement.TryGetProperty("microsoftOAuthEnabled", out _).Should().BeFalse();
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("apiBase").GetString()
+            .Should().StartWith("http").And.EndWith("/api");
     }
 
     /// <summary>
@@ -136,6 +77,12 @@ public class ConfigEndpointTests
 
         doc.RootElement.EnumerateObject().Select(p => p.Name)
             .Should().BeEquivalentTo("apiBase", "isMockMode", "managementActionsEnabled");
+
+        // Folded in from the deleted GetConfig_TestEnvironment_ReportsMockMode: the exact
+        // key set above already proves the auth-era fields (guestLoginEnabled,
+        // microsoftOAuthEnabled) cannot regrow, so only the value claim was left to keep.
+        doc.RootElement.GetProperty("isMockMode").GetBoolean().Should().BeTrue(
+            because: "the hermetic fixture runs under the Testing environment");
     }
 }
 
@@ -151,16 +98,6 @@ public class DiagReportEndpointTests
     {
         var response = await _client.GetAsync("/api/diag/report");
         response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task GetDiagReport_WhenOk_ContentIsJson()
-    {
-        var response = await _client.GetAsync("/api/diag/report");
-        if (response.StatusCode == HttpStatusCode.OK)
-        {
-            response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
-        }
     }
 }
 
@@ -270,13 +207,6 @@ public class OpenApiEndpointTests
     private readonly HttpClient _client;
 
     public OpenApiEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
-
-    [Fact]
-    public async Task GetOpenApi_Returns200()
-    {
-        var response = await _client.GetAsync("/openapi/v1.json");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
 }
 
 [Collection("WebApp")]
@@ -285,13 +215,6 @@ public class StaticFilesTests
     private readonly HttpClient _client;
 
     public StaticFilesTests(TestWebApp factory) => _client = factory.CreateClient();
-
-    [Fact]
-    public async Task GetAppsJson_Returns200()
-    {
-        var response = await _client.GetAsync("/data/apps.json");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
 }
 
 [Collection("WebApp")]

@@ -1,13 +1,16 @@
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
-
 namespace PoPunkouterSoftware.API;
 
 /// <summary>
-/// Lets the client discover the canonical API base URL, environment mode, and
-/// feature/model availability. The <c>/api/whoami</c> endpoint exposes the
-/// current principal populated by <see cref="FakeAuthHandler"/> so the UI can
-/// render its Session / Logout slot.
+/// Lets the client discover the canonical API base URL, environment mode, and feature
+/// availability. One endpoint, one consumer: <c>AzureDashboard</c> reads it to decide
+/// whether to render the management controls.
+/// <para><c>/api/whoami</c>, <c>/api/logout</c> and <c>/api/impersonate</c> used to live
+/// here. They were affordances of the Session/Logout header slot, which was deleted in
+/// 2026-08 because a statically-rendered <c>MainLayout</c> can never fire an
+/// <c>@onclick</c>. Nothing has called them since, so they went the same way as the three
+/// slices deleted in 2026-07 — see the "every endpoint needs a consumer" rule in
+/// CLAUDE.md. <see cref="FakeAuthHandler"/> itself stays: it is what lets a caller opt
+/// into the management role via <c>X-Fake-Roles</c>.</para>
 /// </summary>
 internal static class ConfigEndpoints
 {
@@ -31,61 +34,6 @@ internal static class ConfigEndpoints
                 }))
             .WithName("GetConfig").WithTags("Config");
 
-        // Whoami — returns the current FakeAuth principal for the UI header.
-        // Public, anonymous, and safe: only the (already-trusted) client knows
-        // what header it sent.
-        app.MapGet("/api/whoami",
-            (HttpContext ctx) =>
-            {
-                var user = ctx.User;
-                var name = user.Identity?.IsAuthenticated == true
-                    ? user.Identity.Name ?? FakeAuthHandler.AnonymousUser
-                    : FakeAuthHandler.AnonymousUser;
-                var roles = user.Claims
-                    .Where(c => c.Type == ClaimTypes.Role)
-                    .Select(c => c.Value)
-                    .ToArray();
-                var isManagement = user.IsInRole(FakeAuthHandler.ManagementRole);
-                var scheme = user.Identity?.AuthenticationType ?? FakeAuthHandler.SchemeName;
-                return Results.Ok(new
-                {
-                    name,
-                    isAuthenticated = user.Identity?.IsAuthenticated ?? false,
-                    roles,
-                    isManagement,
-                    scheme,
-                });
-            })
-            .WithName("GetWhoami").WithTags("Config");
-
-        // Logout — the FakeAuth scheme is in-memory per request; the canonical
-        // "logout" is to drop the X-Fake-User / X-Fake-Roles headers on the
-        // client and reload. The endpoint exists so the client has a peer to
-        // call from the Session/Logout slot and so the audit trail is uniform.
-        app.MapPost("/api/logout", () => Results.NoContent())
-            .WithName("Logout").WithTags("Config");
-
-        // Impersonation — a management-only action that lets an admin drop their
-        // X-Fake-User header to temporarily take a non-elevated identity. Gated by the
-        // management policy.
-        //
-        // Mapped ONLY outside Production, because it is an affordance of FakeAuth and
-        // FakeAuth does not exist there. Left mapped, it would not merely fail closed: with
-        // no authentication scheme registered, a failed policy evaluation on an
-        // unauthenticated caller challenges rather than forbids, and ChallengeAsync() with
-        // no default challenge scheme throws — turning a 403 into a 500.
-        if (!app.Environment.IsProduction())
-        {
-            app.MapPost("/api/impersonate",
-                [Authorize(Policy = "Management")] (HttpContext ctx) =>
-                {
-                    var user = ctx.User.Identity?.Name ?? FakeAuthHandler.AnonymousUser;
-                    return Results.Ok(new { impersonatedAs = user });
-                })
-                .WithName("Impersonate").WithTags("Config");
-        }
-
         return app;
     }
 }
-

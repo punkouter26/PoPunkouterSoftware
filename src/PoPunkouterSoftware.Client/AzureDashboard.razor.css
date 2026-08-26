@@ -342,32 +342,6 @@
     white-space: nowrap;
 }
 
-.azure-ops-page ::deep .azure-donut-wrap {
-    position: relative;
-}
-
-.azure-ops-page ::deep .azure-donut-center {
-    position: absolute;
-    top: 38%;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    pointer-events: none;
-}
-
-.azure-ops-page ::deep .azure-donut-pct {
-    color: var(--app-accent);
-    font-size: 2rem;
-    font-weight: 750;
-    line-height: 1;
-}
-
-.azure-ops-page ::deep .azure-donut-caption {
-    margin-top: .15rem;
-    color: var(--app-text-soft);
-    font-size: .72rem;
-}
-
 .azure-ops-page ::deep .azure-resource-heading {
     align-items: end;
 }
@@ -641,5 +615,333 @@
     .azure-ops-page ::deep .azure-attention-item,
     .azure-ops-page ::deep .azure-disclosure {
         scroll-behavior: auto;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Status narrative, sparklines, what-changed, cost forecast, uptime heatmap.
+
+   Every rule below follows the `.azure-ops-page ::deep …` form required by this
+   file — media-query overrides included. The only exception is the token block
+   on `.azure-ops-page` itself, which is this component's own root element and so
+   is correctly scoped without `::deep` (see the top of this file).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Page-local tone tokens. The palette has no "good" green — `--app-accent` is the
+   blue that stands in for success elsewhere — but a red/green uptime grid is the
+   one place the universal convention beats house style, so a green is defined
+   here rather than added to the global palette it is not needed in. */
+.azure-ops-page {
+    --tone-good: #4ea87b;
+    --tone-warn: var(--app-accent-warm);
+    --tone-bad: var(--app-danger-soft);
+    --tone-accent: var(--app-accent);
+    --uptime-cell: 10px;
+}
+
+@media (prefers-color-scheme: light) {
+    .azure-ops-page {
+        --tone-good: #2f7d55;
+        --tone-bad: var(--app-danger-strong);
+    }
+}
+
+/* ── Lead status paragraph ─────────────────────────────────────────────────── */
+
+.azure-ops-page ::deep .azure-narrative {
+    display: grid;
+    gap: .5rem;
+    justify-items: start;
+    padding: clamp(.9rem, 2vw, 1.25rem);
+    border: 1px solid var(--app-border-strong);
+    border-left: 3px solid var(--tone-accent);
+    border-radius: var(--app-radius-lg);
+    background: var(--app-surface);
+}
+
+.azure-ops-page ::deep .azure-narrative.is-good { border-left-color: var(--tone-good); }
+.azure-ops-page ::deep .azure-narrative.is-warn { border-left-color: var(--tone-warn); }
+.azure-ops-page ::deep .azure-narrative.is-bad { border-left-color: var(--tone-bad); }
+
+.azure-ops-page ::deep .azure-narrative__head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+}
+
+/* The paragraph is the reason the band exists — size it like body copy that is
+   meant to be read, not like a caption. */
+.azure-ops-page ::deep .azure-narrative__text {
+    margin: 0;
+    max-width: 78ch;
+    font-size: clamp(1rem, 1.4vw, 1.12rem);
+    line-height: 1.5;
+    color: var(--app-text);
+}
+
+.azure-ops-page ::deep .azure-narrative__text--muted { color: var(--app-text-muted); }
+.azure-ops-page ::deep .azure-narrative__error { color: var(--tone-bad); }
+
+/* ── KPI sparklines ────────────────────────────────────────────────────────── */
+
+.azure-ops-page ::deep .app-sparkline {
+    width: 100%;
+    height: 26px;
+    margin-top: .3rem;
+    overflow: visible;
+}
+
+.azure-ops-page ::deep .app-sparkline__line {
+    fill: none;
+    stroke: var(--tone-accent);
+    stroke-width: 1.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.azure-ops-page ::deep .app-sparkline__area {
+    fill: color-mix(in srgb, var(--tone-accent) 16%, transparent);
+    stroke: none;
+}
+
+.azure-ops-page ::deep .app-sparkline__dot {
+    fill: var(--tone-accent);
+    stroke: var(--app-surface);
+    stroke-width: 1px;
+}
+
+.azure-ops-page ::deep .app-sparkline.tone-good { --tone-accent: var(--tone-good); }
+.azure-ops-page ::deep .app-sparkline.tone-warn { --tone-accent: var(--tone-warn); }
+.azure-ops-page ::deep .app-sparkline.tone-bad { --tone-accent: var(--tone-bad); }
+
+/* ── What changed ─────────────────────────────────────────────────────────── */
+
+.azure-ops-page ::deep .azure-changed {
+    display: grid;
+    gap: .6rem;
+    padding: .9rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-lg);
+    background: var(--app-surface);
+}
+
+.azure-ops-page ::deep .azure-change-list {
+    display: grid;
+    gap: .35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.azure-ops-page ::deep .azure-change {
+    display: flex;
+    gap: .6rem;
+    align-items: flex-start;
+    padding: .5rem .65rem;
+    border-radius: var(--app-radius-md);
+    background: var(--app-surface-soft);
+}
+
+.azure-ops-page ::deep .azure-change__copy {
+    display: grid;
+    gap: .1rem;
+    min-width: 0;
+}
+
+.azure-ops-page ::deep .azure-change__text { color: var(--app-text); }
+
+.azure-ops-page ::deep .azure-change__detail {
+    font-size: .76rem;
+    color: var(--app-text-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.azure-ops-page ::deep .azure-change.dir-worse .rz-icon { color: var(--tone-bad); }
+.azure-ops-page ::deep .azure-change.dir-better .rz-icon { color: var(--tone-good); }
+.azure-ops-page ::deep .azure-change.dir-neutral .rz-icon { color: var(--app-text-soft); }
+
+/* ── Cost forecast ring ───────────────────────────────────────────────────── */
+/* The forecast card is now a cell of .azure-glance-grid and the uptime heatmap is a
+   full-width row of its own, so the two-column .azure-insight-grid that used to pair
+   them is gone along with its responsive override. */
+
+.azure-ops-page ::deep .azure-forecast__body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.azure-ops-page ::deep .azure-forecast__ring {
+    position: relative;
+    flex: 0 0 auto;
+    width: 128px;
+    height: 128px;
+}
+
+.azure-ops-page ::deep .azure-forecast__ring svg { width: 100%; height: 100%; }
+
+.azure-ops-page ::deep .azure-forecast__track {
+    fill: none;
+    stroke: var(--app-border-strong);
+    stroke-width: 10;
+}
+
+.azure-ops-page ::deep .azure-forecast__value {
+    fill: none;
+    stroke: var(--tone-good);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dasharray var(--app-dur-slow) var(--app-ease-out);
+}
+
+.azure-ops-page ::deep .azure-forecast__value.is-near { stroke: var(--tone-warn); }
+.azure-ops-page ::deep .azure-forecast__value.is-over { stroke: var(--tone-bad); }
+
+.azure-ops-page ::deep .azure-forecast__center {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    pointer-events: none;
+}
+
+.azure-ops-page ::deep .azure-forecast__pct {
+    font-family: var(--app-headline-font);
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--app-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.azure-ops-page ::deep .azure-forecast__caption {
+    font-size: .7rem;
+    color: var(--app-text-soft);
+    letter-spacing: .04em;
+}
+
+.azure-ops-page ::deep .azure-forecast__facts {
+    display: grid;
+    gap: .45rem;
+    margin: 0;
+    min-width: 0;
+}
+
+.azure-ops-page ::deep .azure-forecast__facts dt {
+    font-size: .72rem;
+    color: var(--app-text-soft);
+    letter-spacing: .03em;
+}
+
+.azure-ops-page ::deep .azure-forecast__facts dd {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--app-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.azure-ops-page ::deep .azure-forecast__delta {
+    margin-left: .35rem;
+    font-size: .78rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.azure-ops-page ::deep .azure-forecast__delta.dir-worse { color: var(--tone-bad); }
+.azure-ops-page ::deep .azure-forecast__delta.dir-better { color: var(--tone-good); }
+
+/* ── Uptime heatmap ───────────────────────────────────────────────────────── */
+
+/* 30 columns cannot fit a 390px viewport. The grid scrolls inside its own
+   container so the page body never scrolls horizontally. */
+.azure-ops-page ::deep .azure-uptime__scroll {
+    overflow-x: auto;
+    padding-bottom: .25rem;
+}
+
+.azure-ops-page ::deep .azure-uptime__grid {
+    display: grid;
+    gap: 3px;
+    align-items: center;
+    min-width: min-content;
+}
+
+.azure-ops-page ::deep .azure-uptime__label {
+    padding-right: .5rem;
+    font-size: .74rem;
+    color: var(--app-text-muted);
+    white-space: nowrap;
+    max-width: 14ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.azure-ops-page ::deep .azure-uptime__cell {
+    width: var(--uptime-cell);
+    height: var(--uptime-cell);
+    border-radius: 2px;
+    background: var(--app-surface-soft);
+}
+
+.azure-ops-page ::deep .azure-uptime__cell.is-healthy { background: var(--tone-good); }
+.azure-ops-page ::deep .azure-uptime__cell.is-degraded { background: var(--tone-warn); }
+.azure-ops-page ::deep .azure-uptime__cell.is-broken { background: var(--tone-bad); }
+
+/* A day with no scan is deliberately near-invisible: it is an absence of evidence,
+   and colouring it would imply the fleet was observed to be in some state. */
+.azure-ops-page ::deep .azure-uptime__cell.is-no-data {
+    background: transparent;
+    border: 1px solid var(--app-border);
+}
+
+.azure-ops-page ::deep .azure-uptime__pct {
+    padding-left: .5rem;
+    font-size: .74rem;
+    color: var(--tone-good);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.azure-ops-page ::deep .azure-uptime__pct.is-degraded { color: var(--app-text-muted); }
+
+.azure-ops-page ::deep .azure-uptime__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-top: .5rem;
+    font-size: .72rem;
+    color: var(--app-text-soft);
+}
+
+.azure-ops-page ::deep .azure-uptime__legend span {
+    display: inline-flex;
+    gap: .3rem;
+    align-items: center;
+}
+
+.azure-ops-page ::deep .azure-uptime__legend i { display: inline-block; }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+    .azure-ops-page ::deep .azure-forecast__body {
+        justify-content: center;
+    }
+
+    .azure-ops-page ::deep .azure-narrative__text {
+        font-size: 1rem;
+    }
+
+    /* Smaller cells keep a 30-day row inside a phone's scroll container without
+       forcing a long horizontal drag to reach the percentage column. */
+    .azure-ops-page {
+        --uptime-cell: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .azure-ops-page ::deep .azure-forecast__value {
+        transition: none;
     }
 }

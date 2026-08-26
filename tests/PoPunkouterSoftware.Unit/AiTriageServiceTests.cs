@@ -17,13 +17,6 @@ public class AiTriageServiceTests
     }
 
     [Fact]
-    public void BuildTemplateFallback_Null_TreatedSameAsNoItems()
-    {
-        AiTriageService.BuildTemplateFallback(null)
-            .Should().Be(AiTriageService.BuildTemplateFallback(new List<string>()));
-    }
-
-    [Fact]
     public void BuildTemplateFallback_MixedItems_SummarizesEachCategoryAndSaysNoAi()
     {
         var items = new List<string>
@@ -40,18 +33,6 @@ public class AiTriageServiceTests
         text.Should().Contain("2 cleanup candidate(s)");
         text.Should().Contain("2 service(s) unavailable");
         text.Should().EndWith("No AI summary available.");
-    }
-
-    [Fact]
-    public void BuildTemplateFallback_OnlyUnavailableServices_OmitsZeroCategories()
-    {
-        var items = new List<string> { "app-one is unavailable" };
-
-        var text = AiTriageService.BuildTemplateFallback(items);
-
-        text.Should().Contain("1 service(s) unavailable");
-        text.Should().NotContain("security finding(s)");
-        text.Should().NotContain("cleanup candidate(s)");
     }
 
     [Fact]
@@ -83,24 +64,6 @@ public class AiTriageServiceTests
     }
 
     [Fact]
-    public void ComputeAttentionHash_ItemOrderMatters()
-    {
-        var a = new List<string> { "one", "two" };
-        var b = new List<string> { "two", "one" };
-
-        // Not a hard requirement of the feature, but documents the actual (order-sensitive)
-        // behavior so a future change to it is a deliberate decision, not a silent drift.
-        AiTriageService.ComputeAttentionHash(a).Should().NotBe(AiTriageService.ComputeAttentionHash(b));
-    }
-
-    [Fact]
-    public void ComputeAttentionHash_NullAndEmpty_ProduceSameHash()
-    {
-        AiTriageService.ComputeAttentionHash(null)
-            .Should().Be(AiTriageService.ComputeAttentionHash(new List<string>()));
-    }
-
-    [Fact]
     public void ComputeAttentionHash_IsLowercaseSha256Hex()
     {
         AiTriageService.ComputeAttentionHash(new List<string> { "a" })
@@ -119,9 +82,12 @@ public class AiTriageServiceTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             CallCount++;
+            // Azure OpenAI chat-completions shape. Trimmed to the two fields the service
+            // reads; the live API also returns content filters, usage and ids.
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("""[{"generated_text":"All systems normal."}]"""),
+                Content = new StringContent(
+                    """{"choices":[{"message":{"role":"assistant","content":"All systems normal."}}]}"""),
             };
             return Task.FromResult(response);
         }
@@ -134,12 +100,17 @@ public class AiTriageServiceTests
 
     private static AiTriageService CreateService(FakeHandler handler, bool enabled)
     {
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api-inference.huggingface.co/") };
+        var httpClient = new HttpClient(handler);
         var factory = new FakeHttpClientFactory(httpClient);
+        // An API key is configured so the service never reaches for a TokenCredential:
+        // acquiring an Entra token would be real I/O, which the Unit tier forbids.
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["FeatureFlags:EnableAiSummary"] = enabled ? "true" : "false",
+                ["StatusNarrator:Endpoint"] = "https://unit-test.cognitiveservices.azure.com/",
+                ["StatusNarrator:Deployment"] = "test-deployment",
+                ["StatusNarrator:ApiKey"] = "unit-test-key",
             })
             .Build();
         return new AiTriageService(factory, config, NullLogger<AiTriageService>.Instance);
@@ -172,7 +143,7 @@ public class AiTriageServiceTests
         second.Source.Should().Be("cached");
         second.Text.Should().Be(first.Text);
         handler.CallCount.Should().Be(1,
-            because: "attention items were unchanged, so the second scan must not re-call the Hugging Face model");
+            because: "nothing material changed, so the second scan must not re-call the Azure AI model");
     }
 
     [Fact]
@@ -214,16 +185,75 @@ public class AiTriageServiceTests
     }
 
     [Fact]
-    public async Task GenerateSummaryAsync_Disabled_ReturnsTemplateFallback_NeverCallsTheModel()
+    public async Task GenerateSummaryAsync_Disabled_ReturnsNarrativeFallback_NeverCallsTheModel()
     {
+        // The disabled path fills the same lead-paragraph slot the model output would, so it
+        // returns a readable status narrative (BuildNarrativeFallback) rather than the
+        // diagnostic "No AI summary available." note. That note still exists for the ad-hoc
+        // attention-items path — see the BuildTemplateFallback tests above.
         var handler = new FakeHandler();
         var service = CreateService(handler, enabled: false);
 
-        var result = await service.GenerateSummaryAsync(
-            new List<string> { "app-one is unavailable" }, previous: null, CancellationToken.None);
+        var facts = new StatusFacts
+        {
+            TotalServices = 4,
+            ActiveServices = 3,
+            BrokenServices = 1,
+            HealthPercent = 75,
+            BrokenServiceNames = new[] { "app-one" },
+        };
+
+        var result = await service.GenerateSummaryAsync(facts, previous: null, CancellationToken.None);
 
         result.Source.Should().Be("disabled");
-        result.Text.Should().Contain("No AI summary available.");
+        result.Text.Should().Contain("app-one").And.Contain("unavailable");
+        result.Text.Should().NotContain("No AI summary available.",
+            because: "the lead paragraph must read as a status sentence, not as a diagnostic about the AI feature");
         handler.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void NarrativeFallback_AllHealthy_SaysSo()
+    {
+        var facts = new StatusFacts { TotalServices = 8, ActiveServices = 8, HealthPercent = 100 };
+
+        AiTriageService.BuildNarrativeFallback(facts)
+            .Should().Contain("All 8 apps are responding normally.");
+    }
+
+    [Fact]
+    public void NarrativeFallback_NoScanData_SaysToRunARefresh()
+    {
+        AiTriageService.BuildNarrativeFallback(new StatusFacts())
+            .Should().Contain("Run a refresh");
+    }
+
+    [Fact]
+    public void FactHash_IgnoresSubDollarCostDrift_SoTheCacheCanActuallyHit()
+    {
+        // Hashing raw cents would make every scan look "changed" and the model would be
+        // re-called on every single refresh — the cache would never hit.
+        var a = new StatusFacts { Cost30Days = 12.08 };
+        var b = new StatusFacts { Cost30Days = 12.41 };
+
+        AiTriageService.ComputeAttentionHash(a.ToHashInputs())
+            .Should().Be(AiTriageService.ComputeAttentionHash(b.ToHashInputs()));
+    }
+
+    [Fact]
+    public void FactHash_ChangesWhenAServiceGoesDown()
+    {
+        var before = new StatusFacts { TotalServices = 4, ActiveServices = 4, HealthPercent = 100 };
+        var after = new StatusFacts
+        {
+            TotalServices = 4,
+            ActiveServices = 3,
+            BrokenServices = 1,
+            HealthPercent = 75,
+            BrokenServiceNames = new[] { "app-one" },
+        };
+
+        AiTriageService.ComputeAttentionHash(before.ToHashInputs())
+            .Should().NotBe(AiTriageService.ComputeAttentionHash(after.ToHashInputs()));
     }
 }
