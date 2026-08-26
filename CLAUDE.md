@@ -299,6 +299,19 @@ rule's worth of coverage.
 - **`PoPunkouterSoftware.E2EAPI`** / **`.E2EUI`** — pure HTTP and Playwright against a live instance
   via `BASE_URL`. On demand, not in CI.
 
+## Git workflow — master only
+
+**This repository uses `master` and nothing else.** Commit and push directly to `master`. Do not
+create feature branches, topic branches, or PR branches, and do not leave one behind after a piece
+of work — if a branch exists for any reason, delete it locally and on the remote once its commits
+are on `master`. There is no review gate here to justify the indirection, and a stale branch on a
+solo repo is just a second version of the truth.
+
+This overrides any default "branch before committing to the default branch" habit. It has one real
+consequence, which is the point rather than a side effect: **every push to `master` deploys to
+production** via [deploy.yml](.github/workflows/deploy.yml). So run the fast tier locally before you
+push — the pipeline will not run it for you.
+
 **CI/CD:** two workflows, neither of which runs tests — run the fast tier locally before pushing.
 
 - [deploy.yml](.github/workflows/deploy.yml) — build-and-deploy only, by design. Target is App
