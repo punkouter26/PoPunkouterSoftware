@@ -146,7 +146,7 @@ internal sealed class ReportRefreshRunner(
                         report,
                         historyForFacts,
                         config.GetValue<double?>("Budget:MonthlyUsd"),
-                        PortfolioIdentity.IsExcluded);
+                        PortfolioIdentity.IsSelf);
                     var aiSummary = await aiTriage.GenerateSummaryAsync(facts, previousReport?.AiSummary, ct);
                     report = report with { AiSummary = aiSummary };
 

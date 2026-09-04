@@ -77,24 +77,22 @@ public class OpsSummaryProjectionRegressionTests
     /// item on the very page that was successfully serving it.
     /// </summary>
     [Fact]
-    public async Task Summary_NeverReportsThisSiteOrRetiredAppsAsNeedingAttention()
+    public async Task Summary_NeverReportsThisSiteAsNeedingAttention()
     {
         if (await LoadSummaryAsync() is not { } summary)
             return;
 
-        var offenders = new[] { "popunkoutersoftware", "porepolinetracker" };
+        const string self = "popunkoutersoftware";
         foreach (var item in summary.GetProperty("attentionItems").EnumerateArray())
         {
             var text = (item.GetString() ?? "").Replace("-", "").ToLowerInvariant();
-            offenders.Should().NotContain(
-                o => text.Contains(o),
-                because: "the dashboard must not report on itself or on retired apps");
+            text.Should().NotContain(self, because: "the dashboard must not report on itself");
         }
 
         foreach (var point in summary.GetProperty("responseTimes").EnumerateArray())
         {
             var label = (point.GetProperty("label").GetString() ?? "").Replace("-", "").ToLowerInvariant();
-            offenders.Should().NotContain(o => label.Contains(o));
+            label.Should().NotContain(self);
         }
     }
 
@@ -141,28 +139,6 @@ public class PortfolioExclusionRegressionTests
     private readonly HttpClient _client;
 
     public PortfolioExclusionRegressionTests(TestWebApp factory) => _client = factory.CreateClient();
-
-    /// <summary>
-    /// Deleting the apps.json entry alone does not remove a card: the response merges the
-    /// catalog with every service the Azure scan found, and a decommissioned app's resource
-    /// can outlive its DNS. PoRepoLineTracker shipped as a card pointing at a host that no
-    /// longer resolves.
-    /// </summary>
-    [Fact]
-    public async Task Portfolio_NeverIncludesRetiredApps_EvenWhenAzureInventoryStillListsThem()
-    {
-        var response = await _client.GetAsync("/api/portfolio");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var names = doc.RootElement.GetProperty("apps").EnumerateArray()
-            .Select(a => (a.GetProperty("name").GetString() ?? "").Replace("-", ""))
-            .ToList();
-
-        names.Should().NotContain(
-            n => n.Contains("porepolinetracker", StringComparison.OrdinalIgnoreCase),
-            because: "PoRepoLineTracker is retired and its host no longer resolves");
-    }
 
     /// <summary>
     /// The card renders screenshot + name + description + link. Everything else was payload

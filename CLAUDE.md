@@ -220,6 +220,13 @@ the page already renders it.
     pinger wrote `app-pomemevideo` — and every service rendered as two half-populated rows.
   - **A ping `timeout` is recorded as neither up nor down.** These are F1 apps that sleep; a 14s
     probe missing a cold start is not evidence of downtime. `unreachable` and 5xx still count.
+  - **Both writers must also agree on what "up" means.** They did not: the pinger counted anything
+    under 500 as reachable while the scan's `ProbeUrlAsync` judged on `IsSuccessStatusCode` alone.
+    The probe sends HEAD with `AllowAutoRedirect = false`, so an app that redirects `/` to a
+    sign-in page answers 302 — and PoRedoImage and PoRepoLineTracker were both reported
+    "unavailable" on the home page while serving normally. The scan now counts any status under
+    400 as reachable. Keep 4xx broken: a card is a link a visitor clicks, and PoSeeReview's flat
+    403 is a real outage, not an auth handshake.
   - The pinger stops when the app does (F1 has no Always-On), which is why
     `.github/workflows/uptime-scan.yml` exists — see CI/CD below.
 - **Secrets.** Key Vault `kv-poshared`, prefix `PoPunkouterSoftware--`, loaded at startup via
@@ -277,7 +284,7 @@ the page already renders it.
   download and broke every deployment (2026-07-10). Kill switch:
   `FeatureFlags:EnableScreenshots=false`.
 
-## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/50/22/14)
+## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/49/22/14)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the

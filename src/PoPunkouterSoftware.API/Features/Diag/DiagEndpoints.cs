@@ -212,7 +212,7 @@ internal static class DiagEndpoints
         // precomputed ByStatus, which still includes the excluded services. Extracted into
         // AttentionItemsBuilder (Infrastructure) so this read-time projection and
         // ReportRefreshRunner's scan-time AI precompute build the identical list.
-        var built = AttentionItemsBuilder.Build(report, PortfolioIdentity.IsExcluded);
+        var built = AttentionItemsBuilder.Build(report, PortfolioIdentity.IsSelf);
         var services = built.Services;
         var total = built.Total;
         var active = built.Active;
@@ -263,10 +263,10 @@ internal static class DiagEndpoints
             BrokenHistory = TrendSeries(history, h => h.BrokenServices),
             ResourceHistory = TrendSeries(history, h => h.TotalResources),
 
-            Changes = DashboardInsightsBuilder.BuildDelta(report, history, PortfolioIdentity.IsExcluded),
+            Changes = DashboardInsightsBuilder.BuildDelta(report, history, PortfolioIdentity.IsSelf),
             Forecast = DashboardInsightsBuilder.BuildForecast(report, history, budgetUsd),
             Uptime = DashboardInsightsBuilder.BuildUptime(
-                history, utcNow, PortfolioIdentity.IsExcluded,
+                history, utcNow, PortfolioIdentity.IsSelf,
                 DashboardInsightsBuilder.UptimeWindowDays, pingSamples),
         };
     }

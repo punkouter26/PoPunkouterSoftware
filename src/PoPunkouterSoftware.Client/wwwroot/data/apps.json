@@ -1,6 +1,20 @@
 {
   "apps": [
     {
+      "id": "app-poarguejudge",
+      "name": "PoArgueJudge",
+      "description": "Run a live debate and let an AI judge call it — the browser transcribes each speaker as they hold the floor, then the verdict says who actually argued it better.",
+      "category": "ai",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://app-poarguejudge.azurewebsites.net",
+      "githubRepo": null
+    },
+    {
       "id": "polocalcompare",
       "name": "PoLocalCompare",
       "description": "Side-by-side comparison tool for local options",
@@ -52,6 +66,48 @@
       ],
       "url": "https://app-5ln5hfdrvof5u-f1win.azurewebsites.net",
       "githubRepo": "punkouter26/PoMiniGames"
+    },
+    {
+      "id": "app-pomode",
+      "name": "PoMode",
+      "description": "Drop in a song and hear what it is made of — stems, pitch, chords and the mode it sits in, plus a Mode Lab that plays each mode over harmony rooted to match.",
+      "category": "creative",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://app-pomode.azurewebsites.net",
+      "githubRepo": "punkouter26/PoMode"
+    },
+    {
+      "id": "poredoimage-web",
+      "name": "PoRedoImage",
+      "description": "Upload a photo and get it back transformed — AI restyles, memes and art-style variations in a few seconds, saved to a gallery that follows you between sessions.",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://poredoimage-web.azurewebsites.net",
+      "githubRepo": "punkouter26/PoRedoImage"
+    },
+    {
+      "id": "app-porepolinetracker",
+      "name": "PoRepoLineTracker",
+      "description": "Track lines of code across all your GitHub repositories over time — point it at an account and watch each repo grow or shrink.",
+      "category": "productivity",
+      "status": "active",
+      "technologies": [
+        "Azure App Service",
+        "C#",
+        "Blazor"
+      ],
+      "url": "https://app-porepolinetracker.azurewebsites.net",
+      "githubRepo": "punkouter26/PoRepoLineTracker"
     },
     {
       "id": "potraffic-api",
@@ -236,20 +292,6 @@
       ],
       "url": "https://ponovaweight-app.azurewebsites.net",
       "githubRepo": null
-    },
-    {
-      "id": "poredoimage-web",
-      "name": "PoRedoImage",
-      "description": "Image editing and transformation app",
-      "category": "productivity",
-      "status": "inactive",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://poredoimage-web.azurewebsites.net",
-      "githubRepo": "punkouter26/PoRedoImage"
     },
     {
       "id": "poseereview",

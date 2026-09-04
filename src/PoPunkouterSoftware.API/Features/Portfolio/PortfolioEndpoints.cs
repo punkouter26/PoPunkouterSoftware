@@ -54,7 +54,7 @@ internal static partial class PortfolioEndpoints
         // Catalog entries marked active are the stable showcase, even when Azure inventory is stale or unavailable.
         foreach (var meta in metadata.Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase)))
         {
-            if (PortfolioIdentity.IsExcluded(meta.Name))
+            if (PortfolioIdentity.IsSelf(meta.Name))
                 continue;
             var key = PortfolioIdentity.NormalizeName(meta.Name);
             if (appsByName.ContainsKey(key))
@@ -65,7 +65,7 @@ internal static partial class PortfolioEndpoints
         // Every discovered service is also shown, including broken services, and receives catalog metadata by stable name.
         foreach (var service in services)
         {
-            if (PortfolioIdentity.IsExcluded(service.FriendlyName, service.Name))
+            if (PortfolioIdentity.IsSelf(service.FriendlyName, service.Name))
                 continue;
             var displayName = string.IsNullOrWhiteSpace(service.FriendlyName) ? service.Name : service.FriendlyName;
             var key = PortfolioIdentity.NormalizeName(displayName);

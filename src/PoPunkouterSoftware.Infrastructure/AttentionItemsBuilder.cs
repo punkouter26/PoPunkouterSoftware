@@ -12,7 +12,7 @@ namespace PoPunkouterSoftware.Infrastructure;
 ///
 /// <para>Lives in Infrastructure (not API) so it can also be exercised from
 /// <c>ReportRefreshRunner</c> without a slice-to-slice reference; the caller supplies the
-/// name-exclusion predicate (<c>PortfolioIdentity.IsExcluded</c> in API) rather than this
+/// name-exclusion predicate (<c>PortfolioIdentity.IsSelf</c> in API) rather than this
 /// method depending on it directly, since <c>PortfolioIdentity</c> is internal to API.</para>
 /// </summary>
 public static class AttentionItemsBuilder
@@ -36,7 +36,7 @@ public static class AttentionItemsBuilder
     /// True when a service (by friendly name / resource name) must be excluded from health
     /// and attention accounting — this site itself and retired apps. Takes a
     /// <c>string?[]</c> (not two positional strings) so API's
-    /// <c>PortfolioIdentity.IsExcluded(params string?[])</c> converts straight to this
+    /// <c>PortfolioIdentity.IsSelf(params string?[])</c> converts straight to this
     /// delegate as a method group.
     /// </param>
     public static Result Build(AzureReport report, Func<string?[], bool> isExcluded)

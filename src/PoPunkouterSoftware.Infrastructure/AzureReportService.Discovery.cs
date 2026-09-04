@@ -211,9 +211,16 @@ public partial class AzureReportService
             using var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             sw.Stop();
             var isAzureError = resp.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.BadGateway;
+            // A 3xx counts as up. The client does not follow redirects (by design — following
+            // them turns "this app is alive" into "some other host answered"), so an app that
+            // redirects "/" to a sign-in page answers 302 here. Judging on IsSuccessStatusCode
+            // alone marked PoRedoImage and PoRepoLineTracker "unavailable" while both were
+            // serving normally, and disagreed with ServicePingerService — the other writer into
+            // the uptime partition — which has always counted anything under 500 as reachable.
+            var reachable = (int)resp.StatusCode < 400;
             return new ConnectivityInfo
             {
-                Success = resp.IsSuccessStatusCode && !isAzureError,
+                Success = reachable && !isAzureError,
                 ResponseTime = (int)sw.ElapsedMilliseconds,
                 Error = isAzureError ? "Azure error page" : null,
                 IsAzureErrorPage = isAzureError,
