@@ -23,10 +23,12 @@ internal static class DiagEndpoints
 
         diag.MapGet("/automation-script", (IWebHostEnvironment env) =>
         {
-            var publishedPath = Path.Combine(env.ContentRootPath, "Automation", "New-AzureEfficiencyReport.ps1");
-            var sourcePath = Path.GetFullPath(Path.Combine(
-                env.ContentRootPath, "..", "..", "SCRIPTS", "New-AzureEfficiencyReport.ps1"));
-            var scriptPath = File.Exists(publishedPath) ? publishedPath : sourcePath;
+            // The script ships with the API project (CopyToOutputDirectory=PreserveNewest),
+            // so in both `dotnet run` and a published deployment it lives at
+            // ContentRootPath/Automation/New-AzureEfficiencyReport.ps1. The previous
+            // "../..//SCRIPTS/..." fallback existed only because the file lived outside the
+            // project tree — that is no longer true.
+            var scriptPath = Path.Combine(env.ContentRootPath, "Automation", "New-AzureEfficiencyReport.ps1");
 
             return File.Exists(scriptPath)
                 ? Results.File(

@@ -34,9 +34,9 @@ Standing instructions from the owner. They outrank default habits and apply to e
 - **No `dotnet user-secrets`.** Local config goes in `appsettings*.json`; real secrets go in the
   `kv-poshared` Key Vault. Rationale: user secrets live outside the repo in a per-machine folder, so
   a value only one machine has looks like a bug on every other machine and in production.
-  ⚠️ Not yet true — `PoPunkouterSoftware.API.csproj` still declares
-  `<UserSecretsId>popunkouter-software-api</UserSecretsId>`, and ASP.NET auto-loads that store in
-  Development. Removing it is a live config change, so it needs the owner's go-ahead.
+  Resolved 2026-09-05: `<UserSecretsId>` removed from `PoPunkouterSoftware.API.csproj`; ASP.NET no
+  longer auto-loads `%APPDATA%\Microsoft\UserSecrets\popunkouter-software-api\secrets.json` in
+  Development. Re-add only with the owner's explicit go-ahead.
 - **Answers over ~100 words end with a 20-word TLDR.**
 - **`docs/` is not project documentation.** The rule of thumb "check the root DOCS folder for a
   project summary" does not pay off in this repo: [docs/](docs/) is the GitHub Pages site — a

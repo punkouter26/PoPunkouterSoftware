@@ -4,7 +4,13 @@
     <!-- TargetFramework, Nullable, ImplicitUsings, TreatWarningsAsErrors inherited from Directory.Build.props -->
     <RootNamespace>PoPunkouterSoftware.API</RootNamespace>
     <AssemblyName>PoPunkouterSoftware.API</AssemblyName>
-    <UserSecretsId>popunkouter-software-api</UserSecretsId>
+    <!--
+      <UserSecretsId> intentionally absent. CLAUDE.md standing rule: "No `dotnet user-secrets`.
+      Local config goes in appsettings*.json; real secrets go in the kv-poshared Key Vault."
+      Declaring the id would make ASP.NET auto-load %APPDATA%\Microsoft\UserSecrets\<id>\secrets.json
+      in Development, reintroducing the per-machine config drift the rule exists to prevent.
+      Re-add only with the owner's explicit go-ahead.
+    -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,7 +27,6 @@
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Enrichers.CorrelationId" />
     <PackageReference Include="Serilog.Enrichers.Environment" />
-    <PackageReference Include="Serilog.Enrichers.Thread" />
 
     <!-- OpenTelemetry + Azure Monitor (sole App Insights pipeline — Serilog sink removed to prevent duplicate telemetry) -->
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
@@ -42,8 +47,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\SCRIPTS\New-AzureEfficiencyReport.ps1"
-             Link="Automation\New-AzureEfficiencyReport.ps1"
+    <Content Include="Automation\New-AzureEfficiencyReport.ps1"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
