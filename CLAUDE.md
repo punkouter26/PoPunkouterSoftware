@@ -91,7 +91,7 @@ the profile it binds :5000 instead of :8000.
 | Project | Role |
 |---|---|
 | [src/PoPunkouterSoftware.API/](src/PoPunkouterSoftware.API/) | ASP.NET Core host + BFF, and the Blazor WASM host. Slices are `Features/<Area>/<Area>Endpoints.cs` (**Config, Diag, Portfolio**), each exposing `Map<Area>Endpoints(this WebApplication)` called from [Program.cs](src/PoPunkouterSoftware.API/Program.cs). Host-level plumbing belonging to no slice lives in `Host/`. **The namespace is flat** — every file is `PoPunkouterSoftware.API` regardless of folder. |
-| [src/PoPunkouterSoftware.Client/](src/PoPunkouterSoftware.Client/) | Blazor WASM (Radzen, mobile-first). `wwwroot` lives **only** here. The layout is **flat** — every component sits in the project root, named for what it is; there is no `Components/` tree. |
+| [src/PoPunkouterSoftware.Client/](src/PoPunkouterSoftware.Client/) | Blazor WASM (Radzen, mobile-first). `wwwroot` lives **only** here. The layout is **flat** — every component sits in the project root, named for what it is; there is no `Components/` tree. `wwwroot/js` holds the graphics and audio layers — see [Graphics and audio](#graphics-and-audio) below. |
 | [src/PoPunkouterSoftware.Shared/](src/PoPunkouterSoftware.Shared/) | DTOs + `DomainVocabulary.cs` only. **No PackageReferences at all**, no server- or browser-only deps — it ships in the WASM bundle (`IsTrimmable`). |
 | [src/PoPunkouterSoftware.Infrastructure/](src/PoPunkouterSoftware.Infrastructure/) | Azure adapters (Table Storage, ARM, pinger, incident, AI triage, telemetry) plus cross-slice helpers (`ReportFileCache`, `AttentionItemsBuilder`, `SecretMasking`). **Slices must not reference each other** — shared logic goes here. |
 
@@ -166,6 +166,78 @@ the page already renders it.
   `AzureCostForecast`, `AzureUptimeHeatmap`, `Sparkline`, `AzurePriorityQueue`,
   `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureHistoryDisclosure`,
   `AzureSnoozedItems`).
+
+## Graphics and audio
+
+Seven files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
+comment in each before changing it; they document the reasoning, this is the map.
+
+| File | Role |
+|---|---|
+| `motion-kit.js` | **The frame governor.** ONE `requestAnimationFrame` loop for the whole app, one gate (reduced-motion / hidden / blur / no runnable subscriber), and an adaptive quality controller. Must load first. |
+| `audio-kit.js` | Programmatic Web Audio — synthesis only, **zero audio assets**. UI SFX, the refresh drone, the `/azure` sonification, and the analyser tap the shaders read. |
+| `gpu-backdrop.js` | Orchestrator for `#app-gpu-backdrop`: tier selection, colour tokens, glass rects, audio energy. Owns no pixels. |
+| `gfx-webgl.js` | WebGL2 renderer (curl-noise field, transform-feedback particles, dual-Kawase blur, glass composite) with a WebGL1 field-only fallback. |
+| `gfx-webgpu.js` | WebGPU renderer (compute-shader particles). **Lazily fetched**, only when `navigator.gpu` exists. |
+| `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. |
+| `helpers.js` | Topbar, clipboard, media-query bridge, download. Unrelated to the above. |
+
+**One rAF loop, and reduced motion stops it.** Every animated layer is a named `motionKit`
+subscriber. Nothing else may call `requestAnimationFrame` for animation. The governor's gate
+is the *only* pause path and it truly cancels the callback — a layer that fades to
+`opacity: 0` while still being scheduled still burns a phone's battery, so
+`motionKit.stats().running` is what the E2E test asserts. It also measures its own dispatch
+cost and steps render scale and particle count down when the device cannot afford them
+(budget 6ms; both GPU tiers measure ~3ms on a desktop). The catalog starfield claims
+exclusivity over the shared backdrop with `motionKit.suppress('app-gpu-backdrop')` — that
+replaced a `data-suppress-gpu-backdrop` attribute plus a MutationObserver.
+
+**Silence is the default and it is an accessibility floor.** `audioKit.enabled` starts false;
+the `AudioContext` is not even *constructed* until a user gesture, because one built during
+page load is a suspended context that silently swallows sound plus an unrequested hardware
+claim. The header toggle is wired by **delegation on `document`** (enhanced navigation
+re-inserts the header, so a direct listener would be lost or double-bound), as are
+`[data-sfx]` / `[data-sfx-hover]`. Sound carries information in exactly two places — the
+refresh lifecycle (a ~30s scan is exactly how long it takes someone to switch tabs) and the
+`/azure` sonification, which is a second *modality* on facts already on the page, not a
+second copy of them. Only primitives cross the interop boundary.
+
+**The backdrop is a capability ladder**: WebGPU → WebGL2 → WebGL1 → the CSS grid in
+`modern-ui.css`. Every rung degrades silently to the next and records the outcome in
+`#app-gpu-backdrop`'s `data-gpu`. A canvas can only ever have one context type, so when
+WebGPU declines, the element is **replaced** before WebGL is tried — and `canvas` must be
+reassigned before `status()` runs, or the diagnostic lands on a detached node.
+
+**`data-glass` is the opt-in for shader-side glassmorphism.** `gpu-backdrop.js` collects the
+on-screen rect of every tagged element (rate-limited, signature-guarded, corner radius cached
+per element — `getComputedStyle` forces a style resolution and was the largest single cost)
+and the renderer blurs and refracts the backdrop beneath them. This is what replaced the 23
+per-card `backdrop-filter` roots: one blur for the whole page, in a pass that already runs.
+CSS's only job is `html[data-gpu-backdrop] [data-glass]`, which makes those surfaces
+translucent enough for it to show — gated so that a machine with no WebGL does not get
+see-through cards over a flat background.
+
+### Three bugs here that all failed silently — check for them before adding shader code
+
+1. **An opaque `<body>` background hid every backdrop layer.** `#app-gpu-backdrop` and the
+   `body::before` grid are both `position: fixed` with **negative** z-index, and negative-z
+   descendants paint *before* an ancestor's in-flow block background. So `body` painting a
+   colour covered both. The page colour now lives on `html`, and `html body` carries
+   `background: transparent !important` — the `!important` is needed to beat something in the
+   Radzen theme sheets. Proven by forcing the composite shader to solid opaque red and
+   watching the page still render navy.
+2. **`smoothstep(hi, lo, x)` is undefined** in both GLSL and WGSL when `edge0 > edge1`. It
+   compiles, the layer reports itself healthy, and the driver may return zero everywhere.
+   Always write `1.0 - smoothstep(lo, hi, x)`.
+3. **`curl()` returns a true derivative** (the finite difference is divided by `2*epsilon`),
+   so its magnitude is ~7, not ~1. Multiplying it by 0.085 displaced every sample point
+   outside its own gaussian falloff and the whole field evaluated to zero — again with no
+   error and no artefact. Check the *magnitude* of a noise term against the coordinate range
+   it is perturbing.
+
+The common thread: a decorative GPU layer has no failure mode that surfaces on its own. If
+you change a shader, look at the rendered pixels — `dataset.gpu` reporting `webgpu` only
+proves a pipeline was created, not that anything reached the screen.
 
 ## Cross-cutting decisions
 
@@ -286,6 +358,8 @@ the page already renders it.
   `[JsonSerializable]` entry in [AppJsonContext.cs](src/PoPunkouterSoftware.Client/AppJsonContext.cs).
   `PublishTrimmed` + `EnableTrimAnalyzer` are on for `.Client` with no `WarningsNotAsErrors` escape
   hatch, so reflection-based JSON fails the build.
+- **The whole app has one rAF loop.** It lives in `js/motion-kit.js`. Do not add another —
+  see [Graphics and audio](#graphics-and-audio).
 - **One application stylesheet.** `wwwroot/css/modern-ui.css` is the whole thing (plus `boot.css`
   for the pre-Blazor splash). It was a four-line aggregator over `modern-ui.base/.components/.responsive`;
   CSS `@import` is serial, so the split cost three extra round trips on the critical path and bought
@@ -312,7 +386,7 @@ the page already renders it.
   download and broke every deployment (2026-07-10). Kill switch:
   `FeatureFlags:EnableScreenshots=false`.
 
-## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/49/22/14)
+## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/49/22/17)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the

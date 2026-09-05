@@ -147,11 +147,31 @@
 html,
 body {
     min-height: 100%;
-    background: var(--app-bg-deep);
     color: var(--app-text);
 }
 
-body {
+/* The page colour lives on <html>, and <body> stays transparent. This is load-bearing,
+   not tidiness: #app-gpu-backdrop and the body::before grid are both position:fixed with
+   NEGATIVE z-index, and in the root stacking context negative-z descendants paint before
+   the in-flow block backgrounds of their ancestors. An opaque background on <body>
+   therefore paints straight over both backdrop layers — BOTH of them, so neither the GPU
+   canvas nor the static grid fallback it degrades to was ever visible. Proven, not
+   inferred: with the composite shader forced to solid opaque red, the page still rendered
+   plain navy.
+
+   The `!important` is not laziness. Something in the Radzen theme sheets sets an opaque
+   background on <body> that a plain `body` rule and even `html body` both lose to; setting
+   it from JS required `important` to take effect, which is how this was finally isolated.
+   The alternative — lifting the canvas out of negative z-index and giving every piece of
+   app chrome an explicit positive one — trades a single scoped declaration for a stacking
+   order that silently hides CONTENT the first time an element is missed. This is the
+   smaller and more reversible risk of the two. */
+html {
+    background: var(--app-bg-deep);
+}
+
+html body {
+    background: transparent !important;
     font-family: var(--app-body-font);
     letter-spacing: 0.01em;
 }
@@ -194,6 +214,32 @@ html[data-gpu-backdrop] body::before {
 
 #app-gpu-backdrop.is-ready {
     opacity: 1;
+}
+
+/* ── Glass surfaces ──────────────────────────────────────────────────────────────
+   `data-glass` is an opt-in marker read by js/gpu-backdrop.js, which collects the
+   on-screen rect of every tagged element and hands it to the renderer. The shader
+   blurs and refracts the backdrop *underneath* those rects — the same effect
+   `backdrop-filter` produces, except computed once for the whole page in a pass that
+   was already running rather than once per element in its own compositing root. That
+   difference is the entire reason the 23 per-card backdrop-filter roots were removed.
+
+   CSS's only job here is to be translucent enough for the result to show. The default
+   --app-surface is 92% opaque, which would hide it completely.
+
+   Gated on html[data-gpu-backdrop] so the translucency only applies when a renderer
+   actually initialised. Without that gate, a visitor on a machine with no WebGL (or
+   with reduced-motion on) would get see-through cards over a flat background — thinner
+   contrast bought for no visual effect at all. */
+html[data-gpu-backdrop] [data-glass] {
+    background: color-mix(in srgb, var(--app-surface) 82%, transparent);
+    border-color: var(--app-border-strong);
+}
+
+/* Hover lifts the surface back toward opaque. A card being read wants contrast more
+   than it wants to be pretty. */
+html[data-gpu-backdrop] [data-glass]:hover {
+    background: color-mix(in srgb, var(--app-surface) 94%, transparent);
 }
 
 /* Belt and braces: the token bridge above covers Radzen's variables, and this rule
@@ -625,10 +671,12 @@ body.topbar-open .rz-header {
         --app-shadow-chrome-raised: 0 16px 48px rgba(15, 23, 42, 0.18);
     }
 
-    body {
+    /* On <html>, not <body> — see the note above about negative-z backdrop layers painting
+       under an opaque body background. */
+    html {
         background: var(--app-bg);
-        color: var(--app-text);
     }
+
 
     body::before {
         background-image:

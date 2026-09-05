@@ -34,7 +34,7 @@ else
        numbers do. *@
     <AzureStatusNarrative Summary="@CurrentAiSummary" AttentionItems="@summary.AttentionItems" Tone="@narrativeTone" />
 
-    <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")">
+    <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")" data-glass>
         <div class="azure-command-copy">
             <div class="app-kicker">Azure · @summary.SubscriptionName</div>
             <h1 class="azure-hero-title">
@@ -100,6 +100,18 @@ else
                     Read-only view — enable&nbsp;<code>FeatureFlags:EnableManagementActions</code>&nbsp;to unlock refresh controls
                 </span>
             }
+            @* Sonification. A second MODALITY on facts this page already renders — not a
+               second copy of them — so the "each fact appears once" rule is intact: nothing
+               new is reported here, the same summary is played instead of read.
+
+               Outside the management gate on purpose: it costs nothing, calls no endpoint
+               and mutates nothing, so it belongs with /api/diag/ai and the snooze endpoints
+               on the unprivileged side. Clicking it while sound is off turns sound on — the
+               click is itself the user gesture the autoplay policy requires, so this is the
+               one place where opting in and hearing the result can happen in one action. *@
+            <RadzenButton Text="Listen" Icon="graphic_eq" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                          Click="SonifyAsync" Disabled="@_sonifying"
+                          title="Plays the fleet status as a four-second sound: health tunes the chord, outages add dissonance, spend sets the pulse rate, uptime opens the filter. Turns sound on if it is off." />
         </div>
     </header>
 
@@ -133,7 +145,7 @@ else
        breakdown in the chart, ratio in the hero — each fact rendered once. *@
     <section class="azure-glance-grid" aria-label="Spend forecast and Azure status charts">
         <AzureCostForecast Forecast="@summary.Forecast" />
-        <article class="app-card">
+        <article class="app-card" data-glass>
             <h2 class="azure-glance-title">30-day cost by resource group</h2>
             <div class="azure-glance-subtitle" aria-hidden="true">Top cost drivers this scan</div>
             @if (summary.CostDrivers.Count == 0)
@@ -149,7 +161,7 @@ else
             }
             <span class="app-sr-only">@string.Join(", ", summary.CostDrivers.Select(x => $"{x.Label}: ${x.Value:F2}"))</span>
         </article>
-        <article class="app-card">
+        <article class="app-card" data-glass>
             <h2 class="azure-glance-title">Response time · slowest endpoints</h2>
             <div class="azure-glance-subtitle" aria-hidden="true">Current scan, milliseconds</div>
             @if (summary.ResponseTimes.Count == 0)

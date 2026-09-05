@@ -95,11 +95,23 @@ public class PortfolioUiTests : IAsyncLifetime
         await CaptureAsync(page, $"03-azure-advanced-{label}.png");
     }
 
+    /// <summary>
+    /// Both routes must reflow without horizontal overflow AND without logging an error.
+    ///
+    /// <para>The console half was added with the GPU/audio layers. Every one of them is
+    /// designed to degrade rather than fail — a missing WebGL2, a refused WebGPU adapter, a
+    /// blocked AudioContext — and each degradation path is a `console.warn`. An
+    /// <c>error</c> means a path nobody designed was taken, and because the layers are
+    /// decorative, nothing else on the page would show it.</para>
+    /// </summary>
     [Theory]
     [MemberData(nameof(Viewports))]
-    public async Task CoreRoutes_ReflowWithoutHorizontalOverflow(string label, int width, int height, bool isMobile)
+    public async Task CoreRoutes_ReflowWithoutOverflowOrConsoleErrors(string label, int width, int height, bool isMobile)
     {
         var page = await NewPageAsync(width, height, isMobile);
+        var errors = new List<string>();
+        page.Console += (_, msg) => { if (msg.Type == "error") errors.Add(msg.Text); };
+        page.PageError += (_, err) => errors.Add(err);
 
         await page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
         (await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= document.documentElement.clientWidth"))
@@ -110,6 +122,81 @@ public class PortfolioUiTests : IAsyncLifetime
         (await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= document.documentElement.clientWidth"))
             .Should().BeTrue($"/azure must not overflow horizontally at {label}");
         await CaptureAsync(page, $"05-azure-reflow-{label}.png");
+
+        errors.Should().BeEmpty($"no route may log a console error at {label}");
+    }
+
+    /// <summary>
+    /// The app must be silent until a visitor asks for sound, and the backdrop ladder must
+    /// resolve to a state it knows about rather than throwing.
+    ///
+    /// <para>Silence-by-default is an accessibility floor, not a preference: an AudioContext
+    /// constructed during page load is both an unrequested hardware claim and — under every
+    /// current autoplay policy — a suspended context that silently swallows whatever is
+    /// played through it. So the assertion is specifically that no context has been
+    /// CONSTRUCTED, which is stronger and more observable than "nothing was audible".</para>
+    ///
+    /// <para>The tier is deliberately not asserted. Headless Chromium usually resolves to
+    /// SwiftShader, which <c>failIfMajorPerformanceCaveat</c> correctly refuses, so
+    /// <c>no-gpu</c> is a legitimate outcome here — the invariant is that the ladder reached
+    /// one of its DEFINED states, never that it reached the top one.</para>
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Viewports))]
+    public async Task Backdrop_ResolvesATier_AndStaysSilentUntilAsked(string label, int width, int height, bool isMobile)
+    {
+        var page = await NewPageAsync(width, height, isMobile);
+        await page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForSelectorAsync(".app-portfolio-card", new() { Timeout = 30_000 });
+
+        var known = new[] { "webgpu", "webgl2", "webgl2-field", "webgl1", "no-gpu", "reduced-motion", "context-lost" };
+        var tier = await page.EvaluateAsync<string?>(
+            "() => document.getElementById('app-gpu-backdrop')?.dataset.gpu ?? null");
+        tier.Should().BeOneOf(known, $"the backdrop ladder must land on a defined state at {label}");
+
+        var audio = await page.EvaluateAsync<bool[]>(
+            "() => [window.audioKit.enabled, window.audioKit.stats().contextCreated]");
+        audio[0].Should().BeFalse("sound must default to off");
+        audio[1].Should().BeFalse("no AudioContext may be constructed before the visitor asks for one");
+
+        // The toggle click is itself the user gesture the autoplay policy requires, so one
+        // press must both flip the preference and bring a live context into existence.
+        await page.Locator("[data-sound-toggle]").First.ClickAsync();
+        await Assertions.Expect(page.Locator("[data-sound-toggle]").First).ToHaveAttributeAsync("aria-pressed", "true");
+        (await page.EvaluateAsync<bool>("() => window.audioKit.stats().contextCreated"))
+            .Should().BeTrue($"turning sound on must construct the context at {label}");
+    }
+
+    /// <summary>
+    /// Reduced motion must STOP every frame loop, not merely hide its output.
+    ///
+    /// <para>Each animated layer used to own a private rAF loop and a private pause; the
+    /// governor in js/motion-kit.js now owns all of them, and its `running` flag is the
+    /// observable form of the guarantee. A layer that faded to `opacity: 0` while still
+    /// being scheduled would pass any screenshot check and still burn a phone's battery.</para>
+    /// </summary>
+    [Fact]
+    public async Task ReducedMotion_StopsEveryFrameLoop()
+    {
+        await using var ctx = await _browser.NewContextAsync(new()
+        {
+            ViewportSize = new() { Width = 1440, Height = 1000 },
+            ReducedMotion = ReducedMotion.Reduce,
+        });
+        var page = await ctx.NewPageAsync();
+        await page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForSelectorAsync(".app-portfolio-card", new() { Timeout = 30_000 });
+
+        // Two bools rather than the whole stats object: EvaluateAsync of a nested structure
+        // adds a deserialisation step that can only obscure what is being asserted.
+        var flags = await page.EvaluateAsync<bool[]>(
+            "() => [window.motionKit.stats().reduced, window.motionKit.stats().running]");
+        flags[0].Should().BeTrue("the governor must see the reduced-motion query");
+        flags[1].Should().BeFalse("no rAF loop may be scheduled under reduced motion");
+
+        // And the backdrop must not have built GPU resources it can never draw with.
+        (await page.EvaluateAsync<string?>("() => document.getElementById('app-gpu-backdrop')?.dataset.gpu ?? null"))
+            .Should().Be("reduced-motion");
     }
 
     // ─── Regressions inherited from the 2026 UI pass ──────────────────────────

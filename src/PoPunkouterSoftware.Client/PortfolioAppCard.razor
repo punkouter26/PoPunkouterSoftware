@@ -7,7 +7,11 @@
    rather than a dashboard tile. The screenshot links out to the live app, and an
    explicit "Open app" affordance sits under the description so visitors who never
    hover the screenshot still have a clear way through. *@
-<article class="app-card app-portfolio-card">
+@* data-glass: js/gpu-backdrop.js collects this element's rect and the shader frosts the
+   backdrop beneath it — see the [data-glass] block in modern-ui.css. data-sfx-hover: a
+   delegated cue from js/audio-kit.js, silent unless the visitor turned sound on. Both are
+   plain attributes on purpose; neither needs interop, a render hook or a dispose path. *@
+<article class="app-card app-portfolio-card" data-glass data-sfx-hover="hover">
     @if (!string.IsNullOrEmpty(App.ScreenshotUrl))
     {
         <a class="app-screenshot-thumb" href="@App.Url" target="_blank" rel="noopener noreferrer" title="@($"Open {App.Name}")">
@@ -19,7 +23,7 @@
     @if (!string.IsNullOrWhiteSpace(App.Url))
     {
         <a class="app-card-link" href="@App.Url" target="_blank" rel="noopener noreferrer"
-           aria-label="@($"Open {App.Name} app")">
+           data-sfx="tap" aria-label="@($"Open {App.Name} app")">
             <RadzenIcon Icon="open_in_new" />
             <span>Open app</span>
             <span class="app-card-link-host" aria-hidden="true">@App.Url</span>

@@ -358,6 +358,12 @@ public partial class AzureDashboard
         _refreshCts = new CancellationTokenSource(TimeSpan.FromSeconds(RefreshTimeoutSeconds));
         StateHasChanged();
 
+        // A full ARM scan takes about thirty seconds, which is exactly the duration after
+        // which someone switches tabs. The drone (and the chord that resolves it below) is
+        // how the outcome reaches a visitor who is no longer looking at the page. Silent
+        // unless they turned sound on — audioKit gates every one of these calls itself.
+        await SfxAsync("audioKit.refreshStart");
+
         await EnsureHubConnectedAsync();
 
         try
@@ -366,6 +372,7 @@ public partial class AzureDashboard
             if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
                 NotificationService.Notify(NotificationSeverity.Warning, "Already running", "A refresh is already in progress.");
+                await SfxAsync("audioKit.refreshEnd", "cancelled");
                 _refreshing = false;
                 StateHasChanged();
                 return;
@@ -379,23 +386,38 @@ public partial class AzureDashboard
                 var detail = await ReadProblemDetailAsync(resp);
                 NotificationService.Notify(NotificationSeverity.Error, "Refresh rejected",
                     detail ?? $"The server rejected the refresh request ({(int)resp.StatusCode}).");
+                await SfxAsync("audioKit.refreshEnd", "failure");
                 _refreshing = false;
                 StateHasChanged();
                 return;
             }
 
             if (_hub?.State == HubConnectionState.Connected)
+            {
                 await WaitForRefreshCompletionAsync(_refreshCts!.Token);
+            }
             else
+            {
+                // No percent values will arrive, which is why the bar above renders
+                // indeterminate. The drone deepens its tremolo to say the same thing rather
+                // than sweeping its filter toward a completion it cannot actually observe.
+                await SfxAsync("audioKit.refreshIndeterminate");
                 await WaitForRefreshCompletionAsync(_refreshCts!.Token, delayMs: 1500);
+            }
 
             await LoadSummaryAsync();
             if (_advancedOpen)
                 await LoadReportAsync();
             if (_refreshFailed)
+            {
                 NotificationService.Notify(NotificationSeverity.Error, "Refresh failed", _refreshFailureMessage ?? "Refresh failed. Check logs for details.");
+                await SfxAsync("audioKit.refreshEnd", "failure");
+            }
             else if (!_refreshCts.Token.IsCancellationRequested)
+            {
                 NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure report refreshed successfully.");
+                await SfxAsync("audioKit.refreshEnd", "success");
+            }
         }
         catch (OperationCanceledException) when (_userCancelled)
         {
@@ -411,10 +433,12 @@ public partial class AzureDashboard
             catch { }
             NotificationService.Notify(NotificationSeverity.Warning, "Timeout",
                 "Refresh took too long (120s limit); the server scan was cancelled.");
+            await SfxAsync("audioKit.refreshEnd", "timeout");
         }
         catch (Exception ex)
         {
             NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
+            await SfxAsync("audioKit.refreshEnd", "failure");
         }
         finally
         {
@@ -446,6 +470,10 @@ public partial class AzureDashboard
             _userCancelled = true;
             _refreshCts.Cancel();
             NotificationService.Notify(NotificationSeverity.Warning, "Cancelled", "Refresh operation cancelled.");
+            // Here rather than in the OperationCanceledException handler: that handler exists
+            // precisely because the cancellation toast has already been shown, so the sound
+            // belongs on the same side of that split as the toast it accompanies.
+            await SfxAsync("audioKit.refreshEnd", "cancelled");
         }
         // Signal the server to stop the in-progress scan (best-effort — swallow errors).
         try
@@ -516,6 +544,11 @@ public partial class AzureDashboard
                     _refreshing = false;
             }
             catch { }
+
+            // Walk the drone's filter to match the bar. Fire-and-forget: a progress tick is
+            // the hottest path on this page (a render per tick already), and awaiting an
+            // interop call here would serialise the hub callback behind the audio graph.
+            _ = SfxAsync("audioKit.refreshProgress", _progressPercent);
 
             InvokeAsync(StateHasChanged);
         });

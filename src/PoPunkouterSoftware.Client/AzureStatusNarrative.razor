@@ -14,7 +14,7 @@
 @using PoPunkouterSoftware.Shared
 @inject HttpClient Http
 
-<section class="azure-narrative @($"is-{Tone}")" aria-label="Current status summary">
+<section class="azure-narrative @($"is-{Tone}")" data-glass aria-label="Current status summary">
     <div class="azure-narrative__head">
         <span class="app-kicker">Right now</span>
         @if (Summary is not null)

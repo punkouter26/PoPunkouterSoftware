@@ -95,7 +95,19 @@
             };
         })();
     </script>
+    @* Load order is load-bearing. motion-kit.js defines window.motionKit, the single rAF
+       governor every animated layer subscribes to, so it must come first. audio-kit.js is
+       next because gpu-backdrop.js and starfield-backdrop.js both PULL window.audioKit.energy()
+       inside their frame callbacks (they null-check it, so the order is defensive rather
+       than strictly required — but a first frame without audio coupling is a visible pop). *@
+    <script src="js/motion-kit.js"></script>
+    <script src="js/audio-kit.js"></script>
     <script src="js/helpers.js"></script>
+    @* The WebGL2/WebGL1 renderer. Always loaded: it is the tier nearly every visitor
+       actually gets, and the fallback for the one above it. The WebGPU renderer is NOT
+       declared here — gpu-backdrop.js fetches js/gfx-webgpu.js itself, and only when
+       navigator.gpu exists, so a browser that cannot use a line of it never downloads it. *@
+    <script src="js/gfx-webgl.js"></script>
     <script src="js/gpu-backdrop.js"></script>
     @* Small wrapper only (no THREE dependency at parse time) — it lazily fetches
        lib/three/three.min.js itself, and only when starfieldBackdrop.init() is called

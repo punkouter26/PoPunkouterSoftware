@@ -147,12 +147,58 @@
         try
         {
             await JS.InvokeVoidAsync("starfieldBackdrop.init");
+            await PushTelemetryAsync();
         }
         catch (JSException)
         {
             // Decorative layer only — the catalog is fully usable without it.
         }
     }
+
+    /// <summary>
+    /// Push the catalog's live health into the starfield's orbit field: healthy apps hold a
+    /// tight orbit, unavailable ones drift outward, unmonitored ones sit calm but dim.
+    ///
+    /// <para>Strictly decorative. <c>apps.json</c> remains authoritative for the cards, and
+    /// nothing here can remove, dim or reorder one — a probe failure produces a body that
+    /// drifts, never a card that disappears. Same rule the catalog already follows for live
+    /// Azure inventory, extended to the one part of the page that moves.</para>
+    ///
+    /// <para>A single delimited string, not a DTO: only primitives cross the interop
+    /// boundary (the discipline <c>appMedia</c> set in helpers.js), so nothing new needs a
+    /// <c>[JsonSerializable]</c> entry and the WASM trim analyzer stays clean.</para>
+    /// </summary>
+    private async Task PushTelemetryAsync()
+    {
+        if (data is null)
+            return;
+
+        // Separator-stripping is defensive, not theoretical: app names come from apps.json,
+        // which is hand-edited, and one stray '|' would silently shift every subsequent
+        // body's state by one field.
+        var spec = string.Join(';', data.Apps.Select(a =>
+            $"{a.Name.Replace('|', ' ').Replace(';', ' ')}|{OrbitState(a.Status)}"));
+
+        try
+        {
+            await JS.InvokeVoidAsync("starfieldBackdrop.setTelemetry", spec);
+        }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+    }
+
+    /// <summary>
+    /// Portfolio status → orbit state. "not-monitored" maps to <c>unknown</c>, not to a
+    /// warning: no probe covers that app, and reporting a fault from an absence of data is
+    /// the same mistake as counting a cold-start timeout as downtime.
+    /// </summary>
+    private static string OrbitState(string status) => status switch
+    {
+        "healthy" => "up",
+        "unavailable" => "down",
+        "degraded" => "warn",
+        _ => "unknown",
+    };
 
     public async ValueTask DisposeAsync()
     {
@@ -183,6 +229,12 @@
             data = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.PortfolioResponse, cts.Token);
             if (_buildIdAtLoad is null && data?.BuildId > 0)
                 _buildIdAtLoad = data.BuildId;
+
+            // Also on the 5-minute auto-reload, not just the first paint — an app that goes
+            // down while the tab is open should visibly leave its orbit. Safe to call before
+            // the canvas exists: starfieldBackdrop holds the latest spec and applies it when
+            // init() completes.
+            await PushTelemetryAsync();
         }
         catch (Exception ex)
         {

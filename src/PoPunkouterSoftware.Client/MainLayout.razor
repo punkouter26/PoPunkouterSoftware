@@ -41,6 +41,20 @@
             </div>
 
             <div class="app-topbar-session">
+                @* Sound toggle. Wired from js/audio-kit.js by DELEGATION on document, not by
+                   a Blazor @onclick (which can never fire here) and not by a direct listener
+                   either — enhanced navigation re-inserts this header on every page change,
+                   which would lose a bound listener or double-bind it.
+
+                   Rendered in the OFF state on the server unconditionally. The real value
+                   lives in localStorage and is applied by audio-kit.js the moment it runs;
+                   guessing "on" here would flash a speaker icon at a visitor who has never
+                   enabled sound. Silence is the default and the markup says so. *@
+                <button type="button" class="app-topbar-sound" data-sound-toggle aria-pressed="false"
+                        aria-label="Turn sound on"
+                        title="Sound off — click to enable interface and status audio">
+                    <span class="material-symbols-outlined" aria-hidden="true">volume_off</span>
+                </button>
                 <button type="button" class="app-topbar-menu" aria-expanded="false" aria-controls="app-topbar-drawer"
                         aria-label="Toggle navigation menu">
                     <span class="material-symbols-outlined" aria-hidden="true">menu</span>
