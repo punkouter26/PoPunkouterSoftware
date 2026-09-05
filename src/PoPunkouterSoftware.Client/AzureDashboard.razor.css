@@ -1,13 +1,13 @@
 .azure-ops-page {
     --azure-section-gap: clamp(1.25rem, 2.5vw, 2.25rem);
     display: grid;
-    gap: 1rem;
+    gap: var(--app-space-md);
 }
 
 .azure-ops-page ::deep .azure-glance-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .75rem;
+    gap: var(--app-space-sm);
 }
 
 /* Every rule in this file MUST use the `.azure-ops-page ::deep …` form, base rules and
@@ -18,7 +18,7 @@
    no specificity, so a bare override silently loses to its own base rule and the layout
    never reflows. That is exactly what pinned the glance grid to three columns at 390px. */
 .azure-ops-page ::deep .azure-glance-grid > .app-card { min-width: 0; padding: var(--app-space-sm); }
-.azure-ops-page ::deep .azure-glance-grid h2 { margin: 0; font-size: 1rem; }
+.azure-ops-page ::deep .azure-glance-grid h2 { margin: 0; font-size: var(--app-step-1); }
 
 /* Chart heights moved out of `Style="height:210px"` inline attributes. The .app-card
    parent owns the frame; .rz-chart is frameless (see modern-ui.components.css). */
@@ -78,7 +78,7 @@
     gap: .55rem;
     margin: .15rem 0 .35rem;
     font-family: var(--app-headline-font);
-    font-size: clamp(1.65rem, 3vw, 2.35rem);
+    font-size: var(--app-step-4);
     line-height: 1;
     letter-spacing: -.04em;
     color: var(--app-text);
@@ -101,20 +101,20 @@
 .azure-ops-page ::deep .azure-command-kpis {
     display: grid;
     grid-template-columns: repeat(2, minmax(110px, 1fr));
-    gap: .65rem;
+    gap: var(--app-space-xs);
 }
 
 .azure-ops-page ::deep .azure-command-kpis > div {
     display: grid;
     gap: .15rem;
-    padding: .8rem .9rem;
+    padding: var(--app-space-sm);
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-md);
     background: var(--app-surface-soft);
 }
 
 .azure-ops-page ::deep .azure-command-kpis strong {
-    font-size: 1.3rem;
+    font-size: var(--app-step-2);
     color: var(--app-text);
 }
 
@@ -196,7 +196,7 @@
 
 .azure-ops-page ::deep .azure-section-heading h2 {
     margin: .15rem 0 .25rem;
-    font-size: clamp(1.35rem, 2vw, 1.8rem);
+    font-size: var(--app-step-3);
 }
 
 .azure-ops-page ::deep .azure-section-heading p {
@@ -598,6 +598,52 @@
     }
 }
 
+/* Mobile-portrait paging. The page is a scroll-snap container here (see
+   [data-snap-pager] in modern-ui.css) and every rule below exists to make a pane fit one
+   screen HONESTLY - by tightening chrome, never by hiding a fact. The vertical budget is
+   844px minus the pill header and the shell padding, about 760px, and
+   PortfolioUiTests.Azure_MobilePortrait_PanesFitTheViewport is what holds these to it.
+
+   The gate matches modern-ui.css exactly: portrait AND a coarse pointer. A narrow desktop
+   window is someone resizing a browser, and it keeps the ordinary stacked layout. */
+@media (max-width: 720px) and (orientation: portrait) and (hover: none) {
+    /* The hero owns a whole pane, so it no longer needs to fight the sections that used
+       to sit under it - but its gradient panel is the tallest single element on the page
+       and every pixel of padding is one the KPI tiles do not get. */
+    .azure-ops-page ::deep .azure-command-header {
+        padding: var(--app-space-sm);
+    }
+
+    .azure-ops-page ::deep .azure-command-kpis {
+        margin: var(--app-space-sm) 0 0;
+        gap: var(--app-space-2xs);
+    }
+
+    .azure-ops-page ::deep .azure-command-meta {
+        margin-top: var(--app-space-xs);
+    }
+
+    /* The sparkline is the tile's third line and its least load-bearing: the number and
+       its label are the fact, the 30-scan shape is context. Shorter, not gone. */
+    .azure-ops-page ::deep .app-sparkline {
+        height: 18px;
+    }
+
+    /* The ring is a proportion, and a proportion reads at any size. 120px of it was
+       sized for a three-across desktop grid. */
+    .azure-ops-page ::deep .azure-forecast__ring {
+        max-width: 104px;
+    }
+
+    /* 30 columns never fit 390px - the grid has always scrolled sideways inside its own
+       container. Capping its height keeps a fleet of twenty apps from turning the uptime
+       pane into a second scrolling page; the rows stay reachable, just inside the card. */
+    .azure-ops-page ::deep .azure-uptime__scroll {
+        max-height: 42dvh;
+        overflow: auto;
+    }
+}
+
 @media (max-width: 420px) {
     .azure-ops-page ::deep .azure-attention-detail dl,
     .azure-ops-page ::deep .azure-resource-card dl {
@@ -675,7 +721,7 @@
 .azure-ops-page ::deep .azure-narrative__text {
     margin: 0;
     max-width: 78ch;
-    font-size: clamp(1rem, 1.4vw, 1.12rem);
+    font-size: var(--app-step-1);
     line-height: 1.5;
     color: var(--app-text);
 }
@@ -854,9 +900,16 @@
 /* ── Uptime heatmap ───────────────────────────────────────────────────────── */
 
 /* 30 columns cannot fit a 390px viewport. The grid scrolls inside its own
-   container so the page body never scrolls horizontally. */
+   container so the page body never scrolls horizontally.
+
+   `min-width: 0` is what makes that true rather than merely intended: this is a grid item,
+   and a grid item defaults to refusing to shrink below its content's min-content width - so
+   the 30-column grid inside was sizing the CARD, which sized the pane, which pushed every
+   other section on the screen sideways under it. The overflow-x here only starts doing its
+   job once the box is allowed to be narrower than what it holds. */
 .azure-ops-page ::deep .azure-uptime__scroll {
     overflow-x: auto;
+    min-width: 0;
     padding-bottom: .25rem;
 }
 

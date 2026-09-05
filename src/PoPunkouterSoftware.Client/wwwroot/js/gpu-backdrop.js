@@ -75,6 +75,11 @@
     function loadWebgpuModule() {
         if (window.gfxWebgpu) return Promise.resolve(true);
         if (!navigator.gpu) return Promise.resolve(false);
+        // A device that has asked us to spend less does not get the top rung fetched for it,
+        // even where WebGPU exists — the WebGL2 rung below draws the same backdrop from a
+        // script that is already on the page. `minimal` stops the layer entirely one level
+        // up, in start(); this guard covers the ladder being entered by any other path.
+        if (window.motionKit && window.motionKit.minimal) return Promise.resolve(false);
         if (webgpuScript) return webgpuScript;
         webgpuScript = new Promise(function (resolve) {
             var s = document.createElement('script');
@@ -90,6 +95,14 @@
     function start() {
         var canvas = document.getElementById('app-gpu-backdrop');
         if (!canvas) return;
+
+        // Same contract as reduced-motion: never set `data-gpu-backdrop` on <html>, so the
+        // static CSS grid in modern-ui.css stays visible and the [data-glass] translucency
+        // (which only applies under that attribute) never kicks in. Degrading, not failing.
+        if (window.motionKit && window.motionKit.minimal) {
+            canvas.dataset.gpu = 'minimal';
+            return;
+        }
 
         // Records why the layer is (not) running. Read it in devtools or in tests:
         // webgpu | webgl2 | webgl1 | reduced-motion | no-gpu | context-lost | disposed

@@ -1,0 +1,81 @@
+/* Scoped to MetricBars' own markup, so no ::deep is needed here — every element below is
+   emitted by this component (see CLAUDE.md on scoped CSS not crossing component boundaries). */
+.metric-bars {
+    display: grid;
+    gap: var(--app-space-2xs);
+}
+
+/* label | bar | value. The label column is the only one allowed to shrink, so a long
+   resource-group name truncates instead of squeezing the bar to nothing; the value column
+   is `max-content` so the figures line up on their right edge down the panel. */
+.metric-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) max-content;
+    align-items: center;
+    gap: var(--app-space-xs);
+    font-size: var(--app-step--1);
+}
+
+.metric-bar__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--app-text-muted);
+}
+
+.metric-bar__track {
+    height: 8px;
+    border-radius: var(--app-radius-pill);
+    background: var(--app-surface-soft);
+    border: 1px solid var(--app-border);
+    overflow: hidden;
+}
+
+.metric-bar__fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--app-radius-pill);
+    background: var(--app-accent);
+    transition: width var(--app-dur-slow) var(--app-ease-out);
+}
+
+.metric-bar__fill.is-warm {
+    background: var(--app-accent-warm);
+}
+
+.metric-bar__fill.is-bad {
+    background: var(--app-danger-soft);
+}
+
+.metric-bar__value {
+    color: var(--app-text);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+/* The bar is decoration for a number that is already printed beside it, so animating it
+   buys nothing a visitor with vestibular sensitivity should have to pay for. */
+@media (prefers-reduced-motion: reduce) {
+    .metric-bar__fill {
+        transition: none;
+    }
+}
+
+/* At 390px an 8rem label column leaves too little for the bar to mean anything, so the
+   labels truncate and the title attribute carries the full text. */
+@media (max-width: 480px) {
+    .metric-bar {
+        grid-template-columns: minmax(0, 5.5rem) minmax(0, 1fr) max-content;
+    }
+}
+
+/* Where there IS room, use it. Measured at 1440px: the longest label in either panel
+   ("Azure App Service (poshared)") wants 172px against the 128px an 8rem column gives, so
+   three of six rows truncated with ~214px of track sitting next to them doing nothing.
+   11rem clears the longest label and still leaves the bar the majority of the row. */
+@media (min-width: 900px) {
+    .metric-bar {
+        grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) max-content;
+    }
+}

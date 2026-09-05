@@ -500,6 +500,17 @@
             if (!canvas) return Promise.resolve();
             if (!window.motionKit) { canvas.dataset.starfield = 'no-governor'; return Promise.resolve(); }
 
+            // The heaviest optional thing the app does — a lazily fetched ~600KB of Three.js
+            // and a second WebGL context — and it is on "/", the route with the LCP that
+            // matters. On a device or a connection that has told us to spend less (see
+            // motionKit.minimal) it is not drawn at all: no fetch, no context, no listener.
+            // Unlike the reduced-motion path below there is nothing to opt back into, because
+            // none of these signals change mid-session.
+            if (window.motionKit.minimal) {
+                canvas.dataset.starfield = 'minimal';
+                return Promise.resolve();
+            }
+
             var motion = window.matchMedia('(prefers-reduced-motion: reduce)');
             if (!motion.matches) return buildAndStart(canvas, token);
 

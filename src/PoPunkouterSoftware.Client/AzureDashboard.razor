@@ -10,7 +10,20 @@
 
 <PageTitle>PoPunkouterSoftware — Azure status</PageTitle>
 
-<div class="app-page azure-ops-page">
+@* data-snap-pager: on mobile portrait ONLY (see the [data-snap-pager] block in
+   modern-ui.css), this container becomes exactly one viewport tall and each `.app-pane`
+   child fills it, so a phone visitor moves a whole screen at a time instead of free-
+   scrolling a nine-section column. Nothing is hidden or cut - the panes are a grouping of
+   the same sections the desktop layout stacks, and the one body of content that genuinely
+   cannot be compressed into a screen (advanced diagnostics) opts out with
+   `.app-pane--tall` and scrolls under its own steam.
+
+   The panes are real elements at every viewport, not a mobile-only wrapper: on desktop
+   `.app-pane` is an ordinary grid section, which is also what gives the page its vertical
+   rhythm. Keep each pane to ONE question - that is what makes the paging legible, and
+   PortfolioUiTests.Azure_MobilePortrait_PanesFitTheViewport is what stops a new section
+   being dropped into whichever pane happens to be nearest. *@
+<div class="app-page azure-ops-page" data-snap-pager>
 @if (_loading)
 {
     <LoadingSkeleton Variant="summary" TileCount="4" AriaLabel="Loading Azure status" />
@@ -32,8 +45,16 @@ else
     @* The lead paragraph comes before the hero on purpose: it is the one element meant to be
        read first, and a plain-English sentence answers "what is going on" faster than four
        numbers do. *@
+    @* The lead paragraph gets a pane to itself. It is the one element on this page meant to
+       be READ rather than scanned, it runs to ten lines at 390px, and pairing it with the
+       hero put the two tallest things on the page in the same screen - measured at 817px
+       against a 756px budget, i.e. the numbers would have been pushed under the fold by the
+       prose explaining them. *@
+    <section class="app-pane azure-pane-narrative">
     <AzureStatusNarrative Summary="@CurrentAiSummary" AttentionItems="@summary.AttentionItems" Tone="@narrativeTone" />
+    </section>
 
+    <section class="app-pane azure-pane-status">
     <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")" data-glass>
         <div class="azure-command-copy">
             <div class="app-kicker">Azure · @summary.SubscriptionName</div>
@@ -117,24 +138,20 @@ else
 
     @if (_refreshing)
     {
-        <section class="azure-refresh-progress" aria-live="polite">
-            @* Percent values only arrive over the hub; when it is down (HTTP-polling
-               fallback) a determinate bar would sit at a lying 0% for the whole scan. *@
-            @if (_hub?.State == HubConnectionState.Connected)
-            {
-                <RadzenProgressBar Value="@_progressPercent" Max="100" ShowValue="true" />
-            }
-            else
-            {
-                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" />
-            }
-            <span><RadzenIcon Icon="sync" class="app-progress-icon" /> @_progressStep — you can leave this page while the scan continues.</span>
-        </section>
+        @* @ref, and Update() rather than parameters: a hub tick must not cost a page render.
+           See AzureRefreshProgress.razor and the hub wiring in AzureDashboard.razor.cs. *@
+        <AzureRefreshProgress @ref="_progressUi"
+                              Percent="@_progressPercent" Step="@_progressStep"
+                              Determinate="@(_hub?.State == HubConnectionState.Connected)" />
     }
+    </section>
 
-    @* Placed directly under the hero: "what moved" is the question a returning visitor
-       actually arrives with, and it is answered from stored history with no extra request. *@
+    @* Its own pane: "what moved" is the question a returning visitor actually arrives with,
+       and it deserves a screen rather than a footnote under the hero. Answered from stored
+       history with no extra request. *@
+    <section class="app-pane azure-pane-changed">
     <AzureWhatChanged Delta="@summary.Changes" />
+    </section>
 
     @* One grid, three cards. There used to be two grids and four cards, and the extra card
        was a donut restating the health ratio the hero already gives as a percentage — the
@@ -143,6 +160,7 @@ else
        exact series the hero's cost sparkline already draws; it now always shows the per-
        resource-group breakdown, which appears nowhere else. Trend in the sparkline,
        breakdown in the chart, ratio in the hero — each fact rendered once. *@
+    <section class="app-pane azure-pane-spend">
     <section class="azure-glance-grid" aria-label="Spend forecast and Azure status charts">
         <AzureCostForecast Forecast="@summary.Forecast" />
         <article class="app-card" data-glass>
@@ -154,10 +172,9 @@ else
             }
             else
             {
-                <RadzenChart>
-                    <RadzenBarSeries TItem="OpsMetricPoint" Data="@summary.CostDrivers" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
-                    <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
-                </RadzenChart>
+                @* MetricBars, not RadzenChart - at most five pre-sorted rows. See the header
+                   of MetricBars.razor for why a chart was the wrong shape for a top-N. *@
+                <MetricBars Points="@summary.CostDrivers" Tone="accent" Format="money" />
             }
             <span class="app-sr-only">@string.Join(", ", summary.CostDrivers.Select(x => $"{x.Label}: ${x.Value:F2}"))</span>
         </article>
@@ -170,20 +187,22 @@ else
             }
             else
             {
-                <RadzenChart>
-                    <RadzenBarSeries TItem="OpsMetricPoint" Data="@summary.ResponseTimes" CategoryProperty="Label" ValueProperty="Value" Title="ms" />
-                    <RadzenCategoryAxis /><RadzenValueAxis FormatString="{0:N0} ms"><RadzenGridLines Visible="true" /></RadzenValueAxis><RadzenLegend Visible="false" />
-                </RadzenChart>
+                <MetricBars Points="@summary.ResponseTimes" Tone="warm" Format="ms" />
                 <p class="azure-chart-note">Free-tier apps sleep when idle — multi-second times are usually cold starts, not outages.</p>
             }
             <span class="app-sr-only">@string.Join(", ", summary.ResponseTimes.Select(x => $"{x.Label}: {x.Value:N0} milliseconds"))</span>
         </article>
     </section>
 
+    </section>
+
     @* Full-width on its own row, not a grid cell: 30 day-columns cannot share a row with
        anything else and still be readable at 390px. *@
+    <section class="app-pane azure-pane-uptime">
     <AzureUptimeHeatmap Map="@summary.Uptime" />
+    </section>
 
+    <section class="app-pane azure-pane-actions">
     <section class="azure-attention-summary">
         <div class="azure-section-heading">
             <div><div class="app-kicker">Action first</div><h2>Needs attention</h2></div>
@@ -213,10 +232,15 @@ else
                       Icon="@(_advancedOpen ? "expand_less" : "tune")" ButtonStyle="ButtonStyle.Base"
                       Variant="Variant.Outlined" Click="ToggleAdvancedAsync" />
     </div>
+    </section>
 
     @if (_advancedOpen)
     {
-        <section class="azure-advanced" aria-label="Advanced Azure diagnostics">
+        @* --tall: the only body of content on this page that cannot honestly be compressed
+           into one screen. It still snaps to the top of the viewport, then scrolls
+           internally - the alternative would be to truncate it, which is exactly what the
+           paging exists to avoid. *@
+        <section class="app-pane app-pane--tall azure-advanced" aria-label="Advanced Azure diagnostics">
         @if (_advancedLoading)
         {
             <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" />

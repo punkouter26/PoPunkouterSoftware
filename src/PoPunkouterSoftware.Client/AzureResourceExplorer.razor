@@ -97,5 +97,37 @@
 
     [Parameter, EditorRequired] public Func<string, BadgeStyle> StatusBadgeFor { get; set; } = default!;
     [Parameter, EditorRequired] public Func<string, string> RiskClassFor { get; set; } = default!;
+
+    private IReadOnlyList<ResourceExplorerItem>? _renderedItems;
+    private int _renderedTotal;
+    private string? _renderedView;
+    private bool _renderedNarrow;
+
+    /// <summary>
+    /// Guarded on every parameter that actually changes what is drawn — the rows, the counter,
+    /// the selected view chip, and the narrow/wide branch that decides WHICH tree is built at
+    /// all. The two <c>Func</c> parameters are excluded deliberately: they are fresh delegates
+    /// on every parent render, so including them would make the guard a no-op, and they only
+    /// ever affect output through the rows above.
+    ///
+    /// <para>This matters most here: the virtualized data grid was being torn down and rebuilt
+    /// on every page render, including once per SignalR progress tick during a scan.</para>
+    /// </summary>
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(_renderedItems, Items)
+            && _renderedTotal == TotalCount
+            && _renderedView == SelectedView
+            && _renderedNarrow == IsNarrow)
+        {
+            return false;
+        }
+
+        _renderedItems = Items;
+        _renderedTotal = TotalCount;
+        _renderedView = SelectedView;
+        _renderedNarrow = IsNarrow;
+        return true;
+    }
 }
 

@@ -100,9 +100,10 @@
     else if (data is not null)
     {
         <section class="app-grid cards" aria-label="Web applications">
-            @foreach (var app in data.Apps)
+            @for (var i = 0; i < data.Apps.Count; i++)
             {
-                <PortfolioAppCard @key="app.Id" App="app" />
+                var app = data.Apps[i];
+                <PortfolioAppCard @key="app.Id" App="app" IsFirst="@(i == 0)" />
             }
         </section>
     }

@@ -148,12 +148,51 @@ future leak with a static-file exclusion when the file simply does not belong th
 
 **Each fact appears once on `/azure`.** The page carries one `.azure-glance-grid` of three cards
 (forecast, cost-by-resource-group, response times) with the uptime heatmap full-width below it.
+Two of those three draw with `MetricBars` — plain HTML/CSS rows — not `RadzenChart`. Both series
+are a **top-N ranking** (`Take(5)` / `Take(6)`, pre-sorted server-side), and a chart was the wrong
+shape for one three times over: it rebuilt an SVG scene graph on every parent render, it carried a
+fixed pixel height with a horizontal category axis that could not survive 390px without an
+`overflow-x` escape hatch, and it spent most of its ink on axis furniture around five numbers that
+are now simply printed on the row. Reach for `RadzenChart` when a series is continuous
+(`AzureHistoryDisclosure` still does); reach for `MetricBars` when it is a ranking.
 There used to be a second grid and a fourth card: a donut restating the healthy/total ratio the hero
 tile already gives as a percentage — the same number appeared in the hero, the card subtitle and the
 donut centre — and a cost chart that drew `CostHistory`, the exact series the hero's cost sparkline
 draws. Trend belongs in the sparkline, breakdown in the chart, ratio in the hero. `OpsSummary` lost
 `FleetHealth` with the donut; if you add a field to the first-paint contract, make sure nothing on
 the page already renders it.
+
+**One design system, three dials.** Everything visual resolves from the token block at the top of
+`modern-ui.css`, and three of those tokens are the only places a global visual decision is made:
+
+- **`--app-density`** scales the whole spacing ladder (`--app-space-*` are all
+  `calc(<base> * var(--app-density))`). Compacting the UI for a viewport is one declaration —
+  0.9 at 820px, 0.78 at 640px — not a per-component `padding` override repeated in every
+  breakpoint of every stylesheet, which is what it replaced.
+- **`--app-step--2 … --app-step-5`** is the fluid type ladder. Every font-size above ~0.9rem
+  resolves from a step. Do **not** write a new `clamp()`: the catalogue h1 grew at `5vw` while the
+  dashboard hero grew at `3vw`, so the two pages' headings crossed over somewhere mid-range and
+  neither size was ever chosen. Density does not scale type — the ladder already shrinks with the
+  viewport and multiplying the two compounds into unreadable text.
+- **`--app-viewport-fit`** is `100dvh` minus the fixed chrome and shell padding: what a
+  full-height pane sizes itself to.
+
+`--app-text-soft` is a **measured** value, not a taste call, in both themes: it is applied to the
+smallest type in the app, so re-measure it against `--app-surface` (the darker of the two grounds
+these sit on, and the one `[data-glass]` makes translucent), not against `--app-bg`.
+
+**`/azure` pages instead of scrolling at mobile portrait; `/` guarantees its first screen.** The
+two routes answer "fit the viewport" differently on purpose. `/azure` is pane-shaped — status,
+what changed, spend, uptime, actions — so `[data-snap-pager]` makes it a one-viewport-tall
+scroll-snap container whose `.app-pane` children are a screen each; `js/helpers.js`
+(`appSnapPager`) injects the dot strip, driven off the **computed** `scroll-snap-type` so the CSS
+media query stays the single source of truth for when paging is on. `/` is a 24-item catalogue —
+a list, and paging a list fights the reader — so it keeps ordinary scrolling and instead
+guarantees the first screen is complete. **Neither route truncates.** The one body of content that
+cannot honestly be compressed to a screen (advanced diagnostics) opts out with `.app-pane--tall`
+and scrolls internally. Both contracts are held by `PortfolioUiTests`
+(`Azure_MobilePortrait_PanesFitTheViewport`, `Home_FirstScreen_ShowsAWholeCard`) — a new section
+dropped into whichever pane is nearest will fail the first of those.
 
 **Two big types are partial classes split by concern.** Find the concern, not the file:
 
@@ -241,6 +280,28 @@ proves a pipeline was created, not that anything reached the screen.
 
 ## Cross-cutting decisions
 
+- **A projection component gets a `ShouldRender` guard.** Blazor treats a reference-typed
+  parameter as "may have changed" on every parent render, so without one, a page render walks
+  every child — 23 portfolio cards, a 30-day uptime grid, the virtualized resource explorer. The
+  guard is reference identity on the data (`AzureUptimeHeatmap`, `AzureCostForecast`,
+  `AzureWhatChanged`, `AzurePriorityQueue`, `MetricBars`, `PortfolioAppCard`) plus any scalar that
+  changes what is drawn (`AzureResourceExplorer` also compares `SelectedView` and `IsNarrow`).
+  This is sound only because the page **replaces** its DTOs rather than mutating them. Two rules
+  follow: never include a `Func`/`EventCallback` parameter in the comparison — those are fresh
+  objects every render and would make the guard a no-op — and **never add internal state to a
+  guarded component**, because `ShouldRender` is consulted on its own `StateHasChanged` too and
+  would block it. `AzureStatusNarrative` is deliberately unguarded for exactly that reason.
+- **A hot signal must not re-render the page that shows it.** `POST /api/diag/refresh` streams ~20
+  progress messages over ~30 seconds; each one used to call `StateHasChanged` on `AzureDashboard`.
+  The strip lives in `AzureRefreshProgress` and the hub calls its `Update()` method directly — a
+  method, not a `[Parameter]`, because setting a parameter requires the parent to render, which is
+  the whole cost being removed. The page still renders on the transition that ends the scan.
+- **Decorative layers ask the device first.** `motionKit.minimal` (Save-Data, `deviceMemory <= 2`,
+  `hardwareConcurrency <= 2`, 2G) is a separate question from the quality tier: the tier says *how
+  well* to draw, `minimal` says *whether to*. Under it the starfield skips its ~600KB Three.js
+  fetch entirely and the GPU backdrop never sets `data-gpu-backdrop`, so the CSS fallback stays.
+  Both hint APIs are Chromium-only — every check is written so a missing hint reads as "no
+  objection". The default is to draw.
 - **Every endpoint needs a consumer.** An endpoint whose only caller is its own test is dead code
   with a green check mark. Three whole slices (GitHub, Infra, Pinger) were deleted in 2026-07 for
   exactly that — all tested, none reachable from the UI. Before adding a route, know what calls it.
@@ -360,6 +421,16 @@ proves a pipeline was created, not that anything reached the screen.
   hatch, so reflection-based JSON fails the build.
 - **The whole app has one rAF loop.** It lives in `js/motion-kit.js`. Do not add another —
   see [Graphics and audio](#graphics-and-audio).
+- **The icon font is served from this origin, and there is only one of it.** Radzen.Blazor ships
+  the Material Symbols variable font and self-hosts it as family `"Material Symbols"`; every
+  `<RadzenIcon>` has always used that copy. `App.razor` additionally loaded it from Google Fonts —
+  a render-blocking cross-origin stylesheet plus two preconnects, serving only the four bare
+  `<span class="material-symbols-outlined">` glyphs in `MainLayout`, with no `display=swap` so
+  those icons were blank until a third-party round trip finished. `modern-ui.css` now declares the
+  family against the local file. Do not re-add the remote `<link>`; and note the `@font-face` has
+  to live in `modern-ui.css` rather than being inherited from Radzen's sheets, because those are
+  `media`-scoped by colour scheme and an `@font-face` in a non-matching media context does not
+  apply.
 - **One application stylesheet.** `wwwroot/css/modern-ui.css` is the whole thing (plus `boot.css`
   for the pre-Blazor splash). It was a four-line aggregator over `modern-ui.base/.components/.responsive`;
   CSS `@import` is serial, so the split cost three extra round trips on the critical path and bought
@@ -386,7 +457,7 @@ proves a pipeline was created, not that anything reached the screen.
   download and broke every deployment (2026-07-10). Kill switch:
   `FeatureFlags:EnableScreenshots=false`.
 
-## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/49/22/17)
+## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/49/22/19)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the

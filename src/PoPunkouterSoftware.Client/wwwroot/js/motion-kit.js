@@ -90,6 +90,41 @@
         return 2;
     }
 
+    /**
+     * "Do not run decorative layers on this device at all."
+     *
+     * The tier ladder above answers HOW WELL to draw; this answers WHETHER TO. They are
+     * different questions and the ladder cannot express the second one — its floor is still
+     * a running WebGL context, a compositing layer and a per-frame dispatch, and on the
+     * hardware below it is exactly wrong to pay any of that for a background gradient.
+     *
+     * Three signals, each of which is a statement by the device or the visitor rather than a
+     * guess about them:
+     *
+     *   · Save-Data. The visitor has explicitly asked every site to spend less. Fetching
+     *     ~600KB of Three.js for a decorative starfield straight past that request is not
+     *     defensible, whatever the GPU can manage.
+     *   · deviceMemory <= 2 / hardwareConcurrency <= 2. Below the ladder's floor, where a
+     *     backdrop competes with the WASM runtime for the only thread that matters.
+     *   · A 2G/slow-2G effective connection, for the same reason as Save-Data.
+     *
+     * Both hint APIs are Chromium-only and `undefined` elsewhere; each check is written so a
+     * missing hint reads as "no objection", never as "minimal". The default is to draw.
+     */
+    function computeMinimal() {
+        var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (conn) {
+            if (conn.saveData === true) return true;
+            var effective = conn.effectiveType || '';
+            if (effective === 'slow-2g' || effective === '2g') return true;
+        }
+        if (typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 2) return true;
+        if (typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 2) return true;
+        return false;
+    }
+
+    var minimal = computeMinimal();
+
     var subs = [];
     var nextId = 1;
     var qualityListeners = [];
@@ -279,6 +314,14 @@
         get running() { return !!raf; },
 
         /**
+         * True when decorative layers should not initialise AT ALL on this device — see
+         * computeMinimal(). Layers treat it exactly like `reduced`: skip the download and the
+         * context, keep the CSS fallback, do not error. Unlike `reduced` it cannot change
+         * mid-session, so there is no listener to match.
+         */
+        get minimal() { return minimal; },
+
+        /**
          * Diagnostics. Read it in devtools, or from a Playwright assertion that the loop is
          * genuinely stopped rather than merely invisible — `running` false with subscribers
          * present is the observable form of "reduced motion is honoured".
@@ -287,6 +330,7 @@
             return {
                 running: !!raf,
                 reduced: motion.matches,
+                minimal: minimal,
                 hidden: document.hidden,
                 blurred: blurred,
                 tier: quality().name,

@@ -43,11 +43,16 @@ public class PortfolioUiTests : IAsyncLifetime
         _pw.Dispose();
     }
 
+    // HasTouch tracks IsMobile because the viewport-fit paging on /azure is gated on
+    // `(hover: none)`, which Chromium only reports under touch emulation. Without it the
+    // "mobile" page here would quietly get the desktop layout and every mobile assertion
+    // below would be testing something the real device never sees.
     private async Task<IPage> NewPageAsync(int width, int height, bool isMobile) =>
         await _browser.NewPageAsync(new()
         {
             ViewportSize = new() { Width = width, Height = height },
             IsMobile = isMobile,
+            HasTouch = isMobile,
         });
 
     [Theory]
@@ -207,28 +212,129 @@ public class PortfolioUiTests : IAsyncLifetime
     // spatial contract) and was retired with it.
 
     /// <summary>
-    /// The glance charts take their height from scoped CSS. When that rule stops
-    /// matching, Radzen measures a zero-height box and the charts silently collapse to
-    /// an empty strip — visually "present" but drawing nothing.
+    /// The glance panels must actually draw their metrics.
+    ///
+    /// <para>This used to assert two <c>RadzenChart</c> instances had non-zero height and had
+    /// emitted SVG geometry — the failure it guarded was a scoped-CSS rule ceasing to match,
+    /// after which Radzen measured a zero-height box and drew an empty strip that still looked
+    /// "present" in a screenshot. Both charts were replaced by <c>MetricBars</c> (see that
+    /// component's header for why), so the same defect now takes a different shape: a bar
+    /// whose fill width resolves to zero, or a panel that renders no rows at all. The
+    /// invariant is unchanged — a panel that reserves space must put marks in it.</para>
     /// </summary>
     [Theory]
     [MemberData(nameof(Viewports))]
-    public async Task Azure_GlanceCharts_HaveHeightAndDrawGeometry(string label, int width, int height, bool isMobile)
+    public async Task Azure_GlancePanels_DrawTheirMetrics(string label, int width, int height, bool isMobile)
     {
         var page = await NewPageAsync(width, height, isMobile);
         await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
         await page.WaitForSelectorAsync(".azure-glance-grid", new() { Timeout = 40_000 });
-        await page.WaitForSelectorAsync(".rz-chart", new() { Timeout = 40_000 });
+        await page.WaitForSelectorAsync(".azure-glance-grid .metric-bar", new() { Timeout = 40_000 });
 
-        var heights = await page.EvaluateAsync<double[]>(
-            "() => [...document.querySelectorAll('.azure-glance-grid .rz-chart')].map(el => el.getBoundingClientRect().height)");
-        heights.Should().NotBeEmpty();
-        heights.Should().OnlyContain(h => h > 150, $"charts must not collapse at {label}");
+        // Every row must have a laid-out track and a fill with real width inside it. A zero
+        // here is the bar-shaped form of the collapsed chart this test replaced.
+        var fills = await page.EvaluateAsync<double[]>(
+            "() => [...document.querySelectorAll('.azure-glance-grid .metric-bar__fill')]" +
+            ".map(el => el.getBoundingClientRect().width)");
+        fills.Should().NotBeEmpty($"no metric bars rendered at {label}");
+        fills.Should().OnlyContain(w => w > 0, $"a metric bar drew no fill at {label}");
 
-        // A reserved box with no marks in it is still a broken chart.
-        var geometryNodes = await page.EvaluateAsync<int>(
-            "() => document.querySelectorAll('.azure-glance-grid .rz-chart svg path, .azure-glance-grid .rz-chart svg rect').length");
-        geometryNodes.Should().BeGreaterThan(0, $"charts rendered no geometry at {label}");
+        // The leader is scaled to 100%, so the widest bar must fill most of its track.
+        var ratio = await page.EvaluateAsync<double>(@"() => {
+            const fill = [...document.querySelectorAll('.azure-glance-grid .metric-bar__fill')]
+                .sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width)[0];
+            return fill.getBoundingClientRect().width / fill.parentElement.getBoundingClientRect().width;
+        }");
+        ratio.Should().BeGreaterThan(0.9, $"the top-ranked bar must fill its track at {label}");
+
+        // The forecast ring is the third panel and is still inline SVG.
+        (await page.Locator(".azure-forecast__ring svg").CountAsync())
+            .Should().Be(1, $"the forecast ring must render at {label}");
+    }
+
+    /// <summary>
+    /// The catalogue's first-screen contract at mobile portrait: heading, freshness row and a
+    /// WHOLE first card, inside 844px minus the chrome.
+    ///
+    /// <para>`/` deliberately keeps ordinary scrolling — a 24-item catalogue is a list, and
+    /// paging a list fights the reader — so the guarantee it makes instead is that the answer
+    /// is complete above the fold. Nothing enforced that before, and it is exactly the sort of
+    /// thing an innocent type-scale or padding change breaks silently: the existing
+    /// horizontal-overflow test passes just as happily with the first card pushed off-screen.
+    /// The assertion is that the card's BOTTOM edge is above the fold, not merely its top —
+    /// half a card is not a card.</para>
+    /// </summary>
+    [Fact]
+    public async Task Home_FirstScreen_ShowsAWholeCard()
+    {
+        var page = await NewPageAsync(390, 844, isMobile: true);
+        await page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForSelectorAsync(".app-portfolio-card", new() { Timeout = 30_000 });
+
+        var probe = await page.EvaluateAsync<double[]>(@"() => {
+            const card = document.querySelector('.app-portfolio-card');
+            const summary = document.querySelector('.portfolio-summary');
+            const h1 = document.querySelector('.portfolio-header h1');
+            return [
+                h1.getBoundingClientRect().bottom,
+                summary.getBoundingClientRect().bottom,
+                card.getBoundingClientRect().bottom,
+                window.innerHeight
+            ];
+        }");
+
+        var fold = probe[3];
+        probe[0].Should().BeLessThan(fold, "the page title must be above the fold");
+        probe[1].Should().BeLessThan(fold, "the freshness and reload row must be above the fold");
+        probe[2].Should().BeLessThanOrEqualTo(fold,
+            "the whole first card must fit the first screen at 390x844 — half a card is not a card");
+    }
+
+    /// <summary>
+    /// /azure pages instead of scrolling at mobile portrait.
+    ///
+    /// <para>Three things have to hold together for that to be true rather than merely
+    /// configured: the container must actually be snapping (the CSS gate is
+    /// <c>portrait AND hover:none</c>, so a wrong gate silently yields a normal long page);
+    /// the dot strip must have one dot per pane, since a snap container with no affordance
+    /// reads as a page that has mysteriously stopped scrolling; and each ordinary pane must
+    /// genuinely FIT one screen. The last is the one that rots — it is what stops a new
+    /// section being dropped into whichever pane happens to be nearest.</para>
+    ///
+    /// <para><c>.app-pane--tall</c> is excluded on purpose. Advanced diagnostics cannot
+    /// honestly be compressed to a screen, so it scrolls internally instead of being cut;
+    /// that is a declared exception, not a failure. It is closed here anyway.</para>
+    /// </summary>
+    [Fact]
+    public async Task Azure_MobilePortrait_PanesFitTheViewport()
+    {
+        var page = await NewPageAsync(390, 844, isMobile: true);
+        await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.WaitForSelectorAsync(".azure-ops-page .app-pane", new() { Timeout = 40_000 });
+        // The dots are injected by a MutationObserver-driven rAF in js/helpers.js, so they
+        // land a frame after the panes do.
+        await page.WaitForSelectorAsync(".app-pager-dot", new() { Timeout = 10_000 });
+
+        var snapType = await page.EvaluateAsync<string>(
+            "() => getComputedStyle(document.querySelector('[data-snap-pager]')).scrollSnapType");
+        snapType.Should().NotBe("none", "mobile portrait must page, not scroll freely");
+
+        var counts = await page.EvaluateAsync<int[]>(
+            "() => [document.querySelectorAll('[data-snap-pager] > .app-pane').length, " +
+            "document.querySelectorAll('.app-pager-dot').length]");
+        counts[0].Should().BeGreaterThan(1, "paging needs more than one pane");
+        counts[1].Should().Be(counts[0], "there must be exactly one dot per pane");
+
+        // Every ordinary pane must fit the pager's own client height.
+        var overflows = await page.EvaluateAsync<string[]>(@"() => {
+            const pager = document.querySelector('[data-snap-pager]');
+            const budget = pager.clientHeight;
+            return [...pager.querySelectorAll(':scope > .app-pane')]
+                .filter(p => !p.classList.contains('app-pane--tall'))
+                .filter(p => p.scrollHeight > budget + 1)
+                .map(p => p.className + ' needs ' + p.scrollHeight + 'px of ' + budget + 'px');
+        }");
+        overflows.Should().BeEmpty("every ordinary pane must fit one screen at 390x844");
     }
 
     /// <summary>

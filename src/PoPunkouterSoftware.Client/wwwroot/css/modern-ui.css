@@ -34,7 +34,14 @@
     --app-border-strong: rgba(148, 163, 184, 0.24);
     --app-text: #f1f5f9;
     --app-text-muted: #94a3b8;
-    --app-text-soft: #64748b;
+    /* WCAG AA floor, not a taste call. #64748b measured 3.5:1 against --app-surface and
+       3.9:1 against --app-bg, and it is applied to the SMALLEST type in the app
+       (.azure-glance-subtitle 0.72rem, .portfolio-summary__auto 0.74rem, .app-note) — the
+       one place a soft grey is least affordable. #7c8ba3 measures 4.9:1 on --app-surface
+       and 5.4:1 on --app-bg while staying visibly softer than --app-text-muted (7.3:1),
+       so the three-step hierarchy survives. Re-measure against --app-surface, not
+       --app-bg: cards are the darker of the two backgrounds these sit on. */
+    --app-text-soft: #7c8ba3;
     --app-on-accent: #051018;
 
     /* ── Accents ────────────────────────────────────────────────────────────── */
@@ -70,14 +77,34 @@
     --app-radius-xl: 16px;
     --app-radius-pill: 999px;
 
-    /* ── Spacing scale ──────────────────────────────────────────────────────── */
-    --app-space-3xs: 0.25rem;
-    --app-space-2xs: 0.35rem;
-    --app-space-xs: 0.5rem;
-    --app-space-sm: 0.75rem;
-    --app-space-md: 1rem;
-    --app-space-lg: 1.25rem;
-    --app-space-xl: 2rem;
+    /* ── Spacing scale ──────────────────────────────────────────────────────────
+       Every step is derived from --app-density, so compacting the UI for a small
+       viewport is ONE declaration rather than a per-component override in each of the
+       five breakpoints this file and AzureDashboard.razor.css used to carry. Change the
+       dial, not the steps. */
+    --app-density: 1;
+    --app-space-3xs: calc(0.25rem * var(--app-density));
+    --app-space-2xs: calc(0.35rem * var(--app-density));
+    --app-space-xs: calc(0.5rem * var(--app-density));
+    --app-space-sm: calc(0.75rem * var(--app-density));
+    --app-space-md: calc(1rem * var(--app-density));
+    --app-space-lg: calc(1.25rem * var(--app-density));
+    --app-space-xl: calc(2rem * var(--app-density));
+
+    /* ── Type scale ─────────────────────────────────────────────────────────────
+       One fluid ladder, 390px → 1280px. Before this, headings carried hand-written
+       clamp()s that disagreed with each other across pages — the catalog h1 grew at
+       5vw while the dashboard h1 grew at 3vw, so the two pages' headings crossed over
+       somewhere in the middle of the range and neither was ever deliberate. Every
+       font-size above 0.9rem should resolve from a step. */
+    --app-step--2: clamp(0.68rem, 0.655rem + 0.10vw, 0.74rem);
+    --app-step--1: clamp(0.76rem, 0.725rem + 0.15vw, 0.86rem);
+    --app-step-0: clamp(0.92rem, 0.89rem + 0.13vw, 1rem);
+    --app-step-1: clamp(1rem, 0.95rem + 0.22vw, 1.15rem);
+    --app-step-2: clamp(1.15rem, 1.05rem + 0.42vw, 1.42rem);
+    --app-step-3: clamp(1.35rem, 1.16rem + 0.79vw, 1.85rem);
+    --app-step-4: clamp(1.6rem, 1.28rem + 1.34vw, 2.45rem);
+    --app-step-5: clamp(1.85rem, 1.4rem + 1.9vw, 3.05rem);
 
     /* ── Motion ─────────────────────────────────────────────────────────────── */
     --app-dur-fast: 120ms;
@@ -103,6 +130,10 @@
     --app-content-width: 1280px;
     --app-header-height: 64px;
     --app-header-offset: 12px;
+    /* Vertical budget for a page that must fit the viewport: everything the fixed
+       chrome and the shell padding take before content gets a pixel. --app-viewport-fit
+       is what a full-height pane sizes itself to. */
+    --app-viewport-fit: calc(100dvh - var(--app-header-reserve) - var(--app-space-lg) - var(--app-space-xs));
     /* Header is position:fixed, so the body must reserve its footprint. */
     --app-header-reserve: calc(var(--app-header-height) + var(--app-header-offset) + 4px);
     --app-headline-font: "Aptos Display", "Segoe UI Variable Display", "Bahnschrift", "Trebuchet MS", sans-serif;
@@ -232,14 +263,18 @@ html[data-gpu-backdrop] body::before {
    with reduced-motion on) would get see-through cards over a flat background — thinner
    contrast bought for no visual effect at all. */
 html[data-gpu-backdrop] [data-glass] {
-    background: color-mix(in srgb, var(--app-surface) 82%, transparent);
+    /* 82% was the effect's ceiling, not its floor: --app-surface is itself ~92% opaque,
+       so a tagged card sat at ~75% over a SHADER whose luminance moves every frame —
+       small muted text on it had no fixed contrast ratio at all. 88% keeps the refraction
+       visible while pinning the worst frame above the AA floor the tokens now guarantee. */
+    background: color-mix(in srgb, var(--app-surface) 88%, transparent);
     border-color: var(--app-border-strong);
 }
 
 /* Hover lifts the surface back toward opaque. A card being read wants contrast more
    than it wants to be pretty. */
 html[data-gpu-backdrop] [data-glass]:hover {
-    background: color-mix(in srgb, var(--app-surface) 94%, transparent);
+    background: color-mix(in srgb, var(--app-surface) 97%, transparent);
 }
 
 /* Belt and braces: the token bridge above covers Radzen's variables, and this rule
@@ -256,8 +291,63 @@ h6 {
     color: var(--app-text);
 }
 
+/* Default sizes from the ladder. Pages override with another step, never with a
+   hand-written clamp() — that is what let the two pages' scales cross over. */
+h1 { font-size: var(--app-step-5); line-height: 1.05; }
+h2 { font-size: var(--app-step-3); line-height: 1.15; }
+h3 { font-size: var(--app-step-2); line-height: 1.2; }
+h4 { font-size: var(--app-step-1); line-height: 1.25; }
+
+body {
+    font-size: var(--app-step-0);
+}
+
 a {
     color: var(--app-accent);
+}
+
+/* ── Icon font ───────────────────────────────────────────────────────────────────
+   Radzen.Blazor already SHIPS the Material Symbols variable font and self-hosts it at
+   _content/Radzen.Blazor/fonts/, under the family name "Material Symbols" — that is what
+   every <RadzenIcon> in the app has always rendered with. The Google Fonts <link> in
+   App.razor was therefore buying nothing but the four bare
+   <span class="material-symbols-outlined"> glyphs in MainLayout, and charging the whole
+   app for it: a render-blocking third-party stylesheet on the critical path, two extra
+   preconnects, and a font request with no `display=swap` — so every icon in the header
+   was invisible until a cross-origin round trip finished.
+
+   The family is re-declared here rather than relied on from Radzen's theme sheets because
+   those are media-scoped (`prefers-color-scheme`), and an @font-face inside a
+   non-matching media context does not apply. This declaration always does.
+
+   `font-display: block` is correct for an icon font and is NOT the FOIT the swap-less
+   Google request was: the file is same-origin, cached, and never blocks first paint — and
+   a swap would show the ligature TEXT ("monitor_heart") before the glyph arrives. */
+@font-face {
+    font-family: "Material Symbols";
+    src: url("/_content/Radzen.Blazor/fonts/MaterialSymbolsOutlined.woff2") format("woff2-variations"),
+         url("/_content/Radzen.Blazor/fonts/MaterialSymbolsOutlined.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 100 700;
+    font-display: block;
+}
+
+.material-symbols-outlined {
+    font-family: "Material Symbols";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 1.25rem;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: "liga";
+    font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 
 .app-sr-only {
@@ -383,7 +473,7 @@ a {
     border-radius: var(--app-radius-pill);
     background: var(--app-accent-wash);
     color: var(--app-accent);
-    font-size: 0.78rem;
+    font-size: var(--app-step--1);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -393,7 +483,7 @@ a {
     color: var(--app-text-soft);
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    font-size: 0.73rem;
+    font-size: var(--app-step--2);
     font-weight: 700;
 }
 
@@ -426,7 +516,7 @@ a {
 
 .app-note {
     color: var(--app-text-soft);
-    font-size: 0.83rem;
+    font-size: var(--app-step--1);
 }
 
 .app-progress-icon {
@@ -436,7 +526,7 @@ a {
 
 .app-card-title {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: var(--app-step-1);
 }
 
 .app-card-copy {
@@ -657,7 +747,9 @@ body.topbar-open .rz-header {
         --app-border-strong: rgba(15, 23, 42, 0.20);
         --app-text: #0f172a;
         --app-text-muted: #475569;
-        --app-text-soft: #64748b;
+        /* 4.45:1 against --app-bg in light mode — a fail by the same measurement as the
+           dark value above. #57647a measures 5.6:1. */
+        --app-text-soft: #57647a;
         --app-on-accent: #ffffff;
         --app-accent: #3b5cb6;
         --app-accent-strong: #2a449a;
@@ -689,11 +781,175 @@ body.topbar-open .rz-header {
     }
 }
 
+/* ── Density ─────────────────────────────────────────────────────────────────────
+   The single dial. One declaration compacts every gap, pad and inset in the app,
+   because the whole spacing scale is derived from it (see --app-density in the token
+   block). Type is NOT scaled here — the fluid ladder already shrinks with the viewport,
+   and multiplying the two would compound into unreadable text.
+
+   Two steps, not five: 820px covers tablets and split-screen, 640px covers phones.
+   These replace the per-component `padding: .5rem` / `gap: .35rem` overrides that used
+   to be repeated in every breakpoint of every stylesheet. */
+@media (max-width: 820px) {
+    :root {
+        --app-density: 0.9;
+    }
+}
+
 @media (max-width: 640px) {
+    :root {
+        --app-density: 0.78;
+        /* The pill header is pure chrome, and on a 844px-tall screen it is competing
+           with content for the fold. */
+        --app-header-height: 54px;
+        --app-header-offset: 8px;
+    }
+
     .app-shell-body,
     .app-page {
         padding-left: var(--app-space-2xs);
         padding-right: var(--app-space-2xs);
+    }
+
+    /* The catalog page's own bottom padding is dead space above the fold on a phone;
+       the last card already has the grid gap under it. */
+    .app-shell-body {
+        padding-bottom: var(--app-space-md);
+    }
+}
+
+/* ── Viewport-fit paging ─────────────────────────────────────────────────────────
+   Mobile-portrait only. A page marked [data-snap-pager] becomes a scroll-snap container
+   exactly one viewport tall, and each `.app-pane` child fills it: the visitor moves a
+   whole screen at a time instead of free-scrolling through an eight-section column, and
+   every pane is a self-contained answer.
+
+   This is PAGING, not truncation — nothing is hidden, and a pane whose content genuinely
+   exceeds one screen (the advanced diagnostics tree) opts out with `.app-pane--tall` and
+   scrolls internally rather than being cut.
+
+   Deliberately gated on `orientation: portrait` AND `hover: none`: a 700px-wide desktop
+   window is someone resizing a browser, and hijacking their scroll would be hostile. */
+.app-pane {
+    display: grid;
+    align-content: start;
+    gap: var(--app-space-md);
+    /* A grid item defaults to `min-width: auto`, i.e. it refuses to shrink below the
+       min-content width of its subtree. One wide descendant then forces the pane wider than
+       the page and everything overflows sideways together. This is the same footgun
+       `minmax(0, 1fr)` exists to defuse in the track list, and it has to be defused on the
+       ITEM as well. */
+    min-width: 0;
+}
+
+/* Same defusal one level down. A pane's children are grid items too, so a single wide
+   descendant - the 30-column uptime grid is the one that actually did this - would set the
+   card's min-content width and drag the whole pane past the viewport with it. */
+.app-pane > * {
+    min-width: 0;
+}
+
+.app-pager-dots {
+    display: none;
+}
+
+@media (max-width: 720px) and (orientation: portrait) and (hover: none) {
+    [data-snap-pager] {
+        /* `display: block`, overriding the page's own `display: grid`. This is load-bearing,
+           not tidiness: as a fixed-height grid the five panes become five implicit ROWS that
+           share the container's height between them, and each pane's `min-height: 100%`
+           then resolves against its own squeezed row rather than against the viewport — the
+           panes end up a fraction of a screen each and the snap positions are meaningless.
+           As blocks, the percentage resolves against the container's content height, which
+           is what "one pane, one screen" actually requires. */
+        display: block;
+        height: var(--app-viewport-fit);
+        overflow-y: auto;
+        /* The panes are constrained to the container width below, so nothing should reach
+           this. It is a guard against a single wide descendant turning a vertical pager into
+           a two-axis one, NOT a licence to clip: anything that hits it is a bug, and
+           Azure_MobilePortrait_PanesFitTheViewport measures scrollWidth to catch it. */
+        overflow-x: hidden;
+        scroll-snap-type: y mandatory;
+        overscroll-behavior-y: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        gap: 0 !important;
+        padding-bottom: 0;
+    }
+
+    /* `width: 0`, not `display: none`: Chromium keeps reserving the classic scrollbar
+       gutter for a display:none scrollbar, which cost 15px of every pane's width. */
+    [data-snap-pager]::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+
+    [data-snap-pager] > .app-pane {
+        /* Pin the pane to the container's width. Without this a wide descendant sets the
+           pane's min-content width and every pane inflates together, which reads as text
+           clipped at the right edge on every screen. */
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+        min-height: 100%;
+        /* `safe` is load-bearing: a pane whose content exceeds the viewport would otherwise
+           centre-overflow, clipping its TOP off the scroll container where it can never be
+           reached. With safe centring it falls back to start alignment and, because the pane
+           is min-height rather than height, simply grows and the container scrolls to it. A
+           pane can be too tall here; it can never be cut. */
+        align-content: safe center;
+        padding: var(--app-space-xs) 0 var(--app-space-lg);
+        box-sizing: border-box;
+    }
+
+    /* Content that cannot honestly be compressed into one screen. It still snaps to the
+       top of the viewport, then scrolls under its own steam — the alternative would be
+       to cut it, which the brief rules out. */
+    [data-snap-pager] > .app-pane--tall {
+        min-height: 100%;
+        height: auto;
+        align-content: start;
+    }
+
+    /* Pagination dots, one per pane. Fixed to the right edge so they do not consume any
+       of the vertical budget the panes were given. Populated by initSnapPager()
+       in js/helpers.js, which only runs when the container actually snaps. */
+    .app-pager-dots {
+        display: flex;
+        position: fixed;
+        right: 4px;
+        top: 50%;
+        transform: translateY(-50%);
+        flex-direction: column;
+        gap: var(--app-space-2xs);
+        z-index: var(--app-z-header);
+        padding: var(--app-space-2xs) 2px;
+    }
+
+    .app-pager-dot {
+        width: 7px;
+        height: 7px;
+        padding: 0;
+        border: 1px solid var(--app-border-strong);
+        border-radius: 50%;
+        background: var(--app-surface-strong);
+        cursor: pointer;
+        transition: background var(--app-dur-fast) var(--app-ease-smooth),
+                    transform var(--app-dur-fast) var(--app-ease-smooth);
+    }
+
+    .app-pager-dot.is-current {
+        background: var(--app-accent);
+        border-color: var(--app-accent);
+        transform: scale(1.35);
+    }
+
+    .app-pager-dot:focus-visible {
+        outline: 2px solid var(--app-accent);
+        outline-offset: 2px;
     }
 }
 

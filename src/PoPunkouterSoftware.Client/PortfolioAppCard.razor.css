@@ -15,7 +15,13 @@
     padding: var(--app-space-sm);
     box-shadow: var(--app-shadow-sm);
     content-visibility: auto;
-    contain-intrinsic-size: auto 320px;
+    /* MEASURED, not estimated: rendered cards run 332px (390px viewport) to 362px
+       (1440px), so the placeholder is 360px. Getting this wrong in either direction is the
+       exact artefact contain-intrinsic-size exists to prevent — the scrollbar jumps as
+       off-screen cards materialise at a size the placeholder did not predict. Re-measure it
+       if the card gains or loses a row; the `auto` keyword only covers cards this session
+       has already laid out once. */
+    contain-intrinsic-size: auto 360px;
     transition: transform var(--app-dur-base) var(--app-ease-smooth),
                 border-color var(--app-dur-base) var(--app-ease-smooth),
                 box-shadow var(--app-dur-base) var(--app-ease-smooth);
@@ -53,7 +59,7 @@
 
 .app-card-title {
     margin: 0.15rem 0 0;
-    font-size: 1.08rem;
+    font-size: var(--app-step-1);
     letter-spacing: -0.01em;
 }
 
@@ -61,11 +67,14 @@
     margin: 0;
     line-height: 1.5;
     color: var(--app-text-muted);
-    /* Cap description to four lines so cards align in the grid — long descriptions
-       no longer push the row down unevenly. */
+    font-size: var(--app-step--1);
+    /* Cap description to three lines so cards align in the grid — long descriptions
+       no longer push the row down unevenly. Three rather than four: the fourth line is
+       what pushed the first card past the fold at 390x844, and no description in
+       apps.json needs it. */
     display: -webkit-box;
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

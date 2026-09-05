@@ -65,5 +65,21 @@
     /// (<c>{Source}|{Item}</c>, matching AzureDashboard.DerivedViews' grouping key) and
     /// posts it to <c>/api/diag/snooze</c>.</summary>
     [Parameter] public EventCallback<PriorityQueueItem> OnSnooze { get; set; }
+
+    private IReadOnlyList<PriorityQueueItem>? _rendered;
+
+    /// <summary>
+    /// Guarded on <see cref="Items"/> alone. The callback parameters are invoked, never
+    /// rendered, and the two <c>Func</c>/<c>EventCallback</c> values are fresh objects on
+    /// every parent render — including them would make the guard a no-op. The page rebuilds
+    /// this list (RebuildDerivedState / ApplyResourceFilter) rather than mutating it, so a
+    /// real change always arrives as a new reference. No state of its own.
+    /// </summary>
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(_rendered, Items)) return false;
+        _rendered = Items;
+        return true;
+    }
 }
 

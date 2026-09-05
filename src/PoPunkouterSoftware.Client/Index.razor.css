@@ -45,7 +45,10 @@
 
 .portfolio-header h1 {
     margin: var(--app-space-3xs) 0 0;
-    font-size: clamp(2rem, 5vw, 3.5rem);
+    /* --app-step-5, not a local clamp(2rem, 5vw, 3.5rem). The old curve grew at 5vw while
+       /azure's hero grew at 3vw, so the two pages' headings crossed somewhere mid-range
+       and neither size was ever chosen on purpose. */
+    font-size: var(--app-step-5);
     line-height: 1;
 }
 
@@ -65,9 +68,9 @@
     align-items: center;
     flex-wrap: wrap;
     gap: var(--app-space-sm);
-    min-height: 38px;
+    min-height: 34px;
     color: var(--app-text-soft);
-    font-size: 0.82rem;
+    font-size: var(--app-step--1);
 }
 
 .portfolio-summary strong {
@@ -83,7 +86,7 @@
    the narrowest viewports, where the row has to wrap and the button matters more. */
 .portfolio-summary__auto {
     color: var(--app-text-soft);
-    font-size: .74rem;
+    font-size: var(--app-step--2);
 }
 
 .portfolio-summary__btn {
@@ -196,6 +199,16 @@
     color: var(--app-text);
 }
 
+/* ── First-screen contract (mobile portrait) ─────────────────────────────────────
+   A 24-item catalogue is a list, and paging a list fights the reader — so `/` keeps
+   ordinary scrolling and instead guarantees that the FIRST SCREEN is complete: eyebrow,
+   title, the freshness/reload row, and a whole first card, inside 844px minus the
+   chrome. That budget is what the numbers below are sized against, and
+   `PortfolioUiTests.Home_FirstScreen_ShowsAWholeCard` is what stops them drifting.
+
+   The lede paragraph is the one thing dropped, not truncated: at 390px it wraps to three
+   lines that restate the h1 and the eyebrow immediately above it. It stays in the DOM
+   for assistive tech and for every wider viewport. */
 @media (max-width: 640px) {
     .portfolio-summary__auto {
         display: none;
@@ -203,10 +216,20 @@
 
     .portfolio-header {
         align-items: start;
+        padding-bottom: 0;
     }
 
     .portfolio-header p {
-        max-width: 26ch;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    .portfolio-page {
+        gap: var(--app-space-sm);
     }
 
     .portfolio-build-banner__copy span {

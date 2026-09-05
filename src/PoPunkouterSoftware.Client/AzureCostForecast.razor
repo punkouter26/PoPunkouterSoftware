@@ -85,6 +85,20 @@
 @code {
     [Parameter, EditorRequired] public CostForecast Forecast { get; set; } = new();
 
+    private CostForecast? _rendered;
+
+    /// <summary>
+    /// Pure projection of <see cref="Forecast"/> — no state of its own, so reference identity
+    /// is a sound staleness test. Without this the SVG ring is re-emitted on every parent
+    /// render. Adding internal state to this component would make the guard wrong.
+    /// </summary>
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(_rendered, Forecast)) return false;
+        _rendered = Forecast;
+        return true;
+    }
+
     private const double Radius = 50;
     private static readonly double Circumference = 2 * Math.PI * Radius;
 

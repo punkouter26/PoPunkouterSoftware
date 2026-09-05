@@ -15,7 +15,18 @@
     @if (!string.IsNullOrEmpty(App.ScreenshotUrl))
     {
         <a class="app-screenshot-thumb" href="@App.Url" target="_blank" rel="noopener noreferrer" title="@($"Open {App.Name}")">
-            <img src="@App.ScreenshotUrl" alt="@($"Preview of {App.Name}")" loading="lazy" width="390" height="844" />
+            @* width/height advertise the box the CSS actually draws (aspect-ratio 16/10 on
+               .app-screenshot-thumb), not the 390x844 phone-screenshot source. They disagreed,
+               so before the stylesheet applied the browser reserved a 0.46-ratio box for a
+               1.6-ratio element and every card jumped once — a self-inflicted CLS on a page
+               whose whole job is showing pictures.
+
+               The FIRST card is the LCP element and must not be lazy: `loading="lazy"` on it
+               delays the largest paint by a full round trip for no benefit, since it is above
+               the fold by definition. Every other card stays lazy. *@
+            <img src="@App.ScreenshotUrl" alt="@($"Preview of {App.Name}")"
+                 loading="@(IsFirst ? "eager" : "lazy")" fetchpriority="@(IsFirst ? "high" : "auto")"
+                 decoding="async" width="1600" height="1000" />
         </a>
     }
     <h2 class="app-card-title">@App.Name</h2>
@@ -34,6 +45,12 @@
 @code {
     [Parameter, EditorRequired] public PortfolioApp App { get; set; } = default!;
 
+    /// <summary>
+    /// True for the first card in the grid, which is the page's LCP element. Drives the
+    /// eager/high-priority image hints — see the note on the &lt;img&gt; above.
+    /// </summary>
+    [Parameter] public bool IsFirst { get; set; }
+
     private PortfolioApp? _rendered;
 
     /// <summary>
@@ -44,9 +61,12 @@
     /// </summary>
     protected override bool ShouldRender()
     {
-        if (ReferenceEquals(_rendered, App)) return false;
+        if (ReferenceEquals(_rendered, App) && _renderedFirst == IsFirst) return false;
         _rendered = App;
+        _renderedFirst = IsFirst;
         return true;
     }
+
+    private bool _renderedFirst;
 }
 

@@ -71,6 +71,23 @@
 @code {
     [Parameter, EditorRequired] public UptimeHeatmap Map { get; set; } = new();
 
+    private UptimeHeatmap? _rendered;
+
+    /// <summary>
+    /// A 30-day grid is the single largest DOM subtree on the page — rows x 30 cells, rebuilt
+    /// from scratch on every parent render because Blazor treats a reference-typed parameter
+    /// as "may have changed". It is a pure projection of <see cref="Map"/>, and the page
+    /// replaces the whole <c>OpsSummary</c> on load rather than mutating it, so reference
+    /// identity is a sound staleness test. This component holds no state of its own; adding
+    /// any would make the guard wrong.
+    /// </summary>
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(_rendered, Map)) return false;
+        _rendered = Map;
+        return true;
+    }
+
     /// <summary>
     /// One label column, one column per day, one percentage column. Set inline rather than in
     /// CSS because the day count is data-driven; everything else about the grid is styled in

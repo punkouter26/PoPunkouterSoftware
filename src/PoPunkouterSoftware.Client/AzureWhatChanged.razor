@@ -57,6 +57,16 @@
 @code {
     [Parameter, EditorRequired] public ScanDelta Delta { get; set; } = new();
 
+    private ScanDelta? _rendered;
+
+    /// <summary>Pure projection of <see cref="Delta"/>; no state of its own.</summary>
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(_rendered, Delta)) return false;
+        _rendered = Delta;
+        return true;
+    }
+
     private static string IconFor(ScanChange change) => change.Kind switch
     {
         ScanChangeKinds.ServiceDown => "cloud_off",

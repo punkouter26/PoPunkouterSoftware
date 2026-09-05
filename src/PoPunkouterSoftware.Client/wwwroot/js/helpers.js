@@ -187,6 +187,140 @@ window.appHardReload = function () {
     }
 };
 
+/**
+ * Snap pager — the navigation affordance for the mobile-portrait viewport-fit layout.
+ *
+ * A page marked `[data-snap-pager]` becomes a one-viewport-tall scroll-snap container on
+ * mobile portrait (see the [data-snap-pager] block in css/modern-ui.css) and each
+ * `.app-pane` child fills a screen. CSS does all of the paging; this file only adds what
+ * CSS cannot: a set of dots saying how many screens there are and which one you are on,
+ * because a snap container with no visible affordance looks exactly like a page that has
+ * mysteriously stopped scrolling.
+ *
+ * Everything here is driven off the COMPUTED `scroll-snap-type`, never off a viewport width
+ * guess. The media query in the stylesheet is the single source of truth for when paging is
+ * active — if it stops matching (rotate to landscape, resize a desktop window), the computed
+ * value goes back to `none` and this tears itself down on the next sync.
+ *
+ * The panes are rendered by Blazor WASM after an HTTP fetch, and one of them appears and
+ * disappears as Advanced diagnostics is toggled, so the pane set cannot be read once at load.
+ * A childList MutationObserver watches for it. The callback is a flag flip and a
+ * requestAnimationFrame — sync() itself early-exits unless the pane count or the snap state
+ * actually changed, which is far less work per Blazor render than Blazor's own diff.
+ */
+window.appSnapPager = (function () {
+    var dots = null;         // the injected dot strip, or null when paging is off
+    var buttons = [];
+    var panes = [];
+    var observer = null;     // IntersectionObserver over the panes
+    var mutations = null;
+    var scheduled = false;
+    var signature = '';
+
+    function isPaging(el) {
+        var type = getComputedStyle(el).scrollSnapType;
+        return !!type && type !== 'none';
+    }
+
+    /** A pane's own heading is a better dot label than "Section 3". */
+    function labelFor(pane, index) {
+        var heading = pane.querySelector('h1, h2');
+        var text = heading && heading.textContent ? heading.textContent.trim() : '';
+        return text ? 'Go to ' + text : 'Go to section ' + (index + 1);
+    }
+
+    function teardown() {
+        if (observer) { observer.disconnect(); observer = null; }
+        if (dots && dots.parentNode) { dots.parentNode.removeChild(dots); }
+        dots = null;
+        buttons = [];
+        panes = [];
+        signature = '';
+    }
+
+    function markCurrent(pane) {
+        var index = panes.indexOf(pane);
+        if (index < 0) return;
+        for (var i = 0; i < buttons.length; i++) {
+            var on = i === index;
+            buttons[i].classList.toggle('is-current', on);
+            if (on) buttons[i].setAttribute('aria-current', 'true');
+            else buttons[i].removeAttribute('aria-current');
+        }
+    }
+
+    function build(pager, found) {
+        teardown();
+        panes = found;
+
+        dots = document.createElement('div');
+        dots.className = 'app-pager-dots';
+        dots.setAttribute('aria-label', 'Page sections');
+
+        panes.forEach(function (pane, index) {
+            var dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'app-pager-dot';
+            dot.setAttribute('aria-label', labelFor(pane, index));
+            dot.addEventListener('click', function () {
+                // Honour reduced-motion here as well as in CSS: `scrollIntoView` with
+                // `behavior: smooth` is script-driven motion that no stylesheet can suppress.
+                var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                pane.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+            });
+            dots.appendChild(dot);
+            buttons.push(dot);
+        });
+
+        pager.parentNode.insertBefore(dots, pager.nextSibling);
+
+        // `root: pager` because the panes scroll inside the container, not the document.
+        // A pane counts as current once most of it is on screen, which for full-height panes
+        // in a mandatory-snap container is unambiguous.
+        observer = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].isIntersecting) markCurrent(entries[i].target);
+            }
+        }, { root: pager, threshold: 0.55 });
+
+        panes.forEach(function (pane) { observer.observe(pane); });
+        markCurrent(panes[0]);
+    }
+
+    function sync() {
+        var pager = document.querySelector('[data-snap-pager]');
+        if (!pager || !isPaging(pager)) { teardown(); return; }
+
+        var found = Array.prototype.slice.call(pager.querySelectorAll(':scope > .app-pane'));
+        if (found.length < 2) { teardown(); return; }
+
+        // Cheap idempotence check — this runs behind a MutationObserver, so it must do
+        // nothing at all in the overwhelmingly common case where nothing relevant moved.
+        var next = found.length + '|' + found.map(function (p) { return p.className; }).join(',');
+        if (next === signature) return;
+        signature = next;
+
+        build(pager, found);
+    }
+
+    function schedule() {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(function () { scheduled = false; sync(); });
+    }
+
+    function start() {
+        if (mutations) return;
+        mutations = new MutationObserver(schedule);
+        mutations.observe(document.body, { childList: true, subtree: true });
+        window.addEventListener('resize', schedule);
+        window.addEventListener('orientationchange', schedule);
+        schedule();
+    }
+
+    return { sync: sync, schedule: schedule, start: start };
+})();
+
 /* Self-initialise the topbar. The header is present in the static SSR payload, so
    it exists by the time this script executes; the DOMContentLoaded guard covers the
    case where the script is ever moved into <head>. */
@@ -194,6 +328,7 @@ window.appHardReload = function () {
     const start = () => {
         window.initTopbarDrawer();
         window.initNavbarScroll();
+        window.appSnapPager.start();
     };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start, { once: true });

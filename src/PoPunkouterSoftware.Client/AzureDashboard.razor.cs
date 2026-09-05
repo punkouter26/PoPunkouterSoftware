@@ -121,6 +121,11 @@ public partial class AzureDashboard
             .ToList();
 
     private bool _refreshing;
+
+    // The live progress strip, addressed directly so a hub tick does not re-render the page.
+    // See AzureRefreshProgress.razor and the RefreshProgress handler in EnsureHubConnectedAsync.
+    private AzureRefreshProgress? _progressUi;
+
     private int _progressPercent;
     private string _progressStep = "";
     private bool _refreshFailed;
@@ -528,6 +533,7 @@ public partial class AzureDashboard
         // re-serialise round-trip, which keeps this trim-safe.
         _hub.On<JsonElement>("RefreshProgress", root =>
         {
+            var wasRefreshing = _refreshing;
             try
             {
                 if (root.TryGetProperty("percent", out var pct))
@@ -546,11 +552,32 @@ public partial class AzureDashboard
             catch { }
 
             // Walk the drone's filter to match the bar. Fire-and-forget: a progress tick is
-            // the hottest path on this page (a render per tick already), and awaiting an
-            // interop call here would serialise the hub callback behind the audio graph.
+            // the hottest path on this page, and awaiting an interop call here would
+            // serialise the hub callback behind the audio graph.
             _ = SfxAsync("audioKit.refreshProgress", _progressPercent);
 
-            InvokeAsync(StateHasChanged);
+            // Route the tick to the progress strip ALONE.
+            //
+            // This used to be a bare InvokeAsync(StateHasChanged) on the page. A scan emits
+            // roughly twenty of these over thirty seconds, and each one re-rendered the hero,
+            // four sparklines, both metric panels, the 30-day uptime grid and — whenever
+            // Advanced diagnostics was open — the whole priority queue and the virtualized
+            // resource explorer, on the single WASM thread, to move one bar. None of that
+            // markup depends on a percentage.
+            //
+            // The page still renders on the transition that ENDS the scan (`done`), because
+            // that is when _refreshing flips and the strip has to come out of the tree; and it
+            // still renders if the strip has not been assigned yet, which is the window
+            // between _refreshing going true and its first render completing.
+            var terminal = wasRefreshing && !_refreshing;
+            InvokeAsync(() =>
+            {
+                if (terminal || _progressUi is null)
+                    StateHasChanged();
+                else
+                    _progressUi.Update(_progressPercent, _progressStep,
+                        _hub?.State == HubConnectionState.Connected);
+            });
         });
 
         try
