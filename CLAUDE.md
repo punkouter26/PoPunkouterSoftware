@@ -16,6 +16,34 @@ else is an endpoint.
 Update it in the same change whenever you cross an architectural boundary; drift here actively
 misleads the next agent.
 
+## Working rules
+
+Standing instructions from the owner. They outrank default habits and apply to every task here.
+
+- **`master` only.** Commit straight to `master`; use another branch only when explicitly asked for
+  one. See [Git workflow](#git-workflow--master-only) for the full rule.
+- **Never push without being asked.** Not "asked once, months ago" — asked in the turn you are
+  working on. A push deploys straight to production. Commit, then hand back and say it is ready.
+- **Git-sync commit messages are short and sound human.** One line, casual American English —
+  "fixed the busted app cards", "cleaned up the dead scan code". No formal subject/body essays, no
+  bullet lists, no changelog voice.
+- **Restart the app after any code change and confirm it came back up.** `./SCRIPTS/run-dev.ps1`,
+  then check it actually serves (`/healthz` returns 200) before claiming the change works. A build
+  that compiles is not a running app — and this project's stale-process footgun means a "successful"
+  build can leave the old binary serving on :8000.
+- **No `dotnet user-secrets`.** Local config goes in `appsettings*.json`; real secrets go in the
+  `kv-poshared` Key Vault. Rationale: user secrets live outside the repo in a per-machine folder, so
+  a value only one machine has looks like a bug on every other machine and in production.
+  ⚠️ Not yet true — `PoPunkouterSoftware.API.csproj` still declares
+  `<UserSecretsId>popunkouter-software-api</UserSecretsId>`, and ASP.NET auto-loads that store in
+  Development. Removing it is a live config change, so it needs the owner's go-ahead.
+- **Answers over ~100 words end with a 20-word TLDR.**
+- **`docs/` is not project documentation.** The rule of thumb "check the root DOCS folder for a
+  project summary" does not pay off in this repo: [docs/](docs/) is the GitHub Pages site — a
+  landing page, `style.css`, per-app privacy policies and store art for PoBox, PoCross, PoDance,
+  PoFlag, PoFootball, PoRacer, PoSoccer and PoSumo, none of which are in this portfolio. There is no
+  project summary in it. **This file is the summary.**
+
 ## Commands
 
 ```powershell
@@ -308,16 +336,20 @@ rule's worth of coverage.
 
 ## Git workflow — master only
 
-**This repository uses `master` and nothing else.** Commit and push directly to `master`. Do not
-create feature branches, topic branches, or PR branches, and do not leave one behind after a piece
-of work — if a branch exists for any reason, delete it locally and on the remote once its commits
-are on `master`. There is no review gate here to justify the indirection, and a stale branch on a
-solo repo is just a second version of the truth.
+**This repository uses `master` and nothing else.** Commit directly to `master`. Use another branch
+only when the owner asks for one by name. Do not create feature branches, topic branches, or PR
+branches on your own initiative, and do not leave one behind after a piece of work — if a branch
+exists for any reason, delete it locally and on the remote once its commits are on `master`. There
+is no review gate here to justify the indirection, and a stale branch on a solo repo is just a
+second version of the truth.
 
-This overrides any default "branch before committing to the default branch" habit. It has one real
-consequence, which is the point rather than a side effect: **every push to `master` deploys to
-production** via [deploy.yml](.github/workflows/deploy.yml). So run the fast tier locally before you
-push — the pipeline will not run it for you.
+This overrides any default "branch before committing to the default branch" habit.
+
+**Committing is yours; pushing is the owner's.** Never `git push` unless the owner asks for it in
+that turn, because **every push to `master` deploys to production** via
+[deploy.yml](.github/workflows/deploy.yml). Commit freely, run the fast tier locally, then stop and
+say the work is ready to push — the pipeline will not run the tests for you, and it will not ask
+before shipping.
 
 **CI/CD:** two workflows, neither of which runs tests — run the fast tier locally before pushing.
 
