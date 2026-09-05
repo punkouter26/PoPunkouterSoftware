@@ -43,7 +43,17 @@ window.initTopbarDrawer = function () {
 
     const setOpen = (open) => {
         document.body.classList.toggle('topbar-open', open);
-        trigger.setAttribute('aria-expanded', String(open));
+        // aria-expanded only describes reality when the drawer can actually collapse.
+        // The trigger is `display: none` on desktop (>= 768px) and the centre nav is
+        // always visible, so an "expanded" attribute there lied: a screen reader
+        // heard "expanded" on a desktop where there was no drawer to expand. Hide
+        // the attribute on desktop by clearing it; on mobile it tracks the state.
+        const canCollapse = getComputedStyle(trigger).display !== 'none';
+        if (canCollapse) {
+            trigger.setAttribute('aria-expanded', String(open));
+        } else {
+            trigger.removeAttribute('aria-expanded');
+        }
         const icon = trigger.firstElementChild;
         if (icon) icon.textContent = open ? 'close' : 'menu';
     };

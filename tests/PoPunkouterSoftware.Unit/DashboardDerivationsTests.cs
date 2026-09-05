@@ -127,6 +127,39 @@ public class DashboardDerivationsTests
     }
 
     [Fact]
+    public void BuildSafeToRemove_DedupesByResourceAndKeepsTheHighestConfidenceVerdict()
+    {
+        // Same Microsoft.Web/sites flagged by two scans: connectivity + metrics (high,
+        // because HttpStatus == "broken") AND the orphan scan (medium). The queue must keep
+        // the high-confidence verdict, not whichever scan ran last.
+        var report = new AzureReport
+        {
+            WebServices = new WebServicesInfo
+            {
+                Services = [Service("app-broken-orphan", status: "broken", requests: 0)],
+            },
+            OrphanedResources =
+            [
+                new OrphanedResource
+                {
+                    Name = "app-broken-orphan",
+                    ResourceGroup = "PoThing",
+                    Type = "Microsoft.Web/sites",
+                    Reason = "Orphan by tag scan",
+                    EstimatedMonthlyCost = "$0/mo",
+                    Command = "az webapp delete --name \"app-broken-orphan\" --resource-group \"PoThing\"",
+                },
+            ],
+        };
+
+        var safe = DashboardDerivations.BuildSafeToRemove(report);
+
+        safe.Should().ContainSingle("the same resource must not appear twice");
+        safe[0].Confidence.Should().Be("high", "the dedup must keep the higher-confidence verdict, not the last-written one");
+        safe[0].Source.Should().Be("Connectivity + Metrics");
+    }
+
+    [Fact]
     public void BuildConsolidatedServices_RollsUpOneAppsResourcesIntoOneRow_AndInfersItsOwnership()
     {
         var report = new AzureReport

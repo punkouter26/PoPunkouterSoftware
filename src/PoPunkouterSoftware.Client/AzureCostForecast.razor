@@ -126,11 +126,17 @@
         _ => BadgeStyle.Success,
     };
 
+    // Default arm is reachable only when Verdict is an unknown string — the badge above is
+    // gated on `Verdict != Unknown`, so the Under arm is the one that actually surfaces.
+    // The old default ("comfortably below the configured budget") lied when no budget was
+    // set: an absent budget has no "below" to be comfortable in, and the message was
+    // announcing a comparison the component had just refused to draw.
     private string VerdictTitle => Forecast.Verdict switch
     {
         CostVerdict.Over => "The projected month total exceeds the configured budget.",
         CostVerdict.Near => "The projection is at or above 80% of the configured budget.",
-        _ => "The projection is comfortably below the configured budget.",
+        CostVerdict.Under => "The projection is comfortably below the configured budget.",
+        _ => "No budget configured — projection shown without a verdict.",
     };
 
     private string RingAriaLabel => Forecast.PercentOfBudget is int pct

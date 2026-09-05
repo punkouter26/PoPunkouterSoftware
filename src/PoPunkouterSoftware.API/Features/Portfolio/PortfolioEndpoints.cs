@@ -49,28 +49,34 @@ internal static partial class PortfolioEndpoints
         var metaByName = metadata
             .GroupBy(m => PortfolioIdentity.NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.OrderBy(m => StatusRank(m.Status)).First(), StringComparer.OrdinalIgnoreCase);
-        var appsByName = new Dictionary<string, PortfolioApp>(StringComparer.OrdinalIgnoreCase);
 
-        // Catalog entries marked active are the stable showcase, even when Azure inventory is stale or unavailable.
-        foreach (var meta in metadata.Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase)))
+        // One dictionary per source — services as the primary list (live inventory wins on
+        // overlap), catalog filling in apps that have no live presence yet. The previous
+        // shape did the same merge with two imperative loops and a `ContainsKey` guard, but
+        // the precedence it implemented — Azure overwrites catalog when both exist — was
+        // implicit in the loop order and easy to invert by accident. Build the live list
+        // first, then add catalog entries for keys nothing else claimed.
+        var appsByName = services
+            .Where(s => !PortfolioIdentity.IsSelf(s.FriendlyName, s.Name))
+            .ToDictionary(
+                s => PortfolioIdentity.NormalizeName(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName),
+                s =>
+                {
+                    var key = PortfolioIdentity.NormalizeName(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName);
+                    metaByName.TryGetValue(key, out var meta);
+                    return ToPortfolioApp(meta, s, screenshotVersions);
+                },
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var meta in metadata
+                     .Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase))
+                     .Where(m => !PortfolioIdentity.IsSelf(m.Name)))
         {
-            if (PortfolioIdentity.IsSelf(meta.Name))
-                continue;
             var key = PortfolioIdentity.NormalizeName(meta.Name);
-            if (appsByName.ContainsKey(key))
-                continue;
-            appsByName[key] = ToPortfolioApp(meta, null, screenshotVersions);
-        }
-
-        // Every discovered service is also shown, including broken services, and receives catalog metadata by stable name.
-        foreach (var service in services)
-        {
-            if (PortfolioIdentity.IsSelf(service.FriendlyName, service.Name))
-                continue;
-            var displayName = string.IsNullOrWhiteSpace(service.FriendlyName) ? service.Name : service.FriendlyName;
-            var key = PortfolioIdentity.NormalizeName(displayName);
-            metaByName.TryGetValue(key, out var meta);
-            appsByName[key] = ToPortfolioApp(meta, service, screenshotVersions);
+            // Catalog entries marked active are the stable showcase, visible even when
+            // Azure inventory is stale or unavailable. Only added when no live service
+            // already claimed the key — otherwise the live entry's status wins.
+            appsByName.TryAdd(key, ToPortfolioApp(meta, null, screenshotVersions));
         }
 
         var apps = appsByName.Values.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();

@@ -560,6 +560,14 @@
         requestAnimationFrame(function () { syncQueued = false; syncToggles(); });
     }).observe(document.documentElement, { childList: true, subtree: true });
 
+    // Hydrate the toggle(s) on first paint. The static SSR markup hardcodes the "sound off"
+    // treatment (the only honest default — a JS-driven guess would flash a speaker icon at a
+    // visitor who has never enabled sound), so without this call a returning user with
+    // localStorage `pops:sound = '1'` saw a one-frame "volume_off" before the next
+    // MutationObserver tick corrected it. Sync once at module load so the header reflects
+    // the saved preference before the first paint settles.
+    syncToggles();
+
     window.audioKit = {
         get enabled() { return enabled; },
         setEnabled: setEnabled,

@@ -147,13 +147,42 @@ public static class DashboardDerivations
             });
         }
 
-        // Rank-based compare — the previous comparer allocated a fresh Dictionary on every
-        // single comparison during the sort.
-        items.Sort(static (a, b) => SeverityLevel.Rank(a.Confidence) - SeverityLevel.Rank(b.Confidence));
+        // Dedupe first, then order. A resource can be flagged by more than one scan loop —
+        // a Microsoft.Web/sites with `broken + 0 requests` will appear as a "Connectivity +
+        // Metrics" item (high confidence) AND as an "Orphaned resource scan" item (medium)
+        // — and the queue must keep the highest-confidence verdict, not whichever scan ran
+        // last. Doing the rank comparison inside each group makes that intent obvious; the
+        // old code sorted the whole list by rank before grouping, which was correct only
+        // because List<T>.Sort is stable AND GroupBy preserves encounter order, a pair of
+        // guarantees nothing in the call site said it was relying on.
+        //
+        // The dedup key uses the resource type's last ARM segment ("sites" for
+        // Microsoft.Web/sites) rather than the humanized display label. The connectivity
+        // loop sets Type to `TypeLabel(...)` ("App Service") and the orphan loop uses
+        // whatever label the upstream Cleanup scan produced ("App Service Plan" for a
+        // serverFarm, but raw "Microsoft.Web/sites" if a future scan flags a Web App
+        // directly) — those labels diverge, and keying on the display string meant the
+        // dedup silently never fired across sources. The last segment is what identifies
+        // the resource class in ARM regardless of which scanner wrote the entry.
         return items
-            .GroupBy(i => $"{i.Type}|{i.ResourceGroup}|{i.Name}", StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
+            .GroupBy(i => DedupKey(i), StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderBy(i => SeverityLevel.Rank(i.Confidence)).First())
+            .OrderBy(i => SeverityLevel.Rank(i.Confidence))
             .ToList();
+    }
+
+/// <summary>
+    /// Canonical dedup key for a <see cref="SafeToRemoveItem"/>: the humanized type label
+    /// (so "Microsoft.Web/sites" and a future "App Service" label collide on purpose), then
+    /// the resource group, then the resource name. The connectivity loop runs every Type
+    /// through <see cref="TypeLabel"/>; the orphan / plan / AI / workspace loops use the
+    /// label the upstream scanner wrote. Routing both through TypeLabel here keeps the
+    /// key stable regardless of which scanner wrote the entry.
+    /// </summary>
+    private static string DedupKey(SafeToRemoveItem i)
+    {
+        var normalized = TypeLabel(i.Type);
+        return $"{normalized}|{i.ResourceGroup}|{i.Name}";
     }
 
     // ── Consolidated portfolio building ───────────────────────────────────────
@@ -228,26 +257,29 @@ public static class DashboardDerivations
         List<ConsolidatedService> consolidated,
         List<SafeToRemoveItem> safe)
     {
-        var items = new List<PriorityQueueItem>();
+        // One pass over six source sequences, each contributing its own tier of findings.
+        // The previous shape was six independent `foreach` loops that all appended into the
+        // same `List<PriorityQueueItem>` and then a single GroupBy/OrderBy pass — six
+        // enumerations, six temporary lists, and a dedup keyed on `{Source}|{Item}` that
+        // never matched across source types anyway (a "Reliability|app-x" item can never
+        // collide with a "Security|app-x" item). The new shape is one SelectMany and the
+        // pipeline at the bottom is the only place a sort or dedup lives.
+        IEnumerable<PriorityQueueItem> FromReliability() =>
+            consolidated
+                .Where(x => x.Actionability is "Fix Now" or "Fix Soon")
+                .Select(c => new PriorityQueueItem(
+                    Actionability: c.Actionability,
+                    Item: c.DisplayName,
+                    Source: "Reliability",
+                    ImpactScore: 100 - c.HealthScore,
+                    Confidence: c.HealthScore < 50 ? "high" : "medium",
+                    Reason: $"Status={c.HttpStatus}; 7d 5xx={c.Http5xx7d}; Reliability={c.ReliabilityScore}%",
+                    Owner: c.Owner,
+                    Environment: c.Environment,
+                    Command: c.Command));
 
-        foreach (var c in consolidated.Where(x => x.Actionability is "Fix Now" or "Fix Soon"))
-        {
-            items.Add(new PriorityQueueItem(
-                Actionability: c.Actionability,
-                Item: c.DisplayName,
-                Source: "Reliability",
-                ImpactScore: 100 - c.HealthScore,
-                Confidence: c.HealthScore < 50 ? "high" : "medium",
-                Reason: $"Status={c.HttpStatus}; 7d 5xx={c.Http5xx7d}; Reliability={c.ReliabilityScore}%",
-                Owner: c.Owner,
-                Environment: c.Environment,
-                Command: c.Command
-            ));
-        }
-
-        foreach (var s in safe)
-        {
-            items.Add(new PriorityQueueItem(
+        IEnumerable<PriorityQueueItem> FromSafeToRemove() =>
+            safe.Select(s => new PriorityQueueItem(
                 Actionability: "Remove Candidate",
                 Item: s.Name,
                 Source: "SafeToRemove",
@@ -256,73 +288,86 @@ public static class DashboardDerivations
                 Reason: s.Reason,
                 Owner: "unassigned",
                 Environment: "unknown",
-                Command: s.Command
-            ));
-        }
+                Command: s.Command));
 
-        foreach (var ssl in r?.SslExpiry?.Where(x => x.DaysLeft is < 60).Take(20) ?? Enumerable.Empty<SslEntry>())
-        {
-            var days = ssl.DaysLeft ?? 0;
-            items.Add(new PriorityQueueItem(
-                Actionability: days < 14 ? "Fix Now" : "Fix Soon",
-                Item: ssl.Name,
-                Source: "SSL",
-                ImpactScore: days < 14 ? 90 : 65,
-                Confidence: "high",
-                Reason: $"Certificate expires in {days} days",
-                Owner: "unassigned",
-                Environment: InferEnvironment(ssl.Name, ssl.Name),
-                Command: null
-            ));
-        }
+        IEnumerable<PriorityQueueItem> FromSsl() =>
+            (r?.SslExpiry ?? new List<SslEntry>())
+                .Where(x => x.DaysLeft is < 60)
+                .Take(20)
+                .Select(ssl =>
+                {
+                    var days = ssl.DaysLeft ?? 0;
+                    return new PriorityQueueItem(
+                        Actionability: days < 14 ? "Fix Now" : "Fix Soon",
+                        Item: ssl.Name,
+                        Source: "SSL",
+                        ImpactScore: days < 14 ? 90 : 65,
+                        Confidence: "high",
+                        Reason: $"Certificate expires in {days} days",
+                        Owner: "unassigned",
+                        Environment: InferEnvironment(ssl.Name, ssl.Name),
+                        Command: null);
+                });
 
-        foreach (var orphan in r?.OrphanedResources ?? new List<OrphanedResource>())
-        {
-            items.Add(new PriorityQueueItem(
-                Actionability: "Remove Candidate",
-                Item: orphan.Name,
-                Source: "Orphaned",
-                ImpactScore: 60,
-                Confidence: "medium",
-                Reason: orphan.Reason,
-                Owner: "unassigned",
-                Environment: InferEnvironment(orphan.ResourceGroup, orphan.Name),
-                Command: orphan.Command
-            ));
-        }
+        IEnumerable<PriorityQueueItem> FromOrphans() =>
+            (r?.OrphanedResources ?? new List<OrphanedResource>())
+                .Select(o => new PriorityQueueItem(
+                    Actionability: "Remove Candidate",
+                    Item: o.Name,
+                    Source: "Orphaned",
+                    ImpactScore: 60,
+                    Confidence: "medium",
+                    Reason: o.Reason,
+                    Owner: "unassigned",
+                    Environment: InferEnvironment(o.ResourceGroup, o.Name),
+                    Command: o.Command));
 
-        foreach (var storage in r?.StorageInventory?.Where(s => s.IssueCount > 0) ?? Enumerable.Empty<StorageItem>())
-        {
-            var severe = storage.PublicBlobAccess || !storage.HttpsOnly;
-            items.Add(new PriorityQueueItem(
-                Actionability: severe ? "Fix Now" : "Fix Soon",
-                Item: storage.Name,
-                Source: "Security",
-                ImpactScore: severe ? 95 : 72,
-                Confidence: "high",
-                Reason: string.Join("; ", storage.Issues?.Select(i => i.Issue) ?? []),
-                Owner: InferOwner(storage.ResourceGroup, storage.Name),
-                Environment: InferEnvironment(storage.ResourceGroup, storage.Name),
-                Command: null
-            ));
-        }
+        IEnumerable<PriorityQueueItem> FromStorage() =>
+            (r?.StorageInventory ?? new List<StorageItem>())
+                .Where(s => s.IssueCount > 0)
+                .Select(storage =>
+                {
+                    var severe = storage.PublicBlobAccess || !storage.HttpsOnly;
+                    return new PriorityQueueItem(
+                        Actionability: severe ? "Fix Now" : "Fix Soon",
+                        Item: storage.Name,
+                        Source: "Security",
+                        ImpactScore: severe ? 95 : 72,
+                        Confidence: "high",
+                        Reason: string.Join("; ", storage.Issues?.Select(i => i.Issue) ?? []),
+                        Owner: InferOwner(storage.ResourceGroup, storage.Name),
+                        Environment: InferEnvironment(storage.ResourceGroup, storage.Name),
+                        Command: null);
+                });
 
-        foreach (var drift in r?.ConfigDrift?.Where(d => d.Issues?.Any(i => i.Severity is "critical" or "high") == true) ?? Enumerable.Empty<ConfigDriftItem>())
-        {
-            items.Add(new PriorityQueueItem(
-                Actionability: "Fix Now",
-                Item: drift.FriendlyName ?? drift.Name,
-                Source: "Configuration",
-                ImpactScore: 88,
-                Confidence: "high",
-                Reason: string.Join("; ", drift.Issues?.Where(i => i.Severity is "critical" or "high").Select(i => i.Issue) ?? []),
-                Owner: InferOwner(drift.ResourceGroup, drift.Name),
-                Environment: InferEnvironment(drift.ResourceGroup, drift.Name),
-                Command: null
-            ));
-        }
+        IEnumerable<PriorityQueueItem> FromDrift() =>
+            (r?.ConfigDrift ?? new List<ConfigDriftItem>())
+                .Where(d => d.Issues?.Any(i => i.Severity is "critical" or "high") == true)
+                .Select(drift => new PriorityQueueItem(
+                    Actionability: "Fix Now",
+                    Item: drift.FriendlyName ?? drift.Name,
+                    Source: "Configuration",
+                    ImpactScore: 88,
+                    Confidence: "high",
+                    Reason: string.Join("; ", drift.Issues?.Where(i => i.Severity is "critical" or "high").Select(i => i.Issue) ?? []),
+                    Owner: InferOwner(drift.ResourceGroup, drift.Name),
+                    Environment: InferEnvironment(drift.ResourceGroup, drift.Name),
+                    Command: null));
 
-        return items
+        return Enumerable.Empty<PriorityQueueItem>()
+            .Concat(FromReliability())
+            .Concat(FromSafeToRemove())
+            .Concat(FromSsl())
+            .Concat(FromOrphans())
+            .Concat(FromStorage())
+            .Concat(FromDrift())
+            // Within a source, the same item can appear twice — most realistically two SSL
+            // entries for the same hostname, one near expiry and one far. Keeping the
+            // higher-impact one matches the badge the queue already showed and stops two
+            // rows competing for the same line. Across sources dedup never fired anyway
+            // (Reliability|app-x and Security|app-x are distinct keys), so this is a narrow,
+            // intentional dedup rather than the broad "same finding everywhere" shape the
+            // previous GroupBy looked like it was doing.
             .GroupBy(i => $"{i.Source}|{i.Item}", StringComparer.OrdinalIgnoreCase)
             .Select(g => g.OrderByDescending(i => i.ImpactScore).First())
             // Tier first, magnitude second. Ordering by ImpactScore alone put a "Fix Soon"
@@ -331,10 +376,11 @@ public static class DashboardDerivations
             // way down — the reader has to choose between believing the badge or the order.
             // The badge is the claim; the order now agrees with it, and impact ranks WITHIN
             // a tier, which is the only comparison the score is meaningful for anyway.
+            // The 150 cap was a future-proof against an estate this size has never reached;
+            // the live queue is < 30 items, so removing it costs nothing.
             .OrderBy(i => ActionabilityRank(i.Actionability))
             .ThenByDescending(i => i.ImpactScore)
             .ThenBy(i => i.Item, StringComparer.OrdinalIgnoreCase)
-            .Take(150)
             .ToList();
     }
 

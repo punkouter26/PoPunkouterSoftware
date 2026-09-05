@@ -45,6 +45,35 @@
     border: 1px solid var(--app-border);
 }
 
+/* Fallback tile rendered when a screenshot is missing — same 16:10 frame as the real
+   thumbnail, so the grid stays rhythmically consistent. The icon and label sit on a
+   subtle wash derived from --app-bg-alt so the placeholder reads as "this slot is
+   empty" without competing for attention with working cards. No hover-zoom: there is
+   nothing to zoom, and pretending there is would be misleading. */
+.app-screenshot-thumb--missing {
+    display: grid;
+    place-items: center;
+    gap: var(--app-space-2xs);
+    color: var(--app-text-soft);
+    background:
+        linear-gradient(135deg,
+            var(--app-accent-wash) 0%,
+            transparent 60%),
+        var(--app-surface-soft);
+}
+
+.app-screenshot-thumb--missing .material-symbols-outlined,
+.app-screenshot-thumb--missing .rz-icon {
+    font-size: 2.5rem;
+    color: var(--app-text-muted);
+}
+
+.app-screenshot-thumb--missing span {
+    font-size: var(--app-step--1);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
 .app-screenshot-thumb img {
     width: 100%;
     height: 100%;

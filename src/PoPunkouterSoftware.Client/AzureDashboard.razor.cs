@@ -99,6 +99,14 @@ public partial class AzureDashboard
     private bool _refreshFailed;
     private string? _refreshFailureMessage;
     private bool _userCancelled;
+    // Captured at the start of RefreshAsync. The wait polls /api/diag/summary on the
+    // HTTP fallback path; if the polling detects a newer report between the user's click
+    // on Cancel and the next yield, the wait exits cleanly (no OperationCanceledException)
+    // and the post-wait LoadSummaryAsync was free to overwrite `_summary` with the report
+    // the user just said "don't bother me with". Tracking the baseline lets the post-wait
+    // branch refuse that overwrite — a cancelled refresh leaves the page on the data the
+    // user had before clicking, and the next scheduled or manual scan picks up the new one.
+    private DateTime? _refreshBaselineGeneratedAt;
     private CancellationTokenSource? _refreshCts;
     private const int RefreshTimeoutSeconds = 120;
 
@@ -334,6 +342,10 @@ public partial class AzureDashboard
         _userCancelled = false;
         _progressPercent = 0;
         _progressStep = "Starting…";
+        // Capture the timestamp the page is currently showing so the post-wait branch can
+        // refuse an overwrite when the user cancelled — a new GeneratedAt after a Cancel
+        // would be the report the scan wrote AFTER the user said "stop, don't bother me".
+        _refreshBaselineGeneratedAt = _summary?.GeneratedAt ?? report?.GeneratedAt;
         // Keep the previous report in view during the scan — do not null it here.
         // The report will be replaced once the scan completes and LoadReportAsync is called again.
         _refreshCts = new CancellationTokenSource(TimeSpan.FromSeconds(RefreshTimeoutSeconds));
@@ -386,18 +398,27 @@ public partial class AzureDashboard
                 await WaitForRefreshCompletionAsync(_refreshCts!.Token, delayMs: 1500);
             }
 
-            await LoadSummaryAsync();
-            if (_advancedOpen)
-                await LoadReportAsync();
-            if (_refreshFailed)
+            // The user-cancelled race: when Cancel lands between the wait's last poll and
+            // the next yield, the wait exits cleanly (no OperationCanceledException) and the
+            // original code fell into LoadSummaryAsync, overwriting `_summary` with the new
+            // report the scan wrote after the user said "stop". _userCancelled is set by
+            // CancelRefreshAsync and is NOT reset by the wait, so checking it here honours
+            // the user's intent regardless of which path the wait took to get out.
+            if (!_userCancelled)
             {
-                NotificationService.Notify(NotificationSeverity.Error, "Refresh failed", _refreshFailureMessage ?? "Refresh failed. Check logs for details.");
-                await SfxAsync("audioKit.refreshEnd", "failure");
-            }
-            else if (!_refreshCts.Token.IsCancellationRequested)
-            {
-                NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure report refreshed successfully.");
-                await SfxAsync("audioKit.refreshEnd", "success");
+                await LoadSummaryAsync();
+                if (_advancedOpen)
+                    await LoadReportAsync();
+                if (_refreshFailed)
+                {
+                    NotificationService.Notify(NotificationSeverity.Error, "Refresh failed", _refreshFailureMessage ?? "Refresh failed. Check logs for details.");
+                    await SfxAsync("audioKit.refreshEnd", "failure");
+                }
+                else if (!_refreshCts.Token.IsCancellationRequested)
+                {
+                    NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure report refreshed successfully.");
+                    await SfxAsync("audioKit.refreshEnd", "success");
+                }
             }
         }
         catch (OperationCanceledException) when (_userCancelled)

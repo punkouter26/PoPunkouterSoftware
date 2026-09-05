@@ -29,6 +29,21 @@
                  decoding="async" width="1600" height="1000" />
         </a>
     }
+    else
+    {
+        @* Fallback tile for the rare app whose screenshot is missing — a host that returns
+           a non-2xx, a 0-byte file, or an entry in apps.json that the screenshotter cannot
+           resolve to a URL. Without this the card renders an empty box that visibly breaks
+           the grid rhythm (every other card has a 16:10 frame) and pulls the eye away from
+           the working apps. A neutral placeholder with the same aspect ratio keeps the
+           grid honest until the screenshotter catches up; the "Open app" link below still
+           goes to the live URL. *@
+        <a class="app-screenshot-thumb app-screenshot-thumb--missing" href="@App.Url" target="_blank" rel="noopener noreferrer"
+           title="@($"Preview not yet captured — opens {App.Name}")" aria-label="@($"Preview not yet captured for {App.Name}")">
+            <RadzenIcon Icon="image" />
+            <span>Preview pending</span>
+        </a>
+    }
     <h2 class="app-card-title">@App.Name</h2>
     <p class="app-card-copy">@App.Description</p>
     @if (!string.IsNullOrWhiteSpace(App.Url))

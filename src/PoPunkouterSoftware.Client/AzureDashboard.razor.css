@@ -105,10 +105,21 @@
     color: var(--app-text-soft);
 }
 
+/* 4 tiles in a single row at desktop, 2×2 only when the hero header collapses to a
+   single column at ≤ 1000 px (see the .azure-command-header media query below). The
+   2-up default was the only rule, so the four KPIs always rendered as a 2×2 grid no
+   matter how wide the page got — the hero header reserved `minmax(320px, .9fr)` for
+   them and the tiles squeezed into 187 px each. */
 .azure-ops-page ::deep .azure-command-kpis {
     display: grid;
-    grid-template-columns: repeat(2, minmax(110px, 1fr));
+    grid-template-columns: repeat(4, minmax(110px, 1fr));
     gap: var(--app-space-xs);
+}
+
+@media (max-width: 1000px) {
+    .azure-ops-page ::deep .azure-command-kpis {
+        grid-template-columns: repeat(2, minmax(110px, 1fr));
+    }
 }
 
 .azure-ops-page ::deep .azure-command-kpis > div {
@@ -380,6 +391,16 @@
     flex-wrap: wrap;
     gap: .45rem;
     margin-bottom: .8rem;
+}
+
+/* The segmented control is now built from plain buttons with `aria-pressed` (see
+   AzureResourceExplorer.razor). Radzen's selected-button treatment is `rz-state-active` —
+   re-declared here so the look matches what the RadzenSelectBar used to render, instead
+   of leaving the active button indistinguishable from its siblings. */
+.azure-ops-page ::deep .azure-filter-bar .rz-state-active {
+    color: var(--app-text);
+    background: var(--app-accent-wash);
+    border-color: var(--app-accent-edge);
 }
 
 /* The grid and the card list are now mutually exclusive branches in the markup
