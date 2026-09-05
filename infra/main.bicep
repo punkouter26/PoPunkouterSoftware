@@ -43,6 +43,9 @@ param sharedKeyVaultResourceGroup string = 'PoShared'
 @description('Shared Azure AI Services account backing the /azure status narrative.')
 param sharedAiServicesAccountName string = 'po-aiservices-shared'
 
+@description('App Insights component the site is linked to, surfaced as the portal hidden-link tag.')
+param appInsightsResourceId string = '/subscriptions/bbb8dfbe-9169-432f-9b7a-fbf861b51037/resourceGroups/PoShared/providers/microsoft.insights/components/poappideinsights8f9c9a4e'
+
 // Windows App Service Plan, Free (F1) tier.
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: appServicePlanName
@@ -65,6 +68,17 @@ resource site 'Microsoft.Web/sites@2024-04-01' = {
   kind: 'app'
   identity: {
     type: 'SystemAssigned'
+  }
+  // Declared because it EXISTS on the live site, and a template that omits it deletes it.
+  // `az deployment group what-if` on 2026-09-05 reported `tags -> None` on this resource:
+  // the portal writes this hidden-link when App Insights is attached to a web app, and it
+  // is what makes the Application Insights blade resolve from the app's own menu. Losing it
+  // does not stop telemetry — the connection string does that work — so a full deployment
+  // would have quietly broken a portal navigation nobody would connect to a bicep run weeks
+  // later. This file's header calls itself a faithful description of what already exists;
+  // this is part of being faithful.
+  tags: {
+    'hidden-link: /app-insights-resource-id': appInsightsResourceId
   }
   properties: {
     serverFarmId: appServicePlan.id

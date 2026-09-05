@@ -470,7 +470,13 @@ proves a context and program were created, not that anything reached the screen.
   (rate-limited or request failed)") and **Monitoring Reader** at subscription scope; main.bicep
   assigns **Storage Table/Blob Data Contributor** on the app's own account. Infrastructure is
   applied out-of-band — `deploy.yml` deliberately does not run bicep — so editing these files
-  changes nothing until someone runs `az deployment group create`.
+  changes nothing until someone runs `az deployment group create`. All six assignments were
+  applied on 2026-09-05. **Run `what-if` before ever deploying the whole template**: it reported
+  `tags -> None` on the site, because the portal-written
+  `hidden-link: /app-insights-resource-id` was not declared and an omitted `tags` block deletes
+  the tag. It is declared now (`appInsightsResourceId`), but the lesson generalises — this file
+  claims to describe what already exists, and anything the portal wrote that it does not name,
+  it deletes.
 - **Telemetry.** Serilog → Console + File; Azure Monitor via OpenTelemetry is the sole App Insights
   pipeline (`writeToProviders: true` on `UseSerilog` is load-bearing — without it application logs
   never reach App Insights). Traces are fixed-rate sampled at 10%
