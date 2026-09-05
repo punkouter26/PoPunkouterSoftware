@@ -12,7 +12,7 @@ namespace PoPunkouterSoftware.Client;
 /// and the uptime grid are all already on screen; this plays them.</para>
 ///
 /// <para>Everything crossing into JS here is a primitive — seven numbers — matching the
-/// discipline <c>appMedia</c> established in helpers.js. No DTO is serialised, so nothing
+/// discipline every interop call in this app follows. No DTO is serialised, so nothing
 /// new needs a <c>[JsonSerializable]</c> entry in <c>AppJsonContext</c> and the WASM trim
 /// analyzer has nothing to complain about. The audio mapping itself lives in
 /// js/audio-kit.js, which documents why each fact was given the parameter it was.</para>

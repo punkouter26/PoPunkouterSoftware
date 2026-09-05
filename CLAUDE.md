@@ -70,6 +70,9 @@ pwsh tests/PoPunkouterSoftware.E2EUI/bin/Debug/net10.0/playwright.ps1 install   
 dotnet test tests/PoPunkouterSoftware.E2EUI                                     # Playwright
 $env:HEADED=1; $env:BROWSER_CHANNEL='chrome'; dotnet test tests/PoPunkouterSoftware.E2EUI
 
+# Rebuild the icon-font subset after adding an icon name (see "Things that will bite you").
+python SCRIPTS/Build-IconFontSubset.py       # needs: pip install "fonttools[woff]" brotli
+
 # `dotnet clean` leaves obj/ behind. When a build misbehaves for no visible reason:
 Get-ChildItem -Recurse -Directory -Include bin,obj | Remove-Item -Recurse -Force
 ```
@@ -199,8 +202,14 @@ dropped into whichever pane is nearest will fail the first of those.
 - `AzureReportService.cs` — orchestrator + primary constructor, declared there **and only there**.
   Steps live in `.Discovery`, `.Metrics`, `.Cost`, `.Security`, `.Inventory`, `.Cleanup`,
   `.GitHubCorrelation`, `.Helpers`.
-- `AzureDashboard.razor.cs` — state, lifecycle, loading, refresh, SignalR. Projections in
-  `.DerivedViews`, display mapping in `.Presentation`, history in `.Trends`. Markup blocks are
+- `AzureDashboard.razor.cs` — state, lifecycle, loading, refresh, SignalR. Display mapping in
+  `.Presentation`, history in `.Trends`. The pure projections are NOT a partial-class aspect any
+  more: they live in `DashboardDerivations.cs`, a plain `public static` class, because as private
+  members of the component ~460 lines of impact scoring, actionability tiering and cleanup
+  reasoning were unreachable from a test even though both test projects reference this assembly.
+  `.DerivedViews` keeps only `CleanupCandidates`, which reads the page's snooze set and so is not
+  pure. Anything pure belongs in `DashboardDerivations`, with a test in
+  `DashboardDerivationsTests`. Markup blocks are
   sibling components in the client root (`AzureStatusNarrative`, `AzureWhatChanged`,
   `AzureCostForecast`, `AzureUptimeHeatmap`, `Sparkline`, `AzurePriorityQueue`,
   `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureHistoryDisclosure`,
@@ -219,7 +228,7 @@ comment in each before changing it; they document the reasoning, this is the map
 | `gfx-webgl.js` | WebGL2 renderer (curl-noise field, transform-feedback particles, dual-Kawase blur, glass composite) with a WebGL1 field-only fallback. |
 | `gfx-webgpu.js` | WebGPU renderer (compute-shader particles). **Lazily fetched**, only when `navigator.gpu` exists. |
 | `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. |
-| `helpers.js` | Topbar, clipboard, media-query bridge, download. Unrelated to the above. |
+| `helpers.js` | Topbar, snap pager, clipboard, download. Unrelated to the above. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
 
 **One rAF loop, and reduced motion stops it.** Every animated layer is a named `motionKit`
 subscriber. Nothing else may call `requestAnimationFrame` for animation. The governor's gate
@@ -282,10 +291,10 @@ proves a pipeline was created, not that anything reached the screen.
 
 - **A projection component gets a `ShouldRender` guard.** Blazor treats a reference-typed
   parameter as "may have changed" on every parent render, so without one, a page render walks
-  every child — 23 portfolio cards, a 30-day uptime grid, the virtualized resource explorer. The
+  every child — 23 portfolio cards, a 30-day uptime grid, ~48 resource explorer cards. The
   guard is reference identity on the data (`AzureUptimeHeatmap`, `AzureCostForecast`,
   `AzureWhatChanged`, `AzurePriorityQueue`, `MetricBars`, `PortfolioAppCard`) plus any scalar that
-  changes what is drawn (`AzureResourceExplorer` also compares `SelectedView` and `IsNarrow`).
+  changes what is drawn (`AzureResourceExplorer` also compares `SelectedView`).
   This is sound only because the page **replaces** its DTOs rather than mutating them. Two rules
   follow: never include a `Func`/`EventCallback` parameter in the comparison — those are fresh
   objects every render and would make the guard a no-op — and **never add internal state to a
@@ -320,13 +329,27 @@ proves a pipeline was created, not that anything reached the screen.
   no `BaseAddress`. A Session/Logout slot and "MOCK DATA" banner were built, could never render, and
   were deleted rather than kept as chrome that only looks functional (2026-08-03). Reinstating either
   requires a small `InteractiveWebAssembly` island in the header, not a change to `MainLayout`.
+- **`<RadzenComponents />` in `MainLayout` carries its own `@rendermode`, and must.** It hosts the
+  notification/dialog/tooltip outlets that `NotificationService` pushes into. Without a render mode
+  it inherits the layout's static SSR: the `.rz-notification` container sits in the DOM but can
+  never gain a child, and the page's `NotificationService` — resolved from the WASM container, a
+  different one from the server's — pushes into an outlet that is not listening. Every toast in
+  the app was silently swallowed, *every error path included*: "Refresh rejected", "Refresh
+  failed", "Timeout", "Snooze failed", "Copy failed". A 500 from `POST /api/diag/snooze` produced
+  no DOM change and no message at all. Interactive WASM islands on one page share a single
+  WebAssembly host and therefore one DI container (a scoped service is a per-host singleton there),
+  which is why the island and the page resolve the same instance. Do not remove the attribute.
 - **Management gate.** Mutating/expensive endpoints (`/api/diag/refresh`, `/api/diag/cancel-refresh`)
   carry `.RequireManagementActions()`, which enforces `FeatureFlags:EnableManagementActions` (on in
   Development/Testing, otherwise opt-in) plus an optional `Security:ManagementApiKey` via the
   `X-Management-Key` header. `/api/diag/ai` and the snooze endpoints are deliberately unprivileged.
 - **Routing.** `/api/diag/*` and `/api/portfolio/*` use `MapGroup`. `/health` (deep probe, one
-  `IHealthCheck` per external dependency), `/healthz` (static liveness) and `/diag` sit off the
-  `/api` group. There is deliberately **no** `/api/health` alias.
+  `IHealthCheck` per external dependency) and `/healthz` (static liveness) sit off the `/api` group.
+  There is deliberately **no** `/api/health` alias, and deliberately **no** bare `/diag`: it was an
+  unauthenticated page rendering ~130 lines of hand-built HTML with its own dark-only palette — a
+  second design system — whose only caller was its own smoke test, and whose `?format=json` twin
+  returned the server's absolute ContentRoot path, the environment name and masked-but-suffixed
+  connection strings to anonymous callers in Production. Removed 2026-09-04.
 - **Resilience.** Typed clients `github` and `azure-arm` use `AddStandardResilienceHandler`.
   `health`, `azure-probe` and `ai-hf` deliberately have **none** — they must report real reachability
   (or degrade), not retry through the outages they exist to detect.
@@ -404,7 +427,12 @@ proves a pipeline was created, not that anything reached the screen.
 - **Storage & retention.** Azure Table Storage; local dev runs Azurite in Docker
   ([docker-compose.yml](docker-compose.yml), `UseDevelopmentStorage=true`). History rows are pruned
   after `Retention:HistoryDays` (default 30) on each save; blobs age out via the lifecycle policy in
-  [infra/main.bicep](infra/main.bicep). Incidents are deliberately never pruned.
+  [infra/main.bicep](infra/main.bicep). There is no incident log: `IncidentService` wrote a row per
+  health transition on every scan, kept them forever, and **nothing ever read them** — no endpoint,
+  no DTO on the wire, no UI. "What changed since last scan" is the feature it looked like, and
+  `DashboardInsightsBuilder.BuildDelta` already provides that from history. Removed 2026-09-04
+  along with `IncidentEntry`, `IncidentTypes`, the `incidents` partition and the never-configured
+  `Incidents:WebhookUrl`. The `incidents` table already in Azure is untouched; drop it by hand.
 - **Snoozes.** Findings have no server-side identity — the `SnoozeStore` RowKey is a SHA-256 hash of
   the client's opaque key (Table Storage forbids `|` and friends), with the raw key kept as a
   property so it round-trips. Expiry is filtered in `GetActiveAsync`, not by a TTL or cleanup job;
@@ -421,16 +449,22 @@ proves a pipeline was created, not that anything reached the screen.
   hatch, so reflection-based JSON fails the build.
 - **The whole app has one rAF loop.** It lives in `js/motion-kit.js`. Do not add another —
   see [Graphics and audio](#graphics-and-audio).
-- **The icon font is served from this origin, and there is only one of it.** Radzen.Blazor ships
-  the Material Symbols variable font and self-hosts it as family `"Material Symbols"`; every
-  `<RadzenIcon>` has always used that copy. `App.razor` additionally loaded it from Google Fonts —
-  a render-blocking cross-origin stylesheet plus two preconnects, serving only the four bare
-  `<span class="material-symbols-outlined">` glyphs in `MainLayout`, with no `display=swap` so
-  those icons were blank until a third-party round trip finished. `modern-ui.css` now declares the
-  family against the local file. Do not re-add the remote `<link>`; and note the `@font-face` has
-  to live in `modern-ui.css` rather than being inherited from Radzen's sheets, because those are
-  `media`-scoped by colour scheme and an `@font-face` in a non-matching media context does not
-  apply.
+- **The icon font is a SUBSET, and adding an icon means rebuilding it.** Radzen.Blazor ships the
+  Material Symbols variable font (~3,600 glyphs, 1,068,920 bytes) and self-hosts it as family
+  `"Material Symbols"`. This app draws about thirty of those glyphs, so
+  [SCRIPTS/Build-IconFontSubset.py](SCRIPTS/Build-IconFontSubset.py) builds
+  `wwwroot/fonts/material-symbols-subset.woff2` (16,000 bytes) and `modern-ui.css` declares the
+  family against that. **Material Symbols renders through LIGATURES** — the element's text is the
+  icon's name — so a name missing from the subset does not degrade to a blank box: it renders the
+  literal word "refresh" inside the button. Add the name to `APP_ICONS` and re-run the script; it
+  verifies every ligature survived and fails loudly if one did not, and
+  `Azure_EveryIcon_RendersAsAGlyphNotItsName` catches a miss in a real browser. Two subtleties the
+  script documents: this font's features are `rlig`/`rclt`, not `liga`, and `--text` alone saves
+  only 11% because all 3,600 names share the same 26 letters, so unused ligatures must be pruned
+  out of GSUB before subsetting. Also: do not re-add the Google Fonts `<link>` `App.razor` used to
+  carry, and keep the `@font-face` in `modern-ui.css` rather than inheriting Radzen's — theirs are
+  `media`-scoped by colour scheme, an `@font-face` in a non-matching media context does not apply,
+  and ours coming later in the cascade is what stops the 1 MB file being fetched at all.
 - **One application stylesheet.** `wwwroot/css/modern-ui.css` is the whole thing (plus `boot.css`
   for the pre-Blazor splash). It was a four-line aggregator over `modern-ui.base/.components/.responsive`;
   CSS `@import` is serial, so the split cost three extra round trips on the critical path and bought
@@ -446,6 +480,17 @@ proves a pipeline was created, not that anything reached the screen.
   **loses to its own base rule** and the layout never reflows — that is how the Azure glance grid
   stayed 3-up at 390px with correct-looking responsive rules, and `minmax(0,1fr)` hid it from the two
   E2E tests that check for overflow.
+- **A global rule that must beat a page-root scoped rule needs (0,2,1), not (0,2,0).** A page root
+  such as `.azure-ops-page` carries a scoped rule compiling to `.azure-ops-page[b-hash]` — (0,2,0)
+  — and `App.razor` loads `PoPunkouterSoftware.Client.styles.css` **after** `modern-ui.css`, so a
+  global selector that merely ties loses the tie on document order. That is why every selector in
+  the `[data-snap-pager]` block is written `html .app-page[data-snap-pager]`. Without the leading
+  `html`, the scoped `display: grid` beat the pager's `display: block`, the six panes became six
+  grid rows sharing 756px at 126px each, and all six rendered on top of one another with their text
+  overlapping — on the phone layout, the only place the rule applies. It failed silently through
+  four E2E assertions because the panes still existed, still snapped, and still reported a
+  `scrollHeight` that fit inside the container; only their rendered height was wrong.
+  `Azure_MobilePortrait_PanesFitTheViewport` now measures the box, not just the content.
 - **`Testing` is the hermetic switch.** It skips Key Vault entirely. Integration tests boot the real
   entry point via `WebApplicationFactory`, and collections run sequentially (`AssemblyInfo.cs`)
   because concurrent entry-point boots race.
@@ -457,7 +502,7 @@ proves a pipeline was created, not that anything reached the screen.
   download and broke every deployment (2026-07-10). Kill switch:
   `FeatureFlags:EnableScreenshots=false`.
 
-## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/49/22/19)
+## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/49/21/23)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the

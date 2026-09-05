@@ -338,7 +338,7 @@
      * Render the whole ops summary as one ~4.2 second gesture.
      *
      * Only primitives cross the interop boundary — seven numbers — matching the discipline
-     * `appMedia` already follows in helpers.js. Nothing here needs a serialised DTO, and the
+     * every interop call in this app already follows. Nothing here needs a serialised DTO, and the
      * WASM trim analyzer stays clean because no new type is reflected over.
      *
      * The mapping, and why each choice is the honest one:

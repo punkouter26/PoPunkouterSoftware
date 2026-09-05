@@ -12,22 +12,6 @@ public partial class AzureDashboard
 {
     private long StepTimingTotalMs => report?.StepTimings?.Sum(x => x.ElapsedMs) ?? 0;
 
-    /// <summary>Last segment of an ARM resource type to a human label ("sites" -> "App Services").</summary>
-    private static string HumanizeResourceType(string type) => type switch
-    {
-        "storageAccounts" => "Storage Accounts",
-        "sites" => "App Services",
-        "userAssignedIdentities" => "Managed Identities",
-        "workspaces" => "Log Analytics",
-        "vaults" => "Key Vaults",
-        "components" => "App Insights",
-        "serverFarms" => "App Service Plans",
-        "accounts" => "Cognitive Services",
-        "servers" => "SQL Servers",
-        "databases" => "SQL Databases",
-        _ => type,
-    };
-
     private static BadgeStyle ActionabilityBadge(string? tier) => tier switch
     {
         "Fix Now" => BadgeStyle.Danger,

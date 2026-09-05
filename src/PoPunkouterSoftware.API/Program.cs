@@ -247,7 +247,6 @@ try
     builder.Services.AddSingleton<ServicePingerService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<ServicePingerService>());
     builder.Services.AddSignalR();
-    builder.Services.AddSingleton<IncidentService>();
     builder.Services.AddSingleton<RefreshSessionManager>();
     builder.Services.AddSingleton<ReportRefreshRunner>();
     builder.Services.AddSingleton<AiTriageService>();

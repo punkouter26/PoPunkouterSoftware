@@ -31,25 +31,44 @@
     }
     else
     {
-        <div class="azure-uptime__scroll">
-            <div class="azure-uptime__grid" style="@GridStyle" role="table" aria-label="Daily uptime by app">
+        @* tabindex="0": this is a horizontally scrolling region, and without it a keyboard-only
+           visitor cannot reach the days that are off-screen at all. The grid inside is marked
+           aria-hidden and the sentences below carry the same facts in a form worth listening to
+           — see the note on Summarise(). *@
+        <div class="azure-uptime__scroll" tabindex="0" role="group"
+             aria-label="Daily uptime grid, scrolls sideways. A written summary of every row follows it.">
+            <div class="azure-uptime__grid" style="@GridStyle" aria-hidden="true">
                 @foreach (var row in Map.Rows)
                 {
-                    <div class="azure-uptime__label" role="rowheader" title="@row.Name">@row.Name</div>
+                    <div class="azure-uptime__label" title="@row.Name">@row.Name</div>
                     @for (var i = 0; i < row.Cells.Count; i++)
                     {
                         var state = row.Cells[i];
                         var day = Map.Days[i];
-                        <div class="azure-uptime__cell @($"is-{state}")" role="cell"
+                        <div class="azure-uptime__cell @($"is-{state}")"
                              title="@($"{row.Name} — {day:ddd MMM dd}: {Describe(state)}")"></div>
                     }
-                    <div class="azure-uptime__pct @(row.UptimePercent < 100 ? "is-degraded" : "")" role="cell"
+                    <div class="azure-uptime__pct @(row.UptimePercent < 100 ? "is-degraded" : "")"
                          title="@($"Healthy on {row.UptimePercent}% of the {row.ScansObserved} scan(s) that checked it, across {row.DaysWithData} day(s)")">
                         @row.UptimePercent%
                     </div>
                 }
             </div>
         </div>
+
+        @* The screen-reader rendering of the grid. This is not a duplicate of a fact already
+           announced: the grid above announces NOTHING, by design. It used to carry role="table"
+           with role="cell" children and no role="row" between them, which is an invalid ARIA
+           table — no assistive technology exposed it as a table at all — and even if the roles
+           had been right, 11 rows x 30 unlabelled colour swatches is 330 cells to listen to for
+           facts that fit in a sentence each. The state of the grid reaches a screen reader here
+           instead, as prose, with the bad days named. *@
+        <ul class="app-sr-only">
+            @foreach (var row in Map.Rows)
+            {
+                <li>@Summarise(row)</li>
+            }
+        </ul>
 
         <div class="azure-uptime__legend" aria-hidden="true">
             <span><i class="azure-uptime__cell is-healthy"></i> up</span>
@@ -111,4 +130,37 @@
         UptimeState.Degraded => "degraded",
         _ => "no scan that day",
     };
+
+    /// <summary>
+    /// One row as a sentence — the accessible rendering of a row of colour swatches.
+    ///
+    /// <para>Bad days are NAMED rather than counted, and capped at four with an "and N more"
+    /// tail: which days an app was down is the whole reason to look at this grid, and a
+    /// 30-item date list read aloud is no more usable than the 30 cells it replaced. Days with
+    /// no scan are reported separately and explicitly, never folded into the good or the bad —
+    /// the same honesty rule the percentage follows.</para>
+    /// </summary>
+    private string Summarise(UptimeRow row)
+    {
+        var bad = new List<string>();
+        for (var i = 0; i < row.Cells.Count && i < Map.Days.Count; i++)
+        {
+            if (row.Cells[i] is UptimeState.Broken or UptimeState.Degraded)
+                bad.Add($"{Map.Days[i]:MMM d} {Describe(row.Cells[i])}");
+        }
+
+        if (row.ScansObserved == 0)
+            return $"{row.Name}: never observed in this window.";
+
+        var text = $"{row.Name}: healthy on {row.UptimePercent} percent of {row.ScansObserved} check(s) "
+            + $"across {row.DaysWithData} observed day(s) of {Map.Days.Count}.";
+
+        if (bad.Count == 0)
+            return text + " No bad days.";
+
+        var named = string.Join(", ", bad.Take(4));
+        return bad.Count <= 4
+            ? $"{text} Bad days: {named}."
+            : $"{text} Bad days: {named}, and {bad.Count - 4} more.";
+    }
 }

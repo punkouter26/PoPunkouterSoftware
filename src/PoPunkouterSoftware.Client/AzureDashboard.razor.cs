@@ -58,47 +58,15 @@ public partial class AzureDashboard
     private List<SnoozeEntry> _activeSnoozes = new();
     private HashSet<string> _snoozedKeys = new(StringComparer.OrdinalIgnoreCase);
 
-    // ── Responsive branch ──────────────────────────────────────────────────────
-    // The resource explorer renders as a virtualized grid on wide viewports and as a
-    // card list on narrow ones. Previously BOTH were emitted and one was hidden with
-    // `display: none`, so every row was built into the DOM twice. This mirrors the
-    // 720px breakpoint in AzureDashboard.razor.css — keep the two in sync.
-    private const string NarrowQuery = "(max-width: 720px)";
-    private bool _isNarrow;
-    private int _mediaSubscriptionId;
-    private DotNetObjectReference<AzureDashboard>? _selfRef;
-
-    [JSInvokable]
-    public Task OnNarrowChanged(bool isNarrow)
-    {
-        if (_isNarrow == isNarrow)
-            return Task.CompletedTask;
-
-        _isNarrow = isNarrow;
-        return InvokeAsync(StateHasChanged);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-            return;
-
-        _selfRef = DotNetObjectReference.Create(this);
-        // appMedia.register fires the callback once with the current match before it
-        // returns, so _isNarrow is correct by the time the explorer is first opened.
-        _mediaSubscriptionId = await JS.InvokeAsync<int>(
-            "appMedia.register", NarrowQuery, _selfRef, nameof(OnNarrowChanged));
-    }
-
     private void RebuildDerivedState()
     {
-        _consolidatedServices = BuildConsolidatedServices(report);
-        // Post-filter rather than threading _snoozedKeys through the static/pure builder —
-        // BuildPriorityQueue stays testable without a renderer, and this is the smaller change.
-        _priorityQueue = BuildPriorityQueue(report, _consolidatedServices, safeToRemove)
+        _consolidatedServices = DashboardDerivations.BuildConsolidatedServices(report);
+        // Post-filter rather than threading _snoozedKeys through the pure builder —
+        // DashboardDerivations stays a pure function of the report, and this is the smaller change.
+        _priorityQueue = DashboardDerivations.BuildPriorityQueue(report, _consolidatedServices, safeToRemove)
             .Where(i => !_snoozedKeys.Contains($"{i.Source}|{i.Item}"))
             .ToList();
-        _resourceExplorerItems = BuildResourceExplorerItems(report, _consolidatedServices, safeToRemove);
+        _resourceExplorerItems = DashboardDerivations.BuildResourceExplorerItems(report, _consolidatedServices, safeToRemove);
         ApplyResourceFilter();
     }
 
@@ -292,13 +260,21 @@ public partial class AzureDashboard
         _loadError = null;
         try
         {
-            _summary = await Http.GetFromJsonAsync("/api/diag/summary", AppJsonContext.Default.OpsSummary)
-                ?? throw new InvalidOperationException("The Azure summary endpoint returned no data.");
+            // Assign through a local so a failed parse cannot half-replace the live summary.
+            var loaded = await Http.GetFromJsonAsync("/api/diag/summary", AppJsonContext.Default.OpsSummary)
+                ?? throw new InvalidOperationException("The Azure status endpoint returned no data.");
+            _summary = loaded;
         }
         catch (Exception ex)
         {
-            _summary = null;
-            _loadError = ex.Message;
+            // _summary is deliberately LEFT ALONE. This method runs on every rescan, so
+            // nulling it meant one failed post-scan reload deleted the hero, all six panes and
+            // the open advanced tree and replaced them with a banner — throwing away data still
+            // held in memory. A reload that fails is a stale dashboard, not an empty one; the
+            // markup renders the banner above whatever is still there. Same rule Index.razor
+            // already follows for the catalog.
+            _loadError = FriendlyError.Describe(ex);
+            Console.Error.WriteLine($"Azure summary load error: {ex}");
         }
         finally
         {
@@ -322,12 +298,12 @@ public partial class AzureDashboard
 
         try
         {
-            report = await Http.GetFromJsonAsync("/api/diag/report", AppJsonContext.Default.AzureReport);
-            if (report is null)
-                throw new InvalidOperationException("The Azure report endpoint returned no data.");
+            var loaded = await Http.GetFromJsonAsync("/api/diag/report", AppJsonContext.Default.AzureReport)
+                ?? throw new InvalidOperationException("The Azure report endpoint returned no data.");
+            report = loaded;
 
-            services = report.WebServices?.Services ?? new List<WebService>();
-            safeToRemove = BuildSafeToRemove(report);
+            services = loaded.WebServices?.Services ?? new List<WebService>();
+            safeToRemove = DashboardDerivations.BuildSafeToRemove(loaded);
             // Snoozes can expire between visits, so this is refreshed on every report
             // load/refresh, not just once at startup.
             await LoadSnoozesAsync();
@@ -336,11 +312,11 @@ public partial class AzureDashboard
         }
         catch (Exception ex)
         {
-            report = null;
-            services = new List<WebService>();
-            safeToRemove = new List<SafeToRemoveItem>();
-            RebuildDerivedState();
-            _advancedError = ex.Message;
+            // The previously loaded report, its derived queue and its explorer rows are left
+            // in place for the same reason LoadSummaryAsync leaves _summary alone: this runs
+            // again after every rescan, and a failed reload that wipes the tree the visitor was
+            // reading is strictly worse than one that leaves it standing under a banner.
+            _advancedError = FriendlyError.Describe(ex);
             Console.Error.WriteLine($"Azure dashboard load error: {ex}");
         }
         finally
@@ -595,17 +571,6 @@ public partial class AzureDashboard
         _refreshCts?.Cancel();
         _refreshCts?.Dispose();
         _refreshCts = null;
-
-        if (_mediaSubscriptionId != 0)
-        {
-            // Best-effort: the circuit may already be gone during teardown.
-            try
-            { await JS.InvokeVoidAsync("appMedia.unregister", _mediaSubscriptionId); }
-            catch (JSException) { }
-            catch (InvalidOperationException) { }
-            catch (TaskCanceledException) { }
-        }
-        _selfRef?.Dispose();
 
         if (_hub is not null)
             await _hub.DisposeAsync();

@@ -29,18 +29,4 @@ public record ServiceHistoryPoint
     public int Requests7d { get; init; }
 }
 
-// ─── Feature #9: Incident Log ─────────────────────────────────────────────────
-
-/// <summary>A single service health transition event detected during a report refresh.</summary>
-public record IncidentEntry
-{
-    public string ServiceName { get; init; } = "";
-    public string FriendlyName { get; init; } = "";
-    /// <summary>"new-incident" (active→broken) or "recovery" (broken→active).</summary>
-    public string Type { get; init; } = "";
-    public DateTime OccurredAt { get; init; }
-    public string? PreviousStatus { get; init; }
-    public string? CurrentStatus { get; init; }
-}
-
 // ─── Plan recommendation ────────────────────────────────────────────────────

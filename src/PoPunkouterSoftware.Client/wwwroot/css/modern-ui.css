@@ -318,15 +318,24 @@ a {
 
    The family is re-declared here rather than relied on from Radzen's theme sheets because
    those are media-scoped (`prefers-color-scheme`), and an @font-face inside a
-   non-matching media context does not apply. This declaration always does.
+   non-matching media context does not apply. This declaration always does — and because it
+   comes after the Radzen sheets in App.razor, it also OVERRIDES their declaration of the same
+   family, which is what stops the full file being fetched at all.
 
-   `font-display: block` is correct for an icon font and is NOT the FOIT the swap-less
-   Google request was: the file is same-origin, cached, and never blocks first paint — and
-   a swap would show the ligature TEXT ("monitor_heart") before the glyph arrives. */
+   The file it points at is a SUBSET, not Radzen's copy. Radzen's ships ~3,600 glyphs in
+   1,068,920 bytes; this app draws about thirty of them, so a megabyte sat on the critical
+   path of every cold load to deliver roughly 16 KB of glyphs. SCRIPTS/Build-IconFontSubset.py
+   rebuilds this file (16,000 bytes) and verifies every ligature the app asks for survived —
+   run it after adding an icon, because a name missing from the subset does not degrade to a
+   blank box, it renders as the literal WORD in the middle of a button.
+
+   `font-display: block` is right for an icon font and, at 16 KB same-origin, is not the FOIT
+   the swap-less Google request was: the block period will not be reached in practice, and a
+   swap would flash the ligature TEXT ("monitor_heart") before the glyph arrives. */
 @font-face {
     font-family: "Material Symbols";
-    src: url("/_content/Radzen.Blazor/fonts/MaterialSymbolsOutlined.woff2") format("woff2-variations"),
-         url("/_content/Radzen.Blazor/fonts/MaterialSymbolsOutlined.woff2") format("woff2");
+    src: url("/fonts/material-symbols-subset.woff2") format("woff2-variations"),
+         url("/fonts/material-symbols-subset.woff2") format("woff2");
     font-style: normal;
     font-weight: 100 700;
     font-display: block;
@@ -853,8 +862,24 @@ body.topbar-open .rz-header {
     display: none;
 }
 
+/* Every selector in this block is written `html .app-page[data-snap-pager]`, never the bare
+   attribute, and BOTH extra parts are load-bearing.
+
+   The pager element is also a page root, and a page root carries a component-scoped rule -
+   `.azure-ops-page { display: grid }` in AzureDashboard.razor.css - which Blazor compiles to
+   `.azure-ops-page[b-hash]`, specificity (0,2,0). A bare `[data-snap-pager]` is (0,1,0) and
+   loses outright. `.app-page[data-snap-pager]` is (0,2,0), a TIE, which is decided by document
+   order - and App.razor loads PoPunkouterSoftware.Client.styles.css after this file, so the
+   scoped rule still wins. The leading `html` makes it (0,2,1), which wins on specificity and
+   therefore does not depend on link order at all.
+
+   Do NOT "simplify" these selectors. The page reverts to the collapsed-pane rendering
+   described below, and it reverts SILENTLY: the panes still exist, still snap, and still
+   report a scrollHeight that fits inside the container, so every assertion that measures
+   content keeps passing. They are simply a sixth of a screen tall each, painting on top of
+   one another. Azure_MobilePortrait_PanesFitTheViewport now measures the rendered box too. */
 @media (max-width: 720px) and (orientation: portrait) and (hover: none) {
-    [data-snap-pager] {
+    html .app-page[data-snap-pager] {
         /* `display: block`, overriding the page's own `display: grid`. This is load-bearing,
            not tidiness: as a fixed-height grid the five panes become five implicit ROWS that
            share the container's height between them, and each pane's `min-height: 100%`
@@ -880,12 +905,12 @@ body.topbar-open .rz-header {
 
     /* `width: 0`, not `display: none`: Chromium keeps reserving the classic scrollbar
        gutter for a display:none scrollbar, which cost 15px of every pane's width. */
-    [data-snap-pager]::-webkit-scrollbar {
+    html .app-page[data-snap-pager]::-webkit-scrollbar {
         width: 0;
         height: 0;
     }
 
-    [data-snap-pager] > .app-pane {
+    html .app-page[data-snap-pager] > .app-pane {
         /* Pin the pane to the container's width. Without this a wide descendant sets the
            pane's min-content width and every pane inflates together, which reads as text
            clipped at the right edge on every screen. */
@@ -908,7 +933,7 @@ body.topbar-open .rz-header {
     /* Content that cannot honestly be compressed into one screen. It still snaps to the
        top of the viewport, then scrolls under its own steam — the alternative would be
        to cut it, which the brief rules out. */
-    [data-snap-pager] > .app-pane--tall {
+    html .app-page[data-snap-pager] > .app-pane--tall {
         min-height: 100%;
         height: auto;
         align-content: start;
@@ -920,28 +945,44 @@ body.topbar-open .rz-header {
     .app-pager-dots {
         display: flex;
         position: fixed;
-        right: 4px;
+        right: 0;
         top: 50%;
         transform: translateY(-50%);
         flex-direction: column;
-        gap: var(--app-space-2xs);
+        /* No gap: each dot already carries 24px of hit area around a 7px mark, so a gap on
+           top of that would space the marks out like a ladder. */
+        gap: 0;
         z-index: var(--app-z-header);
-        padding: var(--app-space-2xs) 2px;
     }
 
+    /* The DOT is 7px; the BUTTON is 24x24. They were the same element, which put six 7x7
+       touch targets down the edge of a phone screen — under a third of the WCAG 2.2 2.5.8
+       minimum, and hard to hit with a thumb whether or not a standard says so. The visible
+       dot is now a ::before inside a transparent 24px hit area, so the design is unchanged
+       and the target is not. */
     .app-pager-dot {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 0;
+        background: none;
+        cursor: pointer;
+    }
+
+    .app-pager-dot::before {
+        content: "";
         width: 7px;
         height: 7px;
-        padding: 0;
         border: 1px solid var(--app-border-strong);
         border-radius: 50%;
         background: var(--app-surface-strong);
-        cursor: pointer;
         transition: background var(--app-dur-fast) var(--app-ease-smooth),
                     transform var(--app-dur-fast) var(--app-ease-smooth);
     }
 
-    .app-pager-dot.is-current {
+    .app-pager-dot.is-current::before {
         background: var(--app-accent);
         border-color: var(--app-accent);
         transform: scale(1.35);

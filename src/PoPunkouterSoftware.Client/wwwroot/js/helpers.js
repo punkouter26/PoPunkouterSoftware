@@ -142,40 +142,6 @@ window.copyToClipboard = function (text) {
 };
 
 /**
- * Media-query bridge.
- *
- * Lets a component render EITHER the desktop grid OR the mobile card list instead of
- * rendering both and hiding one with CSS. Only primitives cross the interop boundary
- * (string in, int out, bool on the callback), so no reflection-based serialisation is
- * pulled in and the WASM trim analyzer stays clean.
- *
- * `register` invokes the callback once with the current value before returning, so the
- * component never has to guess an initial breakpoint state.
- */
-window.appMedia = (function () {
-    var registry = {};
-    var nextId = 1;
-
-    return {
-        register: function (query, dotNetRef, method) {
-            var mql = window.matchMedia(query);
-            var handler = function (e) { dotNetRef.invokeMethodAsync(method, e.matches); };
-            mql.addEventListener('change', handler);
-            var id = nextId++;
-            registry[id] = { mql: mql, handler: handler };
-            dotNetRef.invokeMethodAsync(method, mql.matches);
-            return id;
-        },
-        unregister: function (id) {
-            var entry = registry[id];
-            if (!entry) return;
-            entry.mql.removeEventListener('change', entry.handler);
-            delete registry[id];
-        }
-    };
-})();
-
-/**
  * Force a cache-busting reload when the server BuildId no longer matches the loaded
  * WASM bundle. Replaces a JS `eval` string that was assembled in C#.
  */
@@ -255,6 +221,9 @@ window.appSnapPager = (function () {
 
         dots = document.createElement('div');
         dots.className = 'app-pager-dots';
+        // role first: a bare <div> is role=generic and a generic element takes no accessible
+        // name, so the aria-label on its own was inert.
+        dots.setAttribute('role', 'group');
         dots.setAttribute('aria-label', 'Page sections');
 
         panes.forEach(function (pane, index) {

@@ -166,7 +166,7 @@
     /// Azure inventory, extended to the one part of the page that moves.</para>
     ///
     /// <para>A single delimited string, not a DTO: only primitives cross the interop
-    /// boundary (the discipline <c>appMedia</c> set in helpers.js), so nothing new needs a
+    /// boundary (the discipline every interop call here follows), so nothing new needs a
     /// <c>[JsonSerializable]</c> entry and the WASM trim analyzer stays clean.</para>
     /// </summary>
     private async Task PushTelemetryAsync()
@@ -205,8 +205,7 @@
     {
         _autoRefreshTimer?.Dispose();
 
-        // Best-effort: the circuit may already be gone during teardown (mirrors
-        // AzureDashboard.razor.cs's appMedia.unregister cleanup).
+        // Best-effort: the circuit may already be gone during teardown.
         try
         {
             await JS.InvokeVoidAsync("starfieldBackdrop.dispose");
@@ -239,11 +238,22 @@
         }
         catch (Exception ex)
         {
-            _loadError = ex.Message;
+            _loadError = FriendlyError.Describe(ex);
+            Console.Error.WriteLine($"Portfolio load error: {ex}");
         }
         finally
         {
             _loading = false;
+            // Load paths reached from a UI event get a render for free — ComponentBase renders
+            // once when the handler's task yields and again when it completes. The 5-minute
+            // auto-refresh timer is NOT a UI event: InvokeAsync only marshals onto the
+            // renderer's sync context, it does not schedule a render. So the timer fetched a
+            // fresh catalog every five minutes, replaced `data` with it, and nothing on screen
+            // ever changed — the "auto-updates every 5 min" label was a promise the page did
+            // not keep, and a card whose app went down kept rendering as healthy until someone
+            // pressed the button. Rendering here covers every caller; the redundant render on
+            // the event paths is one diff of a page whose children are all ShouldRender-guarded.
+            StateHasChanged();
         }
     }
 

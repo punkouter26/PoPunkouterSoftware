@@ -23,16 +23,29 @@
    rhythm. Keep each pane to ONE question - that is what makes the paging legible, and
    PortfolioUiTests.Azure_MobilePortrait_PanesFitTheViewport is what stops a new section
    being dropped into whichever pane happens to be nearest. *@
-<div class="app-page azure-ops-page" data-snap-pager>
-@if (_loading)
+@* <main id="main-content">, not a bare <div>: the skip link in MainLayout targets
+   `#main-content` on EVERY page, and this page did not have one — so "Skip to content"
+   was a link to nothing here while working correctly on "/". It is also the page's only
+   main landmark. `tabindex="-1"` makes it a programmatic focus target, matching
+   Index.razor. *@
+<main id="main-content" class="app-page azure-ops-page" data-snap-pager tabindex="-1">
+@* The error banner sits ALONGSIDE the dashboard, never instead of it — the rule
+   Index.razor already follows for the catalog. A refresh whose summary reload fails is a
+   STALE dashboard, not an empty one: `_summary` is left populated on failure (see
+   LoadSummaryAsync) so a 503 on the post-rescan reload no longer deletes the hero, all six
+   panes and the advanced tree that were on screen a second earlier. Only a failure with
+   nothing to fall back on renders the banner alone. *@
+@if (!string.IsNullOrWhiteSpace(_loadError))
+{
+    <ErrorRetryBanner Title="@(_summary is null ? "Azure status is unavailable." : "Azure status could not be updated — showing the last known scan.")"
+                      Message="@_loadError" OnRetry="LoadSummaryAsync" />
+}
+
+@if (_loading && _summary is null)
 {
     <LoadingSkeleton Variant="summary" TileCount="4" AriaLabel="Loading Azure status" />
 }
-else if (!string.IsNullOrWhiteSpace(_loadError) || _summary is null)
-{
-    <ErrorRetryBanner Title="Azure status is unavailable." Message="@_loadError" OnRetry="LoadSummaryAsync" />
-}
-else
+else if (_summary is not null)
 {
     var summary = _summary;
     var ageLabel = RelativeTime.Format(summary.GeneratedAt);
@@ -58,15 +71,22 @@ else
     <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")" data-glass>
         <div class="azure-command-copy">
             <div class="app-kicker">Azure · @summary.SubscriptionName</div>
-            <h1 class="azure-hero-title">
-                @(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")
+            @* The badge is a SIBLING of the h1, not a child, and the flex row is what keeps
+               them on one optical line. Nested inside, it was concatenated into the heading's
+               accessible name — a screen reader read "3 item(s) need attention3 ACTIONABLE" as
+               one string, and that string is also what <FocusOnNavigate Selector="h1"> announces
+               on arrival. Never put a badge, chip or count inside a heading element. *@
+            <div class="azure-hero-line">
+                <h1 class="azure-hero-title">
+                    @(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")
+                </h1>
                 @if (summary.AttentionCount > 0)
                 {
                     <RadzenBadge Text="@($"{summary.ActionableCount} actionable")" IsPill="true"
                                   BadgeStyle="BadgeStyle.Warning"
                                   title="Unavailable services plus security and cleanup findings — everything in the headline count except the staleness flag, which is cleared by refreshing rather than by fixing a resource." />
                 }
-            </h1>
+            </div>
             <div class="azure-command-meta">
                 <span>Updated @ageLabel</span>
                 <RadzenBadge Text="@(summary.IsStale ? "Stale data" : "Current")" IsPill="true"
@@ -79,7 +99,9 @@ else
            same stored history the charts below use, so a tile and its chart can never
            disagree; a series with fewer than two points renders nothing at all rather than a
            misleading single dot. *@
-        <div class="azure-command-kpis" aria-label="Azure status summary">
+        @* role="group" is what makes the aria-label below count: a bare <div> is role=generic,
+           and a generic element takes no accessible name, so the label was inert. *@
+        <div class="azure-command-kpis" role="group" aria-label="Azure status summary">
             <div>
                 <strong>@summary.HealthPercent%</strong>
                 <span>@(summary.IsStale ? $"Health as of {ageLabel}" : "Service health")</span>
@@ -241,15 +263,18 @@ else
            internally - the alternative would be to truncate it, which is exactly what the
            paging exists to avoid. *@
         <section class="app-pane app-pane--tall azure-advanced" aria-label="Advanced Azure diagnostics">
-        @if (_advancedLoading)
+        @* Banner alongside, not instead of — see the note on the page-level banner above. *@
+        @if (!string.IsNullOrWhiteSpace(_advancedError))
+        {
+            <ErrorRetryBanner Title="@(report is null ? "Diagnostics could not be loaded." : "Diagnostics could not be updated — showing the last load.")"
+                              Message="@_advancedError" OnRetry="LoadReportAsync" />
+        }
+
+        @if (_advancedLoading && report is null)
         {
             <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" />
         }
-        else if (!string.IsNullOrWhiteSpace(_advancedError) || report is null)
-        {
-            <ErrorRetryBanner Message="@_advancedError" OnRetry="LoadReportAsync" />
-        }
-        else
+        else if (report is not null)
         {
             var currentReport = report;
             var securityIssueCount = (currentReport.StorageInventory ?? new()).Sum(s => s.IssueCount)
@@ -276,7 +301,6 @@ else
                                    Views="@ResourceViews"
                                    SelectedView="@_resourceView"
                                    SelectedViewChanged="@SetResourceView"
-                                   IsNarrow="@_isNarrow"
                                    StatusBadgeFor="@ExplorerStatusBadge"
                                    RiskClassFor="@RiskClass" />
 
@@ -296,4 +320,4 @@ else
         </section>
     }
 }
-</div>
+</main>

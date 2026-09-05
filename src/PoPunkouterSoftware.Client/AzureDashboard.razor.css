@@ -32,10 +32,19 @@
 .azure-ops-page ::deep .azure-glance-title { font-family: var(--app-headline-font); letter-spacing: -.02em; }
 .azure-ops-page ::deep .azure-glance-subtitle { color: var(--app-text-soft); font-size: .72rem; margin: 0 0 .35rem; letter-spacing: .03em; }
 
-/* H1 with embedded badge — keep them on one line at desktop, wrap on mobile.
+/* H1 and its badge — one optical line at desktop, wrapping on mobile. The badge is a
+   SIBLING of the heading (see AzureDashboard.razor): nested inside, it became part of the
+   heading's accessible name. This row is what restores the layout the nesting used to give.
    (The typography half of this rule used to live in a second, near-duplicate
    `.azure-hero-title` block further down; they are merged here.) */
-.azure-ops-page ::deep .azure-hero-title .rz-badge { transform: translateY(-.15em); }
+.azure-ops-page ::deep .azure-hero-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .55rem;
+}
+
+.azure-ops-page ::deep .azure-hero-line > .rz-badge { transform: translateY(-.15em); }
 
 .azure-ops-page ::deep .azure-attention-summary {
     padding: .9rem;
@@ -71,11 +80,9 @@
         var(--app-surface-strong);
 }
 
+/* The flex/gap declarations that used to sit here existed only to lay out the badge that
+   was nested inside the heading; that job moved to `.azure-hero-line` above. */
 .azure-ops-page ::deep .azure-hero-title {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: .55rem;
     margin: .15rem 0 .35rem;
     font-family: var(--app-headline-font);
     font-size: var(--app-step-4);
@@ -245,14 +252,33 @@
     white-space: nowrap;
 }
 
+/* The provenance line and the actions, side by side. The left column no longer holds a 2x2
+   tile grid (see AzurePriorityQueue.razor), so it needs far less of the row. */
 .azure-ops-page ::deep .azure-attention-detail {
     display: grid;
-    grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.4fr);
+    grid-template-columns: minmax(180px, 1fr) minmax(280px, 1.6fr);
     gap: 1rem;
+    align-items: start;
     padding: 0 .9rem .9rem;
 }
 
-.azure-ops-page ::deep .azure-attention-detail dl,
+/* Provenance as a dot-separated run of facts. The separator is a ::before on every span but
+   the first, so a fact that is omitted for having nothing to say (an unassigned owner, an
+   unknown environment) takes its separator with it and never leaves a dangling dot. */
+.azure-ops-page ::deep .azure-item-provenance {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .1rem .45rem;
+    margin: 0;
+    color: var(--app-text-soft);
+    font-size: .74rem;
+}
+
+.azure-ops-page ::deep .azure-item-provenance > span + span::before {
+    content: "·";
+    margin-right: .45rem;
+}
+
 .azure-ops-page ::deep .azure-resource-card dl {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -260,21 +286,18 @@
     margin: 0;
 }
 
-.azure-ops-page ::deep .azure-attention-detail dl > div,
 .azure-ops-page ::deep .azure-resource-card dl > div {
     padding: .55rem;
     border-radius: var(--app-radius-md);
     background: var(--app-surface-soft);
 }
 
-.azure-ops-page ::deep .azure-attention-detail dt,
 .azure-ops-page ::deep .azure-resource-card dt {
     color: var(--app-text-soft);
     font-size: .68rem;
     text-transform: uppercase;
 }
 
-.azure-ops-page ::deep .azure-attention-detail dd,
 .azure-ops-page ::deep .azure-resource-card dd {
     margin: .1rem 0 0;
     color: var(--app-text);
@@ -361,22 +384,16 @@
 
 /* The grid and the card list are now mutually exclusive branches in the markup
    (driven by `_isNarrow`), not two always-rendered trees toggled with `display`. */
-.azure-ops-page ::deep .azure-resource-grid {
-    overflow-x: auto;
-}
-
-/* Radzen row virtualization needs a bounded scroll container. This replaces the
-   `Style="width:100%;min-width:900px"` inline attribute and the 12-row pager. */
-.azure-ops-page ::deep .azure-resource-grid .rz-data-grid,
-.azure-ops-page ::deep .azure-resource-grid .rz-datatable {
-    width: 100%;
-    min-width: 900px;
-    height: 560px;
-}
-
+/* One column on a phone, as many as fit above it. This is the whole responsive story for
+   the explorer now that the data-grid branch is gone: the cards reflow, so there is no
+   second render tree and no matchMedia bridge deciding which one to build. `auto-fill` with
+   a minmax floor rather than a fixed count, so a 1440px window gets four columns and a
+   split-screen one gets two without either width being named anywhere. */
 .azure-ops-page ::deep .azure-resource-cards {
     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
     gap: var(--app-space-xs);
+    align-items: start;
 }
 
 /* Off-screen resource cards skip layout, style, and paint. */
@@ -645,7 +662,6 @@
 }
 
 @media (max-width: 420px) {
-    .azure-ops-page ::deep .azure-attention-detail dl,
     .azure-ops-page ::deep .azure-resource-card dl {
         grid-template-columns: 1fr;
     }
@@ -913,6 +929,15 @@
     padding-bottom: .25rem;
 }
 
+/* The scroller is focusable (see AzureUptimeHeatmap.razor) so a keyboard can reach the days
+   that are off-screen; a focusable element with no focus ring is worse than one that is not
+   focusable at all. */
+.azure-ops-page ::deep .azure-uptime__scroll:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 3px;
+    border-radius: var(--app-radius-sm);
+}
+
 .azure-ops-page ::deep .azure-uptime__grid {
     display: grid;
     gap: 3px;
@@ -920,8 +945,20 @@
     min-width: min-content;
 }
 
+/* Sticky at both edges of the scroller. The grid is wider than the card at every phone
+   width, and both of the columns that say WHAT a row is and HOW GOOD it is used to scroll
+   away with the days: at 390px the label survived only because it happens to be leftmost,
+   while the uptime percentage - the one number in the whole card - sat at x=441 in a 323px
+   box, off-screen and unreachable without a horizontal swipe nothing advertised.
+
+   `background` is not decoration here: a sticky cell with a transparent background lets the
+   day cells slide visibly underneath it. It has to match the card, which is --app-surface. */
 .azure-ops-page ::deep .azure-uptime__label {
+    position: sticky;
+    left: 0;
+    z-index: 1;
     padding-right: .5rem;
+    background: var(--app-surface);
     font-size: .74rem;
     color: var(--app-text-muted);
     white-space: nowrap;
@@ -949,7 +986,11 @@
 }
 
 .azure-ops-page ::deep .azure-uptime__pct {
+    position: sticky;
+    right: 0;
+    z-index: 1;
     padding-left: .5rem;
+    background: var(--app-surface);
     font-size: .74rem;
     color: var(--tone-good);
     font-variant-numeric: tabular-nums;

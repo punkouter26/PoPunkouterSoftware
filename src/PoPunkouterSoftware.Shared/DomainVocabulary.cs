@@ -61,9 +61,3 @@ public static class ResourceRiskLevel
         _ => 4,
     };
 }
-
-public static class IncidentTypes
-{
-    public const string NewIncident = "new-incident";
-    public const string Recovery = "recovery";
-}

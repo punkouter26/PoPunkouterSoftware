@@ -335,6 +335,28 @@ public class PortfolioUiTests : IAsyncLifetime
                 .map(p => p.className + ' needs ' + p.scrollHeight + 'px of ' + budget + 'px');
         }");
         overflows.Should().BeEmpty("every ordinary pane must fit one screen at 390x844");
+
+        // …and must actually BE a screen tall. The assertion above compares a pane's CONTENT
+        // height to the container's, which every pane passes while being a sixth of a screen
+        // tall — which is exactly what happened: `[data-snap-pager] { display: block }` lost
+        // on specificity to the scoped `.azure-ops-page { display: grid }`, the panes became
+        // six grid rows sharing 756px at 126px each, and all six rendered on top of one
+        // another with their content overflowing. Every check here passed throughout. Measure
+        // the box the visitor sees, not just the content inside it.
+        var geometry = await page.EvaluateAsync<string[]>(@"() => {
+            const pager = document.querySelector('[data-snap-pager]');
+            const budget = pager.clientHeight;
+            const bad = [];
+            if (getComputedStyle(pager).display !== 'block')
+                bad.push('pager display is ' + getComputedStyle(pager).display + ', not block');
+            for (const p of pager.querySelectorAll(':scope > .app-pane')) {
+                const h = p.getBoundingClientRect().height;
+                if (h < budget - 1)
+                    bad.push(p.className + ' renders ' + Math.round(h) + 'px of a ' + budget + 'px screen');
+            }
+            return bad;
+        }");
+        geometry.Should().BeEmpty("each pane must fill the screen it is supposed to be");
     }
 
     /// <summary>
@@ -369,9 +391,15 @@ public class PortfolioUiTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// The resource explorer has a card layout and a grid layout. Both used to render
-    /// unconditionally with CSS hiding the wrong one, so every row was built twice into
-    /// two live DOM trees. Exactly one must exist at any viewport.
+    /// The resource explorer is ONE tree at every viewport.
+    ///
+    /// <para>It used to be two — a card list and a RadzenDataGrid — first both rendered with
+    /// CSS hiding the wrong one (every row built twice), then behind a matchMedia bridge
+    /// picking between them. The grid is gone: it carried sorting, per-column filter menus,
+    /// column resize and virtualization over a list that measures 48 rows, and its filter
+    /// menus put buttons named "*A*Contains" into the accessibility tree. The cards reflow on
+    /// their own, so there is no branch left. This test now guards against a second tree being
+    /// reintroduced rather than against both rendering at once.</para>
     /// </summary>
     [Theory]
     [MemberData(nameof(Viewports))]
@@ -380,16 +408,14 @@ public class PortfolioUiTests : IAsyncLifetime
         var page = await NewPageAsync(width, height, isMobile);
         await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
         await page.GetByRole(AriaRole.Button, new() { Name = "Advanced diagnostics" }).ClickAsync();
-        await page.WaitForSelectorAsync(".azure-resource-grid, .azure-resource-cards", new() { Timeout = 40_000 });
+        await page.WaitForSelectorAsync(".azure-resource-cards", new() { Timeout = 40_000 });
 
-        var grids = await page.Locator(".azure-resource-grid").CountAsync();
-        var cards = await page.Locator(".azure-resource-cards").CountAsync();
-
-        (grids + cards).Should().Be(1, $"exactly one explorer tree must be in the DOM at {label}");
-        if (isMobile)
-            cards.Should().Be(1, "mobile must render the card list");
-        else
-            grids.Should().Be(1, "desktop must render the virtualized grid");
+        (await page.Locator(".azure-resource-cards").CountAsync())
+            .Should().Be(1, $"exactly one explorer tree must be in the DOM at {label}");
+        (await page.Locator(".azure-resource-grid, .rz-data-grid, .rz-datatable").CountAsync())
+            .Should().Be(0, "the data grid was removed; a returning one is a regression");
+        (await page.Locator(".azure-resource-card").CountAsync())
+            .Should().BeGreaterThan(0, "the explorer must actually list resources");
     }
 
     /// <summary>
@@ -467,6 +493,79 @@ public class PortfolioUiTests : IAsyncLifetime
 
         var (a, b) = (Luminance(foreground), Luminance(background));
         return (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
+    }
+
+    /// <summary>
+    /// "Skip to content" must land somewhere on EVERY route.
+    ///
+    /// <para>MainLayout renders the link on every page pointing at <c>#main-content</c>, and
+    /// <c>/azure</c> had no <c>&lt;main&gt;</c> at all — its page root was a bare div — so the
+    /// first focusable element on the ops dashboard was a link to nothing, while the identical
+    /// link on "/" worked. A missing landmark is invisible to everything except a keyboard or
+    /// a screen reader, which is exactly who the link is for.</para>
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Viewports))]
+    public async Task CoreRoutes_HaveOneMainLandmark_AndAWorkingSkipLink(
+        string label, int width, int height, bool isMobile)
+    {
+        var page = await NewPageAsync(width, height, isMobile);
+
+        foreach (var route in new[] { "/", "/azure" })
+        {
+            await page.GotoAsync($"{BaseUrl}{route}", new() { WaitUntil = WaitUntilState.NetworkIdle });
+            await page.WaitForSelectorAsync("main", new() { Timeout = 40_000 });
+
+            (await page.Locator("main").CountAsync()).Should().Be(
+                1, $"{route} needs exactly one main landmark at {label}");
+
+            var resolved = await page.EvaluateAsync<bool>(@"() => {
+                const link = document.querySelector('.app-skip-link');
+                return !!(link && document.querySelector(link.getAttribute('href')));
+            }");
+            resolved.Should().BeTrue($"the skip link must resolve on {route} at {label}");
+        }
+    }
+
+    /// <summary>
+    /// Every icon must render as a GLYPH, not as its own name.
+    ///
+    /// <para>Material Symbols draws through ligatures — the element's text is the icon's name —
+    /// so the font subset in <c>wwwroot/fonts</c> (see SCRIPTS/Build-IconFontSubset.py, which
+    /// replaced a 1 MB full font with 16 KB) fails in one specific way: a name missing from the
+    /// subset does not go blank, it renders the literal word "refresh" inside a button. This
+    /// measures rendered width against font size, which is the only signal that separates the
+    /// two, and it opens every disclosure first so the icons behind them are covered too.</para>
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Viewports))]
+    public async Task Azure_EveryIcon_RendersAsAGlyphNotItsName(
+        string label, int width, int height, bool isMobile)
+    {
+        var page = await NewPageAsync(width, height, isMobile);
+        await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.GetByRole(AriaRole.Button, new() { Name = "Advanced diagnostics" }).ClickAsync();
+        await page.WaitForSelectorAsync(".azure-attention-list, .azure-resource-cards", new() { Timeout = 40_000 });
+        await page.EvaluateAsync("() => document.querySelectorAll('details').forEach(d => { d.open = true; })");
+        await page.WaitForTimeoutAsync(800);
+
+        var words = await page.EvaluateAsync<string[]>(@"() => {
+            const bad = [];
+            for (const el of document.querySelectorAll('*')) {
+                const cs = getComputedStyle(el);
+                if (!/Material Symbols/i.test(cs.fontFamily)) continue;
+                const text = (el.textContent || '').trim();
+                if (!text || !/^[a-z0-9_]+$/.test(text)) continue;
+                const width = el.getBoundingClientRect().width;
+                if (width > parseFloat(cs.fontSize) * 2.2) bad.push(text + ' @' + Math.round(width) + 'px');
+            }
+            return bad;
+        }");
+        words.Should().BeEmpty($"these icon names have no glyph in the font subset at {label}");
+
+        var fullFont = await page.EvaluateAsync<int>(
+            "() => performance.getEntriesByType('resource').filter(r => /MaterialSymbolsOutlined/i.test(r.name)).length");
+        fullFont.Should().Be(0, "the 1 MB Radzen icon font must never be fetched");
     }
 
     private static async Task CaptureAsync(IPage page, string filename)

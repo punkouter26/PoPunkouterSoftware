@@ -7,7 +7,7 @@ using PoPunkouterSoftware.Shared;
 namespace PoPunkouterSoftware.API;
 
 /// <summary>
-/// Owns the full Azure inventory refresh run (scan → save → incidents → file cache →
+/// Owns the full Azure inventory refresh run (scan → save → file cache →
 /// screenshots → SignalR progress). One shared entry point so both the manual
 /// POST /api/diag/refresh and the automatic staleness-triggered rescan execute the
 /// identical pipeline under the same <see cref="RefreshSessionManager"/> lock.
@@ -151,16 +151,6 @@ internal sealed class ReportRefreshRunner(
                     report = report with { AiSummary = aiSummary };
 
                     await store.SaveAsync(report, ct);
-
-                    try
-                    {
-                        var incidentSvc = scope.ServiceProvider.GetRequiredService<IncidentService>();
-                        await incidentSvc.DetectAndRecordAsync(report, previousReport, ct);
-                    }
-                    catch (Exception iex)
-                    {
-                        logger.LogWarning(iex, "Incident detection failed (non-fatal)");
-                    }
 
                     var json = JsonSerializer.Serialize(report, FileCacheJsonOptions);
                     var filePath = ReportFileCache.EnsureReportPath(env);

@@ -2,12 +2,22 @@
 @using Radzen
 @using Radzen.Blazor
 
-@* The resource explorer: a segmented filter over every inventoried resource, rendered
-   as cards on narrow viewports and a virtualized grid on wide ones.
+@* The resource explorer: a segmented filter over every inventoried resource, rendered as a
+   card list at every viewport.
 
-   IsNarrow drives a real @if, not CSS visibility. Both branches used to render
-   unconditionally with CSS hiding whichever did not match, so every row was built twice
-   into two live DOM trees. PortfolioUiTests pins "exactly one tree per viewport". *@
+   It used to render a RadzenDataGrid on wide viewports and these cards on narrow ones. The
+   grid carried sorting, per-column filter menus, column resize and row virtualization over a
+   list that measures 48 rows on the live subscription — machinery sized for a dataset this app
+   does not have. It cost more than it looked: a virtualized grid torn down and rebuilt on
+   every page render (which is why this component needed the largest ShouldRender guard in the
+   codebase), a second full render tree to keep in step with the first, a matchMedia bridge
+   through JS interop with a DotNetObjectReference and a dispose path purely to choose between
+   them, and — the part that actually reached a visitor — a filter menu per column that put
+   buttons named "*A*Contains" and "A**Starts with" into the accessibility tree above the
+   segmented control that already filters this list.
+
+   One tree, one breakpoint story: the cards reflow by themselves, so the wide layout is a CSS
+   grid of the same articles rather than a different component. *@
 <section class="azure-anchor-section">
     <div class="azure-section-heading azure-resource-heading">
         <div><div class="app-kicker">Resource explorer</div><h2>All resources</h2></div>
@@ -28,54 +38,33 @@
         </RadzenSelectBar>
     </div>
 
-    @if (IsNarrow)
+    @if (Items.Count == 0)
+    {
+        <div class="azure-compact-state">No resources match the @SelectedView view.</div>
+    }
+    else
     {
         <div class="azure-resource-cards">
             @foreach (var item in Items)
             {
-                <article class="azure-resource-card" @key="item.Name">
+                @* @key on the composite identity, not the name: two resources in different
+                   resource groups can share a name, and a duplicate key makes Blazor's diff
+                   reuse the wrong element. *@
+                <article class="azure-resource-card" @key="@($"{item.Type}|{item.ResourceGroup}|{item.Name}")">
                     <div class="azure-resource-card-heading">
-                        <strong>@item.Name</strong>
+                        <strong title="@item.Name">@item.Name</strong>
                         <SeverityBadge Text="@item.Status" Style="@StatusBadgeFor(item.Status)" />
                     </div>
                     <dl>
                         <div><dt>Type</dt><dd>@item.Type</dd></div>
                         <div><dt>Group</dt><dd>@item.ResourceGroup</dd></div>
-                        <div><dt>Concern</dt><dd>@item.Risk</dd></div>
+                        <div><dt>Concern</dt><dd class="azure-risk-label @RiskClassFor(item.Risk)">@item.Risk</dd></div>
                         <div><dt>Requests / 5xx</dt><dd>@item.Requests7d.ToString("N0") / @item.Errors7d.ToString("N0")</dd></div>
+                        <div><dt>Response</dt><dd>@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</dd></div>
+                        <div><dt>Location</dt><dd>@item.Location</dd></div>
                     </dl>
                 </article>
             }
-        </div>
-    }
-    else
-    {
-        @* Row virtualization replaces paging: one scroll container, only visible rows
-           materialised, so filtering never reallocates the full row set. Height comes
-           from scoped CSS — an inline style here would collapse the chart box. *@
-        <div class="azure-resource-grid">
-            <RadzenDataGrid Data="@Items" TItem="ResourceExplorerItem" AllowSorting="true" AllowFiltering="true"
-                            AllowVirtualization="true" AllowPaging="false" AllowColumnResize="true"
-                            FilterMode="FilterMode.SimpleWithMenu" Density="Density.Compact" GridLines="DataGridGridLines.Horizontal">
-                <Columns>
-                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Name" Title="Resource" Width="210px">
-                        <Template Context="item"><strong>@item.Name</strong></Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Type" Title="Type" Width="150px" />
-                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResourceGroup" Title="Resource group" Width="160px" />
-                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Status" Title="Status" Width="115px">
-                        <Template Context="item"><SeverityBadge Text="@item.Status" Style="@StatusBadgeFor(item.Status)" /></Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Risk" Title="Concern" Width="130px">
-                        <Template Context="item"><span class="azure-risk-label @RiskClassFor(item.Risk)">@item.Risk</span></Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Requests7d" Title="Req 7d" Width="90px" TextAlign="TextAlign.Right" />
-                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="Errors7d" Title="5xx" Width="70px" TextAlign="TextAlign.Right" />
-                    <RadzenDataGridColumn TItem="ResourceExplorerItem" Property="ResponseTimeMs" Title="Response" Width="100px" TextAlign="TextAlign.Right">
-                        <Template Context="item">@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</Template>
-                    </RadzenDataGridColumn>
-                </Columns>
-            </RadzenDataGrid>
         </div>
     }
 </section>
@@ -91,34 +80,27 @@
     [Parameter] public string SelectedView { get; set; } = "";
     [Parameter] public EventCallback<string> SelectedViewChanged { get; set; }
 
-    /// <summary>True on narrow viewports. Driven by a real matchMedia listener (appMedia in
-    /// helpers.js), not a CSS breakpoint, because it selects which tree to build at all.</summary>
-    [Parameter] public bool IsNarrow { get; set; }
-
     [Parameter, EditorRequired] public Func<string, BadgeStyle> StatusBadgeFor { get; set; } = default!;
     [Parameter, EditorRequired] public Func<string, string> RiskClassFor { get; set; } = default!;
 
     private IReadOnlyList<ResourceExplorerItem>? _renderedItems;
     private int _renderedTotal;
     private string? _renderedView;
-    private bool _renderedNarrow;
 
     /// <summary>
-    /// Guarded on every parameter that actually changes what is drawn — the rows, the counter,
-    /// the selected view chip, and the narrow/wide branch that decides WHICH tree is built at
-    /// all. The two <c>Func</c> parameters are excluded deliberately: they are fresh delegates
-    /// on every parent render, so including them would make the guard a no-op, and they only
-    /// ever affect output through the rows above.
+    /// Guarded on every parameter that actually changes what is drawn — the rows, the counter
+    /// and the selected view chip. The two <c>Func</c> parameters are excluded deliberately:
+    /// they are fresh delegates on every parent render, so including them would make the guard
+    /// a no-op, and they only ever affect output through the rows above.
     ///
-    /// <para>This matters most here: the virtualized data grid was being torn down and rebuilt
-    /// on every page render, including once per SignalR progress tick during a scan.</para>
+    /// <para>The <c>IsNarrow</c> comparison that used to sit here went with the data grid: with
+    /// one render tree there is no viewport-dependent branch left to invalidate on.</para>
     /// </summary>
     protected override bool ShouldRender()
     {
         if (ReferenceEquals(_renderedItems, Items)
             && _renderedTotal == TotalCount
-            && _renderedView == SelectedView
-            && _renderedNarrow == IsNarrow)
+            && _renderedView == SelectedView)
         {
             return false;
         }
@@ -126,8 +108,6 @@
         _renderedItems = Items;
         _renderedTotal = TotalCount;
         _renderedView = SelectedView;
-        _renderedNarrow = IsNarrow;
         return true;
     }
 }
-

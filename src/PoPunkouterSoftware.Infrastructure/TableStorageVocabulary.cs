@@ -11,7 +11,6 @@ public static class TablePartitions
     public const string Report = "report";
     public const string History = "history";
     public const string HistorySummary = "history-summary";
-    public const string Incidents = "incidents";
     public const string Snoozes = "snoozes";
 
     /// <summary>
@@ -38,12 +37,4 @@ public readonly record struct ReverseChronoRowKey(DateTimeOffset At)
 {
     public override string ToString() =>
         (DateTimeOffset.MaxValue.UtcTicks - At.UtcTicks).ToString("D20");
-
-    /// <summary>
-    /// Appends a uniqueness suffix for partitions where several rows can share one timestamp
-    /// (e.g. multiple incidents detected in the same refresh — DateTime resolution is ~15 ms,
-    /// so same-tick collisions are the common case, and an unsuffixed Upsert would silently
-    /// keep only the last row).
-    /// </summary>
-    public string WithSuffix(string suffix) => $"{ToString()}-{suffix}";
 }

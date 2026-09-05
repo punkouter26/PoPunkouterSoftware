@@ -117,7 +117,7 @@
     /**
      * Parse the wire format: "Name|state;Name|state;…" with state in up|warn|down|unknown.
      * A single delimited string keeps the interop boundary to primitives, the same
-     * discipline `appMedia` follows in helpers.js — no DTO, nothing for the WASM trim
+     * discipline every interop call in this app follows — no DTO, nothing for the WASM trim
      * analyzer to reflect over.
      */
     var STATES = { up: STATE_UP, warn: STATE_WARN, down: STATE_DOWN, unknown: STATE_UNKNOWN };

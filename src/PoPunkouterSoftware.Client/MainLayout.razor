@@ -1,7 +1,23 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 
-<RadzenComponents />
+@* RadzenComponents hosts the notification, dialog, tooltip and context-menu outlets that
+   NotificationService and friends push into. It MUST carry its own render mode.
+
+   This layout is statically server-rendered (see the note in the header below), so without
+   one, the outlet rendered as inert server-side markup: the `.rz-notification` container was
+   in the DOM but could never gain a child, and the page's NotificationService — resolved from
+   the WASM DI container, a different one from the server's — was pushing into an outlet that
+   was not listening. Every toast in the app was silently swallowed: "Copied", "Snoozed",
+   "Refresh rejected", "Refresh failed", "Timeout", "Snooze failed". A 500 from
+   POST /api/diag/snooze produced no DOM change and no message at all.
+
+   An explicit @rendermode makes this an interactive WASM island inside the static layout.
+   Islands on a page share ONE WebAssembly host and therefore one DI container — in WASM a
+   scoped service is a per-host singleton — so this outlet and the page component resolve the
+   SAME NotificationService instance, which is what makes the push arrive. Removing the
+   attribute silently restores the swallow. *@
+<RadzenComponents @rendermode="WasmRenderModes.Interactive" />
 
 @* Skip-to-content link — first focusable element on every page, invisible until it
    receives keyboard focus. Tab order lands on it before the topbar nav, then jumps the

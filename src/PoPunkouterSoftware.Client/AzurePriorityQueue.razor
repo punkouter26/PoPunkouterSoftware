@@ -26,12 +26,26 @@
                         <span class="azure-impact-score">Impact @item.ImpactScore</span>
                     </div>
                     <div class="azure-attention-detail">
-                        <dl>
-                            <div><dt>Source</dt><dd>@item.Source</dd></div>
-                            <div><dt>Confidence</dt><dd>@item.Confidence</dd></div>
-                            <div><dt>Owner</dt><dd>@item.Owner</dd></div>
-                            <div><dt>Environment</dt><dd>@item.Environment</dd></div>
-                        </dl>
+                        @* One provenance LINE, not a 2x2 grid of labelled tiles. The grid gave
+                           four boxes the same visual weight as the finding itself and pushed every
+                           item to ~200px, so seven open items were a 1400px scroll — and on live
+                           data two of the four boxes read "unassigned" and "unknown" for most
+                           rows, because Owner and Environment are inferred from a resource-group
+                           name and usually cannot be inferred at all. Facts that are absent for
+                           most items are not worth a permanent column: they are rendered only
+                           when they actually say something. *@
+                        <p class="azure-item-provenance">
+                            <span>@item.Source</span>
+                            <span>@item.Confidence confidence</span>
+                            @if (!string.Equals(item.Owner, "unassigned", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span>owner @item.Owner</span>
+                            }
+                            @if (!string.Equals(item.Environment, "unknown", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span>@item.Environment</span>
+                            }
+                        </p>
                         <div class="azure-item-actions">
                             @if (!string.IsNullOrWhiteSpace(item.Command))
                             {

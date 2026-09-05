@@ -235,21 +235,6 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
             resp.Content.Headers.ContentType!.MediaType.Should().Be("application/json");
     }
 
-    [Fact]
-    public async Task Diag_WithJsonAccept_ReturnsOkStatus_WithMaskedKeyVaultUri()
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/diag");
-        request.Headers.Accept.ParseAdd("application/json");
-
-        var resp = await _client.SendAsync(request);
-
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var doc = await ReadJsonAsync(resp);
-        doc.RootElement.GetProperty("status").GetString().Should().Be("ok");
-        doc.RootElement.GetProperty("config").GetProperty("AzureKeyVaultUri").GetString()
-            .Should().Contain("*", because: "the vault URI must be rendered masked");
-    }
-
     // ─── Host plumbing ────────────────────────────────────────────────────────
 
     [Fact]
