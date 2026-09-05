@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace PoPunkouterSoftware.Integration;
 
@@ -93,11 +94,35 @@ public class DiagReportEndpointTests
 
     public DiagReportEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
 
+    /// <summary>
+    /// The report endpoint is anonymous — the Advanced diagnostics panel is a WASM client
+    /// with no credential — and it returns the whole inventory, resource ids included. Those
+    /// ids carry the subscription GUID a few hundred times over. CLAUDE.md records that exact
+    /// payload leaking once already from a served static file; moving it behind a route did
+    /// not change who can read it, so the GUID is masked on the way out.
+    /// </summary>
     [Fact]
-    public async Task GetDiagReport_Returns200Or404()
+    public async Task GetDiagReport_Returns200Or404_AndNeverCarriesTheSubscriptionId()
     {
         var response = await _client.GetAsync("/api/diag/report");
         response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound);
+        if (response.StatusCode != HttpStatusCode.OK)
+            return;
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        body.Should().NotContain(TestWebApp.SeedSubscriptionId,
+            because: "the subscription id must not reach an anonymous caller");
+        // Asserted on the shape rather than on the seed's own GUID so this holds against any
+        // report the endpoint might serve: not one /subscriptions/ segment anywhere in the
+        // payload may be followed by a GUID.
+        Regex.Matches(body, @"/subscriptions/(?<id>[^/""]+)", RegexOptions.IgnoreCase)
+            .Select(m => m.Groups["id"].Value)
+            .Should().OnlyContain(id => id == "****",
+                because: "every resource id must have its subscription segment masked");
+        // The rest of the id survives: the panel renders resource group and name, and those
+        // are already public in the hostnames the portfolio links to.
+        body.Should().Contain("/subscriptions/****/resourceGroups/");
     }
 }
 

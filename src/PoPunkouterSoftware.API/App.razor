@@ -46,62 +46,12 @@
         <div class="app-boot-label">Loading PoPunkouterSoftware…</div>
     </div>
     <Routes />
-    <script>
-        // Suppress expected hotreload errors in development
-        const originalError = console.error;
-        console.error = function(...args) {
-            const msg = args[0]?.toString?.() || '';
-            if (msg.includes('blazor-hotreload') || msg.includes('net::ERR_ABORTED')) {
-                return;  // Silently ignore hotreload connection errors
-            }
-            originalError.apply(console, args);
-        };
-        // Remove the boot splash the moment Blazor renders real UI (the Radzen layout).
-        (function () {
-            // Re-query on every call: an enhanced navigation re-inserts a *brand new*
-            // splash element (the server renders one into every response, and the DOM
-            // diff restores what we removed), so a captured reference goes stale.
-            // `fade` is for the cold load only — on navigation the splash must vanish
-            // instantly or every page change flashes a full-screen overlay for 300ms.
-            window.dismissBootSplash = function (fade) {
-                var splash = document.getElementById('app-boot-splash');
-                if (!splash) return;
-                if (!fade) { splash.remove(); return; }
-                splash.classList.add('is-dismissed');
-                setTimeout(function () { splash.remove(); }, 350);
-            };
-
-            var observer = new MutationObserver(function () {
-                if (document.querySelector('.rz-layout, .app-topbar')) {
-                    observer.disconnect();
-                    window.dismissBootSplash(true);
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-            // Fail-safe: never trap the user behind the splash if boot detection misses.
-            setTimeout(function () { observer.disconnect(); window.dismissBootSplash(true); }, 30000);
-        })();
-        // Navigation progress bar for Blazor enhanced navigation.
-        (function () {
-            var bar = null;
-            function getBar() { return bar || (bar = document.getElementById('app-nav-progress')); }
-            window.appNavStart = function () {
-                var b = getBar(); if (!b) return;
-                b.className = 'is-active';
-                // Close the mobile drawer once a navigation begins, otherwise it stays
-                // open across page changes and looks like a stuck overlay.
-                if (window.closeTopbarDrawer) window.closeTopbarDrawer();
-            };
-            window.appNavEnd = function () {
-                var b = getBar(); if (!b) return;
-                b.className = 'is-done';
-                setTimeout(function () {
-                    b.className = 'is-hidden';
-                    setTimeout(function () { b.className = ''; }, 300);
-                }, 200);
-            };
-        })();
-    </script>
+    @* Boot behaviour (splash + nav progress bar) lives in js/app-boot.js, not in an
+       inline <script>. The app sends `script-src 'self' 'wasm-unsafe-eval'` with no
+       'unsafe-inline' (Host/SecurityHeaders.cs), so an inline block here would be blocked
+       by the browser and the loading splash would never be dismissed. Any new host-page
+       script goes in a file under wwwroot/js for the same reason. *@
+    <script src="js/app-boot.js"></script>
     @* Load order is load-bearing. motion-kit.js defines window.motionKit, the single rAF
        governor every animated layer subscribes to, so it must come first. audio-kit.js is
        next because gpu-backdrop.js and starfield-backdrop.js both PULL window.audioKit.energy()
@@ -123,20 +73,9 @@
        js/starfield-backdrop.js for the full cost-scoping rationale. *@
     <script src="js/starfield-backdrop.js"></script>
     <script src="_framework/blazor.web.js"></script>
-    @* Enhanced-navigation callbacks are delivered through Blazor's own listener registry,
-       NOT as DOM events — `document.addEventListener('enhancedload', ...)` never fires and
-       silently does nothing. Must come after blazor.web.js, which is what defines `Blazor`.
-
-       Without the splash hookup, clicking an in-app link leaves the re-inserted boot splash
-       covering a fully rendered page forever (the first-load MutationObserver is already
-       disconnected by then), which looks exactly like the app hanging on load. *@
-    <script>
-        Blazor.addEventListener('enhancednavigationstart', window.appNavStart);
-        Blazor.addEventListener('enhancedload', function () {
-            window.dismissBootSplash(false);
-            window.appNavEnd();
-        });
-    </script>
+    @* Enhanced-navigation hooks. Must come after blazor.web.js, which defines `Blazor`.
+       External for the CSP reason above — see js/blazor-hooks.js for the full rationale. *@
+    <script src="js/blazor-hooks.js"></script>
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
 </body>
 </html>

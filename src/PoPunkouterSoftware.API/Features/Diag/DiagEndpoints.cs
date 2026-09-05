@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Shared;
 
@@ -38,6 +39,9 @@ internal static class DiagEndpoints
         })
         .WithName("DownloadAzureEfficiencyAutomationScript");
 
+        // Anonymous by necessity — the Advanced diagnostics panel is WASM with no credential —
+        // so the subscription id is masked out of every resource id on the way out. See
+        // SecretMasking.MaskSubscriptionIds for why that field and not the rest.
         diag.MapGet("/report", async (HttpContext http, IWebHostEnvironment env, AzureReportStore store, ILogger<Program> logger) =>
         {
             var reportResult = await store.LoadAsync();
@@ -48,7 +52,7 @@ internal static class DiagEndpoints
                 if (http.Request.Headers.IfNoneMatch.Contains(etag))
                     return Results.StatusCode(StatusCodes.Status304NotModified);
                 http.Response.Headers.ETag = etag;
-                return Results.Json(reportResult.Value);
+                return MaskedJson(reportResult.Value);
             }
 
             // Deserialize then re-serialize via Results.Json so ASP.NET Core's camelCase naming
@@ -57,7 +61,7 @@ internal static class DiagEndpoints
             // path when Table Storage is down.
             var fileReport = await ReportFileCache.TryLoadFromFileAsync(env, logger);
             if (fileReport is not null)
-                return Results.Json(fileReport);
+                return MaskedJson(fileReport);
 
             if (!reportResult.IsSuccess)
             {
@@ -190,6 +194,19 @@ internal static class DiagEndpoints
 
         return app;
     }
+
+    /// <summary>Web-cased JSON, matching what Results.Json would have produced.</summary>
+    private static readonly JsonSerializerOptions ReportJsonOptions = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// Serializes the report with the subscription id masked out of every resource id.
+    /// Returns pre-serialized text rather than the object so the mask cannot be skipped by
+    /// a future caller reaching for Results.Json out of habit.
+    /// </summary>
+    private static IResult MaskedJson(AzureReport report) =>
+        Results.Text(
+            SecretMasking.MaskSubscriptionIds(JsonSerializer.Serialize(report, ReportJsonOptions)),
+            "application/json");
 
     private static async Task<AzureReport?> LoadLatestReportAsync(
         IWebHostEnvironment env, AzureReportStore store, ILogger logger, CancellationToken ct)

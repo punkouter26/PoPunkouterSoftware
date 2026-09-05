@@ -1,3 +1,7 @@
+using Azure;
+using Azure.Core;
+using Azure.Data.Tables;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PoPunkouterSoftware.Infrastructure;
 
@@ -8,14 +12,25 @@ internal static class HealthEndpoints
     internal static WebApplication MapHealthEndpoints(this WebApplication app)
     {
         // ─── Health — probes all external connections ──────────────────────────
-        // NET_RULES §3: "/health .net health check (blazor page that shows all
-        // connection status) and /diag. /diag must strictly mask secret values."
+        // NET_RULES §3: "/health .net health check that shows all connection status".
         //
-        // /health is the deep probe, implemented with the built-in
-        // IHealthCheck pipeline (one check per dependency). The Blazor
-        // page /diag renders the same report with masked config values.
-        // HTTP probes are deliberately NOT retried — they must report
-        // real reachability, not retry through outages.
+        // Every check here authenticates the way the app does and performs the smallest
+        // real operation it depends on. An anonymous HTTP GET at the service URL is NOT a
+        // health check: it proves DNS and TLS and nothing else. That is what these used to
+        // do, and it is why /health reported Key Vault "healthy (httpStatus 404)" and Table
+        // Storage "degraded (httpStatus 400)" — two meaningless verdicts — through a week
+        // in which the app could not read a single Azure resource.
+        //
+        // Retries are still deliberately absent: these must report real reachability, not
+        // retry through the outage they exist to detect.
+        //
+        // No check here returns Unhealthy, and that is a decision rather than an oversight.
+        // MapHealthChecks answers Unhealthy with 503, and this app has no hard dependency:
+        // Table Storage falls back to the local report file, a missing vault means secrets
+        // simply were not bound, and an absent report degrades to "no report". Every one of
+        // those is a designed path that still serves both pages. A dependency fault shows up
+        // as `"status": "degraded"` plus the check's own verdict, which is the honest signal;
+        // 503 would claim the instance is dead when it is serving fine.
         app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
         {
             ResponseWriter = HealthResponseWriter.WriteAsync,
@@ -37,31 +52,29 @@ internal static class HealthEndpoints
 }
 
 /// <summary>
-/// Probes the shared Key Vault over HTTPS. Any 2xx-5xx response is treated as
-/// "reachable" — a 401/403 is the expected answer from an anonymous ping.
+/// Reads secret metadata from the shared Key Vault with the app's own credential. Listing
+/// one page of secret properties is the least-privilege operation that proves the grant the
+/// app actually depends on (secrets get/list) — it never touches a secret VALUE.
 /// </summary>
 public sealed class KeyVaultHealthCheck : IHealthCheck
 {
-    private readonly IHttpClientFactory _http;
+    private readonly TokenCredential _credential;
     private readonly IConfiguration _config;
 
-    public KeyVaultHealthCheck(IHttpClientFactory http, IConfiguration config)
+    public KeyVaultHealthCheck(TokenCredential credential, IConfiguration config)
     {
-        _http = http;
+        _credential = credential;
         _config = config;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         // Mirrors Program.cs's resolution exactly, including its blank check — the probe must
-        // report on the vault the app actually bound, not a different one.
-        //
-        // `?? default` alone was wrong: the hermetic test config sets these keys to "" (not
-        // null), so the fallback never fired, GetAsync("") threw, and /health returned 503 for
-        // every run under the Testing environment. Program.cs reads a blank value as "no vault"
-        // and skips binding it, so a blank value here is healthy-not-configured, not a failure.
+        // report on the vault the app actually bound, not a different one. A blank value is
+        // "no vault" (Program.cs skips binding it), which is healthy-not-configured rather
+        // than a failure: the hermetic Testing config blanks these keys on purpose.
         var uri = _config["KeyVault:Uri"] ?? _config["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
-        if (string.IsNullOrWhiteSpace(uri))
+        if (string.IsNullOrWhiteSpace(uri) || !Uri.TryCreate(uri, UriKind.Absolute, out var vaultUri))
         {
             return HealthCheckResult.Healthy("not-configured", new Dictionary<string, object>
             {
@@ -72,34 +85,65 @@ public sealed class KeyVaultHealthCheck : IHealthCheck
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(5));
-            var client = _http.CreateClient("health");
-            var resp = await client.GetAsync(uri, cts.Token);
-            var data = new Dictionary<string, object> { ["httpStatus"] = (int)resp.StatusCode };
-            return resp.StatusCode is >= System.Net.HttpStatusCode.OK and <= System.Net.HttpStatusCode.InternalServerError
-                ? HealthCheckResult.Healthy("reachable", data)
-                : HealthCheckResult.Unhealthy("unreachable", data: data!);
+            cts.CancelAfter(TimeSpan.FromSeconds(8));
+
+            var client = new SecretClient(vaultUri, _credential);
+            var secrets = 0;
+            await foreach (var page in client.GetPropertiesOfSecretsAsync(cts.Token).AsPages(pageSizeHint: 1))
+            {
+                secrets = page.Values.Count;
+                break; // one page is proof of access; the app loads the rest at startup
+            }
+
+            return HealthCheckResult.Healthy("readable", new Dictionary<string, object>
+            {
+                ["secretsVisible"] = secrets,
+            });
+        }
+        catch (RequestFailedException ex) when (ex.Status is 401 or 403)
+        {
+            // Degraded, not Unhealthy: the vault is up and the app still serves every page.
+            // Unhealthy answers /health with 503, and "one dependency is misconfigured" is
+            // not the same claim as "this instance is dead" — see the note on the writer.
+            return Degraded("forbidden", ex.Status, "the app's identity cannot list secrets in this vault");
+        }
+        catch (Exception ex) when (ex is Azure.Identity.CredentialUnavailableException or Azure.Identity.AuthenticationFailedException)
+        {
+            // No usable credential — a managed identity that has not been bound, or a
+            // developer machine with no `az login`. A local ergonomics problem must not
+            // report the deployment as dead.
+            return Degraded("no-credential", null, ex.Message);
         }
         catch (Exception ex)
         {
-            return HealthCheckResult.Unhealthy("unreachable", ex);
+            return Degraded("unreachable", null, ex.Message);
         }
+    }
+
+    private static HealthCheckResult Degraded(string description, int? status, string note)
+    {
+        var data = new Dictionary<string, object> { ["note"] = note };
+        if (status is not null)
+            data["httpStatus"] = status.Value;
+        return HealthCheckResult.Degraded(description, data: data);
     }
 }
 
 /// <summary>
-/// Probes Azure Table Storage. Azurite returns 400 for unauthenticated GETs
-/// in Development — that is treated as "reachable".
+/// Queries one row from the app's own table with the app's own credential. Reuses
+/// <see cref="TableClientProvider"/> so the probe resolves the client through the exact
+/// code path the stores use — a probe that builds its own client can pass while the app's
+/// client fails.
 /// </summary>
 public sealed class TableStorageHealthCheck : IHealthCheck
 {
-    private readonly IHttpClientFactory _http;
     private readonly IConfiguration _config;
+    private readonly ILogger<TableStorageHealthCheck> _logger;
 
-    public TableStorageHealthCheck(IHttpClientFactory http, IConfiguration config)
+    public TableStorageHealthCheck(IConfiguration config, ILogger<TableStorageHealthCheck> logger)
     {
-        _http = http;
         _config = config;
+        _logger = logger;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
@@ -114,60 +158,126 @@ public sealed class TableStorageHealthCheck : IHealthCheck
             });
         }
 
-        string? probeUrl = null;
-        var isDevStorage = false;
-        if (!string.IsNullOrWhiteSpace(connStr) &&
-            connStr.Equals("UseDevelopmentStorage=true", StringComparison.OrdinalIgnoreCase))
-        {
-            probeUrl = "http://127.0.0.1:10002/devstoreaccount1";
-            isDevStorage = true;
-        }
-        else
-        {
-            probeUrl = string.IsNullOrWhiteSpace(endpoint) ? null : endpoint;
-            if (probeUrl is null && !string.IsNullOrWhiteSpace(connStr))
-            {
-                var parts = connStr.Split(';', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(p => p.Split('=', 2))
-                    .Where(p => p.Length == 2)
-                    .ToDictionary(p => p[0], p => p[1], StringComparer.OrdinalIgnoreCase);
-                if (parts.TryGetValue("TableEndpoint", out var te))
-                    probeUrl = te;
-                else if (parts.TryGetValue("AccountName", out var acct))
-                    probeUrl = $"https://{acct}.table.core.windows.net/";
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(probeUrl))
-        {
-            return HealthCheckResult.Unhealthy("invalid-config", data: new Dictionary<string, object>
-            {
-                ["error"] = "AzureTableStorage endpoint could not be resolved.",
-            });
-        }
-
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(5));
-            var client = _http.CreateClient("health");
-            var resp = await client.GetAsync(probeUrl, cts.Token);
-            var data = new Dictionary<string, object>
+            cts.CancelAfter(TimeSpan.FromSeconds(8));
+
+            var provider = new TableClientProvider(_config, _logger, "health probe");
+            var client = await provider.GetAsync(cts.Token);
+            if (client is null)
             {
-                ["httpStatus"] = (int)resp.StatusCode,
-                ["note"] = isDevStorage ? "Azurite" : null!,
-            };
-            return (int)resp.StatusCode switch
+                // TableClientProvider returns null for both "not configured" and "cannot
+                // reach it", and so does the app — in either case it serves from the local
+                // report file. Reporting the same verdict it acts on keeps the two aligned.
+                return HealthCheckResult.Degraded("unavailable", data: new Dictionary<string, object>
+                {
+                    ["note"] = "table client could not be created — serving from the file cache",
+                });
+            }
+
+            var rows = 0;
+            await foreach (var page in client.QueryAsync<TableEntity>(maxPerPage: 1, cancellationToken: cts.Token).AsPages())
             {
-                >= 200 and < 400 => HealthCheckResult.Healthy("reachable", data),
-                400 when isDevStorage => HealthCheckResult.Healthy("reachable", data),
-                >= 400 and < 500 => HealthCheckResult.Degraded("degraded", data: data),
-                _ => HealthCheckResult.Unhealthy("unreachable", data: data),
-            };
+                rows = page.Values.Count;
+                break; // one page is proof of a working data-plane read
+            }
+
+            return HealthCheckResult.Healthy("readable", new Dictionary<string, object>
+            {
+                ["rowsVisible"] = rows,
+            });
+        }
+        catch (RequestFailedException ex) when (ex.Status is 401 or 403)
+        {
+            // Control-plane Reader does not grant table data access — this is the check that
+            // tells those two apart. See infra/main.bicep's storage data-plane assignments.
+            return HealthCheckResult.Degraded("forbidden", data: new Dictionary<string, object>
+            {
+                ["httpStatus"] = ex.Status,
+                ["note"] = "the app's identity lacks Storage Table Data Contributor",
+            });
+        }
+        catch (Exception ex) when (ex is Azure.Identity.CredentialUnavailableException or Azure.Identity.AuthenticationFailedException)
+        {
+            return HealthCheckResult.Degraded("no-credential", data: new Dictionary<string, object>
+            {
+                ["note"] = ex.Message,
+            });
         }
         catch (Exception ex)
         {
-            return HealthCheckResult.Unhealthy("unreachable", ex);
+            return HealthCheckResult.Degraded("unreachable", data: new Dictionary<string, object>
+            {
+                ["note"] = ex.Message,
+            });
+        }
+    }
+}
+
+/// <summary>
+/// The check the app was missing: does the stored inventory actually contain anything?
+///
+/// <para>ARM answers an unauthorized list with an EMPTY page rather than a 403, so a scan
+/// running without the subscription Reader role completes successfully and stores a report
+/// describing zero resources. Every downstream view — services, cost, uptime, history —
+/// then renders a truthful zero, and nothing anywhere reports a fault. Production ran that
+/// way while /health showed all green.</para>
+///
+/// <para>Reads the stored report only; adds no outbound call of its own, so an anonymous
+/// caller cannot use /health to drive Azure traffic.</para>
+/// </summary>
+public sealed class AzureInventoryHealthCheck : IHealthCheck
+{
+    private readonly AzureReportStore _store;
+    private readonly IWebHostEnvironment _env;
+    private readonly ILogger<AzureInventoryHealthCheck> _logger;
+
+    public AzureInventoryHealthCheck(AzureReportStore store, IWebHostEnvironment env, ILogger<AzureInventoryHealthCheck> logger)
+    {
+        _store = store;
+        _env = env;
+        _logger = logger;
+    }
+
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _store.LoadAsync(cancellationToken);
+            var report = result.IsSuccess && result.Value is not null
+                ? result.Value
+                : await ReportFileCache.TryLoadFromFileAsync(_env, _logger, cancellationToken);
+
+            if (report is null)
+            {
+                return HealthCheckResult.Degraded("no-report", data: new Dictionary<string, object>
+                {
+                    ["note"] = "no inventory has been stored yet — run a refresh",
+                });
+            }
+
+            var services = report.WebServices?.Total ?? 0;
+            var resources = report.AllResourceSummary?.Total ?? 0;
+            var data = new Dictionary<string, object>
+            {
+                ["services"] = services,
+                ["resources"] = resources,
+                ["generatedAt"] = report.GeneratedAt?.ToString("O") ?? "(unknown)",
+            };
+
+            if (services == 0 && resources == 0)
+            {
+                data["note"] = "the scan completed but discovered nothing — check the app "
+                    + "identity's Reader role on the subscription (infra/main.bicep)";
+                return HealthCheckResult.Degraded("empty-inventory", data: data);
+            }
+
+            return HealthCheckResult.Healthy("populated", data);
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Degraded("unavailable", ex);
         }
     }
 }
@@ -207,6 +317,14 @@ internal static class HealthResponseWriter
         var config = context.RequestServices.GetRequiredService<IConfiguration>();
 
         context.Response.ContentType = "application/json";
+
+        // The masked config block is a DEVELOPMENT diagnostic and is omitted in Production.
+        //
+        // /health is anonymous, so in Production this block published the environment name,
+        // which settings are bound, and masked-but-suffixed values for the Key Vault URI and
+        // the storage endpoint — the same class of disclosure the /diag page was deleted for
+        // on 2026-09-04, reintroduced on the route that replaced it. Masking is not the
+        // control here: the last four characters of a vault URI name the vault.
         var payload = new
         {
             status = report.Status.ToString().ToLowerInvariant(),
@@ -221,12 +339,7 @@ internal static class HealthResponseWriter
                     description = kvp.Value.Description,
                     data = kvp.Value.Data,
                 }),
-            // NET_RULES §3: "/health ... shows all connection status". The masked config
-            // block is part of that contract and is asserted by both the integration and
-            // E2E-API tiers; it was dropped when the checks were rewritten, which is what
-            // left those tests red. Values are masked here exactly as on /diag —
-            // ASPNETCORE_ENVIRONMENT is the one deliberately unmasked key.
-            config = BuildMaskedConfig(env, config),
+            config = env.IsProduction() ? null : BuildMaskedConfig(env, config),
         };
         await context.Response.WriteAsJsonAsync(payload);
     }
@@ -241,6 +354,11 @@ internal static class HealthResponseWriter
                 config["AzureTableStorage:ConnectionString"]),
             ["AzureTableStorage:Endpoint"] = SecretMasking.MaskValue(
                 config["AzureTableStorage:Endpoint"]),
+            // Screenshots resolve their container from this key when no connection string is
+            // set. It was absent from this block, so "blob storage unavailable — screenshots
+            // disabled" was undiagnosable from the outside.
+            ["AzureBlobStorage:Endpoint"] = SecretMasking.MaskValue(
+                config["AzureBlobStorage:Endpoint"]),
             // Never the masked prefix for App Insights: even four characters of a connection
             // string reveal the region and the target workspace.
             ["ApplicationInsights:ConnectionString"] =
@@ -249,4 +367,3 @@ internal static class HealthResponseWriter
                     : "configured (redacted)",
         };
 }
-

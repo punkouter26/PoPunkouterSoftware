@@ -189,7 +189,7 @@ two routes answer "fit the viewport" differently on purpose. `/azure` is pane-sh
 what changed, spend, uptime, actions — so `[data-snap-pager]` makes it a one-viewport-tall
 scroll-snap container whose `.app-pane` children are a screen each; `js/helpers.js`
 (`appSnapPager`) injects the dot strip, driven off the **computed** `scroll-snap-type` so the CSS
-media query stays the single source of truth for when paging is on. `/` is a 24-item catalogue —
+media query stays the single source of truth for when paging is on. `/` is an 11-item catalogue —
 a list, and paging a list fights the reader — so it keeps ordinary scrolling and instead
 guarantees the first screen is complete. **Neither route truncates.** The one body of content that
 cannot honestly be compressed to a screen (advanced diagnostics) opts out with `.app-pane--tall`
@@ -345,11 +345,46 @@ proves a pipeline was created, not that anything reached the screen.
   `X-Management-Key` header. `/api/diag/ai` and the snooze endpoints are deliberately unprivileged.
 - **Routing.** `/api/diag/*` and `/api/portfolio/*` use `MapGroup`. `/health` (deep probe, one
   `IHealthCheck` per external dependency) and `/healthz` (static liveness) sit off the `/api` group.
+  **`/openapi/v1.json` and `/scalar/v1` are mapped only outside Production** — they were
+  unconditional, so the live site published its full route table, parameter shapes and response
+  schemas (management routes included) to anonymous callers, for an API whose only client is
+  compiled from this same solution.
   There is deliberately **no** `/api/health` alias, and deliberately **no** bare `/diag`: it was an
   unauthenticated page rendering ~130 lines of hand-built HTML with its own dark-only palette — a
   second design system — whose only caller was its own smoke test, and whose `?format=json` twin
   returned the server's absolute ContentRoot path, the environment name and masked-but-suffixed
   connection strings to anonymous callers in Production. Removed 2026-09-04.
+- **A health check does the real operation, with the app's own credential.** Every check used to be
+  an anonymous `HttpClient.GetAsync` at the dependency's URL, which proves DNS and TLS and nothing
+  else: Key Vault read "healthy" off an HTTP **404** and Table Storage "degraded" off a **400**,
+  both meaningless, through a period when the app could not read a single Azure resource. They now
+  list one page of secret properties and query one table row. `AzureInventory` is the check that
+  would have caught it: ARM answers an *unauthorized* list with an **empty page, not a 403**, so a
+  scan with no Reader role completes and stores a report describing zero resources — the dashboard
+  then renders truthful zeros and nothing anywhere reports a fault. **No check returns Unhealthy**,
+  deliberately: `MapHealthChecks` answers Unhealthy with 503, and this app has no hard dependency
+  (see "Degradation is a designed path"). A fault shows as `"status": "degraded"` plus the check's
+  own verdict. The masked `config` block is a development diagnostic and is **omitted in
+  Production** — `/health` is anonymous, and it was publishing the environment name and a
+  masked-but-suffixed vault URI whose last four characters name the vault.
+- **`/api/diag/report` masks the subscription id.** It is anonymous by necessity (the Advanced
+  diagnostics panel is WASM with no credential) and returns every resource id in the estate.
+  `SecretMasking.MaskSubscriptionIds` rewrites `/subscriptions/<guid>` to `/subscriptions/****` on
+  the serialized JSON — on the JSON, not the object graph, because the id appears inside free-text
+  strings across a dozen nested record types and a per-record rewrite would miss whichever one is
+  added next. Resource groups and names stay: they are already public in the hostnames the
+  portfolio links to. Use `MaskedJson`, never `Results.Json`, for a report in that slice.
+- **Security headers come from `Host/SecurityHeaders.cs`, and the CSP forbids inline script.**
+  They lived in `wwwroot/staticwebapp.config.json` — Static Web Apps configuration, in an App
+  Service app, read by nothing — so production sent no CSP, no `nosniff` and no Referrer-Policy
+  while a file in the repo said otherwise. A control that exists only in an unread file is worse
+  than none, because it stops anyone noticing the gap. `script-src 'self' 'wasm-unsafe-eval'`
+  carries **no** `'unsafe-inline'`, which is why App.razor's boot and Blazor-hook blocks are now
+  `js/app-boot.js` and `js/blazor-hooks.js`: **a new inline `<script>` in the host page will
+  silently stop running** — put it in a file under `wwwroot/js`. `style-src` keeps `'unsafe-inline'`
+  because Radzen and Blazor both write inline style attributes. `X-Powered-By` is stripped by
+  `web.config`, not middleware: on Windows App Service IIS appends it downstream of the managed
+  pipeline, so a middleware `Remove()` is a no-op that reads like a fix.
 - **Resilience.** Typed clients `github` and `azure-arm` use `AddStandardResilienceHandler`.
   `health`, `azure-probe` and `ai-hf` deliberately have **none** — they must report real reachability
   (or degrade), not retry through the outages they exist to detect.
@@ -417,6 +452,17 @@ proves a pipeline was created, not that anything reached the screen.
   System-Assigned Managed Identity, and **skipped entirely under the `Testing` environment**. The
   grant is a classic access policy, not RBAC — the vault is shared across Po* apps, so switching
   models is an estate-wide change.
+- **The managed identity needs subscription-wide read, and that is not optional.** `infra/main.bicep`
+  granted the site's identity Key Vault (access policy) and Cognitive Services (RBAC) and nothing
+  else, so the two data sources the whole app exists to read were the two it could not touch:
+  production reported 0 services, 0 resources, `$0.00` and an empty uptime grid while every health
+  check showed green. `modules/subscription-inventory-reader.bicep` assigns **Reader**, **Cost
+  Management Reader** (a separate data plane — Reader does not cover
+  `Microsoft.CostManagement/query/action`, which is why the report said "Cost data unavailable
+  (rate-limited or request failed)") and **Monitoring Reader** at subscription scope; main.bicep
+  assigns **Storage Table/Blob Data Contributor** on the app's own account. Infrastructure is
+  applied out-of-band — `deploy.yml` deliberately does not run bicep — so editing these files
+  changes nothing until someone runs `az deployment group create`.
 - **Telemetry.** Serilog → Console + File; Azure Monitor via OpenTelemetry is the sole App Insights
   pipeline (`writeToProviders: true` on `UseSerilog` is load-bearing — without it application logs
   never reach App Insights). Traces are fixed-rate sampled at 10%
@@ -500,9 +546,15 @@ proves a pipeline was created, not that anything reached the screen.
 - **Screenshots pin `PLAYWRIGHT_BROWSERS_PATH`** to the persistent `%HOME%` share and install only
   the Chromium headless shell — the worker's ephemeral disk previously filled with a full Chromium
   download and broke every deployment (2026-07-10). Kill switch:
-  `FeatureFlags:EnableScreenshots=false`.
+  `FeatureFlags:EnableScreenshots=false`. In-process capture is off in Production for that reason,
+  and `appsettings.json` said the capture happened in `screenshots.yml` instead — **a workflow that
+  did not exist**, so every production card rendered `screenshotUrl: null` for months. It exists now
+  (see CI/CD below) and writes the same container, blob names and viewport as `AppScreenshotService`,
+  so the two paths are interchangeable. Serving those blobs also needs `AzureBlobStorage:Endpoint`,
+  without which `GetContainerAsync` returns null and stored images never appear —
+  indistinguishable from never having captured any.
 
-## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/49/21/23)
+## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/50/21/23)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the
@@ -518,7 +570,10 @@ rule's worth of coverage.
   a fixture that runs Azurite inside the factory with explicit teardown. `TestWebApp` seeds its own
   report cache into `App_Data` — it previously got a report for free from the committed
   `wwwroot/data/azure-full-report.json`, an undeclared dependency on a production data dump that
-  made "hermetic" untrue. `ProductionBootTests` boots
+  made "hermetic" untrue. The seed now **displaces** any file already there (restored on dispose):
+  bailing out when one existed meant a developer who had run the app locally ran this whole tier
+  against their own `App_Data` report — different names, different counts, a real subscription id —
+  which is the same undeclared dependency one directory over. `ProductionBootTests` boots
   the entry point under `Production` with every external dependency blanked — the only coverage of
   that environment's hosting pipeline.
 - **`PoPunkouterSoftware.E2EAPI`** / **`.E2EUI`** — pure HTTP and Playwright against a live instance
@@ -541,7 +596,7 @@ that turn, because **every push to `master` deploys to production** via
 say the work is ready to push — the pipeline will not run the tests for you, and it will not ask
 before shipping.
 
-**CI/CD:** two workflows, neither of which runs tests — run the fast tier locally before pushing.
+**CI/CD:** three workflows, none of which runs tests — run the fast tier locally before pushing.
 
 - [deploy.yml](.github/workflows/deploy.yml) — build-and-deploy only, by design. Target is App
   Service `app-popunkoutersoftware` via OIDC, no secrets in the workflow.
@@ -554,3 +609,8 @@ before shipping.
   `Security:ManagementApiKey` matching the `MANAGEMENT_API_KEY` GitHub secret. `ManagementActionFilter`
   **fails closed** in Production when the flag is on without a key — that combination would leave a
   free, repeatable, ~30-second subscription scan open to anonymous callers.
+- [screenshots.yml](.github/workflows/screenshots.yml) — nightly (04:40 UTC) Playwright capture of
+  every card's URL at 390×844, uploaded to the `app-screenshots` blob container under the host name
+  the card looks up. Exists because in-process capture cannot run on the Windows F1 sandbox.
+  **Requires** the production OIDC identity to hold **Storage Blob Data Contributor** on
+  `stpopunkoutersoftware`; the deploy identity is scoped to website-publish only.

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using PoPunkouterSoftware.API;
 using System.Net;
+using System.Text.Json;
 
 namespace PoPunkouterSoftware.Integration;
 
@@ -35,6 +36,7 @@ public sealed class ProductionApp : WebApplicationFactory<Program>
                 ["AzureKeyVaultUri"] = "",
                 ["ApplicationInsights:ConnectionString"] = "",
                 ["AzureTableStorage:ConnectionString"] = "",
+                ["AzureBlobStorage:Endpoint"] = "",
                 ["Pinger:Enabled"] = "false",
             }));
     }
@@ -53,9 +55,13 @@ public class ProductionBootTests : IClassFixture<ProductionApp>
     public async Task PublicEndpoints_DoNotFailWithServerError(string path)
     {
         var response = await _client.GetAsync(path);
+        var body = await response.Content.ReadAsStringAsync();
 
+        // The body is in the message on purpose: a bare "expected < 500 but found 503" from
+        // /health names no check, and the whole point of that endpoint is to say which
+        // dependency is unhappy.
         ((int)response.StatusCode).Should().BeLessThan(500,
-            because: $"{path} must serve in Production, not throw out of the auth pipeline");
+            because: $"{path} must serve in Production, not throw out of the auth pipeline. Body: {body}");
     }
 
     /// <summary>
@@ -69,6 +75,45 @@ public class ProductionBootTests : IClassFixture<ProductionApp>
         var response = await _client.PostAsync(path, content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>
+    /// Everything about a Production response that a live probe found wrong at once: the
+    /// schema endpoints answered, /health published its masked config block, and not one of
+    /// the four security headers was sent because they were declared in
+    /// wwwroot/staticwebapp.config.json — Static Web Apps configuration in an App Service
+    /// app, read by nothing.
+    ///
+    /// <para>One test rather than four: they share a boot of the Production pipeline, which
+    /// is the expensive part, and a failure in any of them means the same thing — this
+    /// environment is not hardened.</para>
+    /// </summary>
+    [Fact]
+    public async Task ProductionResponses_AreHardened()
+    {
+        // 1. No schema publication.
+        foreach (var path in new[] { "/openapi/v1.json", "/scalar/v1" })
+        {
+            var schema = await _client.GetAsync(path);
+            ((int)schema.StatusCode).Should().BeGreaterThanOrEqualTo(400,
+                because: $"{path} is development tooling and must not answer in Production");
+        }
+
+        // 2. /health is anonymous here, so it must not carry the config block.
+        var health = await _client.GetAsync("/health");
+        using var doc = JsonDocument.Parse(await health.Content.ReadAsStringAsync());
+        var hasConfig = doc.RootElement.TryGetProperty("config", out var config)
+                        && config.ValueKind == JsonValueKind.Object;
+        hasConfig.Should().BeFalse(because: "the masked config block is a development diagnostic");
+
+        // 3. The security headers ship from middleware now, on every response.
+        var page = await _client.GetAsync("/healthz");
+        page.Headers.GetValues("X-Content-Type-Options").Should().ContainSingle().Which.Should().Be("nosniff");
+        page.Headers.GetValues("X-Frame-Options").Should().ContainSingle().Which.Should().Be("DENY");
+        page.Headers.GetValues("Referrer-Policy").Should().ContainSingle();
+        var csp = page.Headers.GetValues("Content-Security-Policy").Single();
+        csp.Should().Contain("frame-ancestors 'none'");
+        csp.Should().Contain("script-src 'self' 'wasm-unsafe-eval'");
     }
 
     /// <summary>

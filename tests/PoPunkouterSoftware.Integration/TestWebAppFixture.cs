@@ -40,6 +40,10 @@ public class TestWebApp : WebApplicationFactory<Program>
                 ["AzureKeyVaultUri"] = "",
                 ["ApplicationInsights:ConnectionString"] = "",
                 ["AzureTableStorage:ConnectionString"] = "",
+                // appsettings.json now carries a real blob endpoint so production can serve
+                // the nightly screenshots. Blank it here or every /api/portfolio call in this
+                // tier tries to reach live Azure storage on a credential it does not have.
+                ["AzureBlobStorage:Endpoint"] = "",
             });
         });
 
@@ -52,14 +56,28 @@ public class TestWebApp : WebApplicationFactory<Program>
         return host;
     }
 
+    /// <summary>Set aside while the seed is in place, and put back on dispose.</summary>
+    private string? _displacedReportPath;
+
     private void SeedReportCache(IHost host)
     {
         var env = host.Services.GetRequiredService<IWebHostEnvironment>();
         var path = ReportFileCache.EnsureReportPath(env);
 
-        // Never clobber a real cache if one happens to be sitting there.
+        // The seed goes in unconditionally.
+        //
+        // This used to bail out when a file was already there ("never clobber a real cache"),
+        // which meant a developer who had run the app locally ran this tier against their own
+        // App_Data report instead of the fixture's — different service names, different
+        // counts, a real subscription id. Tests that asserted on seeded values passed only
+        // because they happened not to look at the differing fields. A fixture that silently
+        // defers to ambient machine state is the same undeclared dependency the committed
+        // wwwroot report was, one directory over.
         if (File.Exists(path))
-            return;
+        {
+            _displacedReportPath = path + ".displaced-by-tests";
+            File.Move(path, _displacedReportPath, overwrite: true);
+        }
 
         File.WriteAllText(path, JsonSerializer.Serialize(BuildSeedReport(), SeedJsonOptions));
         _seededReportPath = path;
@@ -74,6 +92,9 @@ public class TestWebApp : WebApplicationFactory<Program>
     /// scan delta) all have something non-trivial to compute from. A report of zero services
     /// would make several assertions pass vacuously.
     /// </summary>
+    /// <summary>The GUID the seeded resource ids carry, asserted absent from /api/diag/report.</summary>
+    public const string SeedSubscriptionId = "11111111-2222-3333-4444-555555555555";
+
     private static AzureReport BuildSeedReport() => new()
     {
         GeneratedAt = DateTime.UtcNow,
@@ -90,6 +111,9 @@ public class TestWebApp : WebApplicationFactory<Program>
                     FriendlyName = "SeedHealthy",
                     ResourceGroup = "rg-seed",
                     ResourceType = "Microsoft.Web/sites",
+                    // A realistic ARM id, because the subscription GUID inside one is what
+                    // /api/diag/report has to mask before it answers an anonymous caller.
+                    ResourceId = $"/subscriptions/{SeedSubscriptionId}/resourceGroups/rg-seed/providers/Microsoft.Web/sites/app-seed-healthy",
                     Url = "https://app-seed-healthy.example.net",
                     HttpStatus = ServiceHealth.Active,
                     PlatformState = "Running",
@@ -101,6 +125,7 @@ public class TestWebApp : WebApplicationFactory<Program>
                     FriendlyName = "SeedBroken",
                     ResourceGroup = "rg-seed",
                     ResourceType = "Microsoft.Web/sites",
+                    ResourceId = $"/subscriptions/{SeedSubscriptionId}/resourceGroups/rg-seed/providers/Microsoft.Web/sites/app-seed-broken",
                     Url = "https://app-seed-broken.example.net",
                     HttpStatus = ServiceHealth.Broken,
                     PlatformState = "Running",
@@ -120,7 +145,13 @@ public class TestWebApp : WebApplicationFactory<Program>
     {
         if (disposing && _seededReportPath is not null && File.Exists(_seededReportPath))
         {
-            try { File.Delete(_seededReportPath); } catch (IOException) { /* best effort */ }
+            try
+            {
+                File.Delete(_seededReportPath);
+                if (_displacedReportPath is not null && File.Exists(_displacedReportPath))
+                    File.Move(_displacedReportPath, _seededReportPath, overwrite: true);
+            }
+            catch (IOException) { /* best effort */ }
         }
 
         base.Dispose(disposing);

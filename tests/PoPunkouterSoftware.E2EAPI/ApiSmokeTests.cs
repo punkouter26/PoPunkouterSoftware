@@ -38,7 +38,9 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
     [InlineData("/api/config")]
     [InlineData("/api/portfolio")]
     [InlineData("/robots.txt")]
-    [InlineData("/openapi/v1.json")]
+    // /openapi/v1.json and /scalar/v1 are deliberately NOT here: they are mapped only
+    // outside Production, so "available on any live host" is no longer true of them.
+    // Their absence in Production is asserted by Api_DoesNotPublishItsOwnSchemaInProduction.
     public async Task PublicGetEndpoint_Returns200(string path)
     {
         var resp = await _client.GetAsync(path);
@@ -58,8 +60,19 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
         doc.RootElement.GetProperty("status").GetString().Should().Be("ok");
     }
 
+    /// <summary>
+    /// The whole /health contract, including the rule that decides whether the masked config
+    /// block is there at all. Two Facts fetched the same document to look at different halves
+    /// of it; they are one request now.
+    ///
+    /// <para>The config block is a development diagnostic and is OMITTED in Production —
+    /// /health is anonymous, and on the live host that block published the environment name,
+    /// which settings are bound, and a masked-but-suffixed Key Vault URI whose last four
+    /// characters name the vault. So this asserts "absent, or present and fully masked",
+    /// which is the contract on every host this tier can be pointed at.</para>
+    /// </summary>
     [Fact]
-    public async Task Health_Returns200_WithApplicationIdentityChecksAndConfig()
+    public async Task Health_Returns200_WithChecks_AndConfigOnlyWhenNotProduction()
     {
         var resp = await _client.GetAsync("/health");
 
@@ -69,18 +82,15 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
         doc.RootElement.TryGetProperty("status", out _).Should().BeTrue();
         doc.RootElement.TryGetProperty("checks", out var checks).Should().BeTrue();
         checks.ValueKind.Should().Be(JsonValueKind.Object);
-        doc.RootElement.TryGetProperty("config", out var config).Should().BeTrue();
-        config.ValueKind.Should().Be(JsonValueKind.Object);
-    }
 
-    [Fact]
-    public async Task Health_ConfigValues_AreMaskedNotRawSecrets()
-    {
-        var resp = await _client.GetAsync("/health");
+        // Every dependency check must render its verdict, whatever that verdict is.
+        foreach (var check in checks.EnumerateObject())
+            check.Value.GetProperty("status").GetString().Should().NotBeNullOrWhiteSpace();
 
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var doc = await ReadJsonAsync(resp);
-        var config = doc.RootElement.GetProperty("config");
+        var hasConfig = doc.RootElement.TryGetProperty("config", out var config)
+                        && config.ValueKind == JsonValueKind.Object;
+        if (!hasConfig)
+            return; // Production: the block is gone, which is the point.
 
         // The environment name is the one deliberately unmasked key; assert it exists
         // (but never assert its VALUE — this must pass on localhost and production alike).
@@ -94,12 +104,64 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
             //   SecretMasking.MaskValue  -> "(not set)" / "****" / "abcd****wxyz"
             //   the App Insights sentinel -> "configured (redacted)", which never reveals
             //     even the first four characters of a connection string.
-            // Accepting only the '*' forms made this test pass purely because App Insights
-            // happened to be unconfigured; it failed the moment a real connection string was
-            // present — i.e. exactly in production, which this smoke tier is meant to target.
             var isMasked = value is "(not set)" or "****" or "configured (redacted)"
                            || (value?.Contains('*') ?? false);
             isMasked.Should().BeTrue(because: $"config key '{prop.Name}' must be masked, got '{value}'");
+        }
+    }
+
+    // ─── Hardening ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The security headers used to be declared in wwwroot/staticwebapp.config.json — Static
+    /// Web Apps configuration, in an App Service app, read by nothing. Production sent none
+    /// of them. They come from Host/SecurityHeaders.cs now, and this is the assertion that
+    /// would have caught the gap: it reads the response, not the config file.
+    /// </summary>
+    [Fact]
+    public async Task EveryResponse_CarriesTheSecurityHeaders()
+    {
+        var resp = await _client.GetAsync("/");
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var headers = resp.Headers;
+
+        headers.GetValues("X-Content-Type-Options").Should().ContainSingle().Which.Should().Be("nosniff");
+        headers.GetValues("Referrer-Policy").Should().ContainSingle();
+        headers.GetValues("X-Frame-Options").Should().ContainSingle().Which.Should().Be("DENY");
+
+        var csp = headers.GetValues("Content-Security-Policy").Single();
+        csp.Should().Contain("frame-ancestors 'none'");
+        csp.Should().Contain("object-src 'none'");
+        // The whole reason App.razor's boot scripts are external files. If someone re-inlines
+        // one, the honest fix is to move it back out — not to widen this. Asserted on the
+        // script-src directive alone: style-src legitimately carries 'unsafe-inline'
+        // (Radzen and Blazor both write inline style attributes), so a substring search
+        // across the whole policy would silently pass on the wrong directive.
+        var scriptSrc = csp.Split(';')
+            .Select(d => d.Trim())
+            .Single(d => d.StartsWith("script-src ", StringComparison.Ordinal));
+        scriptSrc.Should().Be("script-src 'self' 'wasm-unsafe-eval'");
+    }
+
+    /// <summary>
+    /// /openapi/v1.json and /scalar/v1 were mapped unconditionally, publishing the full route
+    /// table — management routes included — of an app with no login. They are development
+    /// tooling and must not answer on the live host.
+    /// </summary>
+    [Fact]
+    public async Task Api_DoesNotPublishItsOwnSchemaInProduction()
+    {
+        var health = await ReadJsonAsync(await _client.GetAsync("/health"));
+        var isProduction = health.RootElement.GetProperty("environment").GetString() == "Production";
+        if (!isProduction)
+            return; // locally these are mapped on purpose
+
+        foreach (var path in new[] { "/openapi/v1.json", "/scalar/v1" })
+        {
+            var resp = await _client.GetAsync(path);
+            ((int)resp.StatusCode).Should().BeGreaterThanOrEqualTo(400,
+                because: $"{path} must not answer on a production host");
         }
     }
 
@@ -183,25 +245,41 @@ public class ApiSmokeTests : IClassFixture<ApiSmokeFixture>
         using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         probe.DefaultRequestHeaders.UserAgent.ParseAdd(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
-        var failures = new List<string>();
+        var ghosts = new List<string>();
+        var mislabelled = new List<string>();
         foreach (var item in doc.RootElement.GetProperty("apps").EnumerateArray())
         {
             var name = item.GetProperty("name").GetString();
             var url = item.GetProperty("url").GetString();
+            var status = item.GetProperty("status").GetString();
             try
             {
                 // Cold F1 apps 200 slowly; any HTTP answer proves the host exists.
                 using var r = await probe.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-                if ((int)r.StatusCode >= 400)
-                    failures.Add($"{name}: {url} -> {(int)r.StatusCode}");
+                var code = (int)r.StatusCode;
+
+                // A host that answers 404/410 for its own root is a ghost: the DNS name
+                // survives, the app does not.
+                if (code is 404 or 410)
+                    ghosts.Add($"{name}: {url} -> {code}");
+
+                // Anything else >= 400 means the app is up and refusing — that is a real
+                // outage from a visitor's point of view, and the card must SAY so rather
+                // than be absent. This is the assertion that used to fail the whole suite
+                // whenever one of 11 third-party apps had a bad night: it asserted the app
+                // was healthy, when the contract this repo actually owns is that the card
+                // tells the truth about it.
+                else if (code >= 400 && status != "unavailable")
+                    mislabelled.Add($"{name}: {url} -> {code} but card says '{status}'");
             }
             catch (Exception ex)
             {
-                failures.Add($"{name}: {url} -> {ex.GetBaseException().Message}");
+                ghosts.Add($"{name}: {url} -> {ex.GetBaseException().Message}");
             }
         }
 
-        failures.Should().BeEmpty(because: "the portfolio must not showcase apps that no longer exist");
+        ghosts.Should().BeEmpty(because: "the portfolio must not showcase apps that no longer exist");
+        mislabelled.Should().BeEmpty(because: "a card linking to a failing app must be marked unavailable");
     }
 
     // ─── Diag ─────────────────────────────────────────────────────────────────

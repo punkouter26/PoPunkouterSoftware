@@ -157,6 +157,46 @@ module aiServicesAccess 'modules/cognitive-services-openai-user.bicep' = {
   }
 }
 
+// The whole point of the app: read-only access to the subscription it reports on.
+// Deployed at subscription scope from this resource-group deployment — see the module
+// header for what breaks without it (everything, silently).
+module inventoryReader 'modules/subscription-inventory-reader.bicep' = {
+  name: 'sub-inventory-reader-${appName}'
+  scope: subscription()
+  params: {
+    principalId: site.identity.principalId
+  }
+}
+
+// Data-plane access to this app's own storage account. The control-plane Reader grant
+// above does NOT cover reading or writing table rows and blobs: Azure storage data
+// operations are governed by their own roles, and the app authenticates to them with
+// the same managed identity (AzureTableStorage:Endpoint / AzureBlobStorage:Endpoint set,
+// no connection string). Table = report history and uptime samples; Blob = the gzipped
+// report bodies and the app-screenshots container.
+var storageTableDataContributorRoleId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
+var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+
+resource tableDataAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, site.id, storageTableDataContributorRoleId)
+  scope: storage
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageTableDataContributorRoleId)
+    principalId: site.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource blobDataAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, site.id, storageBlobDataContributorRoleId)
+  scope: storage
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+    principalId: site.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 output appName string = site.name
 output appServicePlanId string = appServicePlan.id
 output sitePrincipalId string = site.identity.principalId

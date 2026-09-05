@@ -252,12 +252,14 @@ try
     builder.Services.AddSingleton<AiTriageService>();
 
     // ─── Health checks (NET_RULES §3) ─────────────────────────────────────────
-    // One check per external dependency. The /health endpoint renders the
-    // HealthReport and the /diag Blazor page renders the same data with
-    // masked config values.
+    // One check per external dependency, each performing the real operation the app
+    // depends on with the app's own credential. AzureInventory is not a dependency probe
+    // but a data-truth probe: it is the only check that can see the failure where every
+    // dependency answers correctly and the inventory is empty anyway.
     builder.Services.AddHealthChecks()
         .AddCheck<KeyVaultHealthCheck>("KeyVault", tags: new[] { "external", "kv" })
         .AddCheck<TableStorageHealthCheck>("TableStorage", tags: new[] { "external", "storage" })
+        .AddCheck<AzureInventoryHealthCheck>("AzureInventory", tags: new[] { "data" })
         .AddCheck<AppInsightsHealthCheck>("ApplicationInsights", tags: new[] { "external", "telemetry" });
 
     // ─── Response compression for dynamic JSON only ───────────────────────────
@@ -332,6 +334,15 @@ try
 
     app.UseExceptionHandler();
 
+    // First in the pipeline so the headers land on every response — static assets, the
+    // WASM payload and API JSON alike, not just the routes that reach an endpoint.
+    app.UseSecurityHeaders();
+
+    // HSTS in Production only: it pins the browser to HTTPS for the max-age, which is
+    // exactly wrong to send from a plain-HTTP localhost run.
+    if (app.Environment.IsProduction())
+        app.UseHsts();
+
     // ─── Startup configuration health-checks (non-fatal, informational) ──────
     var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
     if (string.IsNullOrWhiteSpace(builder.Configuration["AzureTableStorage:ConnectionString"]) &&
@@ -397,13 +408,21 @@ try
        .AddInteractiveWebAssemblyRenderMode()
        .AddAdditionalAssemblies(typeof(PoPunkouterSoftware.Client.MainLayout).Assembly);
 
-    // ─── OpenAPI / Scalar UI ─────────────────────────────────────────
-    app.MapOpenApi();
-    app.MapScalarApiReference(o =>
+    // ─── OpenAPI / Scalar UI — never in Production ────────────────────
+    // These were mapped unconditionally, so /openapi/v1.json and /scalar/v1 published the
+    // full route table, parameter shapes and response schemas of an app with no login to
+    // anonymous callers on the live site — including the management routes, which are the
+    // ones worth finding. There is no consumer for them in Production: the API has exactly
+    // one client and it is compiled from the same solution.
+    if (!app.Environment.IsProduction())
     {
-        o.Title = "PoPunkouterSoftware API";
-        o.Theme = ScalarTheme.Default;
-    });
+        app.MapOpenApi();
+        app.MapScalarApiReference(o =>
+        {
+            o.Title = "PoPunkouterSoftware API";
+            o.Theme = ScalarTheme.Default;
+        });
+    }
 
     // ─── Host-level plumbing (not part of any slice) ──────────────────
     app.MapGet("/favicon.ico", () => Results.Redirect("/images/favicon.ico", permanent: false))

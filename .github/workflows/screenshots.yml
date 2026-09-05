@@ -1,0 +1,133 @@
+name: Capture app screenshots
+
+# The portfolio card is a screenshot, the app name and a status dot — the screenshot IS
+# the card. In-process capture is off in Production because the Windows F1 sandbox cannot
+# run Chromium (and the install attempt once filled the worker disk, breaking every
+# deployment — 2026-07-10), so appsettings.json has said since then that "the screenshots.yml
+# GitHub Action captures nightly into the same blob container".
+#
+# That workflow did not exist. Every production card rendered with screenshotUrl: null.
+# This is it: same container, same blob names, same viewport as AppScreenshotService, so the
+# two paths are interchangeable and /api/portfolio/screenshots/{host} serves either.
+#
+# REQUIRES: the production environment's OIDC identity needs the "Storage Blob Data
+# Contributor" role on the storage account. The deploy identity is scoped to website-publish
+# only; grant this to that identity or give this workflow its own.
+
+on:
+  schedule:
+    # 04:40 UTC — after the 06:17 uptime scan would be too late for a morning visitor, and
+    # far enough from the deploy window that a capture never races a restart.
+    - cron: '40 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: screenshots
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  SITE_URL: 'https://app-popunkoutersoftware.azurewebsites.net'
+  STORAGE_ACCOUNT: 'stpopunkoutersoftware'
+  CONTAINER: 'app-screenshots'
+  # Must match AppScreenshotService's ViewportWidth/ViewportHeight: the cards display the
+  # PNG at a fixed aspect ratio, so a different capture size letterboxes every thumbnail.
+  VIEWPORT_WIDTH: '390'
+  VIEWPORT_HEIGHT: '844'
+
+jobs:
+  capture:
+    name: Capture & upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: '22'
+
+      - name: Install Playwright (Chromium only)
+        run: npx --yes playwright@1.49.0 install --with-deps chromium
+
+      # The live portfolio is the source of truth for what has a card, so the capture set
+      # cannot drift from the render set. Waking the site first: F1 has no Always-On, and a
+      # cold start answers the first request slowly rather than not at all.
+      - name: Wake the site
+        run: curl -fsS --max-time 180 --retry 3 --retry-all-errors "$SITE_URL/healthz" > /dev/null
+
+      - name: Capture screenshots
+        run: |
+          mkdir -p shots
+          cat > capture.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import { writeFileSync } from 'node:fs';
+
+          const site = process.env.SITE_URL;
+          const width = Number(process.env.VIEWPORT_WIDTH);
+          const height = Number(process.env.VIEWPORT_HEIGHT);
+
+          const res = await fetch(`${site}/api/portfolio`);
+          if (!res.ok) throw new Error(`portfolio fetch failed: ${res.status}`);
+          const { apps } = await res.json();
+
+          // One blob per HOST, lowercased — AppScreenshotService.HostOf's contract, and what
+          // /api/portfolio/screenshots/{host} looks up.
+          const targets = [];
+          for (const app of apps ?? []) {
+            if (!app.url) continue;
+            try { targets.push({ host: new URL(app.url).host.toLowerCase(), url: app.url }); }
+            catch { /* a malformed catalog URL is not worth failing the run over */ }
+          }
+          console.log(`${targets.length} targets`);
+
+          const browser = await chromium.launch();
+          let captured = 0;
+          for (const { host, url } of targets) {
+            const page = await browser.newPage({
+              viewport: { width, height },
+              isMobile: true,
+              hasTouch: true,
+              deviceScaleFactor: 2,
+            });
+            try {
+              // Cold Azure apps can take a while; capture whatever rendered on timeout,
+              // exactly as the in-process path does.
+              try { await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }); }
+              catch { /* timeout — screenshot what we have */ }
+              writeFileSync(`shots/${host}.png`, await page.screenshot({ type: 'png' }));
+              captured++;
+            } catch (err) {
+              console.log(`::warning title=Screenshot failed::${host}: ${err.message}`);
+            } finally {
+              await page.close();
+            }
+          }
+          await browser.close();
+
+          console.log(`captured ${captured}/${targets.length}`);
+          // A run that captured nothing is a failure worth seeing; partial success is normal
+          // (an app can be genuinely down on any given night).
+          if (captured === 0) { console.log('::error title=No screenshots captured::every target failed'); process.exit(1); }
+          EOF
+          node capture.mjs
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Upload to blob storage
+        run: |
+          az storage blob upload-batch \
+            --account-name "$STORAGE_ACCOUNT" \
+            --auth-mode login \
+            --destination "$CONTAINER" \
+            --source shots \
+            --content-type "image/png" \
+            --overwrite true
