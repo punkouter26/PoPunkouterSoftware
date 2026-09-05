@@ -217,7 +217,7 @@ dropped into whichever pane is nearest will fail the first of those.
 
 ## Graphics and audio
 
-Seven files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
+Eight files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
 comment in each before changing it; they document the reasoning, this is the map.
 
 | File | Role |
@@ -225,10 +225,11 @@ comment in each before changing it; they document the reasoning, this is the map
 | `motion-kit.js` | **The frame governor.** ONE `requestAnimationFrame` loop for the whole app, one gate (reduced-motion / hidden / blur / no runnable subscriber), and an adaptive quality controller. Must load first. |
 | `audio-kit.js` | Programmatic Web Audio — synthesis only, **zero audio assets**. UI SFX, the refresh drone, the `/azure` sonification, and the analyser tap the shaders read. |
 | `gpu-backdrop.js` | Orchestrator for `#app-gpu-backdrop`: tier selection, colour tokens, glass rects, audio energy. Owns no pixels. |
-| `gfx-webgl.js` | WebGL2 renderer (curl-noise field, transform-feedback particles, dual-Kawase blur, glass composite) with a WebGL1 field-only fallback. |
-| `gfx-webgpu.js` | WebGPU renderer (compute-shader particles). **Lazily fetched**, only when `navigator.gpu` exists. |
+| `gfx-webgl.js` | WebGL2 renderer (curl-noise field, transform-feedback particles, dual-Kawase blur, glass composite) with a WebGL1 field-only fallback. **The top of the ladder.** |
 | `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. |
 | `helpers.js` | Topbar, snap pager, clipboard, download. Unrelated to the above. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
+| `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
+| `blazor-hooks.js` | Registers the enhanced-navigation callbacks. Must load **after** `blazor.web.js`, which defines `Blazor`. Also ex-inline. |
 
 **One rAF loop, and reduced motion stops it.** Every animated layer is a named `motionKit`
 subscriber. Nothing else may call `requestAnimationFrame` for animation. The governor's gate
@@ -250,11 +251,18 @@ refresh lifecycle (a ~30s scan is exactly how long it takes someone to switch ta
 `/azure` sonification, which is a second *modality* on facts already on the page, not a
 second copy of them. Only primitives cross the interop boundary.
 
-**The backdrop is a capability ladder**: WebGPU → WebGL2 → WebGL1 → the CSS grid in
+**The backdrop is a capability ladder**: WebGL2 → WebGL1 → the CSS grid in
 `modern-ui.css`. Every rung degrades silently to the next and records the outcome in
-`#app-gpu-backdrop`'s `data-gpu`. A canvas can only ever have one context type, so when
-WebGPU declines, the element is **replaced** before WebGL is tried — and `canvas` must be
-reassigned before `status()` runs, or the diagnostic lands on a detached node.
+`#app-gpu-backdrop`'s `data-gpu`. A **WebGPU rung sat on top until 2026-09-05**
+(`gfx-webgpu.js`, 524 lines, compute-shader particles, lazily fetched behind
+`navigator.gpu`) and was removed: a second complete renderer, in a second shader language,
+for a decorative layer whose WebGL2 rung draws the same thing at the same measured ~3ms.
+Two implementations of one decoration is the most expensive code in the repo to keep
+honest, because neither can be verified except by looking at pixels. Re-adding it also
+means re-adding the canvas swap it forced — `getContext` is sticky per element, so a canvas
+offered to WebGPU can never yield a WebGL context, and `build()` had to clone and replace
+the node mid-init (reassigning `canvas` *before* `status()` ran, or the diagnostic landed
+on a detached node). `build()` is synchronous now.
 
 **`data-glass` is the opt-in for shader-side glassmorphism.** `gpu-backdrop.js` collects the
 on-screen rect of every tagged element (rate-limited, signature-guarded, corner radius cached
@@ -284,8 +292,8 @@ see-through cards over a flat background.
    it is perturbing.
 
 The common thread: a decorative GPU layer has no failure mode that surfaces on its own. If
-you change a shader, look at the rendered pixels — `dataset.gpu` reporting `webgpu` only
-proves a pipeline was created, not that anything reached the screen.
+you change a shader, look at the rendered pixels — `dataset.gpu` reporting `webgl2` only
+proves a context and program were created, not that anything reached the screen.
 
 ## Cross-cutting decisions
 

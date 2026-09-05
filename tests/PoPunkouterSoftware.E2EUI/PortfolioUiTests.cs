@@ -104,7 +104,7 @@ public class PortfolioUiTests : IAsyncLifetime
     /// Both routes must reflow without horizontal overflow AND without logging an error.
     ///
     /// <para>The console half was added with the GPU/audio layers. Every one of them is
-    /// designed to degrade rather than fail — a missing WebGL2, a refused WebGPU adapter, a
+    /// designed to degrade rather than fail — a missing WebGL2, a shader that will not compile, a
     /// blocked AudioContext — and each degradation path is a `console.warn`. An
     /// <c>error</c> means a path nobody designed was taken, and because the layers are
     /// decorative, nothing else on the page would show it.</para>
@@ -154,7 +154,9 @@ public class PortfolioUiTests : IAsyncLifetime
         await page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
         await page.WaitForSelectorAsync(".app-portfolio-card", new() { Timeout = 30_000 });
 
-        var known = new[] { "webgpu", "webgl2", "webgl2-field", "webgl1", "no-gpu", "reduced-motion", "context-lost" };
+        // "webgpu" is deliberately absent: that rung was removed on 2026-09-05, so a browser
+        // reporting it would mean the tier vocabulary and the ladder had drifted apart.
+        var known = new[] { "webgl2", "webgl2-field", "webgl1", "no-gpu", "reduced-motion", "context-lost" };
         var tier = await page.EvaluateAsync<string?>(
             "() => document.getElementById('app-gpu-backdrop')?.dataset.gpu ?? null");
         tier.Should().BeOneOf(known, $"the backdrop ladder must land on a defined state at {label}");

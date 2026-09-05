@@ -2,20 +2,27 @@
  * GPU backdrop — the single compositing layer behind the whole app, and the capability
  * ladder that picks how to draw it.
  *
- * This file is the orchestrator only. Pixels belong to the renderers:
- *   js/gfx-webgpu.js   compute-advected particles, lazily fetched, `navigator.gpu` only
+ * This file is the orchestrator only. Pixels belong to the renderer:
  *   js/gfx-webgl.js    WebGL2 (particles + dual-Kawase glass) with a WebGL1 field fallback
  *
- *      WebGPU  →  WebGL2  →  WebGL1  →  the CSS grid in modern-ui.css
+ *      WebGL2  →  WebGL1  →  the CSS grid in modern-ui.css
  *
- * Each rung degrades to the next on any failure — adapter refusal, missing WebGL2, a
- * shader that will not compile, a lost context. The bottom rung is not a rung at all: if
- * nothing initialises, `data-gpu-backdrop` is never set on <html> and the static CSS grid
- * backdrop stays visible, exactly as before this layer existed.
+ * Each rung degrades to the next on any failure — missing WebGL2, a shader that will not
+ * compile, a lost context. The bottom rung is not a rung at all: if nothing initialises,
+ * `data-gpu-backdrop` is never set on <html> and the static CSS grid backdrop stays
+ * visible, exactly as before this layer existed.
  *
- * WebGPU is fetched lazily for the same reason Three.js is (see js/starfield-backdrop.js):
- * a browser that cannot use a single line of it should not download it. Here the gate is a
- * feature (`navigator.gpu`) rather than a route.
+ * There was a WebGPU rung on top (js/gfx-webgpu.js — 524 lines, compute-advected
+ * particles, lazily fetched behind `navigator.gpu`). It was removed on 2026-09-05: it was
+ * a second complete renderer, with its own shader language, for a decorative layer whose
+ * WebGL2 rung draws the same backdrop at the same measured cost (~3ms dispatch on a
+ * desktop, per the governor's own budget accounting). Two implementations of one
+ * decoration is the most expensive kind of code to keep honest — a decorative GPU layer
+ * has no failure mode that surfaces on its own, so each renderer has to be verified by
+ * looking at pixels, and there were two of them. Adding it back also means re-adding the
+ * canvas-swap it forced: `getContext` is sticky per element, so a canvas offered to WebGPU
+ * can never yield a WebGL context afterwards, and the only way back down the ladder was to
+ * clone and replace the node mid-init.
  *
  * ── What this file owns ─────────────────────────────────────────────────────────────────
  *   • Tier selection and fallback.
@@ -71,27 +78,6 @@
         ];
     }
 
-    var webgpuScript = null;
-    function loadWebgpuModule() {
-        if (window.gfxWebgpu) return Promise.resolve(true);
-        if (!navigator.gpu) return Promise.resolve(false);
-        // A device that has asked us to spend less does not get the top rung fetched for it,
-        // even where WebGPU exists — the WebGL2 rung below draws the same backdrop from a
-        // script that is already on the page. `minimal` stops the layer entirely one level
-        // up, in start(); this guard covers the ladder being entered by any other path.
-        if (window.motionKit && window.motionKit.minimal) return Promise.resolve(false);
-        if (webgpuScript) return webgpuScript;
-        webgpuScript = new Promise(function (resolve) {
-            var s = document.createElement('script');
-            s.src = 'js/gfx-webgpu.js';
-            s.dataset.lib = 'gfx-webgpu';
-            s.onload = function () { resolve(!!window.gfxWebgpu); };
-            s.onerror = function () { resolve(false); };
-            document.head.appendChild(s);
-        });
-        return webgpuScript;
-    }
-
     function start() {
         var canvas = document.getElementById('app-gpu-backdrop');
         if (!canvas) return;
@@ -105,7 +91,7 @@
         }
 
         // Records why the layer is (not) running. Read it in devtools or in tests:
-        // webgpu | webgl2 | webgl1 | reduced-motion | no-gpu | context-lost | disposed
+        // webgl2 | webgl2-field | webgl1 | reduced-motion | no-gpu | context-lost | disposed
         var status = function (s) { canvas.dataset.gpu = s; };
 
         var motion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -113,7 +99,6 @@
         var subscription = 0;
         var qualitySub = 0;
         var building = false;
-        var token = 0;
 
         // ── Glass rects ─────────────────────────────────────────────────────────────────
         var glassBuf = new Float32Array(MAX_GLASS_RECTS * 5);
@@ -200,7 +185,6 @@
         }
 
         function teardown() {
-            token++;
             if (subscription) { window.motionKit.unsubscribe(subscription); subscription = 0; }
             if (qualitySub) { window.motionKit.offQuality(qualitySub); qualitySub = 0; }
             canvas.removeEventListener('webglcontextlost', onContextLost);
@@ -220,45 +204,15 @@
             if (motion.matches) { status('reduced-motion'); return; }
             if (!window.motionKit) { status('no-gpu'); return; }
 
+            // Synchronous now that WebGL2 is the top rung: gfxWebgl.create() either returns
+            // a renderer or null, and the WebGL1 field fallback is chosen inside it. The
+            // `building` flag stays because build() is reachable from both the reduced-motion
+            // listener and the initial call, and gfxWebgl.create() compiles shaders.
             building = true;
-            var mine = ++token;
-
-            loadWebgpuModule().then(function (haveWebgpu) {
-                if (mine !== token) return null;
-                if (!haveWebgpu) return null;
-                return window.gfxWebgpu.create(canvas).catch(function (err) {
-                    console.warn('gpu-backdrop: WebGPU init failed, falling back', err);
-                    return null;
-                });
-            }).then(function (r) {
-                if (mine !== token) { if (r) r.dispose(); return; }
-                if (r) { building = false; attach(r); return; }
-
-                // WebGPU declined. A canvas can only ever have one context type, so if
-                // `getContext('webgpu')` was reached at all it has poisoned this element for
-                // WebGL — hence the swap rather than reusing it.
-                //
-                // `canvas` is reassigned BEFORE anything else touches it: `status()` closes
-                // over this variable, and writing the outcome to the pre-swap node put the
-                // whole diagnostic on an element that had already been removed from the DOM.
-                // Every reader — devtools, the E2E tier assertion — then saw no state at all.
-                canvas = replaceCanvas();
-                var gl = window.gfxWebgl ? window.gfxWebgl.create(canvas) : null;
-                building = false;
-                if (!gl) { status('no-gpu'); return; }
-                attach(gl);
-            });
-        }
-
-        /**
-         * Replace the canvas element in place. `getContext` is sticky per element: once a
-         * canvas has been offered to WebGPU it cannot yield a WebGL context, even if the
-         * WebGPU request failed. Swapping the node is the only way back down the ladder.
-         */
-        function replaceCanvas() {
-            var fresh = canvas.cloneNode(false);
-            canvas.parentNode.replaceChild(fresh, canvas);
-            return fresh;
+            var gl = window.gfxWebgl ? window.gfxWebgl.create(canvas) : null;
+            building = false;
+            if (!gl) { status('no-gpu'); return; }
+            attach(gl);
         }
 
         // ── Signals ─────────────────────────────────────────────────────────────────────

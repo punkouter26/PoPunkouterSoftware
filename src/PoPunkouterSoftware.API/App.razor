@@ -60,10 +60,9 @@
     <script src="js/motion-kit.js"></script>
     <script src="js/audio-kit.js"></script>
     <script src="js/helpers.js"></script>
-    @* The WebGL2/WebGL1 renderer. Always loaded: it is the tier nearly every visitor
-       actually gets, and the fallback for the one above it. The WebGPU renderer is NOT
-       declared here — gpu-backdrop.js fetches js/gfx-webgpu.js itself, and only when
-       navigator.gpu exists, so a browser that cannot use a line of it never downloads it. *@
+    @* The WebGL2/WebGL1 renderer — now the top of the backdrop ladder. A lazily-fetched
+       WebGPU renderer sat above it until 2026-09-05; see the header of js/gpu-backdrop.js
+       for why a second full renderer of the same decoration was not worth keeping. *@
     <script src="js/gfx-webgl.js"></script>
     <script src="js/gpu-backdrop.js"></script>
     @* Small wrapper only (no THREE dependency at parse time) — it lazily fetches
