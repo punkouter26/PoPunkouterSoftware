@@ -610,10 +610,15 @@ that turn, because **every push to `master` deploys to production** via
 say the work is ready to push — the pipeline will not run the tests for you, and it will not ask
 before shipping.
 
-**CI/CD:** three workflows, none of which runs tests — run the fast tier locally before pushing.
+**CI/CD:** three workflows. Only `deploy.yml` runs tests, and only the Unit tier — the other
+three tiers still run locally before a push.
 
-- [deploy.yml](.github/workflows/deploy.yml) — build-and-deploy only, by design. Target is App
-  Service `app-popunkoutersoftware` via OIDC, no secrets in the workflow.
+- [deploy.yml](.github/workflows/deploy.yml) — build, **unit tests**, deploy. Target is App
+  Service `app-popunkoutersoftware` via OIDC, no secrets in the workflow. Unit is the only tier
+  that belongs in a deploy pipeline: no Docker, no network, no live host, ~0.5s for 100 tests
+  against an assembly the job already built. Integration needs Testcontainers Azurite; both E2E
+  tiers need a running app and a `BASE_URL`. Adding any of them would trade a fast gate for a
+  slow flaky one and start blocking deploys on infrastructure rather than on code.
 - [uptime-scan.yml](.github/workflows/uptime-scan.yml) — nightly (06:17 UTC) `POST /api/diag/refresh`
   so the uptime grid gets one data point per day even when nobody visits and the F1 site is asleep.
   It wakes the site first (cold start), treats 409 "already refreshing" as success, and then
@@ -623,8 +628,20 @@ before shipping.
   `Security:ManagementApiKey` matching the `MANAGEMENT_API_KEY` GitHub secret. `ManagementActionFilter`
   **fails closed** in Production when the flag is on without a key — that combination would leave a
   free, repeatable, ~30-second subscription scan open to anonymous callers.
+  ⚠️ **This ran red every night from at least 2026-08-29 to 2026-09-05** because neither setting was
+  ever applied: `/api/config` reported `managementActionsEnabled: false`, so `/api/diag/refresh`
+  answered 403 to a correct key and an absent one alike, and the workflow's own 403 branch fired
+  nightly. Nothing else schedules a scan, so the consequence was not a missing data point — it was
+  an empty `History` table (`/health` showed `TableStorage: readable, rowsVisible: 0`), no uptime
+  grid, and a report that only ever refreshed when a visitor happened to load one past the 12h
+  staleness line. **A red scheduled workflow here means the dashboard has no data**, not that a
+  nightly nicety was skipped. Check its run history before believing the grid.
 - [screenshots.yml](.github/workflows/screenshots.yml) — nightly (04:40 UTC) Playwright capture of
   every card's URL at 390×844, uploaded to the `app-screenshots` blob container under the host name
   the card looks up. Exists because in-process capture cannot run on the Windows F1 sandbox.
-  **Requires** the production OIDC identity to hold **Storage Blob Data Contributor** on
-  `stpopunkoutersoftware`; the deploy identity is scoped to website-publish only.
+  Uploads with the storage **account key**, resolved at run time through ARM by the same OIDC
+  identity `deploy.yml` uses — Contributor on the resource group covers `listKeys`, so this needs
+  no new role assignment and no new secret. It was written with `--auth-mode login` and no
+  matching data-plane grant anywhere, which would have failed on its first run. The stricter
+  option is `--auth-mode login` plus **Storage Blob Data Contributor** scoped to the container;
+  prefer it if you know the identity's object id.

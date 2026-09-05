@@ -85,8 +85,20 @@ jobs:
       - name: Build
         run: dotnet build PoPunkouterSoftware.sln -c Release --no-restore --nologo
 
-      # Deliberately NO test step: this pipeline is build-and-deploy only.
-      # All test tiers (unit/integration/E2E) run locally before pushing to master.
+      # ONE test tier runs here, and only one.
+      #
+      # Unit is the only tier that is hermetic enough to belong in a deploy pipeline: no
+      # Docker, no network, no live host, ~0.5s for 100 tests against an assembly this job
+      # has already built. Integration needs a Testcontainers Azurite instance; E2E-API and
+      # E2E-UI need a running app (and E2E-UI a browser download) and are pointed at a
+      # BASE_URL by hand. Adding any of those would trade a fast gate for a slow, flaky one
+      # and start blocking deploys on infrastructure rather than on code.
+      #
+      # This pipeline was build-and-deploy only until 2026-09-05, on the reasoning that the
+      # fast tier runs locally before every push. That holds right up until the once it
+      # does not, and the cost of the guard turned out to be under a second.
+      - name: Unit tests
+        run: dotnet test tests/PoPunkouterSoftware.Unit -c Release --no-build --nologo
 
       - name: Publish
         run: dotnet publish src/PoPunkouterSoftware.API/PoPunkouterSoftware.API.csproj -c Release --no-restore -o ./publish --nologo

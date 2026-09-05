@@ -10,9 +10,18 @@ name: Capture app screenshots
 # This is it: same container, same blob names, same viewport as AppScreenshotService, so the
 # two paths are interchangeable and /api/portfolio/screenshots/{host} serves either.
 #
-# REQUIRES: the production environment's OIDC identity needs the "Storage Blob Data
-# Contributor" role on the storage account. The deploy identity is scoped to website-publish
-# only; grant this to that identity or give this workflow its own.
+# AUTH: uploads with the storage account key, fetched at run time through ARM by the same
+# OIDC identity deploy.yml already uses. That identity has Contributor on the resource group
+# (it deploys the site), and Contributor covers `listKeys` — so this needs no new grant and
+# no new secret, which is the difference between a workflow that runs tonight and one that
+# fails nightly until somebody remembers to fix RBAC.
+#
+# The stricter alternative is `--auth-mode login` plus a "Storage Blob Data Contributor"
+# assignment scoped to the container. Prefer it if you know the identity's object id —
+# control-plane Contributor already implies the ability to read the account key, so this is
+# not a privilege escalation, but a data-plane role is narrower than a key to the whole
+# account. The first version of this workflow used `--auth-mode login` with no such
+# assignment anywhere, which would have failed on its first run.
 
 on:
   schedule:
@@ -32,6 +41,7 @@ permissions:
 env:
   SITE_URL: 'https://app-popunkoutersoftware.azurewebsites.net'
   STORAGE_ACCOUNT: 'stpopunkoutersoftware'
+  STORAGE_RG: 'PoPunkouterSoftware'
   CONTAINER: 'app-screenshots'
   # Must match AppScreenshotService's ViewportWidth/ViewportHeight: the cards display the
   # PNG at a fixed aspect ratio, so a different capture size letterboxes every thumbnail.
@@ -124,10 +134,25 @@ jobs:
 
       - name: Upload to blob storage
         run: |
+          # Resolved at run time rather than held as a secret: it is never stored anywhere,
+          # and it follows the account if the key is rotated. Not echoed, and the upload runs
+          # with --output none so no URL list lands in the log.
+          ACCOUNT_KEY=$(az storage account keys list \
+            --account-name "$STORAGE_ACCOUNT" \
+            --resource-group "$STORAGE_RG" \
+            --query "[0].value" -o tsv)
+          if [ -z "$ACCOUNT_KEY" ]; then
+            echo "::error title=No storage key::The OIDC identity cannot listKeys on $STORAGE_ACCOUNT — it needs Contributor on $STORAGE_RG."
+            exit 1
+          fi
+
           az storage blob upload-batch \
             --account-name "$STORAGE_ACCOUNT" \
-            --auth-mode login \
+            --account-key "$ACCOUNT_KEY" \
             --destination "$CONTAINER" \
             --source shots \
             --content-type "image/png" \
-            --overwrite true
+            --overwrite true \
+            --output none
+
+          echo "Uploaded $(ls shots | wc -l) screenshots to $CONTAINER."
