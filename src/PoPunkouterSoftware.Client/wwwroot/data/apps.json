@@ -12,6 +12,7 @@
         "Blazor"
       ],
       "url": "https://app-poarguejudge.azurewebsites.net",
+      "healthUrl": "https://app-poarguejudge.azurewebsites.net/health/live",
       "githubRepo": null
     },
     {
@@ -25,6 +26,7 @@
         "JavaScript"
       ],
       "url": "https://app-polocalcompare-win.azurewebsites.net",
+      "healthUrl": "https://app-polocalcompare-win.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoLocalCompare"
     },
     {
@@ -39,6 +41,7 @@
         "Blazor"
       ],
       "url": "https://pomarriedlife-api.azurewebsites.net",
+      "healthUrl": "https://pomarriedlife-api.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoMarriedLife"
     },
     {
@@ -52,6 +55,7 @@
         "C#"
       ],
       "url": "https://app-pomemevideo.azurewebsites.net",
+      "healthUrl": "https://app-pomemevideo.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoMemeVideo"
     },
     {
@@ -65,6 +69,7 @@
         "C#"
       ],
       "url": "https://app-5ln5hfdrvof5u-f1win.azurewebsites.net",
+      "healthUrl": "https://app-5ln5hfdrvof5u-f1win.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoMiniGames"
     },
     {
@@ -79,6 +84,7 @@
         "Blazor"
       ],
       "url": "https://app-pomode.azurewebsites.net",
+      "healthUrl": "https://app-pomode.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoMode"
     },
     {
@@ -93,6 +99,7 @@
         "Blazor"
       ],
       "url": "https://poredoimage-web.azurewebsites.net",
+      "healthUrl": "https://poredoimage-web.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoRedoImage"
     },
     {
@@ -107,6 +114,7 @@
         "Blazor"
       ],
       "url": "https://app-porepolinetracker.azurewebsites.net",
+      "healthUrl": "https://app-porepolinetracker.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoRepoLineTracker"
     },
     {
@@ -120,6 +128,7 @@
         "C#"
       ],
       "url": "https://potraffic-api-win.azurewebsites.net",
+      "healthUrl": "https://potraffic-api-win.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoTraffic"
     },
     {
@@ -134,6 +143,7 @@
         "Blazor"
       ],
       "url": "https://app-powatch-win.azurewebsites.net",
+      "healthUrl": "https://app-powatch-win.azurewebsites.net/health/live",
       "githubRepo": "punkouter26/PoWatch"
     },
     {
@@ -147,6 +157,7 @@
         "Blazor"
       ],
       "url": "https://app-poseereview.azurewebsites.net",
+      "healthUrl": "https://app-poseereview.azurewebsites.net/health/live",
       "githubRepo": null
     }
   ]

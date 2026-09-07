@@ -8,6 +8,7 @@ using OpenTelemetry.Instrumentation.Http;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using PoPunkouterSoftware.API;
+using PoPunkouterSoftware.API.Platform;
 using PoPunkouterSoftware.Infrastructure;
 using Radzen;
 using Scalar.AspNetCore;
@@ -57,7 +58,7 @@ try
     // Connection string is no longer committed to appsettings.json — it is supplied at
     // runtime via the Key Vault secret 'ApplicationInsights--ConnectionString' (mapped to
     // ApplicationInsights:ConnectionString) or the APPLICATIONINSIGHTS_CONNECTION_STRING env var.
-    var aiConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+    var aiConnectionString = PoPlatform.ResolveAppInsightsConnectionString(builder.Configuration);
     if (string.IsNullOrWhiteSpace(aiConnectionString))
         aiConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
     // CorrelationId enricher requires IHttpContextAccessor
@@ -435,6 +436,9 @@ try
     // ─── Feature slices ───────────────────────────────────────────────
     app.MapConfigEndpoints();
     app.MapHealthEndpoints();
+    // Uniform cross-app liveness probe (see PoPlatform). Same shape in every Po app, which
+    // is what lets the portfolio dashboard poll them all and render one uptime grid.
+    app.MapPoLiveness();
     app.MapDiagEndpoints();
     app.MapPortfolioEndpoints();
     app.MapHub<RefreshHub>("/hubs/refresh");
