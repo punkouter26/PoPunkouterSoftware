@@ -5,8 +5,11 @@
 @* The 30-day trend pair. Collapsed by default: it is corroborating evidence, not a
    first-paint signal, and the charts are the most expensive thing on the page to draw. *@
 <details class="azure-disclosure">
+    @* <h2>, not <strong>: with no heading, this block was invisible to heading navigation —
+       the same defect the two /users disclosures had. Level 2 matches the page's other
+       sections ("Uptime", "Needs attention"); the chart titles inside stay <h3>. *@
     <summary class="azure-disclosure-heading">
-        <span><RadzenIcon Icon="timeline" /><strong>30-day history</strong></span>
+        <span><RadzenIcon Icon="timeline" /><h2 class="azure-disclosure-title">30-day history</h2></span>
         <span class="app-note">@SnapshotCount snapshots</span>
     </summary>
     <div class="azure-disclosure-body">
@@ -20,6 +23,15 @@
                         <RadzenLineSeries TItem="HistoryStatusPoint" Data="@StatusHistory" CategoryProperty="Label" ValueProperty="Broken" Title="Broken" />
                         <RadzenCategoryAxis /><RadzenValueAxis />
                     </RadzenChart>
+                    @* Both charts are unlabelled SVG. This is the text alternative, in the
+                       same shape the uptime grid and the ranking panels use: the facts the
+                       picture carries, in one sentence, rather than every point read aloud. *@
+                    <p class="app-sr-only">
+                        Active services went from @StatusHistory.First().Active to
+                        @StatusHistory.Last().Active, and unavailable services from
+                        @StatusHistory.First().Broken to @StatusHistory.Last().Broken,
+                        across @StatusHistory.Count snapshots.
+                    </p>
                 </article>
                 <article>
                     <h3>Cost</h3>
@@ -27,6 +39,10 @@
                         <RadzenLineSeries TItem="HistoryCostPoint" Data="@CostHistory" CategoryProperty="Label" ValueProperty="Value" Title="USD" />
                         <RadzenCategoryAxis /><RadzenValueAxis FormatString="${0:F0}" />
                     </RadzenChart>
+                    <p class="app-sr-only">
+                        30-day cost went from $@CostHistory.First().Value.ToString("F0") to
+                        $@CostHistory.Last().Value.ToString("F0") across @CostHistory.Count snapshots.
+                    </p>
                 </article>
             </div>
         }

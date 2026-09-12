@@ -23,16 +23,21 @@
     outline-offset: 2px;
 }
 
-/* ── Sound toggle ────────────────────────────────────────────────────────────────
-   Always visible, at both viewports: it is the only control over whether the app
-   makes noise, so hiding it behind the mobile drawer would mean a visitor who wants
-   silence has to open a menu to get it.
+/* ── Header toggles (theme, sound) ───────────────────────────────────────────────
+   Always visible, at both viewports: these are the only controls over how the app looks
+   and whether it makes noise, so hiding either behind the mobile drawer would mean a
+   visitor has to open a menu to change it.
 
-   Click handling is delegated from js/audio-kit.js for the same reason the hamburger
-   is wired from helpers.js — this layout is statically server-rendered and an
-   @onclick here never fires.
+   Click handling is delegated from js/theme-kit.js and js/audio-kit.js for the same
+   reason the hamburger is wired from helpers.js — this layout is statically
+   server-rendered and an @onclick here never fires.
+
+   One rule set for both buttons: they sit side by side in the same region and a second
+   copy would be a second thing to keep in step. `.is-on` is the sound toggle's on state;
+   the theme toggle never uses it (it has three states, described on the button itself).
 */
-.app-topbar-sound {
+.app-topbar-sound,
+.app-topbar-theme {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -47,7 +52,8 @@
                 background var(--app-dur-fast) var(--app-ease-smooth);
 }
 
-.app-topbar-sound:hover {
+.app-topbar-sound:hover,
+.app-topbar-theme:hover {
     border-color: var(--app-accent);
     color: var(--app-text);
 }
@@ -61,7 +67,19 @@
     color: var(--app-accent);
 }
 
-.app-topbar-sound:focus-visible {
+/* The theme toggle reads its state from `data-theme-state`, written by theme-kit.js.
+   `system` is deliberately the muted default: following the OS is not "off", it is the
+   state a visitor who has never touched the control should not have to think about.
+   Light and dark are both accented because both are an active choice. */
+.app-topbar-theme[data-theme-state="light"],
+.app-topbar-theme[data-theme-state="dark"] {
+    border-color: var(--app-accent);
+    background: var(--app-accent-wash);
+    color: var(--app-accent);
+}
+
+.app-topbar-sound:focus-visible,
+.app-topbar-theme:focus-visible {
     outline: 2px solid var(--app-accent);
     outline-offset: 2px;
 }

@@ -342,6 +342,27 @@ try
     // WASM payload and API JSON alike, not just the routes that reach an endpoint.
     app.UseSecurityHeaders();
 
+    // A browser that mistypes a URL, or follows a link to an app that was renamed, must get
+    // the app: the shell, the header, the skip link and a way back. It used to get
+    // `{"status":404,"path":"…","message":"Route not found."}` on a blank white page, because
+    // a single `MapFallback` swallowed every unmatched path — which also made the
+    // `<NotFound>` block in Routes.razor dead code, since a real navigation never reached the
+    // router.
+    //
+    // A RE-EXECUTING STATUS PAGE, not a catch-all route, and the difference is the status
+    // code. A catch-all route matches by definition, so the response says 200 — a soft 404
+    // that tells a link checker, a monitor or a search engine the page exists. Setting the
+    // status from the page's own OnInitialized does not work either: by then Blazor has begun
+    // writing the response. Both versions of that mistake were tried and both shipped a 200
+    // (caught by NotFoundRouteRegressionTests and by ProductionBootTests, which saw
+    // /openapi/v1.json answer 200 in Production). This middleware re-executes the pipeline
+    // against /not-found and then RESTORES the original status, which is the only combination
+    // that gives a real 404 with a real body.
+    //
+    // Anything that already wrote a 4xx body — an unknown /api path, which answers JSON — has
+    // started its response, so the middleware leaves it alone. Known routes are untouched.
+    app.UseStatusCodePagesWithReExecute("/not-found", "?statusCode={0}");
+
     // HSTS in Production only: it pins the browser to HTTPS for the max-age, which is
     // exactly wrong to send from a plain-HTTP localhost run.
     if (app.Environment.IsProduction())
@@ -446,14 +467,29 @@ try
     app.MapPortfolioEndpoints();
     app.MapSignInEndpoints();
     app.MapHub<RefreshHub>("/hubs/refresh");
-    app.MapFallback((HttpContext ctx) =>
-        Results.NotFound(new
+
+    // Unmatched API route. Every /api/* path is a JSON contract — the WASM client reads
+    // these bodies and UnknownApiRoute_Returns404_WithJsonStatusAndPath pins the shape — so
+    // an unknown one keeps answering JSON.
+    //
+    // This is deliberately NOT a MapFallback any more. A fallback matches EVERY unmatched
+    // path, so `/does-not-exist` in a browser got this same JSON blob on a blank white page
+    // with no header, no skip link and no way back; it also meant the <NotFound> block in
+    // Routes.razor could never run for a real navigation. The catch-all route on
+    // NotFoundPage.razor now owns everything outside /api, answers it with the app's own
+    // chrome, and sets a real 404 — while this route, being more specific, still wins for
+    // anything under /api.
+    app.Map("/api/{**rest}", async (HttpContext ctx) =>
+    {
+        ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+        await ctx.Response.WriteAsJsonAsync(new
         {
             status = 404,
             path = ctx.Request.Path.Value,
             message = "Route not found."
-        }))
-        .ExcludeFromDescription();
+        });
+    })
+    .ExcludeFromDescription();
 
     app.Run();
 }

@@ -48,6 +48,8 @@ APP_ICONS = [
     # MainLayout header (bare <span class="material-symbols-outlined">) and js/helpers.js,
     # js/audio-kit.js, which swap textContent at runtime.
     "home", "menu", "close", "monitor_heart", "group", "volume_off", "volume_up",
+    # MainLayout theme toggle, swapped at runtime by js/theme-kit.js.
+    "dark_mode", "light_mode",
     # RadzenIcon / RadzenButton Icon="..." across the client.
     "alarm_off", "auto_awesome", "check_circle", "cloud_sync", "content_copy",
     "data_object", "delete_sweep", "download", "graphic_eq", "open_in_new",

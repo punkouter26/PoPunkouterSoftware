@@ -28,9 +28,15 @@
     padding: var(--app-space-3xs);
 }
 
-/* Each chart card now has a one-line subtitle so the tile says what it measures */
+/* Each chart card now has a one-line subtitle so the tile says what it measures.
+
+   `--app-step--2`, not `.72rem`. This page carried a second, parallel type scale in literal
+   rems — eleven declarations between .68 and .75rem — and after the ladder's floor moved up
+   to 0.76rem those literals became the smallest text in the app, which is the exact thing
+   the floor exists to prevent. Every one of them is a small caption, a key or a column
+   label, which is what the bottom step is for now. */
 .azure-ops-page ::deep .azure-glance-title { font-family: var(--app-headline-font); letter-spacing: -.02em; }
-.azure-ops-page ::deep .azure-glance-subtitle { color: var(--app-text-soft); font-size: .72rem; margin: 0 0 .35rem; letter-spacing: .03em; }
+.azure-ops-page ::deep .azure-glance-subtitle { color: var(--app-text-soft); font-size: var(--app-step--2); margin: 0 0 .35rem; letter-spacing: .03em; }
 
 /* H1 and its badge — one optical line at desktop, wrapping on mobile. The badge is a
    SIBLING of the heading (see AzureDashboard.razor): nested inside, it became part of the
@@ -137,7 +143,7 @@
 }
 
 .azure-ops-page ::deep .azure-command-kpis span {
-    font-size: .75rem;
+    font-size: var(--app-step--2);
     color: var(--app-text-soft);
 }
 
@@ -258,7 +264,7 @@
 
 .azure-ops-page ::deep .azure-impact-score {
     color: var(--app-text-soft);
-    font-size: .74rem;
+    font-size: var(--app-step--2);
     font-weight: 700;
     white-space: nowrap;
 }
@@ -282,7 +288,7 @@
     gap: .1rem .45rem;
     margin: 0;
     color: var(--app-text-soft);
-    font-size: .74rem;
+    font-size: var(--app-step--2);
 }
 
 .azure-ops-page ::deep .azure-item-provenance > span + span::before {
@@ -305,7 +311,7 @@
 
 .azure-ops-page ::deep .azure-resource-card dt {
     color: var(--app-text-soft);
-    font-size: .68rem;
+    font-size: var(--app-step--2);
     text-transform: uppercase;
 }
 
@@ -452,7 +458,7 @@
 .azure-ops-page ::deep .azure-risk-label.warning { color: var(--app-accent-warm); }
 .azure-ops-page ::deep .azure-risk-label.muted { color: var(--app-text-soft); }
 
-.azure-ops-page ::deep .azure-chart-note { margin: .4rem 0 0; color: var(--app-text-muted); font-size: .74rem; }
+.azure-ops-page ::deep .azure-chart-note { margin: .4rem 0 0; color: var(--app-text-muted); font-size: var(--app-step--2); }
 
 /* Contrast: this renders both nested inside an already-opaque panel (.app-card,
    .azure-disclosure, .azure-attention-summary — all var(--app-surface)) AND, in
@@ -484,6 +490,17 @@
     display: flex;
     gap: .55rem;
     align-items: center;
+}
+
+/* Pinned, because this used to be a <strong> and now carries real heading semantics —
+   Radzen's theme sheet sizes bare h1..h6 from its own display tokens. Same reasoning as
+   .signin-disclosure__title on /users. */
+.azure-ops-page ::deep .azure-disclosure-title {
+    margin: 0;
+    font-family: var(--app-headline-font);
+    font-size: var(--app-step-0);
+    font-weight: 600;
+    letter-spacing: -.01em;
 }
 
 .azure-ops-page ::deep summary.azure-disclosure-heading { cursor: pointer; list-style: none; }
@@ -713,7 +730,20 @@
 /* Page-local tone tokens. The palette has no "good" green — `--app-accent` is the
    blue that stands in for success elsewhere — but a red/green uptime grid is the
    one place the universal convention beats house style, so a green is defined
-   here rather than added to the global palette it is not needed in. */
+   here rather than added to the global palette it is not needed in.
+
+   Keyed on the visitor's theme rather than on the media query alone, which matters more
+   here than anywhere else in the app: these are DATA-VIZ strokes, and they are graded
+   against a 3:1 non-text floor. Under the old plain `@media (prefers-color-scheme: light)`
+   a visitor who chose dark on a light OS kept `--tone-good: #4ea87b` — the light green —
+   on a dark card, and one who chose light on a dark OS kept the dark green on white at
+   2.91:1, under the floor. The three blocks below are the same condition the global
+   palette uses.
+
+   `#217a52` for the light green where `#2f7d55` used to be: it measures 5.29:1 on white
+   AND 3.17:1 on the dark card, so it is legible on either ground even if a future theme
+   case misses this block. The dark green already clears both (5.75 / #141e2d) and is
+   unchanged. */
 .azure-ops-page {
     --tone-good: #4ea87b;
     --tone-warn: var(--app-accent-warm);
@@ -723,10 +753,20 @@
 }
 
 @media (prefers-color-scheme: light) {
-    .azure-ops-page {
-        --tone-good: #2f7d55;
+    html:not([data-app-theme="dark"]) .azure-ops-page {
+        --tone-good: #217a52;
         --tone-bad: var(--app-danger-strong);
     }
+}
+
+html[data-app-theme="light"] .azure-ops-page {
+    --tone-good: #217a52;
+    --tone-bad: var(--app-danger-strong);
+}
+
+html[data-app-theme="dark"] .azure-ops-page {
+    --tone-good: #4ea87b;
+    --tone-bad: var(--app-danger-soft);
 }
 
 /* ── Lead status paragraph ─────────────────────────────────────────────────── */
@@ -900,7 +940,7 @@
 }
 
 .azure-ops-page ::deep .azure-forecast__caption {
-    font-size: .7rem;
+    font-size: var(--app-step--2);
     color: var(--app-text-soft);
     letter-spacing: .04em;
 }
@@ -913,7 +953,7 @@
 }
 
 .azure-ops-page ::deep .azure-forecast__facts dt {
-    font-size: .72rem;
+    font-size: var(--app-step--2);
     color: var(--app-text-soft);
     letter-spacing: .03em;
 }
@@ -980,7 +1020,7 @@
     z-index: 1;
     padding-right: .5rem;
     background: var(--app-surface);
-    font-size: .74rem;
+    font-size: var(--app-step--2);
     color: var(--app-text-muted);
     white-space: nowrap;
     max-width: 14ch;
@@ -1012,7 +1052,7 @@
     z-index: 1;
     padding-left: .5rem;
     background: var(--app-surface);
-    font-size: .74rem;
+    font-size: var(--app-step--2);
     color: var(--tone-good);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -1025,7 +1065,7 @@
     flex-wrap: wrap;
     gap: .75rem;
     margin-top: .5rem;
-    font-size: .72rem;
+    font-size: var(--app-step--2);
     color: var(--app-text-soft);
 }
 
@@ -1058,5 +1098,38 @@
 @media (prefers-reduced-motion: reduce) {
     .azure-ops-page ::deep .azure-forecast__value {
         transition: none;
+    }
+}
+
+/* ── Desktop landscape: two columns ──────────────────────────────────────────
+   The page is pane-shaped — six panes, each answering one question — and on a phone the
+   snap pager gives each of them a screen of its own. At 1440x1000 the same six panes were
+   stacked in ONE column: measured at 1707px of content in a 1000px viewport, i.e. a
+   desktop visitor scrolled 71% more than a phone visitor did, while two thirds of the
+   1280px column sat empty beside a 712px-wide paragraph. Two columns is the desktop
+   answer to the question the pager answers on mobile.
+
+   Which panes span both columns is not cosmetic. The uptime grid is 30 day-columns plus a
+   label and a percentage column: in a 632px half it would need its internal scroller to
+   reach the days it is there to show, so it stays full width. The actions pane keeps it
+   company because a list of attention items reads better wide than narrow, and the
+   advanced diagnostics pane keeps its own full-width row for the same reason it has
+   `.app-pane--tall` on mobile.
+
+   `align-items: start` so a short pane keeps its own height instead of being stretched to
+   its row partner — the status hero stretched to the narrative's height would be 130px of
+   empty card. Order is untouched: DOM order is still narrative, status, changed, spend,
+   uptime, actions, so the reading order and the tab order are unchanged at every width. */
+@media (min-width: 1100px) {
+    .azure-ops-page {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+        align-items: start;
+    }
+
+    .azure-ops-page > .azure-pane-uptime,
+    .azure-ops-page > .azure-pane-actions,
+    .azure-ops-page > .app-pane--tall {
+        grid-column: 1 / -1;
     }
 }

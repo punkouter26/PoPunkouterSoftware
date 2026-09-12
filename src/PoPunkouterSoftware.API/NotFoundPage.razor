@@ -1,0 +1,92 @@
+@page "/not-found"
+@inject NavigationManager Nav
+
+@* The app's 4xx page: what a browser gets instead of a JSON blob.
+
+   Until this page existed, a mistyped URL answered
+   `{"status":404,"path":"/does-not-exist","message":"Route not found."}` — a JSON blob on
+   a blank white page with no header, no skip link, no way back — because a single
+   `MapFallback` in Program.cs swallowed every unmatched path. The `<NotFound>` block in
+   Routes.razor has been dead the whole time for the same reason: a browser navigation
+   never reached the router.
+
+   RENDERED BY RE-EXECUTION, NOT BY A CATCH-ALL ROUTE.
+   `app.UseStatusCodePagesWithReExecute("/not-found", "?statusCode={0}")` in Program.cs
+   points at this path, which is why this is a normal route rather than `/{*path}`. A
+   catch-all route matches by definition, so the response says 200 — a soft 404 that tells a
+   link checker, a monitor or a search engine that the page exists — and a catch-all cannot
+   set the status from its own OnInitialized either, because by then Blazor has begun
+   writing the body.
+
+   BOTH of those were tried on the way here, and both shipped a 200: first the plain
+   fallback (404 JSON, no page), then the catch-all (page, but 200). The re-executing status
+   page is the only combination that yields a real 404 with a real body, because the
+   middleware restores the ORIGINAL status after re-rendering. Do not turn this into a
+   catch-all, and do not try to set `Response.StatusCode` from here.
+
+   It also serves the other body-less 4xx responses: a 403 from a gated API endpoint is
+   re-executed here too and keeps its 403, because the status is never changed by this page.
+   That is why the copy branches on the status instead of assuming "404". *@
+
+<main id="main-content" class="app-page" tabindex="-1">
+    <section class="app-card not-found-card">
+        <div class="app-kicker">@(StatusCode?.ToString() ?? "404")</div>
+        <h1>@Heading</h1>
+        <p>@Message</p>
+        @if (IsMissingPage)
+        {
+            <ul class="not-found-links">
+                <li><a href="/">Apps</a> — the catalogue</li>
+                <li><a href="/azure">Azure</a> — service health, cost and uptime</li>
+                <li><a href="/users">Users</a> — who has signed in</li>
+            </ul>
+        }
+        @if (ShowPath)
+        {
+            <p class="app-note">Requested: <code class="not-found-path">@Path</code></p>
+        }
+    </section>
+</main>
+
+@code {
+    /// <summary>
+    /// The status the middleware re-executed for, handed over as `?statusCode={0}`. Null when
+    /// this page is reached directly, which means the same thing as 404 here.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "statusCode")]
+    public int? StatusCode { get; set; }
+
+    /// <summary>
+    /// The requested path, echoed back so the page reads as "…and here is what you asked for"
+    /// rather than as a generic error. Taken from the navigation manager rather than from the
+    /// request, so it is also correct when the router's <c>&lt;NotFound&gt;</c> fragment
+    /// renders this component client-side.
+    ///
+    /// It is the re-executed path (`/not-found`), not the original one — the middleware
+    /// rewrites `Request.Path` before re-running the pipeline, and the original is not
+    /// carried in the query. Echoing `/not-found` back would be worse than saying nothing, so
+    /// this is only shown when the two actually differ.
+    /// </summary>
+    private string Path { get; set; } = "/";
+
+    private bool IsMissingPage => StatusCode is null or 404;
+
+    private string Heading => StatusCode switch
+    {
+        401 or 403 => "You are not allowed to do that",
+        404 or null => "There is nothing at this address",
+        _ => "That request could not be completed",
+    };
+
+    private string Message => IsMissingPage
+        ? "The dashboard has exactly three pages, and none of them is this address."
+        : $"This deployment refused the request. The status was {StatusCode}.";
+
+    private bool ShowPath => !Path.Contains("not-found", StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        var uri = Nav.ToBaseRelativePath(Nav.Uri);
+        Path = string.IsNullOrEmpty(uri) ? "/" : "/" + uri;
+    }
+}

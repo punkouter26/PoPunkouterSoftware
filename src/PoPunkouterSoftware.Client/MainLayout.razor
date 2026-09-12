@@ -60,6 +60,26 @@
             </div>
 
             <div class="app-topbar-session">
+                @* Theme toggle. Same treatment as the sound toggle below it and for the same
+                   reasons: wired by DELEGATION from js/theme-kit.js (this layout is static
+                   SSR, so @onclick never fires, and enhanced navigation re-inserts the header
+                   on every page change, which would lose a direct listener or double-bind it),
+                   and rendered in the OS-following state on the server because that is the
+                   honest default — theme-kit.js corrects the glyph, the label and the
+                   `data-theme-state` attribute the moment it runs.
+
+                   `dark_mode` is the server-rendered glyph, not a guess: with no stored
+                   choice the OS decides, and a moon is the one state that reads correctly
+                   whether the visitor is on a dark OS (already in that state) or a light one
+                   (one click away). No `aria-pressed`: the control has three states — follow
+                   the system, light, dark — and `aria-pressed` cannot express that without
+                   lying. The accessible name carries the state instead. *@
+                <button type="button" class="app-topbar-theme" data-theme-toggle
+                        data-theme-state="system"
+                        aria-label="Theme follows your system setting. Switch theme"
+                        title="Theme follows your system setting. Switch theme">
+                    <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>
+                </button>
                 @* Sound toggle. Wired from js/audio-kit.js by DELEGATION on document, not by
                    a Blazor @onclick (which can never fire here) and not by a direct listener
                    either — enhanced navigation re-inserts this header on every page change,

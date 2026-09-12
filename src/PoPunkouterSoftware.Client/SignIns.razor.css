@@ -194,7 +194,11 @@
 .signins-page ::deep .signin-table th,
 .signins-page ::deep .signin-table td {
     text-align: left;
-    padding: .45rem .6rem;
+    /* From the spacing ladder, not a literal: `padding: .45rem .6rem` ignored
+       --app-density entirely, so the table's cell padding did not compact with the rest of
+       the UI at 640px — and on a phone those 19px per column are the difference between the
+       roster fitting and needing a sideways scroll. */
+    padding: var(--app-space-2xs) var(--app-space-xs);
     border-bottom: 1px solid var(--app-border);
     vertical-align: top;
     white-space: nowrap;
@@ -243,12 +247,50 @@
 
 .signins-page ::deep .signin-chip {
     display: inline-block;
-    padding: .1rem .45rem;
+    padding: var(--app-space-3xs) var(--app-space-2xs);
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-pill);
     background: var(--app-surface-soft);
     color: var(--app-text-muted);
     font-size: var(--app-step--2);
+}
+
+/* The phone-only copy of the two date columns. Hidden wherever the real columns render, so
+   exactly one copy of each date is ever in the accessibility tree. */
+.signins-page ::deep .signin-person__dates {
+    display: none;
+}
+
+/* ── Mobile roster: three columns, not five ─────────────────────────────────
+   Measured on the running app at 393px: the table was 493px inside a 339px scroller — the
+   sign-in count and both dates were off-screen, the app-name chips were cut mid-word at
+   the clip edge, and nothing indicated the table scrolled at all. Dropping the two date
+   columns (repeated under the person's name by .signin-person__dates) is what makes the
+   remaining three fit, so the roster needs no horizontal scroll on a phone.
+
+   The 640px breakpoint is the app's phone breakpoint, matching --app-density's second
+   step in modern-ui.css. */
+@media (max-width: 640px) {
+    .signins-page ::deep .signin-table .is-date-col {
+        display: none;
+    }
+
+    .signins-page ::deep .signin-person__dates {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 var(--app-space-xs);
+        margin-top: .1rem;
+        color: var(--app-text-soft);
+        font-size: var(--app-step--2);
+        font-weight: 400;
+    }
+
+    /* The person cell holds a name, a masked address and now two dates on one line each;
+       letting it wrap is what keeps a long address from setting the column's min-content
+       width and dragging the table wide again. */
+    .signins-page ::deep .signin-table tbody th {
+        white-space: normal;
+    }
 }
 
 /* ── Disclosures (trend, raw feed) ────────────────────────────────────────── */
@@ -279,6 +321,18 @@
     display: inline-flex;
     align-items: center;
     gap: .4rem;
+}
+
+/* Pinned, because this used to be a <strong> and now carries real heading semantics.
+   Radzen's theme sheet styles bare h1..h6 from its own display tokens, so without this the
+   disclosure titles would jump to the theme's h2 size — a visual change nobody asked for,
+   attached to an accessibility fix. */
+.signins-page ::deep .signin-disclosure__title {
+    margin: 0;
+    font-family: var(--app-headline-font);
+    font-size: var(--app-step-0);
+    font-weight: 600;
+    letter-spacing: -.01em;
 }
 
 .signins-page ::deep .signin-disclosure__body {

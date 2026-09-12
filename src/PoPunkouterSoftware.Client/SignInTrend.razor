@@ -12,8 +12,14 @@
 @using Radzen.Blazor
 
 <details class="signin-disclosure">
+    @* The title is an <h2>, not a <strong>. A screen reader navigating by heading skipped
+       straight past both disclosures on this page — they were the only two sections of the
+       page with no heading, so "Sign-ins over time" and the raw feed were unreachable by the
+       one navigation method built for scanning a page. A heading inside <summary> is the
+       standard disclosure pattern and does not change the accessible name, which is still
+       the summary's text content. Level 2 because it is a sibling of the two panels above. *@
     <summary class="signin-disclosure__heading">
-        <span><RadzenIcon Icon="timeline" /><strong>Sign-ins over time</strong></span>
+        <span><RadzenIcon Icon="timeline" /><h2 class="signin-disclosure__title">Sign-ins over time</h2></span>
         <span class="app-note">@WindowDays days, by app</span>
     </summary>
     <div class="signin-disclosure__body">
@@ -39,6 +45,16 @@
                    fractional ticks whenever the busiest day is 1, which is most days here. *@
                 <RadzenValueAxis FormatString="{0:N0}" />
             </RadzenChart>
+
+            @* The chart is an unlabelled SVG: nothing in it reaches a screen reader, and the
+               five-series legend it draws is five more things to tab through. This is the
+               same treatment the ranking panels get — one sentence carrying the facts the
+               picture carries — rather than a per-day table, which would be 90 numbers read
+               aloud to say what a total and a peak already say. *@
+            <p class="app-sr-only">
+                Sign-ins per day over the last @WindowDays days, by app:
+                @string.Join("; ", Series.Select(s => $"{s.App}: {s.Points.Sum(p => p.SignIns)} total, busiest day {s.Points.Max(p => p.SignIns)}"))
+            </p>
         }
     </div>
 </details>

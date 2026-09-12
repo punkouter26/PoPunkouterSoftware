@@ -4,7 +4,16 @@
    a column-resize layer for what is a short, pre-sorted, read-only list, and its data-grid
    branch is the one the resource explorer already dropped. The table is wrapped in its own
    horizontal-scroll container by the page stylesheet, which is the one exception the
-   "nothing scrolls sideways" rule allows. *@
+   "nothing scrolls sideways" rule allows.
+
+   FIVE COLUMNS BECOME THREE ON A PHONE. "First seen" and "Last seen" are the two columns a
+   visitor can most easily do without side by side, and dropping them is what lets the
+   remaining three fit 390px — the alternative was 493px of table in a 339px box, measured
+   on the running app, with the sign-in count and both dates off-screen behind a scroller
+   that gave no hint it scrolled. The dates are not lost: `.signin-person__dates` repeats
+   them under the person's name and is `display: none` at every viewport where the real
+   columns exist, so exactly one copy is in the accessibility tree at any width and nothing
+   is announced twice. *@
 @using PoPunkouterSoftware.Shared
 
 <table class="signin-table">
@@ -14,8 +23,8 @@
             <th scope="col">Person</th>
             <th scope="col">Apps</th>
             <th scope="col" class="is-numeric">Sign-ins</th>
-            <th scope="col">First seen</th>
-            <th scope="col">Last seen</th>
+            <th scope="col" class="is-date-col">First seen</th>
+            <th scope="col" class="is-date-col">Last seen</th>
         </tr>
     </thead>
     <tbody>
@@ -29,6 +38,17 @@
                     {
                         <span class="signin-person__email">@person.MaskedEmail</span>
                     }
+                    @* Phone-only stand-in for the two columns hidden below 640px. The
+                       sr-only prefixes are what stop these reading as two bare relative
+                       times with nothing to say what they are. *@
+                    <span class="signin-person__dates">
+                        <span>
+                            <span class="app-sr-only">First seen </span>@RelativeTime.Format(person.FirstSeen)
+                        </span>
+                        <span>
+                            <span class="app-sr-only">Last seen </span>@RelativeTime.Format(person.LastSeen)
+                        </span>
+                    </span>
                 </th>
                 <td>
                     <span class="signin-chips">
@@ -39,11 +59,16 @@
                     </span>
                 </td>
                 <td class="is-numeric">@person.SignIns</td>
-                @* The absolute instant stays in the tooltip: "3 days ago" is the right default
-                   for scanning the list, and the exact timestamp is what you need the moment
-                   you are correlating a sign-in with anything else. *@
-                <td title="@person.FirstSeen.ToString("u")">@RelativeTime.Format(person.FirstSeen)</td>
-                <td title="@person.LastSeen.ToString("u")">@RelativeTime.Format(person.LastSeen)</td>
+                @* The absolute instant is a hint rather than a `title`, so it is reachable by
+                   tap as well as by mouse. Not Focusable: this is one hint per row per
+                   column, and putting them all in the tab order would add two stops per
+                   person to a page whose whole job is scanning a list. *@
+                <td class="is-date-col">
+                    <AppHint Text="@($"{person.DisplayName} first signed in at {person.FirstSeen:u}")">@RelativeTime.Format(person.FirstSeen)</AppHint>
+                </td>
+                <td class="is-date-col">
+                    <AppHint Text="@($"{person.DisplayName} last signed in at {person.LastSeen:u}")">@RelativeTime.Format(person.LastSeen)</AppHint>
+                </td>
             </tr>
         }
     </tbody>

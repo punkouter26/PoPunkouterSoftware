@@ -105,7 +105,15 @@
                         <div class="signins-panel__subtitle">
                             Most recent first. Addresses are partially hidden — this page has no login.
                         </div>
-                        <div class="signins-scroll">
+                        @* tabindex="0" + role="group" for the same reason the uptime grid
+                           carries them: this is a horizontally scrollable region, and with
+                           no focus stop a keyboard-only visitor cannot reach anything past
+                           the right edge. Since the mobile reflow it only actually scrolls
+                           at very narrow widths — the attributes stay because the
+                           alternative is a scroll region that is unreachable on exactly the
+                           screen where it scrolls. *@
+                        <div class="signins-scroll" tabindex="0" role="group"
+                             aria-label="Sign-in roster. Scrolls sideways when the table is wider than this window.">
                             <SignInRoster People="@report.People" />
                         </div>
                     </article>

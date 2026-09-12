@@ -29,6 +29,10 @@ Standing instructions from the owner. They outrank default habits and apply to e
   one. See [Git workflow](#git-workflow--master-only) for the full rule.
 - **Never push without being asked.** Not "asked once, months ago" — asked in the turn you are
   working on. A push deploys straight to production. Commit, then hand back and say it is ready.
+  The one standing exception is the phrase **`git sync`**: typing it *is* the ask.
+- **`git sync` means: stage everything, commit, push.** In that order, no questions asked in
+  between. Commit **all** outstanding changes first — a sync that leaves a dirty tree behind ships
+  half the work and hides the other half.
 - **Git-sync commit messages are short and sound human.** One line, casual American English —
   "fixed the busted app cards", "cleaned up the dead scan code". No formal subject/body essays, no
   bullet lists, no changelog voice.
@@ -42,12 +46,20 @@ Standing instructions from the owner. They outrank default habits and apply to e
   Resolved 2026-09-05: `<UserSecretsId>` removed from `PoPunkouterSoftware.API.csproj`; ASP.NET no
   longer auto-loads `%APPDATA%\Microsoft\UserSecrets\popunkouter-software-api\secrets.json` in
   Development. Re-add only with the owner's explicit go-ahead.
+- **Run only the tests that cover what you changed.** Not the whole tier, and never all four tiers,
+  after an ordinary code change — `--filter "FullyQualifiedName~<TypeUnderTest>Tests"` against the
+  one project that holds them. The full fast tier is a **pre-push gate**, not a per-edit habit; see
+  [Git workflow](#git-workflow--master-only).
+- **Never hand the owner a command to type.** If you can run it, run it — build, test, restart,
+  `curl` a local endpoint, read a log, check a workflow. A reply ending in "now run this" is a task
+  you left half-finished. The exceptions are the things you genuinely cannot do: pushing without the
+  ask, out-of-band `az deployment` runs, and anything needing a credential you do not hold.
 - **Answers over ~100 words end with a 20-word TLDR.**
-- **`docs/` is not project documentation.** The rule of thumb "check the root DOCS folder for a
-  project summary" does not pay off in this repo: [docs/](docs/) is the GitHub Pages site — a
-  landing page, `style.css`, per-app privacy policies and store art for PoBox, PoCross, PoDance,
-  PoFlag, PoFootball, PoRacer, PoSoccer and PoSumo, none of which are in this portfolio. There is no
-  project summary in it. **This file is the summary.**
+- **Check the root DOCS folder for a project summary — and here is that check's answer, already
+  made, so do not redo it.** [docs/](docs/) is the GitHub Pages site: a landing page, `style.css`,
+  per-app privacy policies and store art for PoBox, PoCross, PoDance, PoFlag, PoFootball, PoRacer,
+  PoSoccer and PoSumo, none of which are in this portfolio. There is no project summary in it and
+  no reason to expect one to appear. **This file is the summary.**
 
 ## Commands
 
@@ -190,7 +202,14 @@ the page already renders it.
   resolves from a step. Do **not** write a new `clamp()`: the catalogue h1 grew at `5vw` while the
   dashboard hero grew at `3vw`, so the two pages' headings crossed over somewhere mid-range and
   neither size was ever chosen. Density does not scale type — the ladder already shrinks with the
-  viewport and multiplying the two compounds into unreadable text.
+  viewport and multiplying the two compounds into unreadable text. The bottom step is also the
+  app's most-repeated size (`.app-kicker`, card subtitles, `.app-note`) and its floor is 0.76rem
+  (12.16px at 390px) — it was 0.68rem/10.88px, below comfortable reading for a tracked all-caps
+  kicker. If a pane then stops fitting its viewport, fix the pane.
+  **A literal below that floor is now the app's smallest text**, which is why `AzureDashboard.razor.css`
+  no longer carries a parallel scale in raw rems: eleven declarations between .68 and .75rem are now
+  `var(--app-step--2)`. The same sweep has NOT been done everywhere — Index/PortfolioAppCard/SignIns
+  still hold literals in the 0.78–0.85rem band, which sit *above* the floor and are left alone.
 - **`--app-viewport-fit`** is `100dvh` minus the fixed chrome and shell padding: what a
   full-height pane sizes itself to.
 
@@ -211,12 +230,33 @@ and scrolls internally. Both contracts are held by `PortfolioUiTests`
 (`Azure_MobilePortrait_PanesFitTheViewport`, `Home_FirstScreen_ShowsAWholeCard`) — a new section
 dropped into whichever pane is nearest will fail the first of those.
 
+At **≥1100px** those same six panes go two-up, because the pane shape is not a phone-only
+idea: stacking them in one column at 1440×1000 measured **1707px of content in a 1000px
+viewport**, so a desktop visitor scrolled 71% more than a phone visitor while two thirds of
+the 1280px column sat empty beside a 712px-wide paragraph. `AzureDashboard.razor.css`'s
+`@media (min-width: 1100px)` sets two columns and lets the uptime grid, the actions pane and
+the advanced pane span both — the uptime grid is 30 day-columns plus labels, so in a 632px
+half it would need its inner scroller to reach the days it exists to show. `align-items: start`
+so a short pane keeps its own height instead of stretching to its row partner. DOM order is
+unchanged at every width, so reading order and tab order still match.
+
 `/users` answers it the way `/` does, not the way `/azure` does: it is a roster of unknown
 length, so it scrolls ordinarily and carries no `[data-snap-pager]`. Its one concession is
 that the roster and the raw feed sit in `.signins-scroll` / the disclosure body, each its own
 `overflow-x: auto` container — five columns of real text cannot honestly reflow to 390px, and
 a per-table scroller is the escape hatch the "page body never scrolls sideways" rule allows.
 Everything else on the page reflows.
+
+The roster itself drops from five columns to three below 640px. Measured at 393px it was a
+**493px table inside a 339px scroller**: the sign-in count and both dates were off-screen,
+the app-name chips were cut mid-word at the clip edge, and nothing indicated the table
+scrolled at all. "First seen"/"Last seen" are the two columns a visitor can most easily do
+without side by side, and `.signin-person__dates` repeats them under the person's name —
+`display: none` at every viewport where the real columns exist, so exactly one copy is in the
+accessibility tree at any width. The scroller stays (with `tabindex="0"` + `role="group"`,
+the same treatment the uptime grid carries) because it is still needed at very narrow widths,
+and a scroll region that is unreachable on exactly the screen where it scrolls is worse than
+no scroller at all.
 
 **Two big types are partial classes split by concern.** Find the concern, not the file:
 
@@ -238,7 +278,7 @@ Everything else on the page reflows.
 
 ## Graphics and audio
 
-Eight files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
+Nine files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
 comment in each before changing it; they document the reasoning, this is the map.
 
 | File | Role |
@@ -248,7 +288,8 @@ comment in each before changing it; they document the reasoning, this is the map
 | `gpu-backdrop.js` | Orchestrator for `#app-gpu-backdrop`: tier selection, colour tokens, glass rects, audio energy. Owns no pixels. |
 | `gfx-webgl.js` | WebGL2 renderer (curl-noise field, transform-feedback particles, dual-Kawase blur, glass composite) with a WebGL1 field-only fallback. **The top of the ladder.** |
 | `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. |
-| `helpers.js` | Topbar, snap pager, clipboard, download. Unrelated to the above. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
+| `helpers.js` | Topbar, snap pager, clipboard, download — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
+| `theme-kit.js` | The visitor's light/dark choice, and the header toggle that sets it. Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
 | `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
 | `blazor-hooks.js` | Registers the enhanced-navigation callbacks. Must load **after** `blazor.web.js`, which defines `Blazor`. Also ex-inline. |
 
@@ -383,6 +424,21 @@ proves a context and program were created, not that anything reached the screen.
   second design system — whose only caller was its own smoke test, and whose `?format=json` twin
   returned the server's absolute ContentRoot path, the environment name and masked-but-suffixed
   connection strings to anonymous callers in Production. Removed 2026-09-04.
+- **An unmatched path gets the app, not JSON.** A browser that mistypes a URL, or follows a link
+  to an app that was renamed, must land on the app's own chrome: shell, header, skip link, a way
+  back, and a **real 404 status**. That is `NotFoundPage.razor`, rendered by
+  `UseStatusCodePagesWithReExecute("/not-found", "?statusCode={0}")`. It is not a page in the
+  three-page budget — nobody navigates to it — but it is a route, so the count of routes is now
+  four.
+  **Two ways to get this wrong, both tried here, both caught by tests and not by looking:**
+  a plain `MapFallback` returns the right status with no page (it swallowed every unmatched path,
+  so `<NotFound>` in `Routes.razor` was dead code for a browser navigation); a **catch-all route**
+  (`@page "/{*path}"`) returns the page but a **200**, because a catch-all matches by definition
+  and a component cannot set `Response.StatusCode` — the response has already begun by the time
+  `OnInitialized` runs. Only the re-executing status page gives a real 404 with a real body.
+  Do not "simplify" it back into a fallback or a catch-all. Unknown **`/api/*`** paths keep
+  answering JSON (`app.Map("/api/{**rest}")` in [Program.cs](src/PoPunkouterSoftware.API/Program.cs)),
+  and `NotFoundRouteRegressionTests` pins both halves in one test.
 - **A health check does the real operation, with the app's own credential.** Every check used to be
   an anonymous `HttpClient.GetAsync` at the dependency's URL, which proves DNS and TLS and nothing
   else: Key Vault read "healthy" off an HTTP **404** and Table Storage "degraded" off a **400**,
@@ -441,6 +497,49 @@ proves a context and program were created, not that anything reached the screen.
   instance from `CreateClient(name)` — handler chains are pooled, so a per-call mutation leaks that
   header, credentials included, to every other consumer. The `github` PAT is bound once in
   `Program.cs`. Pass per-call values on the `HttpRequestMessage`.
+- **The theme is a choice, not only a media query.** `theme-kit.js` owns it: the header toggle
+  (rendered by `MainLayout`, wired by delegation, re-synced after enhanced navigation) writes
+  `localStorage` `pops:theme` and sets `data-app-theme` on `<html>`. Rejected alternatives, so they
+  are not re-litigated: Radzen's `RadzenTheme`/`RadzenAppearanceToggle` would make a second theme
+  authority alongside this app's own token block, which is the same class of bug as the Radzen token
+  bridge; `light-dark()` would collapse the palette to one line per token but fails *silently and
+  totally* on a browser that lacks it, because every token becomes invalid at computed-value time.
+  Consequences to keep in step:
+  - **The light palette exists twice** in `modern-ui.css` — once under
+    `@media (prefers-color-scheme: light) { :root:not([data-app-theme="dark"]) … }` (the no-choice
+    case, which applies before any script runs and so cannot flash) and once under
+    `:root[data-app-theme="light"]`. CSS has no way to share a declaration block across those two
+    selectors. **Change one, change both.** `boot.css` and `.azure-ops-page`'s `--tone-*` block have
+    the same two-place shape, and the tones matter most: they are data-viz strokes graded against a
+    3:1 non-text floor, and the old plain media query left a light green at 2.91:1 on a dark card.
+  - **Radzen's two theme sheets are switched by rewriting their `media` attributes**, because
+    `App.razor` scopes them with media queries and no CSS selector can reach a stylesheet's `media`
+    attribute. Skipping that leaves every Radzen surface (badges, buttons, chart legend) on the
+    system's theme while the page around them flips.
+- **Radzen's own markup is repaired from `js/helpers.js`, not at 22 call sites.** Two defects in
+  what the library renders: an icon is real text (`<i class="rzi">refresh</i>`), so every Radzen icon
+  button's accessible name is the ligature name plus its label — measured as `"refresh Rescan
+  Azure"`, `"graphic_eq Listen"`, `"timelineSign-ins over time"`; and chart legend items ship
+  `aria-disabled="False.ToString().ToLowerInvariant()"`, a literal from an expression that never ran.
+  `appRepairRadzenA11y` fixes both from one `MutationObserver` — `aria-hidden` cannot be set from
+  CSS and `RadzenButton` exposes no way to reach the `<i>` inside itself, so per-call-site fixes mean
+  22 places to remember in markup whose point is that a new Radzen control just works. The
+  hand-written `<span class="material-symbols-outlined" aria-hidden="true">` glyphs in `MainLayout`
+  were always correct, which is exactly why this went unnoticed: it only affects Radzen's path.
+- **A hint is `AppHint.razor`, not a `title`.** Native `title` never appears on touch and is not
+  announced on focus, so ~40 of them — the exact read time, the "auto-updates every 5 min"
+  explanation, the config keys that would unlock refresh — were desktop-mouse-only. `AppHint` wraps
+  Radzen's `TooltipService` (mouseenter, focus, click) and renders **no** `title`: keeping one as a
+  fallback prints a native tooltip under the Radzen one a second later. `Focusable` is opt-in per
+  use — a hint on each of twelve catalogue cards would otherwise add twenty-four tab stops.
+- **Radzen's four status colours are bridged in the token block, and badges were unreadable without
+  it.** The bridge mapped `--rz-primary*` only, so `.rz-badge-<style>` kept the theme's pastel fill
+  with white text on top: `"3 actionable"` measured **1.64:1**, `"AI"`/`"Current"` 2.29:1,
+  `"1 security"` 2.63:1 — all below AA at 12px, in both schemes. `--rz-success/--rz-warning/
+  --rz-danger/--rz-info` and their `--rz-on-*` pairs are now dark fills with white text (5.9–6.7:1).
+  A `.rz-badge-danger.rz-variant-fill` override used to sit in the stylesheet claiming to fix the
+  danger badge; Radzen emits `rz-variant-filled`, never `rz-variant-fill`, so it matched nothing and
+  the badge it was written for stayed at 2.63:1 — do not re-add a per-style badge override.
 - **Package versions go in `Directory.Packages.props` only** (Central Package Management, transitive
   pinning on). Some entries are *security pins* for transitive packages with no direct reference —
   `Microsoft.OpenApi` is one; removing it because "nothing references it" reintroduces a vulnerable
@@ -624,7 +723,7 @@ proves a context and program were created, not that anything reached the screen.
   without which `GetContainerAsync` returns null and stored images never appear —
   indistinguishable from never having captured any.
 
-## Tests — four projects, one per tier (budget 105/52/25/25, currently 103/51/21/23)
+## Tests — four projects, one per tier (budget 105/52/25/25, currently 103/52/21/23)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the
@@ -662,9 +761,13 @@ This overrides any default "branch before committing to the default branch" habi
 
 **Committing is yours; pushing is the owner's.** Never `git push` unless the owner asks for it in
 that turn, because **every push to `master` deploys to production** via
-[deploy.yml](.github/workflows/deploy.yml). Commit freely, run the fast tier locally, then stop and
-say the work is ready to push — the pipeline will not run the tests for you, and it will not ask
-before shipping.
+[deploy.yml](.github/workflows/deploy.yml). Commit freely, then stop and say the work is ready to
+push — the pipeline will not run the tests for you, and it will not ask before shipping.
+
+**`git sync` is the ask, and it is the one place the fast tier runs in full.** On those two words:
+commit every outstanding change, run `dotnet test` on the Unit and Integration projects (not just
+the filtered subset that covered the edit — this is the gate that stands in for a review), then
+push. Everywhere else, run only the tests covering what changed.
 
 **CI/CD:** three workflows. Only `deploy.yml` runs tests, and only the Unit tier — the other
 three tiers still run locally before a push.

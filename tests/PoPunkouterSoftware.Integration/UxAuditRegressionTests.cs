@@ -157,3 +157,62 @@ public class PortfolioExclusionRegressionTests
         }
     }
 }
+
+/// <summary>
+/// The 404, which used to be JSON for everybody.
+///
+/// A single <c>MapFallback</c> answered every unmatched path with
+/// <c>{"status":404,"path":"…","message":"Route not found."}</c> — so a browser that mistyped
+/// a URL, or followed a link to an app that had been renamed, got that blob on a blank white
+/// page: no header, no skip link, no way back. It also made the <c>&lt;NotFound&gt;</c> block in
+/// Routes.razor unreachable, since a real navigation never reached the router.
+///
+/// One test for both halves, because they are one behaviour: the answer must depend on WHO is
+/// asking, and the fix is what makes that possible. It is deliberately not two tests — the
+/// integration tier is at its budget, and splitting this only creates two places to forget.
+///
+/// The status assertion is the one that matters most and the one that was wrong twice while
+/// this was being built: a plain fallback gave a page-less 404, and a catch-all route gave the
+/// right page with a 200. Both were caught here and by ProductionBootTests.
+/// </summary>
+[Collection("WebApp")]
+public class NotFoundRouteRegressionTests
+{
+    private readonly HttpClient _client;
+
+    public NotFoundRouteRegressionTests(TestWebApp factory) => _client = factory.CreateClient();
+
+    [Fact]
+    public async Task UnmatchedRoutes_AnswerBrowsersWithTheAppsPage_AndApiClientsWithJson()
+    {
+        // ── A browser: the app's own chrome, at the original URL, with a real 404 ──
+        foreach (var path in new[] { "/does-not-exist", "/azure/typo" })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, path);
+            request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml");
+            var response = await _client.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound,
+                because: $"{path} — a 200 tells a link checker, a monitor or a search engine that the page exists");
+            response.Content.Headers.ContentType?.MediaType.Should().Be("text/html");
+            body.Should().Contain("id=\"main-content\"",
+                because: "the page must carry the skip-link target MainLayout points at, or 'Skip to content' goes nowhere");
+            body.Should().Contain("<h1",
+                because: "no h1 means <FocusOnNavigate Selector=\"h1\"> has nothing to focus on arrival");
+            body.Should().NotContain("Route not found.",
+                because: "that string is the old JSON fallback's body — it must not be what a browser sees");
+        }
+
+        // ── An API client: still JSON, still the requested path echoed back ──
+        // Asserted here as well as in the E2E-API tier because this is the test that fails if
+        // the /not-found route is ever turned into a catch-all, which is the one way the page
+        // fix breaks the API contract.
+        var api = await _client.GetAsync("/api/does-not-exist");
+        api.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        api.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
+        using var doc = JsonDocument.Parse(await api.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("status").GetInt32().Should().Be(404);
+        doc.RootElement.GetProperty("path").GetString().Should().Be("/api/does-not-exist");
+    }
+}

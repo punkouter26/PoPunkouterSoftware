@@ -89,8 +89,14 @@ else if (_summary is not null)
             </div>
             <div class="azure-command-meta">
                 <span>Updated @ageLabel</span>
-                <RadzenBadge Text="@(summary.IsStale ? "Stale data" : "Current")" IsPill="true"
-                              BadgeStyle="@(summary.IsStale ? BadgeStyle.Danger : BadgeStyle.Success)" />
+                @* The badge's explanation used to be a `title`, which is invisible on touch
+                   and unannounced on focus. Focusable: what "as of the last scan" means is
+                   the difference between reading these numbers as current or as a snapshot. *@
+                <AppHint Focusable="true"
+                         Text="@($"Health, cost and uptime below are from the last full Azure scan, {ageLabel} ago.{(summary.IsStale ? " That is past the freshness window, so treat them as a snapshot rather than as the state of the estate now." : "")}")">
+                    <RadzenBadge Text="@(summary.IsStale ? "Stale data" : "Current")" IsPill="true"
+                                  BadgeStyle="@(summary.IsStale ? BadgeStyle.Danger : BadgeStyle.Success)" />
+                </AppHint>
             </div>
         </div>
         @* Health claims inherit the report's age: "100% healthy" from a stale scan is a
@@ -139,9 +145,13 @@ else if (_summary is not null)
             }
             else
             {
-                <span class="app-note" title="Management actions are disabled on this deployment. Set FeatureFlags:EnableManagementActions=true (and Security:ManagementApiKey if you want the extra API-key gate) in production appsettings to enable refresh, cancel, and pinger toggle.">
+                @* Focusable, and this is the case that most needed it: the explanation of WHY
+                   there is no refresh button — and the exact config keys that would enable it
+                   — was a `title` no phone or keyboard visitor could read. *@
+                <AppHint Class="app-note" Focusable="true"
+                         Text="Management actions are disabled on this deployment. Set FeatureFlags:EnableManagementActions=true (and Security:ManagementApiKey for the extra API-key gate) in production appsettings to enable refresh, cancel and the pinger toggle.">
                     Read-only view — enable&nbsp;<code>FeatureFlags:EnableManagementActions</code>&nbsp;to unlock refresh controls
-                </span>
+                </AppHint>
             }
             @* Sonification. A second MODALITY on facts this page already renders — not a
                second copy of them — so the "each fact appears once" rule is intact: nothing

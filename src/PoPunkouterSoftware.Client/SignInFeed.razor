@@ -9,8 +9,10 @@
 @using PoPunkouterSoftware.Shared
 
 <details class="signin-disclosure">
+    @* <h2>, not <strong> — see the note in SignInTrend.razor. It is the second of the two
+       sections on this page that had no heading at all. *@
     <summary class="signin-disclosure__heading">
-        <span><RadzenIcon Icon="history" /><strong>Most recent sign-ins</strong></span>
+        <span><RadzenIcon Icon="history" /><h2 class="signin-disclosure__title">Most recent sign-ins</h2></span>
         <span class="app-note">@Events.Count @(Events.Count == 1 ? "event" : "events")</span>
     </summary>
     <div class="signin-disclosure__body">

@@ -50,13 +50,18 @@
             <strong>@data.Apps.Count apps</strong>
             @if (data.GeneratedAt is DateTime updated)
             {
-                <span class="@(data.Stale ? "is-stale" : "")" title="@updated.ToString("u")">
+                @* Focusable because the exact read time exists nowhere else on the page: the
+                   visible text is relative, and `title` — which is what this used to be —
+                   never appears on a touch device and is not announced on focus. *@
+                <AppHint Class="@(data.Stale ? "is-stale" : "")" Focusable="true"
+                         Text="@($"Last read {updated:u}.{(data.Stale ? " This page treats that as stale — the button re-reads the stored inventory now." : "")}")">
                     Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
-                </span>
+                </AppHint>
             }
-            <span class="portfolio-summary__auto" title="This list reloads itself every 5 minutes; the button is only for checking sooner.">
+            <AppHint Class="portfolio-summary__auto"
+                     Text="This list reloads itself every 5 minutes; the button is only for checking sooner.">
                 auto-updates every 5 min
-            </span>
+            </AppHint>
             @* "Reload catalog", not "Refresh list": this re-reads the inventory the server
                already has (GET /api/portfolio, ~200 ms). It does NOT rescan Azure — that is
                the "Rescan Azure" button on /azure, which costs about 30 seconds of live ARM

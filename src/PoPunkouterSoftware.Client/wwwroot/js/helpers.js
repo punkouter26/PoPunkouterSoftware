@@ -300,6 +300,92 @@ window.appSnapPager = (function () {
     return { sync: sync, schedule: schedule, start: start };
 })();
 
+/* ═════════════════════════════════════════════════════════════════════════════
+   Radzen markup repairs — accessibility only, no visual effect.
+
+   Two defects in what Radzen 10.4.5 renders itself. Neither can be fixed from this
+   repository's markup, because in both cases the library emits the wrong thing:
+
+   1. ICON GLYPHS ARE REAL TEXT. Radzen renders an icon as
+      `<i class="notranslate rzi">refresh</i>` — the ligature NAME, in the text flow,
+      with no aria-hidden. So the accessible name of every Radzen icon button is the
+      glyph name followed by its label, measured on the running app as
+      "refresh Rescan Azure" and "graphic_eq Listen", and the two /users disclosures
+      announce as "timelineSign-ins over time" and "historyMost recent sign-ins".
+      Sixteen on "/", four on "/azure", two on "/users".
+
+      The hand-written `<span class="material-symbols-outlined" aria-hidden="true">`
+      glyphs in MainLayout were already correct, which is exactly why this went
+      unnoticed for so long: it only affects the path that goes through Radzen.
+
+   2. `aria-disabled` IS EMITTED UNEVALUATED. Chart legend items ship
+      `aria-disabled="False.ToString().ToLowerInvariant()"` — a literal, from an
+      expression that never ran. The value is neither "true" nor "false", so nothing
+      can tell whether the item is usable — and a legend item IS a control
+      (`role="button"`, `tabindex="0"`, clicking it hides that series).
+
+   WHY A MutationObserver AND NOT 22 CALL SITES. aria-hidden cannot be set from CSS,
+   and RadzenButton gives no way to reach the <i> it renders inside itself. Doing this
+   per call site — an aria-label on every button, an aria-hidden wrapper span around
+   every standalone icon — is 22 places to remember, in markup whose whole point is
+   that adding a Radzen control works with no interop hook. This is the same reasoning
+   as the delegated click listeners: survive any amount of DOM replacement, and ask
+   nothing of the component rendering the markup.
+
+   Cost is bounded: one observer on documentElement, one attribute write per icon, and
+   a no-op for any added node carrying neither. Attribute writes do not produce
+   childList records, so this cannot feed itself.
+   ═════════════════════════════════════════════════════════════════════════════ */
+window.appRepairRadzenA11y = (function () {
+    'use strict';
+
+    function hideIcons(node) {
+        if (node.classList && node.classList.contains('rzi')) {
+            node.setAttribute('aria-hidden', 'true');
+        }
+        if (!node.querySelectorAll) return;
+        const icons = node.querySelectorAll('.rzi');
+        for (let i = 0; i < icons.length; i++) {
+            icons[i].setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    function fixAriaDisabled(node) {
+        if (!node.querySelectorAll) return;
+        const candidates = [];
+        if (node.hasAttribute && node.hasAttribute('aria-disabled')) candidates.push(node);
+        candidates.push.apply(candidates, node.querySelectorAll('[aria-disabled]'));
+        for (let i = 0; i < candidates.length; i++) {
+            const value = candidates[i].getAttribute('aria-disabled');
+            // Only the malformed value is removed. A real "true"/"false" is Radzen
+            // (or this app) working correctly and is left exactly as found.
+            if (value !== 'true' && value !== 'false') {
+                candidates[i].removeAttribute('aria-disabled');
+            }
+        }
+    }
+
+    function repair(node) {
+        if (!node || node.nodeType !== 1) return;
+        hideIcons(node);
+        fixAriaDisabled(node);
+    }
+
+    function start() {
+        if (!document.body) return;
+        // The static SSR payload is already parsed, so sweep it once — the observer
+        // below only sees what Blazor adds afterwards.
+        repair(document.body);
+        new MutationObserver(function (records) {
+            for (const record of records) {
+                for (const added of record.addedNodes) repair(added);
+            }
+        }).observe(document.documentElement, { childList: true, subtree: true });
+    }
+
+    return { start: start, repair: repair };
+})();
+
 /* Self-initialise the topbar. The header is present in the static SSR payload, so
    it exists by the time this script executes; the DOMContentLoaded guard covers the
    case where the script is ever moved into <head>. */
@@ -308,6 +394,7 @@ window.appSnapPager = (function () {
         window.initTopbarDrawer();
         window.initNavbarScroll();
         window.appSnapPager.start();
+        window.appRepairRadzenA11y.start();
     };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start, { once: true });
