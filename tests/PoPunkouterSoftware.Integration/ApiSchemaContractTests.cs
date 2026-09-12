@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace PoPunkouterSoftware.Integration;
@@ -44,6 +46,39 @@ public class ApiSchemaContractTests
 
         doc.RootElement.EnumerateObject().Select(p => p.Name).Should().Contain(
             new[] { "generatedAt", "isStale", "healthPercent", "attentionCount" });
+    }
+
+    /// <summary>
+    /// The sign-in roster, in the shape the page meets when nothing is configured — which is
+    /// the fixture's deliberate state (see TestWebApp) and the same shape a missing credential
+    /// or a missing Monitoring Reader role produces in production.
+    /// <para>Two claims in one request: the casing contract, and that the endpoint answers
+    /// <b>200 with a reason</b> rather than a 500. Degradation is a designed path here — the
+    /// page renders "why there is nothing" — and an exception-mapped status would give it
+    /// nothing to say.</para>
+    /// </summary>
+    [Fact]
+    public async Task SignIns_ExposesItsContractInCamelCase_AndDegradesRatherThanFailing()
+    {
+        var response = await _client.GetAsync("/api/signins?days=7");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+
+        root.EnumerateObject().Select(p => p.Name).Should().Contain(
+            new[] { "generatedAt", "windowDays", "available", "totalPeople", "totalSignIns", "people", "apps", "trend", "recent" });
+
+        root.GetProperty("available").GetBoolean().Should().BeFalse();
+        root.GetProperty("unavailable").GetString().Should().NotBeNullOrWhiteSpace(
+            because: "the page renders the reason, so an unavailable report without one is a blank panel");
+
+        // The caller-supplied window is clamped, never rejected.
+        root.GetProperty("windowDays").GetInt32().Should().Be(7);
+        (await _client.GetFromJsonAsync<JsonElement>("/api/signins?days=9999"))
+            .GetProperty("windowDays").GetInt32().Should().Be(90,
+                because: "90 days is the Application Insights retention on the shared component");
     }
 
     /// <summary>

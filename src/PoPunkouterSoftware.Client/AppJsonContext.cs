@@ -47,6 +47,7 @@ internal sealed record AiTriageAdHocRequest(
 [JsonSerializable(typeof(AiSummaryResult))]
 [JsonSerializable(typeof(List<HistorySummary>))]
 [JsonSerializable(typeof(PortfolioResponse))]
+[JsonSerializable(typeof(SignInReport))]
 [JsonSerializable(typeof(ConfigResponse))]
 [JsonSerializable(typeof(ProblemResponse))]
 [JsonSerializable(typeof(AiTriageAdHocRequest))]

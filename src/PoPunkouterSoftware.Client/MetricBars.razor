@@ -42,7 +42,8 @@
     [Parameter] public string Tone { get; set; } = "accent";
 
     /// <summary>
-    /// <c>money</c> renders USD, <c>ms</c> renders milliseconds. A format STRING rather than a
+    /// <c>money</c> renders USD, <c>ms</c> renders milliseconds, <c>count</c> renders a plain
+    /// integer. A format STRING rather than a
     /// <c>Func&lt;double,string&gt;</c> on purpose: a lambda written in the caller's markup is a
     /// new object on every render, which would defeat the <see cref="ShouldRender"/> guard below
     /// and reintroduce exactly the re-render this component exists to stop.
@@ -90,6 +91,7 @@
     private string FormatValue(double value) => Format switch
     {
         "ms" => value.ToString("N0", CultureInfo.InvariantCulture) + " ms",
+        "count" => value.ToString("N0", CultureInfo.InvariantCulture),
         _ => value.ToString("C2", CultureInfo.GetCultureInfo("en-US")),
     };
 }

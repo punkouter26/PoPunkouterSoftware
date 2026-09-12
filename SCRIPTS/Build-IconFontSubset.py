@@ -47,12 +47,12 @@ from fontTools.subset import Subsetter, Options
 APP_ICONS = [
     # MainLayout header (bare <span class="material-symbols-outlined">) and js/helpers.js,
     # js/audio-kit.js, which swap textContent at runtime.
-    "home", "menu", "close", "monitor_heart", "volume_off", "volume_up",
+    "home", "menu", "close", "monitor_heart", "group", "volume_off", "volume_up",
     # RadzenIcon / RadzenButton Icon="..." across the client.
     "alarm_off", "auto_awesome", "check_circle", "cloud_sync", "content_copy",
     "data_object", "delete_sweep", "download", "graphic_eq", "open_in_new",
-    "refresh", "security", "snooze", "speed", "sync", "terminal", "timeline",
-    "troubleshoot",
+    "history", "refresh", "security", "snooze", "speed", "sync", "terminal",
+    "timeline", "troubleshoot",
     # Dynamic: AzureDashboard's advanced-diagnostics toggle.
     "expand_less", "tune",
     # Dynamic: AzureWhatChanged.IconFor.

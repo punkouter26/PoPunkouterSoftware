@@ -44,6 +44,13 @@ public class TestWebApp : WebApplicationFactory<Program>
                 // the nightly screenshots. Blank it here or every /api/portfolio call in this
                 // tier tries to reach live Azure storage on a credential it does not have.
                 ["AzureBlobStorage:Endpoint"] = "",
+                // Same reason, one endpoint over: appsettings.json names the real shared
+                // Application Insights component so /users can read the sign-in roster in
+                // production. Blank here, or every /api/signins call in this tier walks the
+                // DefaultAzureCredential chain against live Azure on a credential it does not
+                // have — slow, non-hermetic, and dependent on whether the developer happens to
+                // be logged in with `az`. Unset is the deterministic "unavailable" branch.
+                ["SignIns:ResourceId"] = "",
             });
         });
 

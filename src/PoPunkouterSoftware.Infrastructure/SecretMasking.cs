@@ -14,6 +14,51 @@ public static partial class SecretMasking
         v[..4] + new string('*', Math.Min(v.Length - 8, 20)) + v[^4..];
 
     /// <summary>
+    /// Elides the local part of an email address, keeping the domain.
+    /// </summary>
+    /// <remarks>
+    /// <para><c>GET /api/signins</c> is anonymous for the same reason <c>/api/diag/report</c>
+    /// is — the page that reads it is WASM with no credential — and it returns the addresses
+    /// of real people, including people who are not the owner. An unmasked roster would
+    /// publish third-party PII to any visitor of a site that has no login at all.</para>
+    /// <para>The domain survives on purpose: "someone at a company tried PoTraffic" and
+    /// "another throwaway gmail" are the two readings the page exists to support, and neither
+    /// survives masking the whole address. The local part is what identifies the individual,
+    /// so that is what goes.</para>
+    /// <para>The LAST character of the local part survives alongside the first two, and that
+    /// is not decoration. Keeping only a prefix made punkouter26@gmail.com and
+    /// punkouter27@gmail.com render as the same string — two different people, same masked
+    /// address, same display name, two rows on the roster that nothing on screen could tell
+    /// apart. A mask that collapses distinct identities is worse than no mask, because the
+    /// page then quietly asserts something false. The remainder is still elided, so what is
+    /// left is not an address anyone can write to.</para>
+    /// <para>The star run is capped so a long local part cannot be counted back to its
+    /// original length, and so the roster column does not stretch.</para>
+    /// </remarks>
+    public static string MaskEmail(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "(unknown)";
+
+        var trimmed = value.Trim();
+        // LastIndexOf: the local part of an address may legally contain '@' when quoted, and
+        // the domain never does, so the last one is the real separator.
+        var at = trimmed.LastIndexOf('@');
+        return at <= 0
+            ? MaskLocalPart(trimmed)
+            : MaskLocalPart(trimmed[..at]) + trimmed[at..];
+    }
+
+    private static string MaskLocalPart(string local) => local.Length switch
+    {
+        // Too short to reveal anything from without revealing most of it.
+        <= 3 => new string('*', 3),
+        // One char each end: enough to separate two neighbouring addresses, not enough to read.
+        <= 5 => local[..1] + new string('*', local.Length - 2) + local[^1..],
+        _ => local[..2] + new string('*', Math.Min(local.Length - 3, 8)) + local[^1..],
+    };
+
+    /// <summary>
     /// Replaces the subscription GUID inside every ARM resource id with a fixed placeholder,
     /// leaving the rest of the id (resource group, provider, type, name) intact.
     /// </summary>

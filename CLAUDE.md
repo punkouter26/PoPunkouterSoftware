@@ -9,8 +9,13 @@ App Service health, cost, SSL expiry, zombie-app detection and downtime diagnosi
 minimal-API **BFF** that reads an Azure inventory report out of Azure Table Storage (with a local
 JSON fallback).
 
-There are exactly **two pages**: `/` (the app catalog) and `/azure` (the ops dashboard). Everything
-else is an endpoint.
+There are exactly **three pages**: `/` (the app catalog), `/azure` (the ops dashboard) and
+`/users` (who has signed in, across every Po app). Everything else is an endpoint.
+
+For years this said *two* pages, and that was load-bearing — the count is a budget, not a
+tally. `/users` was added 2026-09-12 because the answer it gives lives nowhere else in the
+estate: an Azure Monitor workbook nobody opens. Adding a fourth needs the same standard —
+a question the existing pages cannot answer without becoming two pages in a trench coat.
 
 `AGENT.MD` used to hold this context and no longer exists — this file is the single context map.
 Update it in the same change whenever you cross an architectural boundary; drift here actively
@@ -93,7 +98,7 @@ the profile it binds :5000 instead of :8000.
 
 | Project | Role |
 |---|---|
-| [src/PoPunkouterSoftware.API/](src/PoPunkouterSoftware.API/) | ASP.NET Core host + BFF, and the Blazor WASM host. Slices are `Features/<Area>/<Area>Endpoints.cs` (**Config, Diag, Portfolio**), each exposing `Map<Area>Endpoints(this WebApplication)` called from [Program.cs](src/PoPunkouterSoftware.API/Program.cs). Host-level plumbing belonging to no slice lives in `Host/`. **The namespace is flat** — every file is `PoPunkouterSoftware.API` regardless of folder. |
+| [src/PoPunkouterSoftware.API/](src/PoPunkouterSoftware.API/) | ASP.NET Core host + BFF, and the Blazor WASM host. Slices are `Features/<Area>/<Area>Endpoints.cs` (**Config, Diag, Portfolio, SignIns**), each exposing `Map<Area>Endpoints(this WebApplication)` called from [Program.cs](src/PoPunkouterSoftware.API/Program.cs). Host-level plumbing belonging to no slice lives in `Host/`. **The namespace is flat** — every file is `PoPunkouterSoftware.API` regardless of folder. |
 | [src/PoPunkouterSoftware.Client/](src/PoPunkouterSoftware.Client/) | Blazor WASM (Radzen, mobile-first). `wwwroot` lives **only** here. The layout is **flat** — every component sits in the project root, named for what it is; there is no `Components/` tree. `wwwroot/js` holds the graphics and audio layers — see [Graphics and audio](#graphics-and-audio) below. |
 | [src/PoPunkouterSoftware.Shared/](src/PoPunkouterSoftware.Shared/) | DTOs + `DomainVocabulary.cs` only. **No PackageReferences at all**, no server- or browser-only deps — it ships in the WASM bundle (`IsTrimmable`). |
 | [src/PoPunkouterSoftware.Infrastructure/](src/PoPunkouterSoftware.Infrastructure/) | Azure adapters (Table Storage, ARM, pinger, incident, AI triage, telemetry) plus cross-slice helpers (`ReportFileCache`, `AttentionItemsBuilder`, `SecretMasking`). **Slices must not reference each other** — shared logic goes here. |
@@ -120,7 +125,16 @@ the profile it binds :5000 instead of :8000.
 **The report is the spine.** `AzureReportService.RunAsync` performs a ~14-step subscription scan and
 produces one `AzureReport`. `AzureReportStore` persists it to Table Storage (gzipped blob + a small
 precomputed `HistorySummary` row per scan). Everything the UI shows is a projection of that stored
-report — **no endpoint queries Azure live on a page load.**
+report — **no endpoint queries Azure live on a page load**, with exactly one declared
+exception: `/api/signins`, below.
+
+**`/api/signins` is that exception, and the reason is the shape of the data, not convenience.**
+`SignInQueryService` runs one Log Analytics query against the shared Application Insights
+component on every load of `/users`. The inventory scan is a ~30-second ARM walk whose answer
+changes slowly, so storing it and projecting it is right. A sign-in roster is one cheap query
+whose whole value is being current: folding it into the nightly scan would mean somebody who
+signed in an hour ago does not appear until tomorrow, which is the only question the page
+exists to answer. Do not generalise this to a second endpoint without the same argument.
 
 **Two read contracts, deliberately split.** `/api/diag/summary` returns the compact `OpsSummary`
 (built by `DiagEndpoints.BuildOpsSummary`) and is the *only* first-paint fetch for `/azure`. The full
@@ -196,6 +210,13 @@ cannot honestly be compressed to a screen (advanced diagnostics) opts out with `
 and scrolls internally. Both contracts are held by `PortfolioUiTests`
 (`Azure_MobilePortrait_PanesFitTheViewport`, `Home_FirstScreen_ShowsAWholeCard`) — a new section
 dropped into whichever pane is nearest will fail the first of those.
+
+`/users` answers it the way `/` does, not the way `/azure` does: it is a roster of unknown
+length, so it scrolls ordinarily and carries no `[data-snap-pager]`. Its one concession is
+that the roster and the raw feed sit in `.signins-scroll` / the disclosure body, each its own
+`overflow-x: auto` container — five columns of real text cannot honestly reflow to 390px, and
+a per-table scroller is the escape hatch the "page body never scrolls sideways" rule allows.
+Everything else on the page reflows.
 
 **Two big types are partial classes split by concern.** Find the concern, not the file:
 
@@ -382,6 +403,26 @@ proves a context and program were created, not that anything reached the screen.
   strings across a dozen nested record types and a per-record rewrite would miss whichever one is
   added next. Resource groups and names stay: they are already public in the hostnames the
   portfolio links to. Use `MaskedJson`, never `Results.Json`, for a report in that slice.
+- **`/api/signins` masks every email address, and the mask keeps the last character on
+  purpose.** The `/users` roster is the app's only payload containing personal data about
+  *other people* — the live data includes an address at a customer domain, not just the
+  owner's. The endpoint is anonymous for the same unavoidable reason `/api/diag/report` is
+  (the page is WASM with no credential, and this app has no identity provider), so masking
+  happens server-side in `SecretMasking.MaskEmail` before anything reaches the wire, and
+  `SignInReportBuilderTests` asserts it over the whole serialized payload rather than field by
+  field so a field added later cannot quietly bypass it. **The display name is masked too**
+  when it looks like an address: several providers send the email *as* the display name, and
+  masking only the email column while printing the same address in the name column next to it
+  is not masking. The local part keeps its first two characters **and its last one** because
+  a prefix-only mask rendered `punkouter26@gmail.com` and `punkouter27@gmail.com` — two
+  different people, same display name — as one identical roster row; a mask that collapses
+  distinct identities makes the page assert something false, which is worse than not masking
+  at all. The domain survives because "someone at a company tried it" and "another throwaway
+  gmail" are the two readings the page exists to support.
+- **Sign-in rows are grouped by email address, never by `UserId`.** The "Po Sign-ins" workbook
+  groups on the object id and is wrong to: the same human gets a different id per app
+  registration, so the owner's own account rendered as two people with half the sign-ins each.
+  `SignInReportBuilder.IdentityKey` falls back to the id only when no address is present.
 - **Security headers come from `Host/SecurityHeaders.cs`, and the CSP forbids inline script.**
   They lived in `wwwroot/staticwebapp.config.json` — Static Web Apps configuration, in an App
   Service app, read by nothing — so production sent no CSP, no `nosniff` and no Referrer-Policy
@@ -525,6 +566,21 @@ proves a context and program were created, not that anything reached the screen.
   carry, and keep the `@font-face` in `modern-ui.css` rather than inheriting Radzen's — theirs are
   `media`-scoped by colour scheme, an `@font-face` in a non-matching media context does not apply,
   and ours coming later in the cascade is what stops the 1 MB file being fetched at all.
+- **A `RadzenChart` over time needs a DATE category, not a formatted label.** Bound to strings,
+  `RadzenCategoryAxis` draws one tick per category and honours neither `Step` nor
+  `TickDistance` — 30 day-labels on `/users` ran into each other and 90 were a solid grey band,
+  through two attempts at thinning them from the markup. Give the axis `DateTime` values and a
+  `FormatString`, and it thins its own ticks to the available width at every viewport with no
+  breakpoint. `SignInTrendPoint.Day` is a `DateTime` for exactly this reason.
+- **A page root that is `display: grid` needs `grid-template-columns: minmax(0, 1fr)`.** The
+  default `auto` track is floored at the min-content width of its widest item, so one child with
+  an intrinsic minimum — a `RadzenChart` with a legend — pushed `/users` to 441px inside a 390px
+  viewport and every sibling stretched with it. **It does not show up as a horizontal
+  scrollbar**: the overflow is clipped, `document.scrollWidth` stays exactly `clientWidth`, and
+  the header, KPI tiles and card borders are simply cropped off the right. An E2E test that
+  measures `scrollWidth` passes throughout. `Users_RostersRender_AndNothingOverflowsTheBody`
+  therefore measures **element bounds**, excluding anything inside a deliberate `overflow-x`
+  container — copy that shape for any new page rather than the scrollWidth check.
 - **One application stylesheet.** `wwwroot/css/modern-ui.css` is the whole thing (plus `boot.css`
   for the pre-Blazor splash). It was a four-line aggregator over `modern-ui.base/.components/.responsive`;
   CSS `@import` is serial, so the split cost three extra round trips on the critical path and bought
@@ -568,7 +624,7 @@ proves a context and program were created, not that anything reached the screen.
   without which `GetContainerAsync` returns null and stored images never appear —
   indistinguishable from never having captured any.
 
-## Tests — four projects, one per tier (budget 100/50/25/25, currently 100/50/21/23)
+## Tests — four projects, one per tier (budget 105/52/25/25, currently 103/51/21/23)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the

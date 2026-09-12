@@ -1,0 +1,131 @@
+@page "/users"
+@rendermode WasmRenderModes.Interactive
+@using PoPunkouterSoftware.Shared
+@inject HttpClient Http
+
+<PageTitle>PoPunkouterSoftware — Who signed in</PageTitle>
+
+@* The third route, and the first one added since the app was built around exactly two.
+   It is a LIST, like the catalogue on "/" and unlike the pane-shaped /azure, so it scrolls
+   ordinarily and carries no [data-snap-pager]: paging a roster fights the reader, and the
+   row count is not knowable in advance the way /azure's six panes are. *@
+<main id="main-content" class="app-page signins-page" tabindex="-1">
+    <header class="signins-header">
+        <div>
+            <span class="app-eyebrow">PoPunkouterSoftware</span>
+            <h1>Who signed in</h1>
+            <p>
+                Every Po app writes the same <code>UserSignedIn</code> record to one shared
+                Application Insights workspace, so this is the whole estate in a single list —
+                the same data as the “Po Sign-ins” workbook in Azure.
+            </p>
+        </div>
+
+        @* Three fixed windows rather than a date picker: 90 is the component's retention
+           ceiling, so a free range could only ever ask for less than it implies. *@
+        <div class="signins-range" role="group" aria-label="History window">
+            @foreach (var days in WindowChoices)
+            {
+                <button type="button" class="signins-range__btn @(days == _windowDays ? "is-active" : "")"
+                        aria-pressed="@(days == _windowDays)" disabled="@_loading"
+                        @onclick="() => SetWindowAsync(days)">
+                    @days days
+                </button>
+            }
+        </div>
+    </header>
+
+    @* The banner sits ALONGSIDE the roster, never instead of it — the rule Index.razor and
+       AzureDashboard both follow. A window switch whose fetch fails leaves the previous
+       window on screen rather than blanking the page. *@
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <ErrorRetryBanner Title="@(_report is null ? "The sign-in list could not be loaded." : "The sign-in list could not be updated — showing the last result.")"
+                          Message="@_loadError" OnRetry="LoadAsync" />
+    }
+
+    @if (_loading && _report is null)
+    {
+        <LoadingSkeleton Variant="summary" TileCount="3" AriaLabel="Loading sign-ins" />
+    }
+    else if (_report is not null)
+    {
+        var report = _report;
+
+        @* Unavailable is a designed state, not an error: no configured component, no
+           credential, no Monitoring Reader role or a slow query all land here. It says which,
+           because "no data" and "cannot read the data" call for completely different fixes. *@
+        @if (!report.Available)
+        {
+            <section class="app-card signins-unavailable" data-glass>
+                <h2>Sign-in data is unavailable</h2>
+                <p>@report.Unavailable</p>
+                <p class="app-note">
+                    The roster is read live from Application Insights with the site's own managed
+                    identity. Nothing else on this site depends on it.
+                </p>
+            </section>
+        }
+        else
+        {
+            <div class="signins-kpis" role="group" aria-label="Sign-in totals">
+                <div>
+                    <strong>@report.TotalPeople</strong>
+                    <span>@(report.TotalPeople == 1 ? "Person" : "People")</span>
+                </div>
+                <div>
+                    <strong>@report.TotalSignIns</strong>
+                    <span>Sign-ins</span>
+                </div>
+                <div>
+                    <strong>@report.TotalApps</strong>
+                    <span>@(report.TotalApps == 1 ? "App used" : "Apps used")</span>
+                </div>
+            </div>
+
+            <p class="signins-meta">
+                Last @report.WindowDays days · read @RelativeTime.Format(report.GeneratedAt)
+                @if (report.Truncated)
+                {
+                    <span class="signins-meta__warn">· capped at the query row limit, so these are minimums</span>
+                }
+            </p>
+
+            @if (report.TotalSignIns == 0)
+            {
+                <div class="app-empty-state">
+                    Nobody has signed in to any Po app in the last @report.WindowDays days.
+                </div>
+            }
+            else
+            {
+                <section class="signins-panels">
+                    <article class="app-card" data-glass>
+                        <h2 class="signins-panel__title">Everyone who has signed in</h2>
+                        <div class="signins-panel__subtitle">
+                            Most recent first. Addresses are partially hidden — this page has no login.
+                        </div>
+                        <div class="signins-scroll">
+                            <SignInRoster People="@report.People" />
+                        </div>
+                    </article>
+
+                    <article class="app-card" data-glass>
+                        <h2 class="signins-panel__title">Reach per app</h2>
+                        <div class="signins-panel__subtitle" aria-hidden="true">Distinct people, this window</div>
+                        @* MetricBars, not a chart: a pre-sorted top-N ranking, which is the
+                           case the repo reserves it for. The trend below is the continuous
+                           series, and that one is a chart. *@
+                        <MetricBars Points="@_reachPoints" Tone="accent" Format="count" />
+                        <span class="app-sr-only">
+                            @string.Join(", ", report.Apps.Select(a => $"{a.App}: {a.People} people, {a.SignIns} sign-ins"))
+                        </span>
+                    </article>
+                </section>
+
+                <SignInTrend Series="@report.Trend" WindowDays="@report.WindowDays" />
+                <SignInFeed Events="@report.Recent" />
+            }
+        }
+    }
+</main>

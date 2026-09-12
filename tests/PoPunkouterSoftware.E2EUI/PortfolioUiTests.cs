@@ -570,6 +570,67 @@ public class PortfolioUiTests : IAsyncLifetime
         fullFont.Should().Be(0, "the 1 MB Radzen icon font must never be fetched");
     }
 
+    /// <summary>
+    /// The third route. Covers the two things about /users that only a real browser can show:
+    /// that the WASM island actually paints the roster (the page has no server-rendered
+    /// content at all), and that nothing on it scrolls the page body sideways at 390px — the
+    /// contract the whole app holds to, and the one a table of five text columns is most
+    /// likely to break. The roster and the raw feed are allowed their own horizontal
+    /// scrollers; the BODY is not.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Viewports))]
+    public async Task Users_RostersRender_AndNothingOverflowsTheBody(string label, int width, int height, bool isMobile)
+    {
+        var page = await NewPageAsync(width, height, isMobile);
+        var response = await page.GotoAsync($"{BaseUrl}/users", new() { WaitUntil = WaitUntilState.NetworkIdle });
+
+        response.Should().NotBeNull();
+        response!.Ok.Should().BeTrue();
+        await Assertions.Expect(page.Locator("main.signins-page")).ToBeVisibleAsync();
+
+        // Either branch is a correct render — a deployment with no Monitoring Reader role
+        // shows the reason instead of the roster — but a page stuck on the skeleton is not.
+        var unavailable = await page.Locator(".signins-unavailable").CountAsync();
+        if (unavailable == 0)
+        {
+            await Assertions.Expect(page.Locator(".signins-kpis")).ToBeVisibleAsync();
+            // The masking contract, asserted over the rendered TEXT rather than the API
+            // response — this is what a visitor can actually read — and over every token that
+            // looks like an address rather than over one CSS class. The roster omits the email
+            // line when the provider sent no real name (both fields mask to the same string),
+            // so a class-scoped assertion would silently stop covering those rows.
+            var addresses = await page.EvaluateAsync<string[]>(
+                @"() => (document.querySelector('main.signins-page').innerText.match(/\S+@\S+/g) || [])");
+            addresses.Should().NotBeEmpty("the roster shows at least one address");
+            addresses.Should().OnlyContain(a => a.Contains('*'), "every address on screen is masked");
+
+            // Open both disclosures: a RadzenChart that never paints reports no error and
+            // leaves an empty box, so the SVG has to be asserted rather than the container.
+            await page.EvaluateAsync("() => document.querySelectorAll('details.signin-disclosure').forEach(d => d.open = true)");
+            await Assertions.Expect(page.Locator(".signin-disclosure .rz-chart svg").First).ToBeVisibleAsync();
+            await Assertions.Expect(page.Locator(".signin-disclosure .signin-table").First).ToBeVisibleAsync();
+        }
+
+        // Measured with everything expanded — a collapsed <details> cannot overflow, so
+        // checking this before opening them would prove nothing about the widest state.
+        //
+        // This measures ELEMENT BOUNDS, not document.scrollWidth, and the difference is the
+        // whole point. An over-wide grid track gets clipped rather than scrolled, so
+        // scrollWidth stayed exactly equal to clientWidth while the header, the KPI tiles and
+        // every card border ran 51px off the right of a 390px screen. CLAUDE.md records the
+        // same trap on /azure. Elements inside a deliberate overflow-x container are excluded:
+        // those are allowed to run wide, because the visitor can scroll them.
+        var overhang = await page.EvaluateAsync<string[]>(
+            @"() => [...document.querySelectorAll('main.signins-page *')]
+                .filter(e => !e.closest('.signins-scroll, .signin-disclosure__body'))
+                .filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+                .map(e => e.tagName + '.' + e.className + ' @' + Math.round(e.getBoundingClientRect().right) + 'px')");
+        overhang.Should().BeEmpty($"nothing outside a scroll container may run off the right at {label}");
+
+        await CaptureAsync(page, $"09-users-{label}.png");
+    }
+
     private static async Task CaptureAsync(IPage page, string filename)
     {
         if (Environment.GetEnvironmentVariable("CAPTURE_SCREENSHOTS") != "1")

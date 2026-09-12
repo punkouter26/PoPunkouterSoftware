@@ -70,14 +70,41 @@ public class SecretMaskingTests
         SecretMasking.MaskSubscriptionIds("").Should().Be("");
     }
 
+    /// <summary>
+    /// Both masks in one contract: a secret keeps its ends and loses its middle, an address
+    /// loses the local part and keeps the domain. The email half backs /api/signins, which is
+    /// anonymous on a site with no login and carries the addresses of real people.
+    /// </summary>
     [Fact]
-    public void MaskedValue_NeverExposesTheMiddleOfTheSecret()
+    public void MaskedValues_NeverExposeTheIdentifyingPart()
     {
         var masked = SecretMasking.MaskValue("AccountKey=SuperSecretValue123");
 
         masked.Should().NotContain("SuperSecret");
         masked.Should().StartWith("Acco");
         masked.Should().EndWith("e123");
+
+        // The domain survives on purpose — "someone at a company" and "another throwaway
+        // gmail" are the two readings /users exists to support. The local part does not.
+        SecretMasking.MaskEmail("punkouter26@gmail.com").Should().Be("pu********6@gmail.com");
+        SecretMasking.MaskEmail("yannick@lotus-diffusers.nl").Should().Be("ya****k@lotus-diffusers.nl");
+
+        // The last character survives so NEIGHBOURING addresses stay distinguishable. Without
+        // it these two real accounts collapsed to one string and the roster showed two
+        // identical rows for two different people.
+        SecretMasking.MaskEmail("punkouter27@gmail.com").Should()
+            .NotBe(SecretMasking.MaskEmail("punkouter26@gmail.com"));
+
+        // Star run capped, so a long local part cannot be counted back to its own length.
+        SecretMasking.MaskEmail(new string('n', 60) + "@x.io").Should().Be("nn********n@x.io");
+
+        // Degenerate inputs still mask rather than passing through: a local part too short to
+        // reveal any of, and a value that is not an address at all.
+        SecretMasking.MaskEmail("a@b.co").Should().Be("***@b.co");
+        SecretMasking.MaskEmail("abcd@b.co").Should().Be("a**d@b.co");
+        SecretMasking.MaskEmail("not-an-address").Should().Be("no********s");
+        SecretMasking.MaskEmail(null).Should().Be("(unknown)");
+        SecretMasking.MaskEmail("   ").Should().Be("(unknown)");
     }
 }
 

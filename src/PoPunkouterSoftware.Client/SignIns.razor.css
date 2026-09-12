@@ -1,0 +1,326 @@
+/* Every rule below the page-root block MUST use the `.signins-page ::deep …` form, base
+   rules and media-query overrides alike — see CLAUDE.md and the same note in
+   AzureDashboard.razor.css. Two reasons, and the second one is the one that bites:
+
+     · Most of this markup lives in child components (SignInRoster, SignInFeed,
+       SignInTrend), and Blazor stamps the scope attribute only on a component's OWN
+       elements, so a bare selector would style nothing there.
+     · `::deep` moves the scope attribute leftward. `.signins-page ::deep .signin-table`
+       compiles to `.signins-page[b-x] .signin-table` (0,3,0) while a bare `.signin-table`
+       compiles to `.signin-table[b-x]` (0,2,0). Media queries add no specificity, so a bare
+       override loses to its own base rule and the layout silently never reflows. */
+
+.signins-page {
+    display: grid;
+    /* minmax(0, 1fr), NOT the default `auto` track. An auto track is floored at the
+       min-content width of its widest item, so the RadzenChart in the trend disclosure — which
+       carries an intrinsic minimum once its legend is laid out — pushed the single column to
+       441px inside a 390px viewport. Every child then stretched with it and the page was
+       quietly cropped on the right: the header, the KPI tiles and the card borders all ran off
+       screen. It did not show up as a horizontal scrollbar because the overflow was CLIPPED,
+       which is why the E2E test now measures element bounds rather than document.scrollWidth. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-space-md);
+    align-content: start;
+}
+
+/* ── Header and window picker ─────────────────────────────────────────────── */
+
+.signins-page ::deep .signins-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-space-sm);
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.signins-page ::deep .signins-header > div:first-child {
+    /* Without a flex basis the intro column shrinks to its longest unbreakable run and the
+       paragraph wraps at ~430px on a 1440px screen, next to empty space. */
+    flex: 1 1 30rem;
+    min-width: 0;
+}
+
+.signins-page ::deep .signins-header h1 {
+    margin: 0;
+    font-size: var(--app-step-4);
+    font-family: var(--app-headline-font);
+    letter-spacing: -.02em;
+}
+
+.signins-page ::deep .signins-header p {
+    margin: .35rem 0 0;
+    max-width: 62ch;
+    color: var(--app-text-muted);
+    font-size: var(--app-step--1);
+}
+
+.signins-page ::deep .signins-header code {
+    font-size: .9em;
+}
+
+.signins-page ::deep .signins-range {
+    display: flex;
+    gap: var(--app-space-3xs);
+    flex-wrap: wrap;
+}
+
+.signins-page ::deep .signins-range__btn {
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-soft);
+    color: var(--app-text-muted);
+    border-radius: var(--app-radius-pill);
+    padding: .3rem .8rem;
+    font: inherit;
+    font-size: var(--app-step--1);
+    cursor: pointer;
+    transition: background var(--app-dur-fast) var(--app-ease-out),
+                color var(--app-dur-fast) var(--app-ease-out);
+}
+
+.signins-page ::deep .signins-range__btn:hover:not(:disabled) {
+    background: var(--app-hover-wash);
+    color: var(--app-text);
+}
+
+.signins-page ::deep .signins-range__btn.is-active {
+    background: var(--app-accent-wash-strong);
+    border-color: var(--app-accent-edge);
+    color: var(--app-text);
+}
+
+.signins-page ::deep .signins-range__btn:disabled {
+    opacity: .55;
+    cursor: default;
+}
+
+/* ── Totals ───────────────────────────────────────────────────────────────── */
+
+.signins-page ::deep .signins-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--app-space-xs);
+}
+
+.signins-page ::deep .signins-kpis > div {
+    display: grid;
+    gap: .15rem;
+    padding: var(--app-space-sm);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-md);
+    background: var(--app-surface-soft);
+}
+
+.signins-page ::deep .signins-kpis strong {
+    font-size: var(--app-step-3);
+    color: var(--app-text);
+}
+
+.signins-page ::deep .signins-kpis span {
+    font-size: var(--app-step--2);
+    color: var(--app-text-soft);
+}
+
+.signins-page ::deep .signins-meta {
+    margin: 0;
+    color: var(--app-text-soft);
+    font-size: var(--app-step--2);
+}
+
+.signins-page ::deep .signins-meta__warn {
+    color: var(--app-accent-warm);
+}
+
+/* ── Panels ───────────────────────────────────────────────────────────────── */
+
+.signins-page ::deep .signins-panels {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--app-space-sm);
+    align-items: start;
+}
+
+.signins-page ::deep .signins-panels > .app-card {
+    min-width: 0;
+    padding: var(--app-space-sm);
+}
+
+.signins-page ::deep .signins-panel__title {
+    margin: 0;
+    font-size: var(--app-step-1);
+    font-family: var(--app-headline-font);
+    letter-spacing: -.02em;
+}
+
+.signins-page ::deep .signins-panel__subtitle {
+    color: var(--app-text-soft);
+    font-size: var(--app-step--2);
+    margin: 0 0 .5rem;
+    letter-spacing: .03em;
+}
+
+.signins-page ::deep .signins-unavailable {
+    padding: var(--app-space-md);
+}
+
+.signins-page ::deep .signins-unavailable h2 {
+    margin: 0 0 .4rem;
+    font-size: var(--app-step-1);
+}
+
+.signins-page ::deep .signins-unavailable p {
+    margin: 0 0 .4rem;
+    color: var(--app-text-muted);
+    font-size: var(--app-step--1);
+}
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
+
+/* The ONE place this page may scroll sideways. A roster has five columns of real text and
+   there is no honest way to fit them in 390px; the rule the rest of the app holds to is that
+   the page BODY never scrolls horizontally, and a per-table container is the escape hatch it
+   allows. Everything else here reflows instead. */
+.signins-page ::deep .signins-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.signins-page ::deep .signin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--app-step--1);
+}
+
+.signins-page ::deep .signin-table th,
+.signins-page ::deep .signin-table td {
+    text-align: left;
+    padding: .45rem .6rem;
+    border-bottom: 1px solid var(--app-border);
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.signins-page ::deep .signin-table thead th {
+    color: var(--app-text-soft);
+    font-size: var(--app-step--2);
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.signins-page ::deep .signin-table tbody tr:last-child th,
+.signins-page ::deep .signin-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.signins-page ::deep .signin-table tbody tr:hover {
+    background: var(--app-hover-wash);
+}
+
+.signins-page ::deep .signin-table .is-numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.signins-page ::deep .signin-person__name {
+    display: block;
+    color: var(--app-text);
+    font-weight: 600;
+}
+
+.signins-page ::deep .signin-person__email {
+    display: block;
+    color: var(--app-text-soft);
+    font-size: var(--app-step--2);
+    font-weight: 400;
+}
+
+.signins-page ::deep .signin-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .2rem;
+}
+
+.signins-page ::deep .signin-chip {
+    display: inline-block;
+    padding: .1rem .45rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-pill);
+    background: var(--app-surface-soft);
+    color: var(--app-text-muted);
+    font-size: var(--app-step--2);
+}
+
+/* ── Disclosures (trend, raw feed) ────────────────────────────────────────── */
+
+.signins-page ::deep .signin-disclosure {
+    /* Lets the body's overflow-x contain the chart instead of the chart widening the page. */
+    min-width: 0;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-lg);
+    background: var(--app-surface);
+}
+
+.signins-page ::deep .signin-disclosure__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--app-space-xs);
+    padding: var(--app-space-sm);
+    cursor: pointer;
+    list-style: none;
+}
+
+.signins-page ::deep .signin-disclosure__heading::-webkit-details-marker {
+    display: none;
+}
+
+.signins-page ::deep .signin-disclosure__heading > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.signins-page ::deep .signin-disclosure__body {
+    padding: 0 var(--app-space-sm) var(--app-space-sm);
+    overflow-x: auto;
+}
+
+.signins-page ::deep .signin-disclosure .rz-chart {
+    min-width: 0;
+    height: 260px;
+}
+
+.signins-page ::deep .signin-empty {
+    color: var(--app-text-soft);
+    font-size: var(--app-step--1);
+    padding: var(--app-space-xs) 0;
+}
+
+/* ── Breakpoints ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+    .signins-page ::deep .signins-panels {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .signins-page ::deep .signins-header {
+        align-items: flex-start;
+    }
+
+    /* Three tiles stay three: they are short integers, and stacking them costs a whole
+       screen of a page whose first job is to show the roster. */
+    .signins-page ::deep .signins-kpis {
+        gap: var(--app-space-3xs);
+    }
+
+    .signins-page ::deep .signins-kpis > div {
+        padding: var(--app-space-xs);
+    }
+
+    .signins-page ::deep .signin-disclosure .rz-chart {
+        height: 210px;
+    }
+}

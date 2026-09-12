@@ -251,6 +251,9 @@ try
     builder.Services.AddSingleton<RefreshSessionManager>();
     builder.Services.AddSingleton<ReportRefreshRunner>();
     builder.Services.AddSingleton<AiTriageService>();
+    // Singleton: LogsQueryClient walks the credential chain on construction, and /users is a
+    // live read on every page load. Reused instance, one chain walk for the lifetime of the app.
+    builder.Services.AddSingleton<SignInQueryService>();
 
     // ─── Health checks (NET_RULES §3) ─────────────────────────────────────────
     // One check per external dependency, each performing the real operation the app
@@ -441,6 +444,7 @@ try
     app.MapPoLiveness();
     app.MapDiagEndpoints();
     app.MapPortfolioEndpoints();
+    app.MapSignInEndpoints();
     app.MapHub<RefreshHub>("/hubs/refresh");
     app.MapFallback((HttpContext ctx) =>
         Results.NotFound(new
