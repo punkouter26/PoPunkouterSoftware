@@ -1,21 +1,6 @@
 {
   "apps": [
     {
-      "id": "app-poarguejudge",
-      "name": "PoArgueJudge",
-      "description": "Run a live debate and let an AI judge call it — the browser transcribes each speaker as they hold the floor, then the verdict says who actually argued it better.",
-      "category": "ai",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://app-poarguejudge.azurewebsites.net",
-      "healthUrl": "https://app-poarguejudge.azurewebsites.net/health/live",
-      "githubRepo": null
-    },
-    {
       "id": "polocalcompare",
       "name": "PoLocalCompare",
       "description": "Side-by-side comparison tool for local options",
