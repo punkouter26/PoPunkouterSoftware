@@ -18,6 +18,7 @@ public record AzureReport
     public List<AppInsightsMetric>? AppInsightsMetrics { get; init; }
     public List<ZombieApp>? ZombieApps { get; init; }
     public List<OrphanedResource>? OrphanedResources { get; init; }
+    public List<CatalogDriftItem>? CatalogDrift { get; init; }
     public BurnRateInfo? BurnRate { get; init; }
     public List<StepTimingEntry>? StepTimings { get; init; }
     public List<AppServicePlanInventoryEntry> AppServicePlanInventory { get; init; } = new();

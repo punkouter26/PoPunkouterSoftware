@@ -160,6 +160,56 @@ public class DashboardDerivationsTests
     }
 
     [Fact]
+    public void BuildSafeToRemove_SurfacesCatalogDriftAsACleanupCandidateWithARemovalSnippet()
+    {
+        // Two catalog entries drift in different ways: the URL probe failed (medium
+        // confidence — the host could be transiently down) and the entry exists in apps.json
+        // but has no Microsoft.Web/sites in the subscription (high confidence — the
+        // operator should rename or remove). The dashboard surfaces both as cleanup
+        // candidates; we do NOT silently edit the catalog because a probe failure must
+        // never blank a card.
+        var report = new AzureReport
+        {
+            WebServices = new WebServicesInfo { Services = [Service("app-polocalcompare", friendly: "PoLocalCompare")] },
+            CatalogDrift =
+            [
+                new CatalogDriftItem
+                {
+                    Name = "PoMarriedLife",
+                    Url = "https://pomarriedlife-api.azurewebsites.net",
+                    Kind = "url-not-loadable",
+                    Reason = "Probe to https://pomarriedlife-api.azurewebsites.net returned HTTP 404.",
+                    Confidence = "medium",
+                    RemovalSnippet = "{\n  \"id\": \"pomarriedlife-api\",\n  \"name\": \"PoMarriedLife\"\n}",
+                },
+                new CatalogDriftItem
+                {
+                    Name = "PoGhost",
+                    Url = "https://ghost.example.com",
+                    Kind = "missing-in-azure",
+                    Reason = "No Microsoft.Web/sites found in this subscription matching 'PoGhost'.",
+                    Confidence = "high",
+                    RemovalSnippet = "{ id: ghost }",
+                },
+            ],
+        };
+
+        var safe = DashboardDerivations.BuildSafeToRemove(report);
+
+        var married = safe.SingleOrDefault(i => i.Type == "Catalogue" && i.Name == "PoMarriedLife");
+        married.Should().NotBeNull("apps.json drift findings must appear in the cleanup queue");
+        married!.Source.Should().Be("apps.json drift");
+        married.Confidence.Should().Be("medium", "a non-loading URL is medium confidence — the host could be transiently down");
+        married.Command.Should().Be(report.CatalogDrift![0].RemovalSnippet,
+            "the Command field carries the JSON snippet so the dashboard's existing Copy action works for it");
+        married.Reason.Should().Contain("404", "the operator wants to know why this was flagged");
+
+        var ghost = safe.Single(i => i.Name == "PoGhost");
+        ghost.Confidence.Should().Be("high", "an Azure-less entry is more concerning than a transient probe failure");
+        ghost.Source.Should().Be("apps.json drift");
+    }
+
+    [Fact]
     public void BuildConsolidatedServices_RollsUpOneAppsResourcesIntoOneRow_AndInfersItsOwnership()
     {
         var report = new AzureReport

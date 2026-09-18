@@ -147,6 +147,30 @@ public static class DashboardDerivations
             });
         }
 
+        // Catalog drift: an apps.json entry whose underlying resource has either gone
+        // (no Microsoft.Web/sites matches the name) or no longer serves traffic. Surfaced
+        // here so the existing dedup / priority-queue / snooze paths handle them, and the
+        // human can copy the removal snippet into apps.json. We deliberately do not edit
+        // the file — the catalog stays visible during outages, so the dashboard must
+        // answer "remove it" with a finding the operator can act on, not a silent edit.
+        foreach (var drift in r.CatalogDrift ?? new())
+        {
+            items.Add(new SafeToRemoveItem
+            {
+                Name = drift.Name,
+                ResourceGroup = null,
+                Type = "Catalogue",
+                Source = "apps.json drift",
+                Reason = drift.Reason,
+                Confidence = drift.Confidence,
+                EstimatedMonthlyCost = null,
+                // No az command — the action lives on the filesystem, not on Azure.
+                // The dashboard's "Copy" affordance reads the RemovalSnippet through
+                // Command? when no shell command applies.
+                Command = drift.RemovalSnippet,
+            });
+        }
+
         // Dedupe first, then order. A resource can be flagged by more than one scan loop —
         // a Microsoft.Web/sites with `broken + 0 requests` will appear as a "Connectivity +
         // Metrics" item (high confidence) AND as an "Orphaned resource scan" item (medium)

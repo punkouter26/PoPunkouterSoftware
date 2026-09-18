@@ -15,21 +15,6 @@
       "githubRepo": "punkouter26/PoLocalCompare"
     },
     {
-      "id": "pomarriedlife-api",
-      "name": "PoMarriedLife",
-      "description": "Married life tracking app",
-      "category": "health",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://pomarriedlife-api.azurewebsites.net",
-      "healthUrl": "https://pomarriedlife-api.azurewebsites.net/health/live",
-      "githubRepo": "punkouter26/PoMarriedLife"
-    },
-    {
       "id": "pomemevideo",
       "name": "PoMemeVideo",
       "description": "Meme video creation tool",

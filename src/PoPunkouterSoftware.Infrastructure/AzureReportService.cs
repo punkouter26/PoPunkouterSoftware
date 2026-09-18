@@ -151,6 +151,9 @@ public partial class AzureReportService(
         Report("Detecting zombie apps…", 74);
         var zombies = DetectZombies(connectedSvcs, metricsMap);
 
+        Report("Detecting catalog drift…", 75);
+        var catalogDrift = await RunTimedStepAsync("Detecting catalog drift", () => DetectCatalogDriftAsync(connectedSvcs, ct));
+
         Report("Calculating burn rate…", 80);
         var burnRate = await RunTimedStepAsync("Calculating burn rate", () => GetBurnRateAsync(subscriptionId, armToken, ct));
 
@@ -260,6 +263,7 @@ public partial class AzureReportService(
             AppInsightsMetrics = appInsights,
             ZombieApps = zombies,
             OrphanedResources = orphaned,
+            CatalogDrift = catalogDrift,
             BurnRate = burnRate,
             StepTimings = stepTimings.OrderByDescending(x => x.ElapsedMs).ToList(),
             AppServicePlanInventory = appServicePlanInventory,
