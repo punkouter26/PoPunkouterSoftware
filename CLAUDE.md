@@ -33,9 +33,9 @@ Standing instructions from the owner. They outrank default habits and apply to e
 - **`git sync` means: stage everything, commit, push.** In that order, no questions asked in
   between. Commit **all** outstanding changes first — a sync that leaves a dirty tree behind ships
   half the work and hides the other half.
-- **Git-sync commit messages are short and sound human.** One line, casual American English —
-  "fixed the busted app cards", "cleaned up the dead scan code". No formal subject/body essays, no
-  bullet lists, no changelog voice.
+- **Git-sync commit messages are short and use American slang, so it seems a human wrote it.**
+  One line, casual — "fixed the busted app cards", "cleaned up the dead scan code". No formal
+  subject/body essays, no bullet lists, no changelog voice.
 - **Restart the app after any code change and confirm it came back up.** `./SCRIPTS/run-dev.ps1`,
   then check it actually serves (`/healthz` returns 200) before claiming the change works. A build
   that compiles is not a running app — and this project's stale-process footgun means a "successful"
@@ -55,6 +55,11 @@ Standing instructions from the owner. They outrank default habits and apply to e
   you left half-finished. The exceptions are the things you genuinely cannot do: pushing without the
   ask, out-of-band `az deployment` runs, and anything needing a credential you do not hold.
 - **Answers over ~100 words end with a 20-word TLDR.**
+- **Treat compile warnings as errors and make sure they are fixed.** The build command above
+  already runs with `TreatWarningsAsErrors=true` solution-wide (see `Directory.Build.props`), so
+  the rule is enforced by the compiler — a warning is a build failure. Don't ship a commit
+  that builds with warnings; either fix the warning or, if it is intentional, suppress it at the
+  smallest possible scope with a documented reason.
 - **Check the root DOCS folder for a project summary — and here is that check's answer, already
   made, so do not redo it.** [docs/](docs/) is the GitHub Pages site: a landing page, `style.css`,
   per-app privacy policies and store art for PoBox, PoCross, PoDance, PoFlag, PoFootball, PoRacer,

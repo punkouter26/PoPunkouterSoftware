@@ -86,11 +86,9 @@ internal static partial class PortfolioEndpoints
         // request lifetime on purpose — must not die when this response completes.
         if (await screenshots.IsStaleAsync(ct))
         {
-            var targets = services
-                .Select(s => (Host: AppScreenshotService.HostOf(s.Url), s.Url))
-                .Where(t => t.Host is not null)
-                .Select(t => (t.Host!, t.Url))
-                .ToList();
+            // Scan-derived targets first; catalog fills the gap so a dev environment with
+            // no live Azure report still produces previews.
+            var targets = AppScreenshotService.CombinedTargets(env, report);
             _ = Task.Run(async () =>
             {
                 try

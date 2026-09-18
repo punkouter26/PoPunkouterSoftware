@@ -162,7 +162,10 @@ internal sealed class ReportRefreshRunner(
                         await hubCtx.Clients.All.SendAsync("RefreshProgress",
                             new { step = "Capturing app screenshots…", percent = 99, done = false }, CancellationToken.None);
                         var screenshots = scope.ServiceProvider.GetRequiredService<AppScreenshotService>();
-                        await screenshots.CaptureAsync(AppScreenshotService.ActiveTargets(report), ct);
+                        // Scan-derived targets first; catalog fills the gap so a dev
+                        // environment with no live Azure report still produces previews.
+                        var captureTargets = AppScreenshotService.CombinedTargets(env, report);
+                        await screenshots.CaptureAsync(captureTargets, ct);
                     }
                     catch (Exception shotEx)
                     {

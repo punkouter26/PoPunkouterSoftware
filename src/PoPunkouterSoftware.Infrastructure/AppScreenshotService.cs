@@ -1,6 +1,7 @@
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
@@ -82,6 +83,74 @@ public class AppScreenshotService
             .Where(t => t.Host is not null)
             .Select(t => (t.Host!, t.Url))
             .ToList();
+
+    /// <summary>
+    /// Hosts that the curated apps.json lists as active, ignoring any entries the scan
+    /// already covered. Mirrors the GitHub Actions `screenshots.yml` workflow, which also
+    /// captures directly from apps.json — so a dev environment with no live Azure report
+    /// can still produce previews. Returns <c>[]</c> when the catalog is missing or
+    /// malformed: capture is non-fatal and the file-cache loader degrades the same way.
+    /// </summary>
+    public static List<(string Host, string Url)> CatalogTargets(IWebHostEnvironment env)
+    {
+        try
+        {
+            var path = Path.Combine(ReportFileCache.GetCatalogDir(env), "apps.json");
+            if (!File.Exists(path))
+                return [];
+
+            using var stream = File.OpenRead(path);
+            var doc = System.Text.Json.JsonDocument.Parse(stream,
+                new System.Text.Json.JsonDocumentOptions
+                {
+                    CommentHandling = System.Text.Json.JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true,
+                });
+            // PropertyNameCaseInsensitive on Parse isn't a thing; the loader below uses it.
+            var list = new List<(string Host, string Url)>();
+            if (!doc.RootElement.TryGetProperty("apps", out var apps)
+                || apps.ValueKind != System.Text.Json.JsonValueKind.Array)
+                return list;
+
+            foreach (var entry in apps.EnumerateArray())
+            {
+                var status = entry.TryGetProperty("status", out var st) ? st.GetString() : null;
+                if (!string.Equals(status, "active", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var url = entry.TryGetProperty("url", out var u) ? u.GetString() : null;
+                var host = HostOf(url);
+                if (host is null) continue;
+                list.Add((host, url!));
+            }
+            return list;
+        }
+        catch (Exception)
+        {
+            // apps.json is authoritative for the catalogue; a malformed file must not
+            // crash the screenshot path — the same posture the portfolio endpoint uses
+            // when loading its metadata.
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Combined capture set: scan-derived active services first (so a healthy active host
+    /// always takes priority over its catalog entry), then any catalog-only entries so a
+    /// fresh dev environment still gets previews without a populated report cache.
+    /// Deduped on host.
+    /// </summary>
+    public static List<(string Host, string Url)> CombinedTargets(IWebHostEnvironment env, AzureReport? report)
+    {
+        var scanTargets = ActiveTargets(report);
+        var seen = new HashSet<string>(scanTargets.Select(t => t.Host), StringComparer.OrdinalIgnoreCase);
+        var combined = new List<(string Host, string Url)>(scanTargets);
+        foreach (var t in CatalogTargets(env))
+        {
+            if (seen.Add(t.Host))
+                combined.Add(t);
+        }
+        return combined;
+    }
 
     /// <summary>
     /// True when the newest stored screenshot is older than 24 hours (or none exist) and
