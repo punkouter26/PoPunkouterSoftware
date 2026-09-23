@@ -113,7 +113,21 @@ try
     var serviceName = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "PoPunkouterSoftware";
     var otelBuilder = builder.Services.AddOpenTelemetry()
         .ConfigureResource(r => r.AddService(serviceName))
-        .WithMetrics(m => m.AddMeter(PoPunkouterSoftware.Infrastructure.Telemetry.MeterName))
+        .WithMetrics(m =>
+        {
+            m.AddMeter(PoPunkouterSoftware.Infrastructure.Telemetry.MeterName);
+
+            // Cost cap: drop the noisy ASP.NET HTTP client/hosting pre-aggregated meters.
+            // They were the #1 ingestion source for this app (~80% of the last 3-day bill)
+            // and are mostly duplicates of traces already captured. Flip the flag off to
+            // re-enable at runtime via configuration without a redeploy.
+            if (!builder.Configuration.GetValue("ApplicationInsights:EnableAspNetCoreMeters", false))
+            {
+                // Names match the AspNetCore.Hosting / AspNetCore.HttpClient instrumentations.
+                m.RemoveMeter("Microsoft.AspNetCore.Hosting");
+                m.RemoveMeter("Microsoft.AspNetCore.HttpClient");
+            }
+        })
         // Custom spans (background refresh root + per-step children) — without this source
         // registration every outbound ARM/GitHub dependency recorded during a refresh is an
         // orphaned, unparented span in Azure Monitor.
