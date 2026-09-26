@@ -12,8 +12,8 @@ namespace PoPunkouterSoftware.Infrastructure;
 /// <summary>
 /// Captures mobile-portrait home-page screenshots of the live portfolio apps with headless
 /// Chromium and persists them in Azure Blob Storage (container "app-screenshots", one PNG
-/// per host). Capture runs during the ops Azure refresh and, at most once per 24 hours,
-/// when the home page is loaded with stale screenshots — visitors always get the stored
+/// per host). Capture runs during the ops Azure refresh and, for any host whose screenshot
+/// is missing or over a week old, when the home page is loaded — visitors always get the stored
 /// (possibly stale) image immediately; capture never blocks a request.
 /// Register as a singleton: it caches the blob container client and serialises capture runs.
 /// </summary>
@@ -25,7 +25,7 @@ public class AppScreenshotService
     private const int ViewportWidth = 390;
     private const int ViewportHeight = 844;
 
-    private static readonly TimeSpan MaxAge = TimeSpan.FromHours(24);
+    private static readonly TimeSpan MaxAge = TimeSpan.FromDays(7);
     private static readonly TimeSpan AttemptCooldown = TimeSpan.FromMinutes(30);
 
     private readonly ILogger<AppScreenshotService> _logger;
@@ -40,9 +40,6 @@ public class AppScreenshotService
     // Throttles retries when capture keeps failing (e.g. Chromium missing on the host),
     // so a hot home page cannot hammer Playwright. In-memory only — resets on restart.
     private DateTimeOffset _lastAttemptUtc = DateTimeOffset.MinValue;
-
-    // Newest stored screenshot; lazily seeded from blob timestamps on first staleness check.
-    private DateTimeOffset? _newestCaptureUtc;
 
     /// <summary>
     /// On Azure App Service the default Playwright install location is the worker's
@@ -153,33 +150,21 @@ public class AppScreenshotService
     }
 
     /// <summary>
-    /// True when the newest stored screenshot is older than 24 hours (or none exist) and
-    /// no capture attempt was made in the last 30 minutes.
+    /// The targets whose screenshot is missing or older than a week, judged per host so a
+    /// newly added app is captured even while every other preview is fresh. Empty while
+    /// disabled or within 30 minutes of the last attempt. <paramref name="versions"/> is
+    /// <see cref="ListVersionsAsync"/>'s output (host → last-modified unix seconds).
     /// </summary>
-    public async Task<bool> IsStaleAsync(CancellationToken ct = default)
+    public List<(string Host, string Url)> DueForCapture(
+        IEnumerable<(string Host, string Url)> targets, IReadOnlyDictionary<string, long> versions)
     {
-        if (!ScreenshotsEnabled)
-            return false;
+        var now = DateTimeOffset.UtcNow;
+        if (!ScreenshotsEnabled || now - _lastAttemptUtc < AttemptCooldown)
+            return [];
 
-        if (DateTimeOffset.UtcNow - _lastAttemptUtc < AttemptCooldown)
-            return false;
-
-        if (_newestCaptureUtc is null)
-        {
-            var container = await GetContainerAsync(ct);
-            if (container is null)
-                return false; // storage unavailable — nothing to refresh into
-
-            DateTimeOffset newest = DateTimeOffset.MinValue;
-            await foreach (var blob in container.GetBlobsAsync(cancellationToken: ct))
-            {
-                if (blob.Properties.LastModified is { } modified && modified > newest)
-                    newest = modified;
-            }
-            _newestCaptureUtc = newest;
-        }
-
-        return DateTimeOffset.UtcNow - _newestCaptureUtc > MaxAge;
+        return targets
+            .Where(t => !versions.TryGetValue(t.Host, out var v) || now - DateTimeOffset.FromUnixTimeSeconds(v) > MaxAge)
+            .ToList();
     }
 
     /// <summary>Hosts that currently have a stored screenshot.</summary>
@@ -298,8 +283,6 @@ public class AppScreenshotService
                 }
             }
 
-            if (captured > 0)
-                _newestCaptureUtc = DateTimeOffset.UtcNow;
             _logger.LogInformation("Captured {Captured}/{Total} app screenshots", captured, targets.Count);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

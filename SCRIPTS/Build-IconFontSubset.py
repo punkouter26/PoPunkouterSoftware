@@ -55,6 +55,8 @@ APP_ICONS = [
     "data_object", "delete_sweep", "download", "graphic_eq", "open_in_new",
     "history", "refresh", "security", "snooze", "speed", "sync", "terminal",
     "timeline", "troubleshoot",
+    # PortfolioAppCard's "Preview pending" placeholder.
+    "image",
     # Dynamic: AzureDashboard's advanced-diagnostics toggle.
     "expand_less", "tune",
     # Dynamic: AzureWhatChanged.IconFor.

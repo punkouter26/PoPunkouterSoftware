@@ -81,14 +81,14 @@ internal static partial class PortfolioEndpoints
 
         var apps = appsByName.Values.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
-        // First page load in 24h with stale screenshots: serve the stored (stale) images
-        // now and re-capture in the background for the next visitor. Detached from the
-        // request lifetime on purpose — must not die when this response completes.
-        if (await screenshots.IsStaleAsync(ct))
+        // Any app whose screenshot is missing or over a week old: serve what is stored now
+        // and capture just those in the background for the next visitor. Scan-derived
+        // targets first; catalog fills the gap so a dev environment with no live Azure
+        // report still produces previews. Detached from the request lifetime on purpose —
+        // must not die when this response completes.
+        var targets = screenshots.DueForCapture(AppScreenshotService.CombinedTargets(env, report), screenshotVersions);
+        if (targets.Count > 0)
         {
-            // Scan-derived targets first; catalog fills the gap so a dev environment with
-            // no live Azure report still produces previews.
-            var targets = AppScreenshotService.CombinedTargets(env, report);
             _ = Task.Run(async () =>
             {
                 try
