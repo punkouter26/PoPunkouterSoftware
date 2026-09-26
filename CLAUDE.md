@@ -532,7 +532,7 @@ proves a context and program were created, not that anything reached the screen.
   hand-written `<span class="material-symbols-outlined" aria-hidden="true">` glyphs in `MainLayout`
   were always correct, which is exactly why this went unnoticed: it only affects Radzen's path.
 - **A hint is `AppHint.razor`, not a `title`.** Native `title` never appears on touch and is not
-  announced on focus, so ~40 of them — the exact read time, the "auto-updates every 5 min"
+  announced on focus, so ~40 of them — the exact read time, the "auto-updates"
   explanation, the config keys that would unlock refresh — were desktop-mouse-only. `AppHint` wraps
   Radzen's `TooltipService` (mouseenter, focus, click) and renders **no** `title`: keeping one as a
   fallback prints a native tooltip under the Radzen one a second later. `Focusable` is opt-in per

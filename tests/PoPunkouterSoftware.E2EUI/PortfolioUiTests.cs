@@ -287,7 +287,7 @@ public class PortfolioUiTests : IAsyncLifetime
 
         var fold = probe[3];
         probe[0].Should().BeLessThan(fold, "the page title must be above the fold");
-        probe[1].Should().BeLessThan(fold, "the freshness and reload row must be above the fold");
+        probe[1].Should().BeLessThan(fold, "the freshness row must be above the fold");
         probe[2].Should().BeLessThanOrEqualTo(fold,
             "the whole first card must fit the first screen at 390x844 — half a card is not a card");
     }

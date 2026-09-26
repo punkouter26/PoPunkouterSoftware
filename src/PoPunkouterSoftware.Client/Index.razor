@@ -54,38 +54,20 @@
                    visible text is relative, and `title` — which is what this used to be —
                    never appears on a touch device and is not announced on focus. *@
                 <AppHint Class="@(data.Stale ? "is-stale" : "")" Focusable="true"
-                         Text="@($"Last read {updated:u}.{(data.Stale ? " This page treats that as stale — the button re-reads the stored inventory now." : "")}")">
+                         Text="@($"Last read {updated:u}.{(data.Stale ? " This page treats that as stale; the server rescans a stale inventory on its own." : "")}")">
                     Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
                 </AppHint>
             }
             <AppHint Class="portfolio-summary__auto"
-                     Text="This list reloads itself every 5 minutes; the button is only for checking sooner.">
-                auto-updates every 5 min
+                     Text="This list is re-read on every visit, and weekly in a tab left open.">
+                auto-updates weekly
             </AppHint>
-            @* "Reload catalog", not "Refresh list": this re-reads the inventory the server
-               already has (GET /api/portfolio, ~200 ms). It does NOT rescan Azure — that is
-               the "Rescan Azure" button on /azure, which costs about 30 seconds of live ARM
-               calls. Two buttons that both said "refresh" meant nobody could tell which one
-               they were about to pay for. *@
-            <button type="button" class="portfolio-summary__btn @(data.Stale ? "is-stale" : "")" @onclick="LoadAppsAsync" disabled="@_loading" aria-busy="@_loading"
-                    title="Re-reads the stored inventory from the server. To scan Azure again for fresh data, use Rescan Azure on the Azure page.">
-                @if (_loading)
-                {
-                    <span class="portfolio-summary__spinner" aria-hidden="true"></span>
-                    <span>Reloading…</span>
-                }
-                else
-                {
-                    <RadzenIcon Icon="refresh" />
-                    <span>Reload catalog</span>
-                }
-            </button>
         </div>
     }
 
     @* The error banner sits ALONGSIDE the catalog, never instead of it. This used to be an
        `else if` ahead of the render branch while `data` was left populated, so one failed
-       background auto-refresh — which fires unattended every 5 minutes — replaced every
+       background auto-refresh — which fires unattended — replaced every
        rendered card with a banner and threw away catalog data still held in memory. A
        refresh that fails is a stale list, not an empty one. *@
     @if (!string.IsNullOrWhiteSpace(_loadError))
@@ -121,16 +103,12 @@
     private bool _loading;
     private string? _loadError;
 
-    // Auto-refresh: the inventory reloads every 5 minutes so the freshness badge stays
-    // honest without the visitor touching the page.
-    //
-    // This used to be driven by a <PortfolioCountdown> child that rendered a live
-    // "Next refresh in 4m 58s" label. That label was `display:none` below 640px yet the
-    // component still ticked once a second and re-rendered forever — and on any viewport
-    // it counted down to a background reload the visitor cannot act on or care about. The
-    // countdown is gone; the reload it existed to trigger is now a plain 5-minute timer
-    // that renders nothing.
-    private static readonly TimeSpan AutoRefreshEvery = TimeSpan.FromMinutes(5);
+    // Auto-refresh: every visit reads the catalog fresh, and a tab left open re-reads it
+    // weekly. There is no manual "Reload catalog" button any more — the owner's call
+    // (2026-09-26): the list changes on the scale of days, so a button and a 5-minute
+    // timer were both answering a question nobody asks. Screenshots follow the same
+    // weekly rhythm server-side (AppScreenshotService.MaxAge).
+    private static readonly TimeSpan AutoRefreshEvery = TimeSpan.FromDays(7);
     private Timer? _autoRefreshTimer;
 
     protected override async Task OnInitializedAsync()
@@ -235,7 +213,7 @@
             if (_buildIdAtLoad is null && data?.BuildId > 0)
                 _buildIdAtLoad = data.BuildId;
 
-            // Also on the 5-minute auto-reload, not just the first paint — an app that goes
+            // Also on the weekly auto-reload, not just the first paint — an app that goes
             // down while the tab is open should visibly leave its orbit. Safe to call before
             // the canvas exists: starfieldBackdrop holds the latest spec and applies it when
             // init() completes.
@@ -250,10 +228,10 @@
         {
             _loading = false;
             // Load paths reached from a UI event get a render for free — ComponentBase renders
-            // once when the handler's task yields and again when it completes. The 5-minute
+            // once when the handler's task yields and again when it completes. The
             // auto-refresh timer is NOT a UI event: InvokeAsync only marshals onto the
-            // renderer's sync context, it does not schedule a render. So the timer fetched a
-            // fresh catalog every five minutes, replaced `data` with it, and nothing on screen
+            // renderer's sync context, it does not schedule a render. So the timer (then
+            // every five minutes) fetched a fresh catalog, replaced `data` with it, and nothing on screen
             // ever changed — the "auto-updates every 5 min" label was a promise the page did
             // not keep, and a card whose app went down kept rendering as healthy until someone
             // pressed the button. Rendering here covers every caller; the redundant render on

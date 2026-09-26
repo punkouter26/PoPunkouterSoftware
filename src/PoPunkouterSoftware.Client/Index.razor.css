@@ -60,9 +60,7 @@
 
 /* ── Freshness summary row ───────────────────────────────────────────────────
    `display: flex` + `gap` is the rule that keeps the count, the "updated N ago"
-   text and the refresh button apart; `margin-left: auto` on the button pushes it
-   to the trailing edge. Without them the row falls back to raw inline flow and
-   the button sits flush on top of the text. */
+   text and the auto-update note apart. */
 .portfolio-summary {
     display: flex;
     align-items: center;
@@ -81,58 +79,11 @@
     color: var(--app-accent-warm);
 }
 
-/* States the automatic 5-minute reload that already exists, so the button beside it
-   reads as "check sooner" rather than "the only way this list ever updates". Hidden on
-   the narrowest viewports, where the row has to wrap and the button matters more. */
+/* States the automatic weekly reload. Hidden on the narrowest viewports, where the row
+   has to wrap and the count and freshness matter more. */
 .portfolio-summary__auto {
     color: var(--app-text-soft);
     font-size: var(--app-step--2);
-}
-
-.portfolio-summary__btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--app-space-2xs);
-    margin-left: auto;
-    padding: var(--app-space-2xs) var(--app-space-sm);
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-pill);
-    color: var(--app-text-muted);
-    background: transparent;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: background-color var(--app-dur-fast) var(--app-ease-smooth),
-                color var(--app-dur-fast) var(--app-ease-smooth),
-                border-color var(--app-dur-fast) var(--app-ease-smooth);
-}
-
-.portfolio-summary__btn:hover:not(:disabled) {
-    border-color: var(--app-accent);
-    color: var(--app-text);
-}
-
-.portfolio-summary__btn:disabled {
-    opacity: 0.7;
-    cursor: progress;
-}
-
-.portfolio-summary__btn.is-stale {
-    color: var(--app-accent-warm);
-    border-color: var(--app-warm-edge);
-}
-
-.portfolio-summary__btn.is-stale:hover:not(:disabled) {
-    border-color: var(--app-accent-warm);
-}
-
-.portfolio-summary__spinner {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 2px solid var(--app-border-strong);
-    border-top-color: var(--app-accent);
-    animation: app-spin 0.8s linear infinite;
-    display: inline-block;
 }
 
 /* ── Build-mismatch banner ───────────────────────────────────────────────────
@@ -240,9 +191,5 @@
 @media (prefers-reduced-motion: reduce) {
     .catalog-starfield {
         display: none;
-    }
-
-    .portfolio-summary__spinner {
-        animation: none;
     }
 }
