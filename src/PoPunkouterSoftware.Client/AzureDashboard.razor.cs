@@ -49,11 +49,12 @@ public partial class AzureDashboard
     private string _resourceView = "All";
 
     // ── Snoozes ─────────────────────────────────────────────────────────────────
-    // Findings have no server identity (see SnoozeStore / AGENT.MD "Snoozes"), so the
-    // priority queue and cleanup list are filtered client-side against each item's own
-    // dedup key — the same formats DerivedViews already groups on ({Source}|{Item} and
-    // {Type}|{ResourceGroup}|{Name}), so a re-scan naturally re-matches a snooze to the
-    // same finding without the server ever knowing what a "finding" is.
+    // Findings have no server identity (see SnoozeStore / CLAUDE.md "Snoozes"), so the
+    // priority queue is filtered client-side against each item's own dedup key — the
+    // {Source}|{Item} format BuildPriorityQueue already groups on — so a re-scan naturally
+    // re-matches a snooze to the same finding without the server ever knowing what a
+    // "finding" is. (The separate cleanup list and its {Type}|{ResourceGroup}|{Name} key went
+    // with the "Cleanup evidence" disclosure: every one of its rows was already in the queue.)
     private const int DefaultSnoozeDurationDays = 7;
     private List<SnoozeEntry> _activeSnoozes = new();
     private HashSet<string> _snoozedKeys = new(StringComparer.OrdinalIgnoreCase);
@@ -216,8 +217,6 @@ public partial class AzureDashboard
     private Task SnoozePriorityItemAsync(PriorityQueueItem item) =>
         SnoozeAsync($"{item.Source}|{item.Item}");
 
-    private Task SnoozeCleanupItemAsync(SafeToRemoveItem item) =>
-        SnoozeAsync($"{item.Type}|{item.ResourceGroup}|{item.Name}");
 
     private async Task UnsnoozeAsync(string key)
     {
@@ -332,7 +331,6 @@ public partial class AzureDashboard
             // load/refresh, not just once at startup.
             await LoadSnoozesAsync();
             RebuildDerivedState();
-            await LoadHistoryAsync();
         }
         catch (Exception ex)
         {

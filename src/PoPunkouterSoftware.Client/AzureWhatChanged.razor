@@ -9,10 +9,7 @@
 
 <section class="azure-changed" aria-label="Changes since the previous scan">
     <div class="azure-section-heading">
-        <div>
-            <div class="app-kicker">Since last scan</div>
-            <h2>What changed</h2>
-        </div>
+        <h2>What changed</h2>
         @if (Delta.HasBaseline && Delta.PreviousScanAt is DateTime prev)
         {
             <span class="app-note" title="@prev.ToString("u")">

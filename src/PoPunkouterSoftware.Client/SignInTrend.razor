@@ -6,23 +6,23 @@
    sends a dense day grid, so every line shares one category axis and a quiet week draws as a
    flat run of zeroes rather than as a segment joining the two days either side of it.
 
-   Collapsed by default, like the 30-day history on /azure: it is corroborating detail behind
+   Collapsed by default, like the evidence disclosures on /azure: it is corroborating detail behind
    the roster, and a chart is the most expensive thing on this page to draw. *@
 @using PoPunkouterSoftware.Shared
 @using Radzen.Blazor
 
-<details class="signin-disclosure">
+<details class="app-disclosure">
     @* The title is an <h2>, not a <strong>. A screen reader navigating by heading skipped
        straight past both disclosures on this page — they were the only two sections of the
        page with no heading, so "Sign-ins over time" and the raw feed were unreachable by the
        one navigation method built for scanning a page. A heading inside <summary> is the
        standard disclosure pattern and does not change the accessible name, which is still
        the summary's text content. Level 2 because it is a sibling of the two panels above. *@
-    <summary class="signin-disclosure__heading">
-        <span><RadzenIcon Icon="timeline" /><h2 class="signin-disclosure__title">Sign-ins over time</h2></span>
+    <summary class="app-disclosure__heading">
+        <span><RadzenIcon Icon="timeline" /><h2 class="app-disclosure__title">Sign-ins over time</h2></span>
         <span class="app-note">@WindowDays days, by app</span>
     </summary>
-    <div class="signin-disclosure__body">
+    <div class="app-disclosure__body">
         @if (Series.Count == 0)
         {
             <div class="signin-empty">No sign-ins in this window.</div>

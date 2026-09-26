@@ -4,9 +4,13 @@
 @* Stripped-down card per the design pass: only the screenshot, the app name, and a
    one-line description. Status badges, technology chips, action buttons, and
    "checked at" timestamps were removed so the grid reads as a clean visual catalogue
-   rather than a dashboard tile. The screenshot links out to the live app, and an
-   explicit "Open app" affordance sits under the description so visitors who never
-   hover the screenshot still have a clear way through. *@
+   rather than a dashboard tile.
+
+   ONE link per card: the title, stretched over the whole card by `::after` (see
+   PortfolioAppCard.razor.css). The screenshot and an "Open app" pill used to be two more
+   anchors to the same URL — three links per card, two tab stops each, 24 tab stops for 12
+   cards that all say "go to this app". The whole card is still the click target, and the
+   host line under the description is the visible "this leaves the site" cue. *@
 @* data-glass: js/gpu-backdrop.js collects this element's rect and the shader frosts the
    backdrop beneath it — see the [data-glass] block in modern-ui.css. data-sfx-hover: a
    delegated cue from js/audio-kit.js, silent unless the visitor turned sound on. Both are
@@ -14,7 +18,7 @@
 <article class="app-card app-portfolio-card" data-glass data-sfx-hover="hover">
     @if (!string.IsNullOrEmpty(App.ScreenshotUrl))
     {
-        <a class="app-screenshot-thumb" href="@App.Url" target="_blank" rel="noopener noreferrer" title="@($"Open {App.Name}")">
+        <div class="app-screenshot-thumb">
             @* width/height advertise the box the CSS actually draws (aspect-ratio 16/10 on
                .app-screenshot-thumb), not the 390x844 phone-screenshot source. They disagreed,
                so before the stylesheet applied the browser reserved a 0.46-ratio box for a
@@ -27,7 +31,7 @@
             <img src="@App.ScreenshotUrl" alt="@($"Preview of {App.Name}")"
                  loading="@(IsFirst ? "eager" : "lazy")" fetchpriority="@(IsFirst ? "high" : "auto")"
                  decoding="async" width="1600" height="1000" />
-        </a>
+        </div>
     }
     else
     {
@@ -36,15 +40,22 @@
            resolve to a URL. Without this the card renders an empty box that visibly breaks
            the grid rhythm (every other card has a 16:10 frame) and pulls the eye away from
            the working apps. A neutral placeholder with the same aspect ratio keeps the
-           grid honest until the screenshotter catches up; the "Open app" link below still
-           goes to the live URL. *@
-        <a class="app-screenshot-thumb app-screenshot-thumb--missing" href="@App.Url" target="_blank" rel="noopener noreferrer"
-           title="@($"Preview not yet captured — opens {App.Name}")" aria-label="@($"Preview not yet captured for {App.Name}")">
+           grid honest until the screenshotter catches up. *@
+        <div class="app-screenshot-thumb app-screenshot-thumb--missing">
             <RadzenIcon Icon="image" />
             <span>Preview pending</span>
-        </a>
+        </div>
     }
-    <h2 class="app-card-title">@App.Name</h2>
+    <h2 class="app-card-title">
+        @if (string.IsNullOrWhiteSpace(App.Url))
+        {
+            @App.Name
+        }
+        else
+        {
+            <a class="app-card-title-link" href="@App.Url" target="_blank" rel="noopener noreferrer" data-sfx="tap">@App.Name</a>
+        }
+    </h2>
     <p class="app-card-copy">@App.Description</p>
     @* Nightly PageSpeed Insights, mobile. Short labels on screen, full names for a screen
        reader — a `title` would be mouse-only (see AppHint), and four full category names do
@@ -58,14 +69,9 @@
             <li class="@ScoreClass(scores.Seo)"><span aria-hidden="true">SEO</span><span class="app-sr-only">Search engine optimisation</span> @scores.Seo</li>
         </ul>
     }
-    @if (!string.IsNullOrWhiteSpace(App.Url))
+    @if (Host is { } host)
     {
-        <a class="app-card-link" href="@App.Url" target="_blank" rel="noopener noreferrer"
-           data-sfx="tap" aria-label="@($"Open {App.Name} app")">
-            <RadzenIcon Icon="open_in_new" />
-            <span>Open app</span>
-            <span class="app-card-link-host" aria-hidden="true">@App.Url</span>
-        </a>
+        <span class="app-card-host" aria-hidden="true"><RadzenIcon Icon="open_in_new" />@host</span>
     }
 </article>
 
@@ -95,6 +101,9 @@
     }
 
     private bool _renderedFirst;
+
+    /// <summary>The URL's host, for the "where this goes" line; null when there is no link.</summary>
+    private string? Host => Uri.TryCreate(App.Url, UriKind.Absolute, out var uri) ? uri.Host : null;
 
     /// <summary>Lighthouse's own bands: 90+ good, 50–89 needs work, below 50 poor.</summary>
     private static string ScoreClass(int score) => score >= 90 ? "is-good" : score >= 50 ? "is-warn" : "is-bad";

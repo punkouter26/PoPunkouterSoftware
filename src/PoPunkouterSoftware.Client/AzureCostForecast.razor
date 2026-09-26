@@ -12,13 +12,15 @@
 
 <article class="app-card azure-forecast" data-glass>
     <div class="azure-section-heading">
-        <div>
-            <div class="app-kicker">Spend</div>
-            <h2 class="azure-glance-title">Month-end forecast</h2>
-        </div>
+        <h2 class="azure-glance-title">Month-end forecast</h2>
         @if (Forecast.Verdict != CostVerdict.Unknown)
         {
             <RadzenBadge Text="@VerdictLabel" IsPill="true" BadgeStyle="@VerdictBadge" title="@VerdictTitle" />
+        }
+        else if (Forecast.BudgetUsd is null)
+        {
+            @* Owner-facing config, so a hint rather than a line every visitor reads. *@
+            <AppHint Focusable="true" Text="No budget is set, so this is a projection without a verdict. Set Budget:MonthlyUsd to compare it against a ceiling." />
         }
     </div>
 
@@ -93,12 +95,6 @@
         </div>
     }
 
-    @if (Forecast.BudgetUsd is null)
-    {
-        <p class="azure-chart-note">
-            Set <code>Budget:MonthlyUsd</code> to compare this projection against a ceiling.
-        </p>
-    }
 </article>
 
 @code {

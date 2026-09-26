@@ -113,21 +113,6 @@ public class AzuriteWebAppTests : IClassFixture<AzuriteWebApp>
     }
 
     [Fact]
-    public async Task DiagHistory_ReturnsArray_WithAtLeastOneSeededEntry()
-    {
-        await SeedReportAsync();
-        var client = _app.CreateClient();
-
-        var resp = await client.GetAsync("/api/diag/history");
-
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-        doc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-        doc.RootElement.GetArrayLength().Should().BeGreaterThanOrEqualTo(1,
-            because: "every SaveAsync writes a history-summary row alongside the latest report");
-    }
-
-    [Fact]
     public async Task DiagSummary_Returns200_WithComputedHealthPercent()
     {
         await SeedReportAsync();

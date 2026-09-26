@@ -38,9 +38,6 @@ public record OpsSummary
     /// <summary>Health percentage per scan.</summary>
     public List<OpsMetricPoint> HealthHistory { get; init; } = new();
 
-    /// <summary>Unavailable-service count per scan.</summary>
-    public List<OpsMetricPoint> BrokenHistory { get; init; } = new();
-
     /// <summary>Total resource count per scan.</summary>
     public List<OpsMetricPoint> ResourceHistory { get; init; } = new();
 

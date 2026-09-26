@@ -1,18 +1,17 @@
 @using PoPunkouterSoftware.Shared
 @using Radzen
 
-@* Items disappearing from the priority queue / cleanup list with no way back is bad UX —
-   this is that way back. Mirrors AzureHistoryDisclosure's <details> pattern: collapsed by
-   default, cheap to render, no dedicated sub-component tree. *@
-<details class="azure-disclosure">
-    <summary class="azure-disclosure-heading">
+@* Items disappearing from the priority queue with no way back is bad UX — this is that way
+   back. It sits directly under the queue it filters, and renders nothing at all when nothing
+   is snoozed: a permanently-present "Snoozed (0)" disclosure opening onto "Nothing is
+   snoozed" was a row of chrome that answered a question nobody asked. *@
+@if (Items.Count > 0)
+{
+<details class="app-disclosure">
+    <summary class="app-disclosure__heading">
         <span><RadzenIcon Icon="snooze" /><strong>Snoozed (@Items.Count)</strong></span>
     </summary>
-    <div class="azure-disclosure-body">
-        @if (Items.Count == 0)
-        {
-            <div class="azure-compact-state">Nothing is snoozed.</div>
-        }
+    <div class="app-disclosure__body">
         @foreach (var entry in Items)
         {
             <article class="azure-finding" @key="entry.Key">
@@ -26,6 +25,7 @@
         }
     </div>
 </details>
+}
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<SnoozeEntry> Items { get; set; } = [];

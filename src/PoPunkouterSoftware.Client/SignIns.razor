@@ -12,14 +12,13 @@
    row count is not knowable in advance the way /azure's six panes are. *@
 <main id="main-content" class="app-page signins-page" tabindex="-1">
     <header class="signins-header">
-        <div>
-            <span class="app-eyebrow">PoPunkouterSoftware</span>
+        @* Title and window picker on one line. The "PoPunkouterSoftware" eyebrow repeated the
+           topbar brand directly above it, and the paragraph explaining where the data comes
+           from is a read-once fact — it is the hint, not a block every visit scrolls past. *@
+        <div class="signins-title">
             <h1>Who signed in</h1>
-            <p>
-                Every Po app writes the same <code>UserSignedIn</code> record to one shared
-                Application Insights workspace, so this is the whole estate in a single list —
-                the same data as the “Po Sign-ins” workbook in Azure.
-            </p>
+            <AppHint Focusable="true"
+                     Text="Every Po app writes the same UserSignedIn record to one shared Application Insights workspace, so this is the whole estate in a single list — the same data as the “Po Sign-ins” workbook in Azure. Addresses are partially hidden, because this page has no login." />
         </div>
 
         @* Three fixed windows rather than a date picker: 90 is the component's retention
@@ -69,7 +68,7 @@
         }
         else
         {
-            <div class="signins-kpis" role="group" aria-label="Sign-in totals">
+            <div class="app-kpis" role="group" aria-label="Sign-in totals">
                 <div>
                     <strong>@report.TotalPeople</strong>
                     <span>@(report.TotalPeople == 1 ? "Person" : "People")</span>
@@ -85,7 +84,8 @@
             </div>
 
             <p class="signins-meta">
-                Last @report.WindowDays days · read @RelativeTime.Format(report.GeneratedAt)
+                @* No "Last N days": the pressed window button above already says so. *@
+                Read @RelativeTime.Format(report.GeneratedAt)
                 @if (report.Truncated)
                 {
                     <span class="signins-meta__warn">· capped at the query row limit, so these are minimums</span>
@@ -103,9 +103,7 @@
                 <section class="signins-panels">
                     <article class="app-card" data-glass>
                         <h2 class="signins-panel__title">Everyone who has signed in</h2>
-                        <div class="signins-panel__subtitle">
-                            Most recent first. Addresses are partially hidden — this page has no login.
-                        </div>
+                        <div class="signins-panel__subtitle" aria-hidden="true">Most recent first</div>
                         @* tabindex="0" + role="group" for the same reason the uptime grid
                            carries them: this is a horizontally scrollable region, and with
                            no focus stop a keyboard-only visitor cannot reach anything past
@@ -113,7 +111,7 @@
                            at very narrow widths — the attributes stay because the
                            alternative is a scroll region that is unreachable on exactly the
                            screen where it scrolls. *@
-                        <div class="signins-scroll" tabindex="0" role="group"
+                        <div class="app-table-scroll" tabindex="0" role="group"
                              aria-label="Sign-in roster. Scrolls sideways when the table is wider than this window.">
                             <SignInRoster People="@report.People" />
                         </div>

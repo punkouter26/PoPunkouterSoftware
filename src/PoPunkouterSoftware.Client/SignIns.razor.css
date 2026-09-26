@@ -5,9 +5,9 @@
      · Most of this markup lives in child components (SignInRoster, SignInFeed,
        SignInTrend), and Blazor stamps the scope attribute only on a component's OWN
        elements, so a bare selector would style nothing there.
-     · `::deep` moves the scope attribute leftward. `.signins-page ::deep .signin-table`
-       compiles to `.signins-page[b-x] .signin-table` (0,3,0) while a bare `.signin-table`
-       compiles to `.signin-table[b-x]` (0,2,0). Media queries add no specificity, so a bare
+     · `::deep` moves the scope attribute leftward. `.signins-page ::deep .signin-chip`
+       compiles to `.signins-page[b-x] .signin-chip` (0,3,0) while a bare `.signin-chip`
+       compiles to `.signin-chip[b-x]` (0,2,0). Media queries add no specificity, so a bare
        override loses to its own base rule and the layout silently never reflows. */
 
 .signins-page {
@@ -30,14 +30,14 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--app-space-sm);
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
 }
 
-.signins-page ::deep .signins-header > div:first-child {
-    /* Without a flex basis the intro column shrinks to its longest unbreakable run and the
-       paragraph wraps at ~430px on a 1440px screen, next to empty space. */
-    flex: 1 1 30rem;
+.signins-page ::deep .signins-title {
+    display: flex;
+    align-items: center;
+    gap: var(--app-space-2xs);
     min-width: 0;
 }
 
@@ -46,17 +46,6 @@
     font-size: var(--app-step-4);
     font-family: var(--app-headline-font);
     letter-spacing: -.02em;
-}
-
-.signins-page ::deep .signins-header p {
-    margin: .35rem 0 0;
-    max-width: 62ch;
-    color: var(--app-text-muted);
-    font-size: var(--app-step--1);
-}
-
-.signins-page ::deep .signins-header code {
-    font-size: .9em;
 }
 
 .signins-page ::deep .signins-range {
@@ -96,30 +85,7 @@
 
 /* ── Totals ───────────────────────────────────────────────────────────────── */
 
-.signins-page ::deep .signins-kpis {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--app-space-xs);
-}
-
-.signins-page ::deep .signins-kpis > div {
-    display: grid;
-    gap: .15rem;
-    padding: var(--app-space-sm);
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-md);
-    background: var(--app-surface-soft);
-}
-
-.signins-page ::deep .signins-kpis strong {
-    font-size: var(--app-step-3);
-    color: var(--app-text);
-}
-
-.signins-page ::deep .signins-kpis span {
-    font-size: var(--app-step--2);
-    color: var(--app-text-soft);
-}
+/* The tiles themselves are the shared `.app-kpis` in modern-ui.css. */
 
 .signins-page ::deep .signins-meta {
     margin: 0;
@@ -181,55 +147,8 @@
 
 /* ── Tables ───────────────────────────────────────────────────────────────── */
 
-/* The ONE place this page may scroll sideways. A roster has five columns of real text and
-   there is no honest way to fit them in 390px; the rule the rest of the app holds to is that
-   the page BODY never scrolls horizontally, and a per-table container is the escape hatch it
-   allows. Everything else here reflows instead. */
-.signins-page ::deep .signins-scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.signins-page ::deep .signin-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--app-step--1);
-}
-
-.signins-page ::deep .signin-table th,
-.signins-page ::deep .signin-table td {
-    text-align: left;
-    /* From the spacing ladder, not a literal: `padding: .45rem .6rem` ignored
-       --app-density entirely, so the table's cell padding did not compact with the rest of
-       the UI at 640px — and on a phone those 19px per column are the difference between the
-       roster fitting and needing a sideways scroll. */
-    padding: var(--app-space-2xs) var(--app-space-xs);
-    border-bottom: 1px solid var(--app-border);
-    vertical-align: top;
-    white-space: nowrap;
-}
-
-.signins-page ::deep .signin-table thead th {
-    color: var(--app-text-soft);
-    font-size: var(--app-step--2);
-    font-weight: 600;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-}
-
-.signins-page ::deep .signin-table tbody tr:last-child th,
-.signins-page ::deep .signin-table tbody tr:last-child td {
-    border-bottom: 0;
-}
-
-.signins-page ::deep .signin-table tbody tr:hover {
-    background: var(--app-hover-wash);
-}
-
-.signins-page ::deep .signin-table .is-numeric {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
+/* Table chrome and its sideways-scroll container are the shared `.app-table` and
+   `.app-table-scroll` in modern-ui.css; only the roster-specific cells live here. */
 
 .signins-page ::deep .signin-person__name {
     display: block;
@@ -276,7 +195,7 @@
    The 640px breakpoint is the app's phone breakpoint, matching --app-density's second
    step in modern-ui.css. */
 @media (max-width: 640px) {
-    .signins-page ::deep .signin-table .is-date-col {
+    .signins-page ::deep .app-table .is-date-col {
         display: none;
     }
 
@@ -293,59 +212,15 @@
     /* The person cell holds a name, a masked address and now two dates on one line each;
        letting it wrap is what keeps a long address from setting the column's min-content
        width and dragging the table wide again. */
-    .signins-page ::deep .signin-table tbody th {
+    .signins-page ::deep .app-table tbody th {
         white-space: normal;
     }
 }
 
 /* ── Disclosures (trend, raw feed) ────────────────────────────────────────── */
 
-.signins-page ::deep .signin-disclosure {
-    /* Lets the body's overflow-x contain the chart instead of the chart widening the page. */
-    min-width: 0;
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-lg);
-    background: var(--app-surface);
-}
-
-.signins-page ::deep .signin-disclosure__heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--app-space-xs);
-    padding: var(--app-space-sm);
-    cursor: pointer;
-    list-style: none;
-}
-
-.signins-page ::deep .signin-disclosure__heading::-webkit-details-marker {
-    display: none;
-}
-
-.signins-page ::deep .signin-disclosure__heading > span:first-child {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-}
-
-/* Pinned, because this used to be a <strong> and now carries real heading semantics.
-   Radzen's theme sheet styles bare h1..h6 from its own display tokens, so without this the
-   disclosure titles would jump to the theme's h2 size — a visual change nobody asked for,
-   attached to an accessibility fix. */
-.signins-page ::deep .signin-disclosure__title {
-    margin: 0;
-    font-family: var(--app-headline-font);
-    font-size: var(--app-step-0);
-    font-weight: 600;
-    letter-spacing: -.01em;
-}
-
-.signins-page ::deep .signin-disclosure__body {
-    padding: 0 var(--app-space-sm) var(--app-space-sm);
-    overflow-x: auto;
-}
-
-.signins-page ::deep .signin-disclosure .rz-chart {
+/* Disclosure chrome is the shared `.app-disclosure` in modern-ui.css. */
+.signins-page ::deep .app-disclosure .rz-chart {
     min-width: 0;
     height: 260px;
 }
@@ -369,17 +244,7 @@
         align-items: flex-start;
     }
 
-    /* Three tiles stay three: they are short integers, and stacking them costs a whole
-       screen of a page whose first job is to show the roster. */
-    .signins-page ::deep .signins-kpis {
-        gap: var(--app-space-3xs);
-    }
-
-    .signins-page ::deep .signins-kpis > div {
-        padding: var(--app-space-xs);
-    }
-
-    .signins-page ::deep .signin-disclosure .rz-chart {
+    .signins-page ::deep .app-disclosure .rz-chart {
         height: 210px;
     }
 }

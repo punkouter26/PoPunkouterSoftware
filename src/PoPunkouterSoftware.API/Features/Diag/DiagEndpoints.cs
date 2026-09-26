@@ -109,22 +109,6 @@ internal static class DiagEndpoints
         .RequireManagementActions()
         .WithName("CancelDiagRefresh");
 
-        // ── History summary for /timebased time-series charts ─────────────────
-        // Reads the tiny precomputed summary rows written at save time; the previous
-        // implementation decompressed and deserialized up to 90 full report blobs per hit.
-        diag.MapGet("/history", async (AzureReportStore store, CancellationToken ct) =>
-        {
-            var result = await store.LoadHistorySummariesAsync(maxEntries: 90, ct);
-            if (!result.IsSuccess)
-                return Results.Problem(detail: result.Error ?? "Failed to load history", statusCode: 503);
-
-            var summaries = (result.Value ?? new())
-                .OrderBy(s => s.GeneratedAt)
-                .ToList();
-
-            return Results.Json(summaries);
-        });
-
         // ── AI triage ─────────────────────────────────────────────────────────
         // NET_RULES UPDATE: cheapest viable AI service. The /api/diag/ai
         // endpoint takes a list of attention items and returns a
@@ -133,7 +117,7 @@ internal static class DiagEndpoints
         // UI never blocks on this — it renders a disabled "AI summary"
         // expander when the feature is off or the upstream model is down.
         //
-        // This is the ad-hoc consumer only: the AzureStatusNarrative component's "Rewrite this"
+        // This is the ad-hoc consumer only: the AzureStatusNarrative component's "Rewrite"
         // button calls this route directly to get a fresh, unpersisted paragraph without a
         // full Azure rescan. The persisted-per-scan summary shown by default on the dashboard
         // is precomputed by ReportRefreshRunner via AiTriageService.GenerateSummaryAsync (which
@@ -279,12 +263,11 @@ internal static class DiagEndpoints
             AiSummary = report.AiSummary,
 
             // Sparkline series for the hero tiles. Same window and ordering as CostHistory so
-            // all four tiles describe the same span of time; the client hides any series with
+            // all three tiles describe the same span of time; the client hides any series with
             // fewer than two points rather than drawing a single dot.
             HealthHistory = TrendSeries(history, h => h.TotalServices > 0
                 ? Math.Round(h.ActiveServices * 100d / h.TotalServices)
                 : 100),
-            BrokenHistory = TrendSeries(history, h => h.BrokenServices),
             ResourceHistory = TrendSeries(history, h => h.TotalResources),
 
             Changes = DashboardInsightsBuilder.BuildDelta(report, history, PortfolioIdentity.IsSelf),

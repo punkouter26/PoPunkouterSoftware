@@ -399,8 +399,8 @@ public class PortfolioUiTests : IAsyncLifetime
     /// CSS hiding the wrong one (every row built twice), then behind a matchMedia bridge
     /// picking between them. The grid is gone: it carried sorting, per-column filter menus,
     /// column resize and virtualization over a list that measures 48 rows, and its filter
-    /// menus put buttons named "*A*Contains" into the accessibility tree. The cards reflow on
-    /// their own, so there is no branch left. This test now guards against a second tree being
+    /// menus put buttons named "*A*Contains" into the accessibility tree. The explorer is now a single
+    /// table that folds its metric columns on a phone, so there is no branch left. This test now guards against a second tree being
     /// reintroduced rather than against both rendering at once.</para>
     /// </summary>
     [Theory]
@@ -410,13 +410,13 @@ public class PortfolioUiTests : IAsyncLifetime
         var page = await NewPageAsync(width, height, isMobile);
         await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
         await page.GetByRole(AriaRole.Button, new() { Name = "Advanced diagnostics" }).ClickAsync();
-        await page.WaitForSelectorAsync(".azure-resource-cards", new() { Timeout = 40_000 });
+        await page.WaitForSelectorAsync(".azure-resource-table", new() { Timeout = 40_000 });
 
-        (await page.Locator(".azure-resource-cards").CountAsync())
+        (await page.Locator(".azure-resource-table").CountAsync())
             .Should().Be(1, $"exactly one explorer tree must be in the DOM at {label}");
         (await page.Locator(".azure-resource-grid, .rz-data-grid, .rz-datatable").CountAsync())
             .Should().Be(0, "the data grid was removed; a returning one is a regression");
-        (await page.Locator(".azure-resource-card").CountAsync())
+        (await page.Locator(".azure-resource-row").CountAsync())
             .Should().BeGreaterThan(0, "the explorer must actually list resources");
     }
 
@@ -547,7 +547,7 @@ public class PortfolioUiTests : IAsyncLifetime
         var page = await NewPageAsync(width, height, isMobile);
         await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
         await page.GetByRole(AriaRole.Button, new() { Name = "Advanced diagnostics" }).ClickAsync();
-        await page.WaitForSelectorAsync(".azure-attention-list, .azure-resource-cards", new() { Timeout = 40_000 });
+        await page.WaitForSelectorAsync(".azure-resource-table", new() { Timeout = 40_000 });
         await page.EvaluateAsync("() => document.querySelectorAll('details').forEach(d => { d.open = true; })");
         await page.WaitForTimeoutAsync(800);
 
@@ -594,7 +594,7 @@ public class PortfolioUiTests : IAsyncLifetime
         var unavailable = await page.Locator(".signins-unavailable").CountAsync();
         if (unavailable == 0)
         {
-            await Assertions.Expect(page.Locator(".signins-kpis")).ToBeVisibleAsync();
+            await Assertions.Expect(page.Locator(".app-kpis")).ToBeVisibleAsync();
             // The masking contract, asserted over the rendered TEXT rather than the API
             // response — this is what a visitor can actually read — and over every token that
             // looks like an address rather than over one CSS class. The roster omits the email
@@ -607,9 +607,9 @@ public class PortfolioUiTests : IAsyncLifetime
 
             // Open both disclosures: a RadzenChart that never paints reports no error and
             // leaves an empty box, so the SVG has to be asserted rather than the container.
-            await page.EvaluateAsync("() => document.querySelectorAll('details.signin-disclosure').forEach(d => d.open = true)");
-            await Assertions.Expect(page.Locator(".signin-disclosure .rz-chart svg").First).ToBeVisibleAsync();
-            await Assertions.Expect(page.Locator(".signin-disclosure .signin-table").First).ToBeVisibleAsync();
+            await page.EvaluateAsync("() => document.querySelectorAll('details.app-disclosure').forEach(d => d.open = true)");
+            await Assertions.Expect(page.Locator(".app-disclosure .rz-chart svg").First).ToBeVisibleAsync();
+            await Assertions.Expect(page.Locator(".app-disclosure .app-table").First).ToBeVisibleAsync();
         }
 
         // Measured with everything expanded — a collapsed <details> cannot overflow, so
@@ -623,7 +623,7 @@ public class PortfolioUiTests : IAsyncLifetime
         // those are allowed to run wide, because the visitor can scroll them.
         var overhang = await page.EvaluateAsync<string[]>(
             @"() => [...document.querySelectorAll('main.signins-page *')]
-                .filter(e => !e.closest('.signins-scroll, .signin-disclosure__body'))
+                .filter(e => !e.closest('.app-table-scroll, .app-disclosure__body'))
                 .filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
                 .map(e => e.tagName + '.' + e.className + ' @' + Math.round(e.getBoundingClientRect().right) + 'px')");
         overhang.Should().BeEmpty($"nothing outside a scroll container may run off the right at {label}");

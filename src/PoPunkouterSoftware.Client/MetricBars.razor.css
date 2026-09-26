@@ -7,10 +7,17 @@
 
 /* label | bar | value. The label column is the only one allowed to shrink, so a long
    resource-group name truncates instead of squeezing the bar to nothing; the value column
-   is `max-content` so the figures line up on their right edge down the panel. */
+   is `max-content` so the figures line up on their right edge down the panel.
+
+   The bar has a FLOOR (2.5rem), not `minmax(0, 1fr)`. Grid grows every non-flexible track
+   to its maximum before an `fr` track gets anything, so in a narrow card the label column
+   took its full 8-11rem, the value took its width, and the bar resolved to exactly 0px —
+   which is what every bar on /azure did at >=1100px, where the spend pane is half the page
+   and each glance card ~190px wide. Measured, and caught by
+   Azure_GlancePanels_DrawTheirMetrics: eleven fills, all 0.0px wide. */
 .metric-bar {
     display: grid;
-    grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) max-content;
+    grid-template-columns: minmax(0, 8rem) minmax(2.5rem, 1fr) max-content;
     align-items: center;
     gap: var(--app-space-xs);
     font-size: var(--app-step--1);
@@ -66,16 +73,17 @@
    labels truncate and the title attribute carries the full text. */
 @media (max-width: 480px) {
     .metric-bar {
-        grid-template-columns: minmax(0, 5.5rem) minmax(0, 1fr) max-content;
+        grid-template-columns: minmax(0, 5.5rem) minmax(2.5rem, 1fr) max-content;
     }
 }
 
 /* Where there IS room, use it. Measured at 1440px: the longest label in either panel
    ("Azure App Service (poshared)") wants 172px against the 128px an 8rem column gives, so
    three of six rows truncated with ~214px of track sitting next to them doing nothing.
-   11rem clears the longest label and still leaves the bar the majority of the row. */
+   11rem clears the longest label and still leaves the bar the majority of the row — in a
+   full-width card. Capped at 40% of the row so a narrow card keeps a readable bar. */
 @media (min-width: 900px) {
     .metric-bar {
-        grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) max-content;
+        grid-template-columns: minmax(0, min(11rem, 40%)) minmax(2.5rem, 1fr) max-content;
     }
 }

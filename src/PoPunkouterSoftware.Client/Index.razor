@@ -18,8 +18,8 @@
 
 <main id="main-content" class="app-page portfolio-page" tabindex="-1">
     <header class="portfolio-header">
+        @* No "PoPunkouterSoftware" eyebrow: the topbar wordmark directly above says it. *@
         <div>
-            <span class="app-eyebrow">PoPunkouterSoftware</span>
             <h1>Web apps</h1>
             <p>Small tools and experiments built with .NET and Azure.</p>
         </div>
@@ -54,14 +54,10 @@
                    visible text is relative, and `title` — which is what this used to be —
                    never appears on a touch device and is not announced on focus. *@
                 <AppHint Class="@(data.Stale ? "is-stale" : "")" Focusable="true"
-                         Text="@($"Last read {updated:u}.{(data.Stale ? " This page treats that as stale; the server rescans a stale inventory on its own." : "")}")">
+                         Text="@($"Last read {updated:u}.{(data.Stale ? " This page treats that as stale; the server rescans a stale inventory on its own." : "")} The list is re-read on every visit, and weekly in a tab left open.")">
                     Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
                 </AppHint>
             }
-            <AppHint Class="portfolio-summary__auto"
-                     Text="This list is re-read on every visit, and weekly in a tab left open.">
-                auto-updates weekly
-            </AppHint>
         </div>
     }
 

@@ -21,11 +21,15 @@
 
    `Text` is also the element's accessible description while open, but it is NOT
    `aria-label`: for the cases where this wraps text the visitor must still be able to read
-   (a timestamp, a sentence), replacing the content with the hint would delete the content. *@
+   (a timestamp, a sentence), replacing the content with the hint would delete the content.
+
+   With no child content it renders an ⓘ glyph instead — the home for methodology prose that
+   used to sit on the page as a paragraph every visitor scrolled past. The text is then also
+   in the tree as sr-only content, because an icon has no name of its own. *@
 @inject TooltipService TooltipService
 @implements IDisposable
 
-<span class="app-hint @Class"
+<span class="app-hint @(ChildContent is null ? "app-hint--icon" : null) @Class"
       @ref="_element"
       tabindex="@(Focusable ? "0" : null)"
       @onmouseenter="Open"
@@ -33,7 +37,14 @@
       @onfocus="Open"
       @onmouseleave="Close"
       @onblur="Close">
-    @ChildContent
+    @if (ChildContent is null)
+    {
+        <span class="material-symbols-outlined" aria-hidden="true">info</span><span class="app-sr-only">@Text</span>
+    }
+    else
+    {
+        @ChildContent
+    }
 </span>
 
 @code {

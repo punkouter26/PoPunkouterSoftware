@@ -13,7 +13,7 @@
 @* data-snap-pager: on mobile portrait ONLY (see the [data-snap-pager] block in
    modern-ui.css), this container becomes exactly one viewport tall and each `.app-pane`
    child fills it, so a phone visitor moves a whole screen at a time instead of free-
-   scrolling a nine-section column. Nothing is hidden or cut - the panes are a grouping of
+   scrolling a long column. Nothing is hidden or cut - the panes are a grouping of
    the same sections the desktop layout stacks, and the one body of content that genuinely
    cannot be compressed into a screen (advanced diagnostics) opts out with
    `.app-pane--tall` and scrolls under its own steam.
@@ -43,7 +43,7 @@
 
 @if (_loading && _summary is null)
 {
-    <LoadingSkeleton Variant="summary" TileCount="4" AriaLabel="Loading Azure status" />
+    <LoadingSkeleton Variant="summary" TileCount="3" AriaLabel="Loading Azure status" />
 }
 else if (_summary is not null)
 {
@@ -54,75 +54,56 @@ else if (_summary is not null)
     var narrativeTone = summary.BrokenServices > 0 ? "bad"
         : summary.ActionableCount > 0 ? "warn"
         : "good";
+    // The queue replaces the plain attention list in place once the full report is in.
+    var showQueue = _advancedOpen && report is not null;
 
-    @* The lead paragraph comes before the hero on purpose: it is the one element meant to be
-       read first, and a plain-English sentence answers "what is going on" faster than four
-       numbers do. *@
-    @* The lead paragraph gets a pane to itself. It is the one element on this page meant to
-       be READ rather than scanned, it runs to ten lines at 390px, and pairing it with the
-       hero put the two tallest things on the page in the same screen - measured at 817px
-       against a 756px budget, i.e. the numbers would have been pushed under the fold by the
-       prose explaining them. *@
-    <section class="app-pane azure-pane-narrative">
-    <AzureStatusNarrative Summary="@CurrentAiSummary" AttentionItems="@summary.AttentionItems" Tone="@narrativeTone" />
-    </section>
-
+    @* One pane for "what is going on": headline, the plain-English lead paragraph under it,
+       and the numbers. The paragraph used to be a separate glass card in a pane of its own
+       ABOVE the hero, so the page opened by saying the same thing in two boxes — prose about
+       the outage, then an h1 counting it — before a single number. *@
     <section class="app-pane azure-pane-status">
     @* data-fx-origin: where the GPU backdrop's recovery bloom starts (js/gpu-backdrop.js). *@
     <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")" data-glass data-fx-origin="health">
         <div class="azure-command-copy">
             <div class="app-kicker">Azure · @summary.SubscriptionName</div>
-            @* The badge is a SIBLING of the h1, not a child, and the flex row is what keeps
-               them on one optical line. Nested inside, it was concatenated into the heading's
-               accessible name — a screen reader read "3 item(s) need attention3 ACTIONABLE" as
-               one string, and that string is also what <FocusOnNavigate Selector="h1"> announces
-               on arrival. Never put a badge, chip or count inside a heading element. *@
-            <div class="azure-hero-line">
-                <h1 class="azure-hero-title">
-                    @(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")
-                </h1>
-                @if (summary.AttentionCount > 0)
+            @* No badge beside the h1 any more. It said "N actionable", which differed from the
+               headline count only by the staleness flag — and staleness has its own badge in
+               the meta row below. Never put a badge, chip or count INSIDE a heading element:
+               it joins the accessible name that <FocusOnNavigate Selector="h1"> announces. *@
+            <h1 class="azure-hero-title">
+                @(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")
+            </h1>
+            <AzureStatusNarrative Summary="@CurrentAiSummary" AttentionItems="@summary.AttentionItems" Tone="@narrativeTone" />
+            @* Freshness is stated ONCE. It used to be "Updated 3d ago", a Current/Stale badge,
+               and the age again inside two KPI labels ("Health as of 3d ago", "Unavailable
+               (3d ago)"). A green "Current" badge said nothing, so the badge now appears only
+               when it is a warning. *@
+            <div class="azure-command-meta">
+                <AppHint Focusable="true"
+                         Text="@($"Health, cost and uptime on this page are from the last full Azure scan, {ageLabel}.{(summary.IsStale ? " That is past the freshness window, so treat them as a snapshot rather than as the state of the estate now." : "")}")">
+                    Updated @ageLabel
+                </AppHint>
+                @if (summary.IsStale)
                 {
-                    <RadzenBadge Text="@($"{summary.ActionableCount} actionable")" IsPill="true"
-                                  BadgeStyle="BadgeStyle.Warning"
-                                  title="Unavailable services plus security and cleanup findings — everything in the headline count except the staleness flag, which is cleared by refreshing rather than by fixing a resource." />
+                    <RadzenBadge Text="Stale data" IsPill="true" BadgeStyle="BadgeStyle.Danger" />
                 }
             </div>
-            <div class="azure-command-meta">
-                <span>Updated @ageLabel</span>
-                @* The badge's explanation used to be a `title`, which is invisible on touch
-                   and unannounced on focus. Focusable: what "as of the last scan" means is
-                   the difference between reading these numbers as current or as a snapshot. *@
-                <AppHint Focusable="true"
-                         Text="@($"Health, cost and uptime below are from the last full Azure scan, {ageLabel} ago.{(summary.IsStale ? " That is past the freshness window, so treat them as a snapshot rather than as the state of the estate now." : "")}")">
-                    <RadzenBadge Text="@(summary.IsStale ? "Stale data" : "Current")" IsPill="true"
-                                  BadgeStyle="@(summary.IsStale ? BadgeStyle.Danger : BadgeStyle.Success)" />
-                </AppHint>
-            </div>
         </div>
-        @* Health claims inherit the report's age: "100% healthy" from a stale scan is a
-           snapshot, not a status — the tiles must not contradict the Stale badge above. *@
-        @* Each tile carries the shape behind its number. The series are projections of the
-           same stored history the charts below use, so a tile and its chart can never
-           disagree; a series with fewer than two points renders nothing at all rather than a
-           misleading single dot. *@
-        @* role="group" is what makes the aria-label below count: a bare <div> is role=generic,
-           and a generic element takes no accessible name, so the label was inert. *@
-        <div class="azure-command-kpis" role="group" aria-label="Azure status summary">
+        @* Three tiles. Health % and the unavailable count were two tiles for one ratio (the
+           percentage IS healthy/total), so the count now rides on the health tile's label.
+           The series are projections of the same stored history, and a series with fewer
+           than two points renders nothing rather than a misleading single dot.
+           role="group" is what makes the aria-label count: a bare <div> takes no name. *@
+        <div class="app-kpis azure-command-kpis" role="group" aria-label="Azure status summary">
             <div>
                 <strong>@summary.HealthPercent%</strong>
-                <span>@(summary.IsStale ? $"Health as of {ageLabel}" : "Service health")</span>
+                <span>@(summary.BrokenServices == 0 ? "Service health" : $"Health · {summary.BrokenServices} down")</span>
                 <Sparkline Points="@summary.HealthHistory" Tone="good" AriaLabel="Service health over the last 30 scans" />
             </div>
             <div>
                 <strong>@summary.CostFormatted</strong>
                 <span>30-day cost</span>
                 <Sparkline Points="@summary.CostHistory" Tone="accent" AriaLabel="30-day cost over the last 30 scans" />
-            </div>
-            <div>
-                <strong>@summary.BrokenServices</strong>
-                <span>@(summary.IsStale ? $"Unavailable ({ageLabel})" : "Unavailable")</span>
-                <Sparkline Points="@summary.BrokenHistory" Tone="bad" AriaLabel="Unavailable services over the last 30 scans" />
             </div>
             <div>
                 <strong>@summary.TotalResources</strong>
@@ -147,13 +128,11 @@ else if (_summary is not null)
             }
             else
             {
-                @* Focusable, and this is the case that most needed it: the explanation of WHY
-                   there is no refresh button — and the exact config keys that would enable it
-                   — was a `title` no phone or keyboard visitor could read. *@
-                <AppHint Class="app-note" Focusable="true"
-                         Text="Management actions are disabled on this deployment. Set FeatureFlags:EnableManagementActions=true (and Security:ManagementApiKey for the extra API-key gate) in production appsettings to enable refresh, cancel and the pinger toggle.">
-                    Read-only view — enable&nbsp;<code>FeatureFlags:EnableManagementActions</code>&nbsp;to unlock refresh controls
-                </AppHint>
+                @* The config keys that would enable rescan are owner-facing, so they live in the
+                   hint, not on the page every visitor reads. Focusable: it is the only place a
+                   keyboard or phone visitor learns why there is no rescan button. *@
+                <span class="app-note">Read-only <AppHint Focusable="true"
+                    Text="Management actions are disabled on this deployment. Set FeatureFlags:EnableManagementActions=true (and Security:ManagementApiKey for the extra API-key gate) to enable rescan and cancel." /></span>
             }
             @* Sonification. A second MODALITY on facts this page already renders — not a
                second copy of them — so the "each fact appears once" rule is intact: nothing
@@ -178,13 +157,6 @@ else if (_summary is not null)
                               Percent="@_progressPercent" Step="@_progressStep"
                               Determinate="@(_hub?.State == HubConnectionState.Connected)" />
     }
-    </section>
-
-    @* Its own pane: "what moved" is the question a returning visitor actually arrives with,
-       and it deserves a screen rather than a footnote under the hero. Answered from stored
-       history with no extra request. *@
-    <section class="app-pane azure-pane-changed">
-    <AzureWhatChanged Delta="@summary.Changes" />
     </section>
 
     @* One grid, three cards. There used to be two grids and four cards, and the extra card
@@ -214,7 +186,10 @@ else if (_summary is not null)
         </article>
         <article class="app-card" data-glass>
             <h2 class="azure-glance-title">Response time · slowest endpoints</h2>
-            <div class="azure-glance-subtitle" aria-hidden="true">Current scan, milliseconds</div>
+            <div class="azure-glance-subtitle">
+                <span aria-hidden="true">Current scan, milliseconds</span>
+                <AppHint Focusable="true" Text="Free-tier apps sleep when idle — multi-second times are usually cold starts, not outages." />
+            </div>
             @if (summary.ResponseTimes.Count == 0)
             {
                 <div class="azure-compact-state success">No slow responses detected.</div>
@@ -222,7 +197,6 @@ else if (_summary is not null)
             else
             {
                 <MetricBars Points="@summary.ResponseTimes" Tone="warm" Format="ms" />
-                <p class="azure-chart-note">Free-tier apps sleep when idle — multi-second times are usually cold starts, not outages.</p>
             }
             <span class="app-sr-only">@string.Join(", ", summary.ResponseTimes.Select(x => $"{x.Label}: {x.Value:N0} milliseconds"))</span>
         </article>
@@ -230,22 +204,53 @@ else if (_summary is not null)
 
     </section>
 
-    @* Full-width on its own row, not a grid cell: 30 day-columns cannot share a row with
-       anything else and still be readable at 390px. *@
+    @* 30 day-columns at 10px: a phone scrolls them inside their own container, and a
+       desktop half (~630px) holds the whole grid, so it pairs with "what changed" there. *@
     <section class="app-pane azure-pane-uptime">
     <AzureUptimeHeatmap Map="@summary.Uptime" Focus="@Focus" />
     </section>
 
-    <section class="app-pane azure-pane-actions">
+    @* Its own pane: "what moved" is the question a returning visitor actually arrives with,
+       and it deserves a screen rather than a footnote under the hero. Answered from stored
+       history with no extra request. AFTER uptime, not straight after the hero: on desktop
+       the two are a half-width pair (see the >=1100px block in the stylesheet), which frees
+       the spend pane to span the page its three cards need. DOM order is the pairing order,
+       so reading and tab order still match what is on screen. *@
+    <section class="app-pane azure-pane-changed">
+    <AzureWhatChanged Delta="@summary.Changes" />
+    </section>
+
+    @* ONE list of what needs doing. First paint shows the server's plain attention sentences;
+       once Advanced diagnostics has loaded the full report, the same section shows the ranked
+       queue (commands, impact, snooze) instead. They used to be two lists on one page — this
+       one plus a "Full priority queue" further down — and the security/cleanup count badges
+       that sat in this heading repeated two of the sentences directly beneath them.
+
+       --tall while the queue is showing: it is as long as the estate is broken, and like the
+       advanced pane it scrolls rather than being cut. *@
+    <section class="app-pane azure-pane-actions @(showQueue ? "app-pane--tall" : null)">
     <section class="azure-attention-summary">
         <div class="azure-section-heading">
-            <div><div class="app-kicker">Action first</div><h2>Needs attention</h2></div>
-            <div class="azure-signal-badges">
-                <RadzenBadge Text="@($"{summary.SecurityFindings} security")" IsPill="true" BadgeStyle="@(summary.SecurityFindings > 0 ? BadgeStyle.Danger : BadgeStyle.Success)" />
-                <RadzenBadge Text="@($"{summary.CleanupCandidates} cleanup")" IsPill="true" BadgeStyle="@(summary.CleanupCandidates > 0 ? BadgeStyle.Warning : BadgeStyle.Success)" />
+            <h2>Needs attention</h2>
+            @* ButtonStyle.Base (not .Light): Radzen's "Light" style hardcodes `color:
+               var(--rz-base-200)` for the outlined variant in every theme — a near-white label,
+               invisible on the light-mode surface. Base resolves to --rz-text-color, which the
+               token bridge maps to --app-text, so it tracks both schemes. *@
+            <div class="azure-advanced-toggle">
+                <RadzenButton Text="@(_advancedOpen ? "Hide advanced diagnostics" : "Advanced diagnostics")"
+                              Icon="@(_advancedOpen ? "expand_less" : "tune")" ButtonStyle="ButtonStyle.Base"
+                              Variant="Variant.Outlined" Size="ButtonSize.Small" Click="ToggleAdvancedAsync" />
             </div>
         </div>
-        @if (summary.AttentionItems.Count == 0)
+        @if (showQueue)
+        {
+            <AzurePriorityQueue Items="@PriorityQueue"
+                                BadgeFor="@ActionabilityBadge"
+                                OnCopyCommand="@CopyText"
+                                OnSnooze="@SnoozePriorityItemAsync" />
+            <AzureSnoozedItems Items="@_activeSnoozes" OnUnsnooze="@UnsnoozeEntryAsync" />
+        }
+        else if (summary.AttentionItems.Count == 0)
         {
             <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No action is needed.</div>
         }
@@ -256,16 +261,6 @@ else if (_summary is not null)
             </ol>
         }
     </section>
-
-    @* ButtonStyle.Base (not .Light): Radzen's "Light" style hardcodes `color: var(--rz-base-200)`
-       for the outlined variant in every theme — a near-white label, which is invisible on the
-       light-mode surface. Base resolves to --rz-text-color, which the token bridge maps to
-       --app-text, so it tracks both schemes. *@
-    <div class="azure-advanced-toggle">
-        <RadzenButton Text="@(_advancedOpen ? "Hide advanced diagnostics" : "Advanced diagnostics")"
-                      Icon="@(_advancedOpen ? "expand_less" : "tune")" ButtonStyle="ButtonStyle.Base"
-                      Variant="Variant.Outlined" Click="ToggleAdvancedAsync" />
-    </div>
     </section>
 
     @if (_advancedOpen)
@@ -292,42 +287,27 @@ else if (_summary is not null)
             var securityIssueCount = (currentReport.StorageInventory ?? new()).Sum(s => s.IssueCount)
                 + (currentReport.ConfigDrift ?? new()).Sum(d => d.IssueCount);
 
-            @* One-tap: the primary action fires on the main button; the secondary export
-               lives behind the same control's caret instead of a second sibling button. *@
-            <div class="azure-advanced-actions">
-                <RadzenSplitButton Text="Download report" Icon="download" Size="ButtonSize.Small" Click="OnDownloadClick">
-                    <RadzenSplitButtonItem Text="Full report (JSON)" Value="json" Icon="data_object" />
-                    <RadzenSplitButtonItem Text="Audit script (PowerShell)" Value="script" Icon="terminal" />
-                </RadzenSplitButton>
-            </div>
-
-            <AzurePriorityQueue Items="@PriorityQueue"
-                                BadgeFor="@ActionabilityBadge"
-                                OnCopyCommand="@CopyText"
-                                OnSnooze="@SnoozePriorityItemAsync" />
-
-            <AzureSnoozedItems Items="@_activeSnoozes" OnUnsnooze="@UnsnoozeEntryAsync" />
-
             <AzureResourceExplorer Items="@FilteredResourceExplorerItems"
                                    TotalCount="@ResourceExplorerItems.Count"
                                    Views="@ResourceViews"
                                    SelectedView="@_resourceView"
                                    SelectedViewChanged="@SetResourceView"
                                    StatusBadgeFor="@ExplorerStatusBadge"
-                                   RiskClassFor="@RiskClass" />
+                                   RiskClassFor="@RiskClass">
+                <HeadingActions>
+                    @* One-tap: the primary action fires on the main button; the secondary export
+                       lives behind the same control's caret instead of a second sibling button.
+                       It sits in the explorer's heading row rather than a toolbar row of its own. *@
+                    <RadzenSplitButton Text="Download report" Icon="download" Size="ButtonSize.Small" Click="OnDownloadClick">
+                        <RadzenSplitButtonItem Text="Full report (JSON)" Value="json" Icon="data_object" />
+                        <RadzenSplitButtonItem Text="Audit script (PowerShell)" Value="script" Icon="terminal" />
+                    </RadzenSplitButton>
+                </HeadingActions>
+            </AzureResourceExplorer>
 
             <AzureEvidenceDisclosures Report="@currentReport"
-                                      CleanupCandidates="@CleanupCandidates"
                                       SecurityIssueCount="@securityIssueCount"
-                                      StepTimingTotalMs="@StepTimingTotalMs"
-                                      ConfidenceBadgeFor="@ConfidenceBadge"
-                                      OnSnooze="@SnoozeCleanupItemAsync">
-                <HistorySection>
-                    <AzureHistoryDisclosure StatusHistory="@ServiceStatusHistory"
-                                            CostHistory="@CostHistory"
-                                            SnapshotCount="@HistoryWindow.Count" />
-                </HistorySection>
-            </AzureEvidenceDisclosures>
+                                      StepTimingTotalMs="@StepTimingTotalMs" />
         }
         </section>
     }

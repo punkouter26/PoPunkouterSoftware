@@ -3,12 +3,13 @@
 
 @* The ranked evidence list: every open item, most actionable first, each carrying the
    provenance that justifies it (source, confidence, owner, environment) plus a
-   one-tap copy of the Azure CLI command that resolves it. *@
-<section class="azure-anchor-section">
-    <div class="azure-section-heading">
-        <div><div class="app-kicker">Ranked evidence</div><h2>Full priority queue</h2></div>
-        <RadzenBadge Text="@($"{Items.Count} open")" IsPill="true" />
-    </div>
+   one-tap copy of the Azure CLI command that resolves it.
+
+   No heading of its own: it renders INSIDE the page's "Needs attention" section, replacing
+   that section's plain first-paint list once the full report has loaded. It used to be a
+   second list further down under "Full priority queue", so every finding was listed twice
+   on the same page — once as a sentence, once as a ranked row. *@
+<div class="azure-priority-queue">
     @if (Items.Count == 0)
     {
         <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No immediate action is required.</div>
@@ -64,7 +65,7 @@
             }
         </div>
     }
-</section>
+</div>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<PriorityQueueItem> Items { get; set; } = [];
@@ -76,7 +77,7 @@
     [Parameter] public EventCallback<string> OnCopyCommand { get; set; }
 
     /// <summary>Snoozes this item for a few days — the page computes its dedup key
-    /// (<c>{Source}|{Item}</c>, matching AzureDashboard.DerivedViews' grouping key) and
+    /// (<c>{Source}|{Item}</c>, matching BuildPriorityQueue's grouping key) and
     /// posts it to <c>/api/diag/snooze</c>.</summary>
     [Parameter] public EventCallback<PriorityQueueItem> OnSnooze { get; set; }
 

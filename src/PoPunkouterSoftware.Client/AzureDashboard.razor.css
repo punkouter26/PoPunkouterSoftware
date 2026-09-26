@@ -38,21 +38,9 @@
 .azure-ops-page ::deep .azure-glance-title { font-family: var(--app-headline-font); letter-spacing: -.02em; }
 .azure-ops-page ::deep .azure-glance-subtitle { color: var(--app-text-soft); font-size: var(--app-step--2); margin: 0 0 .35rem; letter-spacing: .03em; }
 
-/* H1 and its badge — one optical line at desktop, wrapping on mobile. The badge is a
-   SIBLING of the heading (see AzureDashboard.razor): nested inside, it became part of the
-   heading's accessible name. This row is what restores the layout the nesting used to give.
-   (The typography half of this rule used to live in a second, near-duplicate
-   `.azure-hero-title` block further down; they are merged here.) */
-.azure-ops-page ::deep .azure-hero-line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: .55rem;
-}
-
-.azure-ops-page ::deep .azure-hero-line > .rz-badge { transform: translateY(-.15em); }
-
 .azure-ops-page ::deep .azure-attention-summary {
+    display: grid;
+    gap: var(--app-space-xs);
     padding: .9rem;
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-lg);
@@ -60,15 +48,12 @@
 }
 
 .azure-ops-page ::deep .azure-simple-attention { display: grid; gap: .35rem; margin: 0; padding-left: 1.4rem; color: var(--app-text-muted); }
-.azure-ops-page ::deep .azure-signal-badges,
-.azure-ops-page ::deep .azure-advanced-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
-.azure-ops-page ::deep .azure-advanced-toggle { display: flex; justify-content: center; padding: .25rem; }
+.azure-ops-page ::deep .azure-advanced-toggle { display: flex; }
 .azure-ops-page ::deep .azure-advanced { display: grid; gap: 1.25rem; padding-top: .5rem; border-top: 1px solid var(--app-border); }
-.azure-ops-page ::deep .azure-advanced-actions { justify-content: flex-end; }
 
 .azure-ops-page ::deep .azure-command-header {
     display: grid;
-    grid-template-columns: minmax(260px, 1.35fr) minmax(320px, .9fr) auto;
+    grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr) auto;
     gap: 1.5rem;
     align-items: center;
     padding: clamp(1rem, 2vw, 1.35rem);
@@ -86,8 +71,6 @@
         var(--app-surface-strong);
 }
 
-/* The flex/gap declarations that used to sit here existed only to lay out the badge that
-   was nested inside the heading; that job moved to `.azure-hero-line` above. */
 .azure-ops-page ::deep .azure-hero-title {
     margin: .15rem 0 .35rem;
     font-family: var(--app-headline-font);
@@ -106,46 +89,12 @@
 }
 
 .azure-ops-page ::deep .azure-command-meta {
-    margin-top: .85rem;
+    margin-top: var(--app-space-xs);
     font-size: .82rem;
     color: var(--app-text-soft);
 }
 
-/* 4 tiles in a single row at desktop, 2×2 only when the hero header collapses to a
-   single column at ≤ 1000 px (see the .azure-command-header media query below). The
-   2-up default was the only rule, so the four KPIs always rendered as a 2×2 grid no
-   matter how wide the page got — the hero header reserved `minmax(320px, .9fr)` for
-   them and the tiles squeezed into 187 px each. */
-.azure-ops-page ::deep .azure-command-kpis {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(110px, 1fr));
-    gap: var(--app-space-xs);
-}
-
-@media (max-width: 1000px) {
-    .azure-ops-page ::deep .azure-command-kpis {
-        grid-template-columns: repeat(2, minmax(110px, 1fr));
-    }
-}
-
-.azure-ops-page ::deep .azure-command-kpis > div {
-    display: grid;
-    gap: .15rem;
-    padding: var(--app-space-sm);
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-md);
-    background: var(--app-surface-soft);
-}
-
-.azure-ops-page ::deep .azure-command-kpis strong {
-    font-size: var(--app-step-2);
-    color: var(--app-text);
-}
-
-.azure-ops-page ::deep .azure-command-kpis span {
-    font-size: var(--app-step--2);
-    color: var(--app-text-soft);
-}
+/* Tile shape, number size and grid are the shared `.app-kpis` in modern-ui.css. */
 
 .azure-ops-page ::deep .azure-command-actions {
     justify-content: flex-end;
@@ -214,13 +163,13 @@
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    align-items: end;
-    margin-bottom: 1rem;
+    align-items: center;
+    margin-bottom: var(--app-space-xs);
 }
 
 .azure-ops-page ::deep .azure-section-heading h2 {
-    margin: .15rem 0 .25rem;
-    font-size: var(--app-step-3);
+    margin: 0;
+    font-size: var(--app-step-2);
 }
 
 .azure-ops-page ::deep .azure-section-heading p {
@@ -235,9 +184,7 @@
     gap: .6rem;
 }
 
-.azure-ops-page ::deep .azure-attention-item,
-.azure-ops-page ::deep .azure-disclosure,
-.azure-ops-page ::deep .azure-resource-card {
+.azure-ops-page ::deep .azure-attention-item {
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-md);
     background: var(--app-surface);
@@ -294,31 +241,6 @@
 .azure-ops-page ::deep .azure-item-provenance > span + span::before {
     content: "·";
     margin-right: .45rem;
-}
-
-.azure-ops-page ::deep .azure-resource-card dl {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .5rem;
-    margin: 0;
-}
-
-.azure-ops-page ::deep .azure-resource-card dl > div {
-    padding: .55rem;
-    border-radius: var(--app-radius-md);
-    background: var(--app-surface-soft);
-}
-
-.azure-ops-page ::deep .azure-resource-card dt {
-    color: var(--app-text-soft);
-    font-size: var(--app-step--2);
-    text-transform: uppercase;
-}
-
-.azure-ops-page ::deep .azure-resource-card dd {
-    margin: .1rem 0 0;
-    color: var(--app-text);
-    font-size: .82rem;
 }
 
 .azure-ops-page ::deep .azure-item-actions {
@@ -409,44 +331,36 @@
     border-color: var(--app-accent-edge);
 }
 
-/* The grid and the card list are now mutually exclusive branches in the markup
-   (driven by `_isNarrow`), not two always-rendered trees toggled with `display`. */
-/* One column on a phone, as many as fit above it. This is the whole responsive story for
-   the explorer now that the data-grid branch is gone: the cards reflow, so there is no
-   second render tree and no matchMedia bridge deciding which one to build. `auto-fill` with
-   a minmax floor rather than a fixed count, so a 1440px window gets four columns and a
-   split-screen one gets two without either width being named anywhere. */
-.azure-ops-page ::deep .azure-resource-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
-    gap: var(--app-space-xs);
-    align-items: start;
-}
-
-/* Off-screen resource cards skip layout, style, and paint. */
-.azure-ops-page ::deep .azure-resource-card {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 190px;
-}
-
-.azure-ops-page ::deep .azure-resource-card-heading,
-.azure-ops-page ::deep .azure-disclosure-heading {
+/* The explorer is a table (the shared .app-table); these are its row cells. Below 640px
+   the two metric columns fold into the name cell, the same move the /users roster makes
+   with its dates, so exactly one copy of each is in the accessibility tree at any width. */
+.azure-ops-page ::deep .azure-resource-heading__tools {
     display: flex;
-    justify-content: space-between;
-    gap: .75rem;
+    flex-wrap: wrap;
+    gap: var(--app-space-xs);
     align-items: center;
-    padding: .9rem 1rem;
 }
 
-.azure-ops-page ::deep .azure-resource-card-heading > strong {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.azure-ops-page ::deep .azure-resource-row__name {
+    display: block;
+    color: var(--app-text);
+    font-weight: 600;
 }
 
-.azure-ops-page ::deep .azure-resource-card dl {
-    padding: 0 .85rem .85rem;
+.azure-ops-page ::deep .azure-resource-row__meta,
+.azure-ops-page ::deep .azure-resource-row__metrics {
+    display: block;
+    color: var(--app-text-soft);
+    font-size: var(--app-step--2);
+    font-weight: 400;
+}
+
+.azure-ops-page ::deep .azure-resource-row__metrics { display: none; }
+
+@media (max-width: 640px) {
+    .azure-ops-page ::deep .azure-resource-table .is-metric-col { display: none; }
+    .azure-ops-page ::deep .azure-resource-row__metrics { display: block; }
+    .azure-ops-page ::deep .azure-resource-table tbody th { white-space: normal; }
 }
 
 .azure-ops-page ::deep .azure-risk-label {
@@ -461,7 +375,7 @@
 .azure-ops-page ::deep .azure-chart-note { margin: .4rem 0 0; color: var(--app-text-muted); font-size: var(--app-step--2); }
 
 /* Contrast: this renders both nested inside an already-opaque panel (.app-card,
-   .azure-disclosure, .azure-attention-summary — all var(--app-surface)) AND, in
+   .app-disclosure, .azure-attention-summary — all var(--app-surface)) AND, in
    AzurePriorityQueue's empty state, directly inside .azure-anchor-section with no opaque
    ancestor at all — i.e. straight over the GPU aurora backdrop (gpu-backdrop.js, both pages).
    --app-surface-soft is a ~3.5-4% wash, tuned for the nested case; used bare it lets the
@@ -486,32 +400,7 @@
     border-color: var(--app-accent-edge);
 }
 
-.azure-ops-page ::deep .azure-disclosure-heading > span:first-child {
-    display: flex;
-    gap: .55rem;
-    align-items: center;
-}
-
-/* Pinned, because this used to be a <strong> and now carries real heading semantics —
-   Radzen's theme sheet sizes bare h1..h6 from its own display tokens. Same reasoning as
-   .signin-disclosure__title on /users. */
-.azure-ops-page ::deep .azure-disclosure-title {
-    margin: 0;
-    font-family: var(--app-headline-font);
-    font-size: var(--app-step-0);
-    font-weight: 600;
-    letter-spacing: -.01em;
-}
-
-.azure-ops-page ::deep summary.azure-disclosure-heading { cursor: pointer; list-style: none; }
-.azure-ops-page ::deep summary.azure-disclosure-heading::-webkit-details-marker { display: none; }
-.azure-ops-page ::deep .azure-disclosure:not([open]) .azure-disclosure-heading { border-bottom: 0; }
-
-.azure-ops-page ::deep .azure-disclosure-body {
-    display: grid;
-    gap: .65rem;
-    padding: 0 1rem 1rem;
-}
+/* Disclosure chrome is the shared `.app-disclosure` in modern-ui.css. */
 
 .azure-ops-page ::deep .azure-finding {
     display: grid;
@@ -528,30 +417,6 @@
     margin: 0;
     color: var(--app-text-muted);
     font-size: .82rem;
-}
-
-.azure-ops-page ::deep .azure-history-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-/* The <article> owns the frame. .rz-chart used to carry its own border + radius +
-   background as well, producing a concentric double border inside every one of these
-   tiles (and a third ring from the enclosing .azure-disclosure). */
-.azure-ops-page ::deep .azure-history-grid article {
-    min-width: 0;
-    padding: var(--app-space-sm);
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-md);
-}
-
-.azure-ops-page ::deep .azure-history-grid .rz-chart {
-    height: 220px;
-    padding: var(--app-space-3xs);
-}
-
-.azure-ops-page ::deep .azure-history-grid h3 {
-    margin: 0 0 var(--app-space-xs);
-    font-size: 1rem;
 }
 
 .azure-ops-page ::deep .azure-timing-row {
@@ -605,7 +470,6 @@
         justify-content: flex-start;
     }
 
-    .azure-ops-page ::deep .azure-history-grid,
     .azure-ops-page ::deep .azure-attention-detail {
         grid-template-columns: 1fr;
     }
@@ -638,14 +502,6 @@
     .azure-ops-page ::deep .azure-resource-heading {
         display: block;
     }
-
-    .azure-ops-page ::deep .azure-result-count {
-        display: block;
-        margin-top: .4rem;
-    }
-
-    /* No display toggle here any more — below this breakpoint the markup itself
-       renders the card list instead of the grid (see _isNarrow / NarrowQuery). */
 
     .azure-ops-page ::deep .azure-finding {
         grid-template-columns: 1fr;
@@ -700,10 +556,6 @@
 }
 
 @media (max-width: 420px) {
-    .azure-ops-page ::deep .azure-resource-card dl {
-        grid-template-columns: 1fr;
-    }
-
     .azure-ops-page ::deep .azure-filter-bar {
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -712,8 +564,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .azure-ops-page ::deep .azure-attention-item,
-    .azure-ops-page ::deep .azure-disclosure {
+    .azure-ops-page ::deep .azure-attention-item {
         scroll-behavior: auto;
     }
 }
@@ -771,34 +622,33 @@ html[data-app-theme="dark"] .azure-ops-page {
 
 /* ── Lead status paragraph ─────────────────────────────────────────────────── */
 
+/* Inside the hero, under the h1 — no card of its own any more (see AzureStatusNarrative).
+   The tone rule on the left edge is what survives of the band: good/bad news is still
+   pre-attentive before a word of the paragraph is read. */
 .azure-ops-page ::deep .azure-narrative {
     display: grid;
-    gap: .5rem;
+    gap: var(--app-space-2xs);
     justify-items: start;
-    padding: clamp(.9rem, 2vw, 1.25rem);
-    border: 1px solid var(--app-border-strong);
+    margin-top: var(--app-space-xs);
+    padding-left: var(--app-space-sm);
     border-left: 3px solid var(--tone-accent);
-    border-radius: var(--app-radius-lg);
-    background: var(--app-surface);
 }
 
 .azure-ops-page ::deep .azure-narrative.is-good { border-left-color: var(--tone-good); }
 .azure-ops-page ::deep .azure-narrative.is-warn { border-left-color: var(--tone-warn); }
 .azure-ops-page ::deep .azure-narrative.is-bad { border-left-color: var(--tone-bad); }
 
-.azure-ops-page ::deep .azure-narrative__head {
+.azure-ops-page ::deep .azure-narrative__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: .5rem;
+    gap: var(--app-space-2xs);
     align-items: center;
 }
 
-/* The paragraph is the reason the band exists — size it like body copy that is
-   meant to be read, not like a caption. */
 .azure-ops-page ::deep .azure-narrative__text {
     margin: 0;
     max-width: 78ch;
-    font-size: var(--app-step-1);
+    font-size: var(--app-step-0);
     line-height: 1.5;
     color: var(--app-text);
 }
@@ -1117,10 +967,6 @@ html[data-app-theme="dark"] .azure-ops-page {
         justify-content: center;
     }
 
-    .azure-ops-page ::deep .azure-narrative__text {
-        font-size: 1rem;
-    }
-
     /* Smaller cells keep a 30-day row inside a phone's scroll container without
        forcing a long horizontal drag to reach the percentage column. */
     .azure-ops-page {
@@ -1135,24 +981,26 @@ html[data-app-theme="dark"] .azure-ops-page {
 }
 
 /* ── Desktop landscape: two columns ──────────────────────────────────────────
-   The page is pane-shaped — six panes, each answering one question — and on a phone the
-   snap pager gives each of them a screen of its own. At 1440x1000 the same six panes were
+   The page is pane-shaped — five panes, each answering one question — and on a phone the
+   snap pager gives each of them a screen of its own. At 1440x1000 the panes (six then) were
    stacked in ONE column: measured at 1707px of content in a 1000px viewport, i.e. a
    desktop visitor scrolled 71% more than a phone visitor did, while two thirds of the
    1280px column sat empty beside a 712px-wide paragraph. Two columns is the desktop
    answer to the question the pager answers on mobile.
 
-   Which panes span both columns is not cosmetic. The uptime grid is 30 day-columns plus a
-   label and a percentage column: in a 632px half it would need its internal scroller to
-   reach the days it is there to show, so it stays full width. The actions pane keeps it
-   company because a list of attention items reads better wide than narrow, and the
-   advanced diagnostics pane keeps its own full-width row for the same reason it has
-   `.app-pane--tall` on mobile.
+   Which panes span both columns is not cosmetic. The status hero spans because it carries
+   the lead paragraph beside its three tiles and its actions. The spend pane spans because
+   it is three cards: in a 632px half each was ~190px, the forecast title wrapped to three
+   lines, its verdict badge was clipped at the card edge, and every metric bar resolved to
+   0px wide. Uptime and "what changed" are the half-width pair instead — at 10px cells the
+   30-day grid is ~540px and fits a half whole, and "what changed" is a short list that
+   left most of a full-width row empty. The actions pane spans because the ranked queue that
+   replaces its list is a wide row per finding, and advanced diagnostics keeps its own
+   full-width row for the same reason it has `.app-pane--tall` on mobile.
 
    `align-items: start` so a short pane keeps its own height instead of being stretched to
-   its row partner — the status hero stretched to the narrative's height would be 130px of
-   empty card. Order is untouched: DOM order is still narrative, status, changed, spend,
-   uptime, actions, so the reading order and the tab order are unchanged at every width. */
+   its row partner. DOM order is status, spend, uptime, changed, actions — the pairing order
+   — so the reading order and the tab order match the screen at every width. */
 @media (min-width: 1100px) {
     .azure-ops-page {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1160,7 +1008,8 @@ html[data-app-theme="dark"] .azure-ops-page {
         align-items: start;
     }
 
-    .azure-ops-page > .azure-pane-uptime,
+    .azure-ops-page > .azure-pane-status,
+    .azure-ops-page > .azure-pane-spend,
     .azure-ops-page > .azure-pane-actions,
     .azure-ops-page > .app-pane--tall {
         grid-column: 1 / -1;

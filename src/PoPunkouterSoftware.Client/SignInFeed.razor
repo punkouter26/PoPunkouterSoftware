@@ -8,21 +8,21 @@
    Collapsed by default because it is the longest block and the least often wanted. *@
 @using PoPunkouterSoftware.Shared
 
-<details class="signin-disclosure">
+<details class="app-disclosure">
     @* <h2>, not <strong> — see the note in SignInTrend.razor. It is the second of the two
        sections on this page that had no heading at all. *@
-    <summary class="signin-disclosure__heading">
-        <span><RadzenIcon Icon="history" /><h2 class="signin-disclosure__title">Most recent sign-ins</h2></span>
+    <summary class="app-disclosure__heading">
+        <span><RadzenIcon Icon="history" /><h2 class="app-disclosure__title">Most recent sign-ins</h2></span>
         <span class="app-note">@Events.Count @(Events.Count == 1 ? "event" : "events")</span>
     </summary>
-    <div class="signin-disclosure__body">
+    <div class="app-disclosure__body">
         @if (Events.Count == 0)
         {
             <div class="signin-empty">No sign-ins in this window.</div>
         }
         else
         {
-            <table class="signin-table">
+            <table class="app-table">
                 <caption class="app-sr-only">Individual sign-in events, most recent first</caption>
                 <thead>
                     <tr>

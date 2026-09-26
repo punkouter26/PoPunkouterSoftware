@@ -517,20 +517,6 @@ a {
     box-shadow: var(--app-shadow-md);
 }
 
-.app-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--app-space-xs);
-    padding: var(--app-space-2xs) var(--app-space-sm);
-    border-radius: var(--app-radius-pill);
-    background: var(--app-accent-wash);
-    color: var(--app-accent);
-    font-size: var(--app-step--1);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
 .app-kicker {
     color: var(--app-text-soft);
     text-transform: uppercase;
@@ -590,6 +576,16 @@ a {
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
 }
+
+/* Icon-only hint (AppHint with no child content): the glyph is the affordance, so no underline. */
+.app-hint--icon {
+    display: inline-flex;
+    vertical-align: middle;
+    color: var(--app-text-soft);
+}
+
+.app-hint--icon[tabindex] { text-decoration: none; }
+.app-hint--icon .material-symbols-outlined { font-size: 1.1em; }
 
 .app-hint[tabindex]:focus-visible {
     outline: 2px solid var(--app-accent);
@@ -753,6 +749,135 @@ a {
 .app-page .rz-progressbar {
     border-radius: var(--app-radius-pill);
     overflow: hidden;
+}
+
+/* ── KPI tiles, disclosures, tables ──────────────────────────────────────────
+   Shared by /azure and /users. Each used to be written twice, once per page stylesheet
+   (`.azure-command-kpis` / `.signins-kpis`, `.azure-disclosure` / `.signin-disclosure`,
+   and `.signin-table` with the resource explorer as cards beside it), and the copies had
+   already drifted: different number sizes, different corner radii, different heading
+   padding for the same <details> shape. A page stylesheet now carries only what is
+   genuinely page-specific — and because those are scoped rules at (0,3,0), they still win
+   over these (0,1,x) ones wherever a page needs to differ. */
+.app-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--app-space-xs);
+}
+
+.app-kpis > div {
+    display: grid;
+    gap: .15rem;
+    align-content: start;
+    min-width: 0;
+    padding: var(--app-space-sm);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-md);
+    background: var(--app-surface-soft);
+}
+
+.app-kpis strong {
+    font-size: var(--app-step-2);
+    color: var(--app-text);
+    overflow-wrap: anywhere;
+}
+
+.app-kpis span {
+    font-size: var(--app-step--2);
+    color: var(--app-text-soft);
+}
+
+.app-disclosure {
+    /* Lets the body's overflow-x contain a chart or table instead of it widening the page. */
+    min-width: 0;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-md);
+    background: var(--app-surface);
+}
+
+.app-disclosure__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--app-space-xs);
+    padding: var(--app-space-xs) var(--app-space-sm);
+    cursor: pointer;
+    list-style: none;
+}
+
+.app-disclosure__heading::-webkit-details-marker { display: none; }
+
+.app-disclosure__heading > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+}
+
+/* Pinned: the title is a real heading, and Radzen's theme sheet sizes bare h1..h6 from its
+   own display tokens, so without this a disclosure title jumps to the theme's h2 size. */
+.app-disclosure__title {
+    margin: 0;
+    font-family: var(--app-headline-font);
+    font-size: var(--app-step-0);
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+/* minmax(0, 1fr): an `auto` track is floored at its widest child's min-content width, so a
+   chart legend or a wide table would size the track past the body instead of scrolling
+   inside it. */
+.app-disclosure__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-space-xs);
+    padding: 0 var(--app-space-sm) var(--app-space-sm);
+    overflow-x: auto;
+}
+
+/* A table's ONE permitted sideways scroll. The rule the app holds to is that the page BODY
+   never scrolls horizontally; a per-table container is the escape hatch it allows. The
+   element carries tabindex="0" + role="group" so a keyboard can reach what is off-screen. */
+.app-table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.app-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--app-step--1);
+}
+
+.app-table th,
+.app-table td {
+    text-align: left;
+    padding: var(--app-space-2xs) var(--app-space-xs);
+    border-bottom: 1px solid var(--app-border);
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.app-table thead th {
+    color: var(--app-text-soft);
+    font-size: var(--app-step--2);
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.app-table tbody tr:last-child th,
+.app-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.app-table tbody tr:hover {
+    background: var(--app-hover-wash);
+}
+
+.app-table .is-numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 .app-page code {

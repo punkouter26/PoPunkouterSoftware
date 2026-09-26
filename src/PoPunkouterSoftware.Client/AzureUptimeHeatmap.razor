@@ -16,11 +16,14 @@
 
 <article class="app-card azure-uptime">
     <div class="azure-section-heading">
-        <div>
-            <div class="app-kicker">Last @Map.Days.Count days</div>
-            <h2 class="azure-glance-title">Uptime</h2>
-        </div>
-        <span class="app-note" title="Full Azure scans run on demand; the background pinger probes every few minutes while the app is awake. Both feed this grid.">@EvidenceLabel</span>
+        <h2 class="azure-glance-title">Uptime</h2>
+        @* The methodology used to be a six-line paragraph under the legend, read once and then
+           scrolled past on every visit, plus a `title` no touch visitor could see. It is the
+           same text, one tap away. *@
+        <span class="app-note">
+            Last @Map.Days.Count days · @EvidenceLabel
+            <AppHint Focusable="true" Text="@Methodology" />
+        </span>
     </div>
 
     @if (Map.Rows.Count == 0)
@@ -83,14 +86,6 @@
             <span><i class="azure-uptime__cell is-no-data"></i> no scan</span>
             <span><i class="azure-uptime__cell is-healthy has-deploy"></i> deploy landed</span>
         </div>
-        <p class="azure-chart-note">
-            Built from full Azure scans and from the background pinger, which probes every few
-            minutes. A cell shows the worst state seen that day, so one bad check marks the
-            day; the percentage counts individual checks rather than days, so one bad check
-            among many does not read as a whole day of downtime. Unobserved days stay blank and
-            count for nothing either way, and a ping that times out is recorded as neither —
-            free-tier apps sleep, and a missed cold start is not an outage.
-        </p>
     }
 </article>
 
@@ -141,6 +136,14 @@
     /// Names both evidence sources. Reporting scans alone would say "3 scans on record" for a
     /// grid actually resting on thousands of probes.
     /// </summary>
+    private const string Methodology =
+        "Built from full Azure scans and from the background pinger, which probes every few minutes "
+        + "while an app is awake. A cell shows the worst state seen that day, so one bad check marks the "
+        + "day; the percentage counts individual checks rather than days, so one bad check among many "
+        + "does not read as a whole day of downtime. Unobserved days stay blank and count for nothing "
+        + "either way, and a ping that times out is recorded as neither — free-tier apps sleep, and a "
+        + "missed cold start is not an outage.";
+
     private string EvidenceLabel => Map.PingCount > 0
         ? $"{Map.ScanCount} scan(s) · {Map.PingCount:N0} ping(s)"
         : $"{Map.ScanCount} scan(s) on record";

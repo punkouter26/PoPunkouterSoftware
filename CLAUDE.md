@@ -126,7 +126,7 @@ the profile it binds :5000 instead of :8000.
   named for the group (`DomainVocabulary.cs`, `TableStorageVocabulary.cs`), and a group of related
   DTOs is `<Concern>Models.cs` (`CostModels.cs`, `SecurityModels.cs`).
 - **Partial-class aspect files are `<Type>.<Aspect>.cs`, and the aspect names the concern**, not the
-  shape: `AzureReportService.Cost.cs`, `AzureDashboard.DerivedViews.cs`. A `.Charts.cs` holding no
+  shape: `AzureReportService.Cost.cs`, `AzureDashboard.Presentation.cs`. A `.Charts.cs` holding no
   charts is the failure mode to avoid.
 - **A file name must be greppable.** If the name is not a type inside the file and is not one of the
   two exceptions, the name is wrong.
@@ -184,20 +184,36 @@ future leak with a static-file exclusion when the file simply does not belong th
 `App_Data/` is gitignored; the Integration fixture seeds its own copy (see below).
 
 **Each fact appears once on `/azure`.** The page carries one `.azure-glance-grid` of three cards
-(forecast, cost-by-resource-group, response times) with the uptime heatmap full-width below it.
+(forecast, cost-by-resource-group, response times) with the uptime heatmap below it.
 Two of those three draw with `MetricBars` — plain HTML/CSS rows — not `RadzenChart`. Both series
 are a **top-N ranking** (`Take(5)` / `Take(6)`, pre-sorted server-side), and a chart was the wrong
 shape for one three times over: it rebuilt an SVG scene graph on every parent render, it carried a
 fixed pixel height with a horizontal category axis that could not survive 390px without an
 `overflow-x` escape hatch, and it spent most of its ink on axis furniture around five numbers that
 are now simply printed on the row. Reach for `RadzenChart` when a series is continuous
-(`AzureHistoryDisclosure` still does); reach for `MetricBars` when it is a ranking.
+(`SignInTrend` on `/users` does); reach for `MetricBars` when it is a ranking. A `MetricBars` bar
+column has a 2.5rem floor: with `minmax(0, 1fr)` grid gave the label its full 11rem first and
+every bar in a ~190px card resolved to 0px.
 There used to be a second grid and a fourth card: a donut restating the healthy/total ratio the hero
 tile already gives as a percentage — the same number appeared in the hero, the card subtitle and the
 donut centre — and a cost chart that drew `CostHistory`, the exact series the hero's cost sparkline
 draws. Trend belongs in the sparkline, breakdown in the chart, ratio in the hero. `OpsSummary` lost
 `FleetHealth` with the donut; if you add a field to the first-paint contract, make sure nothing on
 the page already renders it.
+
+The 2026-09-26 consolidation applied the same rule to the rest of the page. The AI narrative is
+the hero's lead paragraph under the h1, not a glass card in a pane of its own above it (the page
+opened by saying the same thing twice). Health % and the unavailable count are one tile
+("80% · Health · 2 down"), so the hero has three tiles and `OpsSummary` lost `BrokenHistory`.
+Freshness is stated once ("Updated 2h ago" plus a badge only when stale). There is ONE list of what
+needs doing: "Needs attention" shows the server's plain sentences on first paint and is replaced
+in place by the ranked `AzurePriorityQueue` once Advanced diagnostics has loaded the report —
+it used to be two lists, plus count badges that repeated two of the sentences. The "Cleanup
+evidence" disclosure is gone (every row was already a "Remove Candidate" in the queue, with a
+second snooze button), and so is the 30-day history disclosure with its `/api/diag/history`
+endpoint (both charts were the hero sparklines' series). The resource explorer is a table, not
+a card per resource. Methodology and owner-facing config text (uptime method, budget key,
+management flag, cold starts) lives in an icon-only `AppHint`, not a paragraph.
 
 **One design system, three dials.** Everything visual resolves from the token block at the top of
 `modern-ui.css`, and three of those tokens are the only places a global visual decision is made:
@@ -238,15 +254,16 @@ and scrolls internally. Both contracts are held by `PortfolioUiTests`
 (`Azure_MobilePortrait_PanesFitTheViewport`, `Home_FirstScreen_ShowsAWholeCard`) — a new section
 dropped into whichever pane is nearest will fail the first of those.
 
-At **≥1100px** those same six panes go two-up, because the pane shape is not a phone-only
-idea: stacking them in one column at 1440×1000 measured **1707px of content in a 1000px
-viewport**, so a desktop visitor scrolled 71% more than a phone visitor while two thirds of
-the 1280px column sat empty beside a 712px-wide paragraph. `AzureDashboard.razor.css`'s
-`@media (min-width: 1100px)` sets two columns and lets the uptime grid, the actions pane and
-the advanced pane span both — the uptime grid is 30 day-columns plus labels, so in a 632px
-half it would need its inner scroller to reach the days it exists to show. `align-items: start`
-so a short pane keeps its own height instead of stretching to its row partner. DOM order is
-unchanged at every width, so reading order and tab order still match.
+At **≥1100px** the five panes (status, spend, uptime, changed, actions) go two-up, because
+the pane shape is not a phone-only idea: stacking them in one column at 1440×1000 measured
+**1707px of content in a 1000px viewport**. `AzureDashboard.razor.css`'s
+`@media (min-width: 1100px)` sets two columns; status, spend, actions and the advanced pane span
+both, and uptime + "what changed" are the half-width pair. Spend spans because it is three cards
+— in a 632px half each was ~190px, the forecast badge clipped and every metric bar drew 0px.
+Uptime fits a half whole at 10px cells (~540px). That pairing is why "what changed" comes
+AFTER uptime in the DOM: DOM order is the pairing order, so reading and tab order match the
+screen. `align-items: start` so a short pane keeps its own height. Measured after: ~1140px of
+content at 1440×1000, down from ~1330px.
 
 `/users` answers it the way `/` does, not the way `/azure` does: it is a roster of unknown
 length, so it scrolls ordinarily and carries no `[data-snap-pager]`. Its one concession is
@@ -272,17 +289,16 @@ no scroller at all.
   Steps live in `.Discovery`, `.Metrics`, `.Cost`, `.Security`, `.Inventory`, `.Cleanup`,
   `.GitHubCorrelation`, `.Helpers`.
 - `AzureDashboard.razor.cs` — state, lifecycle, loading, refresh, SignalR. Display mapping in
-  `.Presentation`, history in `.Trends`. The pure projections are NOT a partial-class aspect any
+  `.Presentation`, sonification in `.Audio`. The pure projections are NOT a partial-class aspect any
   more: they live in `DashboardDerivations.cs`, a plain `public static` class, because as private
   members of the component ~460 lines of impact scoring, actionability tiering and cleanup
   reasoning were unreachable from a test even though both test projects reference this assembly.
-  `.DerivedViews` keeps only `CleanupCandidates`, which reads the page's snooze set and so is not
-  pure. Anything pure belongs in `DashboardDerivations`, with a test in
+  (`.DerivedViews` and `.Trends` were deleted with the cleanup and history disclosures.)
+  Anything pure belongs in `DashboardDerivations`, with a test in
   `DashboardDerivationsTests`. Markup blocks are
   sibling components in the client root (`AzureStatusNarrative`, `AzureWhatChanged`,
   `AzureCostForecast`, `AzureUptimeHeatmap`, `Sparkline`, `AzurePriorityQueue`,
-  `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureHistoryDisclosure`,
-  `AzureSnoozedItems`).
+  `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureSnoozedItems`).
 
 ## Graphics and audio
 
@@ -604,6 +620,13 @@ proves a context and program were created, not that anything reached the screen.
   Radzen's `TooltipService` (mouseenter, focus, click) and renders **no** `title`: keeping one as a
   fallback prints a native tooltip under the Radzen one a second later. `Focusable` is opt-in per
   use — a hint on each of twelve catalogue cards would otherwise add twenty-four tab stops.
+  With **no child content** it renders an ⓘ glyph plus the text as sr-only content: that is
+  where read-once prose goes (methodology, owner-facing config keys) instead of a paragraph.
+- **KPI tiles, disclosures and tables are shared classes** in `modern-ui.css`: `.app-kpis`,
+  `.app-disclosure` (`__heading`, `__title`, `__body`), `.app-table` and `.app-table-scroll`.
+  Each used to exist once per page stylesheet and the copies had drifted. A page stylesheet
+  keeps only what is page-specific; its scoped (0,3,0) rules still win over these where it must
+  differ. A catalogue card has ONE link — the title, stretched over the card by `::after`.
 - **Radzen's four status colours are bridged in the token block, and badges were unreadable without
   it.** The bridge mapped `--rz-primary*` only, so `.rz-badge-<style>` kept the theme's pastel fill
   with white text on top: `"3 actionable"` measured **1.64:1**, `"AI"`/`"Current"` 2.29:1,
@@ -795,7 +818,7 @@ proves a context and program were created, not that anything reached the screen.
   without which `GetContainerAsync` returns null and stored images never appear —
   indistinguishable from never having captured any.
 
-## Tests — four projects, one per tier (budget 105/52/25/25, currently 105/52/21/23)
+## Tests — four projects, one per tier (budget 105/52/25/25, currently 105/51/21/23)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the

@@ -3,9 +3,9 @@
 @using Radzen.Blazor
 
 @* The resource explorer: a segmented filter over every inventoried resource, rendered as a
-   card list at every viewport.
+   table at every viewport.
 
-   It used to render a RadzenDataGrid on wide viewports and these cards on narrow ones. The
+   It used to render a RadzenDataGrid on wide viewports and a card list on narrow ones. The
    grid carried sorting, per-column filter menus, column resize and row virtualization over a
    list that measures 48 rows on the live subscription — machinery sized for a dataset this app
    does not have. It cost more than it looked: a virtualized grid torn down and rebuilt on
@@ -16,12 +16,18 @@
    buttons named "*A*Contains" and "A**Starts with" into the accessibility tree above the
    segmented control that already filters this list.
 
-   One tree, one breakpoint story: the cards reflow by themselves, so the wide layout is a CSS
-   grid of the same articles rather than a different component. *@
+   One tree, one breakpoint story. It then spent three years as a CARD per resource — six
+   labelled tiles each, ~190px tall, so the 48-resource estate was a quarter-mile scroll of
+   repeated "TYPE / GROUP / CONCERN" labels. A table prints each label once, in the header.
+   Below 640px the two metric columns fold into the name cell (the same trick the /users
+   roster uses for its dates), with exactly one copy of each in the accessibility tree. *@
 <section class="azure-anchor-section">
     <div class="azure-section-heading azure-resource-heading">
-        <div><div class="app-kicker">Resource explorer</div><h2>All resources</h2></div>
-        <span class="azure-result-count">@Items.Count of @TotalCount</span>
+        <h2>All resources</h2>
+        <div class="azure-resource-heading__tools">
+            <span class="azure-result-count">@Items.Count of @TotalCount</span>
+            @HeadingActions
+        </div>
     </div>
 
     @* Segmented control as a plain `role="group"` of buttons. RadzenSelectBar does not
@@ -31,7 +37,7 @@
        identical (the .rz-button classes below match Radzen's small size) and gives AT the
        fact it needed. `aria-pressed` is the right ARIA here, not `aria-selected`: every
        button stays focusable independently and the group is a filter rather than a tab
-       list (the cards below are the content, not a tabpanel). *@
+       list (the rows below are the content, not a tabpanel). *@
     <div class="azure-filter-bar" role="group" aria-label="Filter resources">
         @foreach (var view in Views)
         {
@@ -51,27 +57,42 @@
     }
     else
     {
-        <div class="azure-resource-cards">
-            @foreach (var item in Items)
-            {
-                @* @key on the composite identity, not the name: two resources in different
-                   resource groups can share a name, and a duplicate key makes Blazor's diff
-                   reuse the wrong element. *@
-                <article class="azure-resource-card" @key="@($"{item.Type}|{item.ResourceGroup}|{item.Name}")">
-                    <div class="azure-resource-card-heading">
-                        <strong title="@item.Name">@item.Name</strong>
-                        <SeverityBadge Text="@item.Status" Style="@StatusBadgeFor(item.Status)" />
-                    </div>
-                    <dl>
-                        <div><dt>Type</dt><dd>@item.Type</dd></div>
-                        <div><dt>Group</dt><dd>@item.ResourceGroup</dd></div>
-                        <div><dt>Concern</dt><dd class="azure-risk-label @RiskClassFor(item.Risk)">@item.Risk</dd></div>
-                        <div><dt>Requests / 5xx</dt><dd>@item.Requests7d.ToString("N0") / @item.Errors7d.ToString("N0")</dd></div>
-                        <div><dt>Response</dt><dd>@(item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—")</dd></div>
-                        <div><dt>Location</dt><dd>@item.Location</dd></div>
-                    </dl>
-                </article>
-            }
+        <div class="app-table-scroll" tabindex="0" role="group"
+             aria-label="Resource table. Scrolls sideways when it is wider than this window.">
+            <table class="app-table azure-resource-table">
+                <caption class="app-sr-only">Inventoried resources in the @SelectedView view</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Resource</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Concern</th>
+                        <th scope="col" class="is-numeric is-metric-col">Requests / 5xx (7d)</th>
+                        <th scope="col" class="is-numeric is-metric-col">Response</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Items)
+                    {
+                        var response = item.ResponseTimeMs is int ms ? $"{ms:N0} ms" : "—";
+                        @* @key on the composite identity, not the name: two resources in different
+                           resource groups can share a name, and a duplicate key makes Blazor's diff
+                           reuse the wrong element. *@
+                        <tr class="azure-resource-row" @key="@($"{item.Type}|{item.ResourceGroup}|{item.Name}")">
+                            <th scope="row">
+                                <span class="azure-resource-row__name">@item.Name</span>
+                                <span class="azure-resource-row__meta">@item.Type · @item.ResourceGroup · @item.Location</span>
+                                <span class="azure-resource-row__metrics">
+                                    @item.Requests7d.ToString("N0") req / @item.Errors7d.ToString("N0") 5xx · @response
+                                </span>
+                            </th>
+                            <td><SeverityBadge Text="@item.Status" Style="@StatusBadgeFor(item.Status)" /></td>
+                            <td class="azure-risk-label @RiskClassFor(item.Risk)">@item.Risk</td>
+                            <td class="is-numeric is-metric-col">@item.Requests7d.ToString("N0") / @item.Errors7d.ToString("N0")</td>
+                            <td class="is-numeric is-metric-col">@response</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     }
 </section>
@@ -89,6 +110,10 @@
 
     [Parameter, EditorRequired] public Func<string, BadgeStyle> StatusBadgeFor { get; set; } = default!;
     [Parameter, EditorRequired] public Func<string, string> RiskClassFor { get; set; } = default!;
+
+    /// <summary>Controls for the heading row (the page's download button). Not part of the
+    /// ShouldRender comparison: a RenderFragment is a fresh delegate every parent render.</summary>
+    [Parameter] public RenderFragment? HeadingActions { get; set; }
 
     private IReadOnlyList<ResourceExplorerItem>? _renderedItems;
     private int _renderedTotal;
