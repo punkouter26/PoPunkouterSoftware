@@ -77,6 +77,24 @@ public class ScanDeltaTests
             HistoryWith(Now.AddHours(-1), ("app-a", ServiceHealth.Active), ("app-b", ServiceHealth.Broken)),
         };
         var current = ReportWith(Now, ("app-a", ServiceHealth.Broken, 0), ("app-b", ServiceHealth.Active, 200));
+        // app-a was deployed between the two scans; app-b's deploy predates the baseline.
+        current = current with
+        {
+            WebServices = current.WebServices! with
+            {
+                Services =
+                [
+                    current.WebServices!.Services[0] with
+                    {
+                        LastDeploy = new DeployInfo { CompletedAt = Now.AddMinutes(-20), Conclusion = "success", Sha = "a1b2c3d4e5f6" },
+                    },
+                    current.WebServices!.Services[1] with
+                    {
+                        LastDeploy = new DeployInfo { CompletedAt = Now.AddHours(-3), Conclusion = "success" },
+                    },
+                ],
+            },
+        };
 
         var delta = DashboardInsightsBuilder.BuildDelta(current, history, NothingExcluded);
 
@@ -84,6 +102,13 @@ public class ScanDeltaTests
             c.Kind == ScanChangeKinds.ServiceDown && c.Direction == ScanChangeDirection.Worse && c.Text.Contains("app-a"));
         delta.Changes.Should().Contain(c =>
             c.Kind == ScanChangeKinds.ServiceRecovered && c.Direction == ScanChangeDirection.Better && c.Text.Contains("app-b"));
+
+        // "Did I break it?": the outage names the deploy that landed since the last scan, and
+        // the deploy is its own line. app-b deployed before the baseline, so it gets neither.
+        delta.Changes.Single(c => c.Kind == ScanChangeKinds.ServiceDown).Detail
+            .Should().Contain("deployed a1b2c3d (success) since the last scan");
+        delta.Changes.Where(c => c.Kind == ScanChangeKinds.Deploy).Should().ContainSingle()
+            .Which.Text.Should().Be("app-a was deployed");
     }
 
     [Fact]
@@ -161,6 +186,36 @@ public class CostForecastTests
     }
 }
 
+public class CostAnomalyTests
+{
+    private static ResourceGroupCost Group(string name, double latest, double usual, int days = 14) => new()
+    {
+        Name = name,
+        Daily = Enumerable.Range(1, days)
+            .Select(i => new DailyCostEntry { Date = new DateTime(2026, 9, 25).AddDays(-i).ToString("yyyy-MM-dd"), Cost = usual })
+            .Append(new DailyCostEntry { Date = "2026-09-25", Cost = latest })
+            .Where(d => d.Cost > 0)   // Cost Management omits $0 days
+            .ToList(),
+    };
+
+    /// <summary>All four branches in one table, because they are one rule read four ways.</summary>
+    [Fact]
+    public void OnlyARealDollarSpikeAgainstItsOwnBaselineIsFlagged()
+    {
+        var anomalies = DashboardInsightsBuilder.BuildCostAnomalies(
+        [
+            Group("rg-steady", latest: 2.10, usual: 2.00),       // normal wobble
+            Group("rg-spike", latest: 9.00, usual: 1.00),        // the case this exists for
+            Group("rg-pennies", latest: 0.40, usual: 0.05),      // 8x, but forty cents
+            Group("rg-new", latest: 3.00, usual: 0, days: 0),    // new spend, no history
+        ]);
+
+        anomalies.Select(a => a.ResourceGroup).Should().Equal("rg-spike", "rg-new");
+        anomalies[0].Should().Be(new CostAnomaly("rg-spike", "2026-09-25", 9.00, 1.00));
+        DashboardInsightsBuilder.BuildCostAnomalies([]).Should().BeEmpty();
+    }
+}
+
 public class UptimeHeatmapTests
 {
     private static readonly DateTime Today = new(2026, 8, 26, 12, 0, 0, DateTimeKind.Utc);
@@ -174,14 +229,21 @@ public class UptimeHeatmapTests
     };
 
     [Fact]
-    public void WindowIsOneCellPerDayIncludingDaysWithNoScan()
+    public void WindowIsOneCellPerDayIncludingDaysWithNoScan_WithDeployDaysMarked()
     {
-        var map = DashboardInsightsBuilder.BuildUptime(
-            [Scan(Today, ("app-a", ServiceHealth.Active))], Today, NothingExcluded, windowDays: 7);
+        // Today's scan saw a deploy two days ago: the marker lands on THAT day's column even
+        // though no scan ran on it, and a deploy older than the window is dropped.
+        var scan = Scan(Today, ("app-a", ServiceHealth.Active));
+        scan = scan with { Services = [scan.Services[0] with { LastDeployAt = Today.AddDays(-2) }] };
+        var old = Scan(Today.AddDays(-20), ("app-a", ServiceHealth.Active));
+        old = old with { Services = [old.Services[0] with { LastDeployAt = Today.AddDays(-20) }] };
+
+        var map = DashboardInsightsBuilder.BuildUptime([scan, old], Today, NothingExcluded, windowDays: 7);
 
         map.Days.Should().HaveCount(7);
         map.Rows.Should().ContainSingle().Which.Cells.Should().HaveCount(7);
         map.Rows[0].Cells.Count(c => c == UptimeState.NoData).Should().Be(6);
+        map.Rows[0].DeployDays.Should().Equal(4);
     }
 
     [Fact]
@@ -311,14 +373,9 @@ public class ServiceIdentityTests
     // disagreed, every service rendered as two half-populated rows — 16 for 8 apps.
 
     [Fact]
-    public void PrefersFriendlyNameOverResourceName()
+    public void PrefersFriendlyName_FallingBackToResourceName()
     {
         NameMatching.ServiceIdentity("PoMemeVideo", "app-pomemevideo").Should().Be("PoMemeVideo");
-    }
-
-    [Fact]
-    public void FallsBackToResourceNameWhenFriendlyNameIsAbsent()
-    {
         // null and "" take the same absent-friendly-name branch; one case covers both.
         NameMatching.ServiceIdentity(null, "app-pomemevideo").Should().Be("app-pomemevideo");
     }

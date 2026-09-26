@@ -95,6 +95,24 @@ public class SignInReportBuilderTests
         }
 
         json.Should().Contain("gmail.com", because: "the domain is kept — it is the half that carries signal");
+
+        // Cost per person joins on the stored scan: app name -> scanned service -> its own
+        // resource group's spend. A group missing from the cost series spent $0 (Cost
+        // Management omits zero rows); an app matching no scanned service stays unknown.
+        var inventory = new PoPunkouterSoftware.Shared.AzureReport
+        {
+            WebServices = new() { Services =
+            [
+                new() { Name = "app-potraffic", FriendlyName = "PoTraffic", ResourceGroup = "rg-traffic" },
+                new() { Name = "app-powatch", FriendlyName = "", ResourceGroup = "rg-watch" },
+            ] },
+            Cost = new() { ResourceGroups = [new() { Name = "RG-TRAFFIC", Total = 6.0 }] },
+        };
+        var costed = SignInReportBuilder.AttachCosts(report, inventory).Apps.ToDictionary(a => a.App);
+        costed["PoTraffic"].Cost30Days.Should().Be(6.0);
+        costed["PoTraffic"].CostPerPerson.Should().Be(3.0, because: "two people signed in to PoTraffic");
+        costed["PoWatch"].Cost30Days.Should().Be(0, because: "matched by resource name; its group spent nothing");
+        costed["PoRedoImage"].Cost30Days.Should().BeNull(because: "no scanned service matches it");
     }
 
     /// <summary>

@@ -46,6 +46,18 @@
     }
     <h2 class="app-card-title">@App.Name</h2>
     <p class="app-card-copy">@App.Description</p>
+    @* Nightly PageSpeed Insights, mobile. Short labels on screen, full names for a screen
+       reader — a `title` would be mouse-only (see AppHint), and four full category names do
+       not fit one line of a 390px card. *@
+    @if (App.Scores is { } scores)
+    {
+        <ul class="app-card-scores" aria-label="PageSpeed Insights, mobile">
+            <li class="@ScoreClass(scores.Performance)"><span aria-hidden="true">Perf</span><span class="app-sr-only">Performance</span> @scores.Performance</li>
+            <li class="@ScoreClass(scores.Accessibility)"><span aria-hidden="true">A11y</span><span class="app-sr-only">Accessibility</span> @scores.Accessibility</li>
+            <li class="@ScoreClass(scores.BestPractices)"><span aria-hidden="true">BP</span><span class="app-sr-only">Best practices</span> @scores.BestPractices</li>
+            <li class="@ScoreClass(scores.Seo)"><span aria-hidden="true">SEO</span><span class="app-sr-only">Search engine optimisation</span> @scores.Seo</li>
+        </ul>
+    }
     @if (!string.IsNullOrWhiteSpace(App.Url))
     {
         <a class="app-card-link" href="@App.Url" target="_blank" rel="noopener noreferrer"
@@ -83,5 +95,8 @@
     }
 
     private bool _renderedFirst;
+
+    /// <summary>Lighthouse's own bands: 90+ good, 50–89 needs work, below 50 poor.</summary>
+    private static string ScoreClass(int score) => score >= 90 ? "is-good" : score >= 50 ? "is-warn" : "is-bad";
 }
 

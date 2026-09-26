@@ -33,6 +33,7 @@ public static class HistorySummaryMapper
             HttpStatus = s.HttpStatus,
             ResponseTimeMs = s.Connectivity?.ResponseTime ?? 0,
             Requests7d = s.Metrics7Days?.Requests ?? 0,
+            LastDeployAt = s.LastDeploy?.CompletedAt,
         }).ToList(),
     };
 }

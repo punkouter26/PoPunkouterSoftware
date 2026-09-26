@@ -152,6 +152,9 @@ changes slowly, so storing it and projecting it is right. A sign-in roster is on
 whose whole value is being current: folding it into the nightly scan would mean somebody who
 signed in an hour ago does not appear until tomorrow, which is the only question the page
 exists to answer. Do not generalise this to a second endpoint without the same argument.
+It also joins the STORED report (`SignInReportBuilder.AttachCosts`) to put each app's own
+resource-group spend and cost-per-person beside its reach — that half is a projection, not
+a live query.
 
 **Two read contracts, deliberately split.** `/api/diag/summary` returns the compact `OpsSummary`
 (built by `DiagEndpoints.BuildOpsSummary`) and is the *only* first-paint fetch for `/azure`. The full
@@ -293,7 +296,7 @@ comment in each before changing it; they document the reasoning, this is the map
 | `gpu-backdrop.js` | Orchestrator for `#app-gpu-backdrop`: tier selection, colour tokens, glass rects, audio energy. Owns no pixels. |
 | `gfx-webgl.js` | WebGL2 renderer (curl-noise field, transform-feedback particles, dual-Kawase blur, glass composite) with a WebGL1 field-only fallback. **The top of the ladder.** |
 | `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. |
-| `helpers.js` | Topbar, snap pager, clipboard, download — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
+| `helpers.js` | Topbar, snap pager, clipboard, download, `appRevealFocus` (the `/azure?focus=` scroll) — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
 | `theme-kit.js` | The visitor's light/dark choice, and the header toggle that sets it. Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
 | `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
 | `blazor-hooks.js` | Registers the enhanced-navigation callbacks. Must load **after** `blazor.web.js`, which defines `Blazor`. Also ex-inline. |
@@ -414,6 +417,35 @@ proves a context and program were created, not that anything reached the screen.
   no DOM change and no message at all. Interactive WASM islands on one page share a single
   WebAssembly host and therefore one DI container (a scoped service is a per-host singleton there),
   which is why the island and the page resolve the same instance. Do not remove the attribute.
+- **Push alerts go through ntfy, and only three things send one.** `AlertNotifier` POSTs JSON to
+  `Alerts:NtfyServer` (default ntfy.sh) when `Alerts:NtfyTopic` is set — Key Vault secret
+  `PoPunkouterSoftware--Alerts--NtfyTopic`, because on ntfy.sh the topic name IS the credential.
+  Senders: `ServicePingerService` on a debounced up/down transition (`OutageTracker`: 2
+  consecutive failed probes, timeouts are no observation — the uptime grid's own rule, so an
+  alert cannot disagree with the grid it links to); `ReportRefreshRunner` on a failed scan and
+  on a NEW spend spike (anomalies the previous report already carried are not re-sent). Each
+  links to `/azure?focus=<service>`, which highlights and scrolls to that uptime row.
+  Tracker state is in-memory: an app still down when this site restarts is re-alerted.
+- **Two anonymous endpoints are rate-limited, globally.** `Host/RateLimits.cs`: `/api/signins`
+  (live Log Analytics) 30/min, `POST /api/diag/ai` (paid completion) 20/hour. Global windows,
+  not per-IP, on purpose — a hard cost ceiling IP rotation cannot beat, and no trust in
+  `X-Forwarded-For`. Rejections are 429 + `Retry-After`. `ProductionBootTests` pins it.
+- **`/api/portfolio/badge/{id}.svg` is consumed from OUTSIDE this repo** — each app's GitHub
+  README embeds it. It is the one endpoint whose caller is not the WASM client, which is why
+  the "every endpoint needs a consumer" rule is satisfied by a README, not by a component.
+  Built from the same `BuildApps` list as the cards plus `BuildUptime`, with none of
+  `GetPortfolio`'s side effects (no auto-rescan, no screenshot capture) — crawlers fetch it.
+- **Every scanned service carries its last deploy.** GitHub correlation now runs for all services,
+  not only broken ones, and asks for the latest **push**-event run on the default branch (a
+  scheduled workflow would otherwise read as a deploy every night). It becomes
+  `WebService.LastDeploy` → `ServiceHistoryPoint.LastDeployAt` → `UptimeRow.DeployDays` (dots
+  on the grid) and a `deploy` change in "what changed", which an outage line cites when a
+  deploy landed between the two scans.
+- **Spend spikes are per resource group, from one extra Cost Management query.**
+  `GetResourceGroupCostsAsync` (30 days × daily × group, no nextLink paging — see its ponytail
+  note) fills `CostInfo.ResourceGroups`; `DashboardInsightsBuilder.BuildCostAnomalies` flags a
+  group whose latest day is ≥$1 over, ≥2× and >3σ above its own 14-day mean. Shown on the
+  forecast card, capped at two lines so the spend pane still fits a phone.
 - **Management gate.** Mutating/expensive endpoints (`/api/diag/refresh`, `/api/diag/cancel-refresh`)
   carry `.RequireManagementActions()`, which enforces `FeatureFlags:EnableManagementActions` (on in
   Development/Testing, otherwise opt-in) plus an optional `Security:ManagementApiKey` via the
@@ -728,7 +760,7 @@ proves a context and program were created, not that anything reached the screen.
   without which `GetContainerAsync` returns null and stored images never appear —
   indistinguishable from never having captured any.
 
-## Tests — four projects, one per tier (budget 105/52/25/25, currently 104/52/21/23)
+## Tests — four projects, one per tier (budget 105/52/25/25, currently 105/52/21/23)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the
@@ -786,7 +818,9 @@ three tiers still run locally before a push.
 - [uptime-scan.yml](.github/workflows/uptime-scan.yml) — nightly (06:17 UTC) `POST /api/diag/refresh`
   so the uptime grid gets one data point per day even when nobody visits and the F1 site is asleep.
   It wakes the site first (cold start), treats 409 "already refreshing" as success, and then
-  **confirms a fresh report actually landed** — a 202 only proves the scan started, and a scan that
+  **confirms a fresh report actually landed**. Its last step pings `HEALTHCHECKS_PING_URL`
+  (optional secret; `/fail` on any failure) so healthchecks.io emails when the run fails OR
+  never runs at all — a 202 only proves the scan started, and a scan that
   fails every night would otherwise show as a green workflow forever.
   **Requires** `FeatureFlags:EnableManagementActions=true` in Production plus a
   `Security:ManagementApiKey` matching the `MANAGEMENT_API_KEY` GitHub secret. `ManagementActionFilter`
@@ -802,7 +836,9 @@ three tiers still run locally before a push.
   nightly nicety was skipped. Check its run history before believing the grid.
 - [screenshots.yml](.github/workflows/screenshots.yml) — nightly (04:40 UTC) Playwright capture of
   every card's URL at 390×844, uploaded to the `app-screenshots` blob container under the host name
-  the card looks up. Exists because in-process capture cannot run on the Windows F1 sandbox.
+  the card looks up. A second pass calls PageSpeed Insights (mobile; `PAGESPEED_API_KEY`
+  optional) and MERGES the scores into `lighthouse.json` in the same container, which
+  `AppScreenshotService.LoadScoresAsync` reads into `PortfolioApp.Scores` — the card's chips. Exists because in-process capture cannot run on the Windows F1 sandbox.
   Uploads with the storage **account key**, resolved at run time through ARM by the same OIDC
   identity `deploy.yml` uses — Contributor on the resource group covers `listKeys`, so this needs
   no new role assignment and no new secret. It was written with `--auth-mode login` and no

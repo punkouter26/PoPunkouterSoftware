@@ -101,6 +101,83 @@ public partial class AzureReportService
         }
     }
 
+    /// <summary>
+    /// 30 days of spend per resource group per day — the series the spike detector and the
+    /// /users cost-per-person join read. A separate query from <see cref="GetCostAsync"/>
+    /// because adding a daily dimension to that one would multiply its rows past Cost
+    /// Management's 1,000-row page, which is not followed here.
+    /// </summary>
+    // ponytail: no nextLink paging; 30 days x ~30 groups stays under the 1,000-row page. Follow
+    // properties.nextLink if the subscription grows past ~33 billed resource groups.
+    private async Task<List<ResourceGroupCost>> GetResourceGroupCostsAsync(
+        string subscriptionId, string? armToken, CancellationToken ct)
+    {
+        if (armToken is null)
+            return [];
+        try
+        {
+            var today = DateTime.UtcNow.Date;
+            var body = JsonSerializer.Serialize(new
+            {
+                type = "Usage",
+                timeframe = "Custom",
+                timePeriod = new { from = today.AddDays(-30).ToString("yyyy-MM-dd"), to = today.ToString("yyyy-MM-dd") },
+                dataset = new
+                {
+                    granularity = "Daily",
+                    aggregation = new { totalCost = new { name = "PreTaxCost", function = "Sum" } },
+                    grouping = new[] { new { type = "Dimension", name = "ResourceGroupName" } },
+                },
+            });
+
+            var result = await QueryCostManagementAsync(subscriptionId, body, armToken, (rows, cols) =>
+            {
+                int costIdx = cols.FindIndex(c => c.Contains("pretax") || c.Contains("cost"));
+                int dateIdx = cols.FindIndex(c => c.Contains("date") || c.Contains("usage"));
+                int rgIdx = cols.FindIndex(c => c.Contains("resourcegroup"));
+                if (costIdx < 0 || dateIdx < 0 || rgIdx < 0)
+                    return new List<ResourceGroupCost>();
+
+                return rows
+                    .Select(row => row.EnumerateArray().ToArray())
+                    .Select(arr => (
+                        Rg: arr[rgIdx].GetString() ?? "",
+                        Date: CostDate(arr[dateIdx]),
+                        Cost: arr[costIdx].GetDouble()))
+                    .Where(r => r.Rg.Length > 0 && r.Cost > 0)
+                    // Cost Management lower-cases some group names and not others; one group per name.
+                    .GroupBy(r => r.Rg, StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new ResourceGroupCost
+                    {
+                        Name = g.Key,
+                        Total = Math.Round(g.Sum(r => r.Cost), 4),
+                        Daily = g.GroupBy(r => r.Date)
+                            .Select(d => new DailyCostEntry { Date = d.Key, Cost = Math.Round(d.Sum(r => r.Cost), 4) })
+                            .OrderBy(d => d.Date, StringComparer.Ordinal)
+                            .ToList(),
+                    })
+                    .OrderByDescending(g => g.Total)
+                    .ToList();
+            }, ct);
+
+            return result ?? [];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Per-resource-group daily cost query failed");
+            return [];
+        }
+    }
+
+    /// <summary>Cost Management returns a day as the number 20260926 or as a string; always yyyy-MM-dd out.</summary>
+    private static string CostDate(JsonElement value)
+    {
+        var raw = value.ValueKind == JsonValueKind.Number ? value.GetInt32().ToString() : value.GetString() ?? "";
+        return raw.Length == 8 && raw.All(char.IsDigit) ? $"{raw[..4]}-{raw[4..6]}-{raw[6..8]}"
+            : raw.Length >= 10 ? raw[..10]
+            : raw;
+    }
+
     private async Task<BurnRateInfo?> GetBurnRateAsync(
         string subscriptionId, string? armToken, CancellationToken ct)
     {

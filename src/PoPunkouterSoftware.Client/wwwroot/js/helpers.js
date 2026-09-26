@@ -152,6 +152,18 @@ window.copyToClipboard = function (text) {
 };
 
 /**
+ * Scroll the first element matching `selector` to the middle of its scroll containers — every
+ * ancestor, so it works inside the /azure snap pager as well as on the desktop page. Used by
+ * the ?focus= deep link that outage notifications carry.
+ */
+window.appRevealFocus = function (selector) {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+};
+
+/**
  * Force a cache-busting reload when the server BuildId no longer matches the loaded
  * WASM bundle. Replaces a JS `eval` string that was assembled in C#.
  */

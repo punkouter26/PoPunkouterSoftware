@@ -52,7 +52,8 @@ jobs:
   capture:
     name: Capture & upload
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 30 for screenshots, plus up to ~15 for PageSpeed Insights (a minute-ish per app).
+    timeout-minutes: 45
     environment: production
     steps:
       - name: Setup Node
@@ -93,6 +94,7 @@ jobs:
             catch { /* a malformed catalog URL is not worth failing the run over */ }
           }
           console.log(`${targets.length} targets`);
+          writeFileSync('targets.json', JSON.stringify(targets));
 
           const browser = await chromium.launch();
           let captured = 0;
@@ -125,6 +127,55 @@ jobs:
           EOF
           node capture.mjs
 
+      # Lighthouse scores for the card chips, from Google's hosted PageSpeed Insights rather
+      # than a local Lighthouse run: no Chrome flags to tune, and the number matches what
+      # anyone gets by pasting the URL into pagespeed.web.dev. Runs after the capture pass on
+      # purpose — that pass has just woken every F1 app, so this measures the app, not its
+      # cold start. PAGESPEED_API_KEY is optional; anonymous calls work at this volume but
+      # share a tighter quota. Never fails the job: screenshots matter more than scores.
+      - name: PageSpeed Insights
+        continue-on-error: true
+        env:
+          PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
+        run: |
+          cat > pagespeed.mjs <<'EOF'
+          import { readFileSync, writeFileSync } from 'node:fs';
+
+          const targets = JSON.parse(readFileSync('targets.json', 'utf8'));
+          const categories = ['performance', 'accessibility', 'best-practices', 'seo'];
+          const scores = {};
+          for (const { host, url } of targets) {
+            const q = new URLSearchParams({ url, strategy: 'mobile' });
+            for (const c of categories) q.append('category', c);
+            if (process.env.PAGESPEED_API_KEY) q.set('key', process.env.PAGESPEED_API_KEY);
+            try {
+              const res = await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${q}`,
+                { signal: AbortSignal.timeout(90000) });
+              if (!res.ok) { console.log(`::warning title=PageSpeed failed::${host}: HTTP ${res.status}`); continue; }
+              const cats = (await res.json()).lighthouseResult?.categories ?? {};
+              // A category that errored has score null. Skip the host rather than print a 0
+              // that reads as "terrible" when it means "not measured".
+              if (categories.some(c => typeof cats[c]?.score !== 'number')) {
+                console.log(`::warning title=PageSpeed incomplete::${host}`);
+                continue;
+              }
+              const pct = c => Math.round(cats[c].score * 100);
+              scores[host] = {
+                performance: pct('performance'),
+                accessibility: pct('accessibility'),
+                bestPractices: pct('best-practices'),
+                seo: pct('seo'),
+              };
+              console.log(`${host}: ${JSON.stringify(scores[host])}`);
+            } catch (err) {
+              console.log(`::warning title=PageSpeed failed::${host}: ${err.message}`);
+            }
+          }
+          writeFileSync('lighthouse.json', JSON.stringify({ generatedAt: new Date().toISOString(), scores }));
+          console.log(`scored ${Object.keys(scores).length}/${targets.length}`);
+          EOF
+          node pagespeed.mjs
+
       - name: Azure Login (OIDC)
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
         with:
@@ -156,3 +207,18 @@ jobs:
             --output none
 
           echo "Uploaded $(ls shots | wc -l) screenshots to $CONTAINER."
+
+          # Scores MERGE into last night's file rather than replacing it: an app PageSpeed
+          # could not reach tonight keeps yesterday's numbers instead of losing its chips.
+          # Same container, so AppScreenshotService reads it with the credential it already has.
+          if [ -f lighthouse.json ]; then
+            az storage blob download --account-name "$STORAGE_ACCOUNT" --account-key "$ACCOUNT_KEY" \
+              --container-name "$CONTAINER" --name lighthouse.json --file previous.json --output none 2>/dev/null \
+              || echo '{}' > previous.json
+            jq -s '{generatedAt: .[1].generatedAt, scores: ((.[0].scores // {}) + .[1].scores)}' \
+              previous.json lighthouse.json > merged.json
+            az storage blob upload --account-name "$STORAGE_ACCOUNT" --account-key "$ACCOUNT_KEY" \
+              --container-name "$CONTAINER" --name lighthouse.json --file merged.json \
+              --content-type "application/json" --overwrite true --output none
+            echo "Uploaded PageSpeed scores for $(jq '.scores | length' merged.json) hosts."
+          fi

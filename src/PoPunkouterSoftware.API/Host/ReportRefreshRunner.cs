@@ -20,6 +20,7 @@ internal sealed class ReportRefreshRunner(
     IHubContext<RefreshHub> hubCtx,
     RefreshSessionManager session,
     AiTriageService aiTriage,
+    AlertNotifier alerts,
     IConfiguration config)
 {
     /// <summary>
@@ -151,6 +152,7 @@ internal sealed class ReportRefreshRunner(
                     report = report with { AiSummary = aiSummary };
 
                     await store.SaveAsync(report, ct);
+                    await NotifyNewCostSpikesAsync(report, previousReport);
 
                     var json = JsonSerializer.Serialize(report, FileCacheJsonOptions);
                     var filePath = ReportFileCache.EnsureReportPath(env);
@@ -195,6 +197,10 @@ internal sealed class ReportRefreshRunner(
                 terminalError = "Refresh failed. Check server logs for details.";
                 RecordOutcome("failed");
                 logger.LogError(ex, "Azure report refresh failed: {Message}", ex.Message);
+                // A failed scan leaves the dashboard showing yesterday as if it were today;
+                // the nightly workflow's week of silent 403s is why this is a push, not a log.
+                await alerts.SendAsync("Azure scan failed", $"{trigger} scan: {ex.Message}",
+                    priority: 4, clickPath: "/azure", tags: ["warning"], ct: CancellationToken.None);
             }
             finally
             {
@@ -213,6 +219,26 @@ internal sealed class ReportRefreshRunner(
         });
 
         return true;
+    }
+
+    /// <summary>
+    /// One alert per spike, not per scan: anomalies the previous report already carried (same
+    /// resource group, same day) were announced when that report landed.
+    /// </summary>
+    private async Task NotifyNewCostSpikesAsync(AzureReport report, AzureReport? previous)
+    {
+        var known = DashboardInsightsBuilder.BuildCostAnomalies(previous?.Cost?.ResourceGroups)
+            .Select(a => (a.ResourceGroup.ToLowerInvariant(), a.Day))
+            .ToHashSet();
+
+        foreach (var spike in DashboardInsightsBuilder.BuildCostAnomalies(report.Cost?.ResourceGroups)
+                     .Where(a => !known.Contains((a.ResourceGroup.ToLowerInvariant(), a.Day))))
+        {
+            await alerts.SendAsync(
+                $"Spend spike in {spike.ResourceGroup}",
+                $"${spike.Cost:F2} on {spike.Day} against a usual ${spike.Baseline:F2}/day",
+                priority: 4, clickPath: "/azure", tags: ["money_with_wings"], ct: CancellationToken.None);
+        }
     }
 }
 

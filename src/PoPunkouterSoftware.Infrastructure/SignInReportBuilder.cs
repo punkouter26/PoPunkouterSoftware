@@ -60,6 +60,49 @@ public static class SignInReportBuilder
     }
 
     /// <summary>
+    /// Joins each app's reach to its own resource group's 30-day spend, from the last STORED
+    /// scan — no Azure call. The app name in a sign-in record is the app's friendly name, so it
+    /// is matched to a scanned service the same way the portfolio matches catalog entries, and
+    /// the service's resource group is the cost key.
+    ///
+    /// <para>A resource group absent from the cost series spent nothing (Cost Management omits
+    /// zero rows), so it reads as $0 rather than unknown. An app that matches no scanned service
+    /// stays null — that genuinely is unknown.</para>
+    /// </summary>
+    public static SignInReport AttachCosts(SignInReport signIns, AzureReport? inventory)
+    {
+        var groups = inventory?.Cost?.ResourceGroups;
+        var services = inventory?.WebServices?.Services;
+        if (!signIns.Available || groups is not { Count: > 0 } || services is not { Count: > 0 })
+            return signIns;
+
+        var costByGroup = groups
+            .GroupBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Total), StringComparer.OrdinalIgnoreCase);
+
+        return signIns with
+        {
+            Apps = signIns.Apps.Select(a =>
+            {
+                var key = NameMatching.Normalize(a.App);
+                var service = services.FirstOrDefault(s =>
+                    NameMatching.Normalize(s.FriendlyName) == key
+                    || NameMatching.Normalize(s.Name) == key
+                    || NameMatching.Normalize(s.Name) == "app" + key);
+                if (service is null || string.IsNullOrWhiteSpace(service.ResourceGroup))
+                    return a;
+
+                var cost = Math.Round(costByGroup.GetValueOrDefault(service.ResourceGroup), 2);
+                return a with
+                {
+                    Cost30Days = cost,
+                    CostPerPerson = a.People > 0 ? Math.Round(cost / a.People, 2) : null,
+                };
+            }).ToList(),
+        };
+    }
+
+    /// <summary>
     /// Blank fields are real: an identity provider that supplies no display name sends an
     /// empty string, and a row with no app name would otherwise group under the empty key.
     /// </summary>

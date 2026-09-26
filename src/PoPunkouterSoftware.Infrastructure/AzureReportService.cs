@@ -132,6 +132,9 @@ public partial class AzureReportService(
 
         Report("Fetching cost data…", 53);
         var costInfo = await RunTimedStepAsync("Fetching cost data", () => GetCostAsync(subscriptionId, armToken, ct));
+        var groupCosts = await RunTimedStepAsync("Fetching daily cost by resource group",
+            () => GetResourceGroupCostsAsync(subscriptionId, armToken, ct));
+        costInfo = costInfo with { ResourceGroups = groupCosts };
 
         Report("Checking SSL certificates…", 60);
         var sslExpiry = await RunTimedStepAsync("Checking SSL certificates", () => CheckSslAsync(connectedSvcs, ct));
@@ -169,13 +172,13 @@ public partial class AzureReportService(
                 && s.ResourceId is not null)
             .ToList();
 
-        // Build GitHub workflow run correlation map for broken services. Skip the fetch
-        // entirely when there is nothing to correlate against — mirrors the downtimeDiags
-        // guard below.
+        // GitHub workflow correlation for EVERY service, not just broken ones: a healthy
+        // service's last deploy is what puts a marker on the uptime grid and a "deployed" line
+        // in "what changed". No PAT configured returns an empty list and costs nothing.
+        Report("Correlating GitHub deploys…", 88);
         var gitHubRuns = new Dictionary<string, GitHubWorkflowRun>(StringComparer.OrdinalIgnoreCase);
-        var infraReviews = brokenAppServices.Count > 0
-            ? await LoadInfraReviewsForCorrelationAsync(connectedSvcs, ct)
-            : [];
+        var infraReviews = await RunTimedStepAsync("Correlating GitHub deploys",
+            () => LoadInfraReviewsForCorrelationAsync(connectedSvcs, ct));
         foreach (var svc in brokenAppServices)
         {
             var matched = MatchServiceToInfraReview(svc, infraReviews);
@@ -205,6 +208,7 @@ public partial class AzureReportService(
             {
                 Metrics7Days = s.ResourceId is not null ? m : null,
                 FreeTierCheck = CheckFreeTierForService(s.ResourceTypeRaw, s.Sku),
+                LastDeploy = ToDeployInfo(MatchServiceToInfraReview(s, infraReviews)),
             };
         }).ToList();
 

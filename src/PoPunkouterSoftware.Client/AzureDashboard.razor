@@ -231,7 +231,7 @@ else if (_summary is not null)
     @* Full-width on its own row, not a grid cell: 30 day-columns cannot share a row with
        anything else and still be readable at 390px. *@
     <section class="app-pane azure-pane-uptime">
-    <AzureUptimeHeatmap Map="@summary.Uptime" />
+    <AzureUptimeHeatmap Map="@summary.Uptime" Focus="@Focus" />
     </section>
 
     <section class="app-pane azure-pane-actions">

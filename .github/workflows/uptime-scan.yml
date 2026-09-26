@@ -33,6 +33,12 @@ env:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    env:
+      # Dead-man's switch. This workflow ran red every night for a week and nobody noticed,
+      # because a red scheduled run emails nobody by default. healthchecks.io emails when a
+      # /fail ping arrives OR when no ping arrives at all (runner never started, workflow
+      # disabled after 60 days of repo inactivity). Optional: unset means the step is skipped.
+      HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
     steps:
       # F1 cold start: the site may be unloaded and take tens of seconds to answer. Wake it
       # before asking it to do real work, so the refresh call is not the request that eats
@@ -102,3 +108,10 @@ jobs:
           done
           echo "::error::No fresh report appeared within 10 minutes of triggering the scan."
           exit 1
+
+      # Last, and always(): a failed step above must still report, or the switch only ever
+      # hears about successes. `!= 'success' && '/fail' || ''` and not the reverse — in an
+      # expression '' is falsy, so `== 'success' && '' || '/fail'` would ALWAYS append /fail.
+      - name: Report to healthchecks.io
+        if: always() && env.HEALTHCHECKS_PING_URL != ''
+        run: curl -fsS -m 10 --retry 3 -o /dev/null "${HEALTHCHECKS_PING_URL}${{ job.status != 'success' && '/fail' || '' }}"

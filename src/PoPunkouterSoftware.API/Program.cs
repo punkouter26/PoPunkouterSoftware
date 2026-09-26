@@ -267,6 +267,8 @@ try
     builder.Services.AddSingleton<RefreshSessionManager>();
     builder.Services.AddSingleton<ReportRefreshRunner>();
     builder.Services.AddSingleton<AiTriageService>();
+    builder.Services.AddSingleton<AlertNotifier>();
+    builder.Services.AddAppRateLimits(builder.Configuration);
     // Singleton: LogsQueryClient walks the credential chain on construction, and /users is a
     // live read on every page load. Reused instance, one chain walk for the lifetime of the app.
     builder.Services.AddSingleton<SignInQueryService>();
@@ -349,6 +351,12 @@ try
             c.Timeout = TimeSpan.FromSeconds(45);
             c.DefaultRequestHeaders.UserAgent.ParseAdd("PoPunkouterSoftware/1.0");
         });
+
+    // ─── HTTP client for ntfy push alerts ───────────────────────────────────
+    // No resilience: an alert is best-effort, and a retry storm against a notification service
+    // during an outage is the one thing worse than a missed notification.
+    builder.Services.AddHttpClient(AlertNotifier.HttpClientName)
+        .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
 
     var app = builder.Build();
 
@@ -440,6 +448,7 @@ try
     app.UseAntiforgery();
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseRateLimiter();
 
     // MapStaticAssets serves compressed + fingerprinted static web assets from the client WASM project.
     // Must be called before MapRazorComponents per framework requirement.

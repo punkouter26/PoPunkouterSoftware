@@ -1,3 +1,5 @@
+using PoPunkouterSoftware.Infrastructure;
+
 namespace PoPunkouterSoftware.API;
 
 /// <summary>
@@ -40,6 +42,5 @@ internal static class PortfolioIdentity
 
     /// <summary>Letters and digits only, lower-cased — the stable join key between the
     /// curated catalog and scanned Azure inventory.</summary>
-    internal static string NormalizeName(string? value) =>
-        string.Concat((value ?? "").Where(char.IsLetterOrDigit)).ToLowerInvariant();
+    internal static string NormalizeName(string? value) => NameMatching.Normalize(value);
 }

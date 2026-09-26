@@ -24,6 +24,7 @@ internal record RawService
     public string? Kind { get; init; }
     public string? AppServicePlan { get; init; }
     public string? AppServicePlanSku { get; init; }
+    public DeployInfo? LastDeploy { get; init; }
 
     public WebService ToWebService() => new()
     {
@@ -41,5 +42,6 @@ internal record RawService
         AppServicePlan = AppServicePlan,
         AppServicePlanSku = AppServicePlanSku,
         ResourceId = ResourceId,
+        LastDeploy = LastDeploy,
     };
 }

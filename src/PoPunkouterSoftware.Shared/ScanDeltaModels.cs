@@ -51,6 +51,7 @@ public static class ScanChangeKinds
     public const string Cleanup = "cleanup";
     public const string Resources = "resources";
     public const string Performance = "performance";
+    public const string Deploy = "deploy";
 }
 
 /// <summary>Canonical <see cref="ScanChange.Direction"/> values.</summary>

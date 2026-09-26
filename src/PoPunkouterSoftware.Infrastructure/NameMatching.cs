@@ -23,4 +23,9 @@ public static class NameMatching
     /// </summary>
     public static string ServiceIdentity(string? friendlyName, string? resourceName) =>
         string.IsNullOrWhiteSpace(friendlyName) ? resourceName ?? "" : friendlyName;
+
+    /// <summary>Letters and digits only, lower-cased — "app-pomemevideo" and "PoMemeVideo"
+    /// differ only by the "app" prefix once normalized.</summary>
+    public static string Normalize(string? value) =>
+        string.Concat((value ?? "").Where(char.IsLetterOrDigit)).ToLowerInvariant();
 }

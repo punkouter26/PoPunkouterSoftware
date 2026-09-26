@@ -1,3 +1,4 @@
+using System.Globalization;
 using PoPunkouterSoftware.Shared;
 
 namespace PoPunkouterSoftware.Infrastructure;
@@ -73,6 +74,13 @@ public static class DashboardInsightsBuilder
             .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
+        // A deploy counts for this scan when it completed after the previous scan ran and no
+        // later than this one. That window is what lets "went offline" name its likely cause.
+        var baselineAt = previous.GeneratedAt;
+        bool DeployedSincePrevious(WebService s) =>
+            s.LastDeploy is { } d && d.CompletedAt > baselineAt
+            && (currentAt is null || d.CompletedAt <= currentAt.Value);
+
         // ── Health transitions: the most actionable change there is, so it leads. ──
         foreach (var svc in currentServices)
         {
@@ -85,15 +93,32 @@ public static class DashboardInsightsBuilder
             if (wasHealthy == isHealthy)
                 continue;
 
+            var transition = $"was {Describe(before.HttpStatus)}, now {Describe(svc.HttpStatus)}";
             changes.Add(isHealthy
                 ? new ScanChange(
                     ScanChangeKinds.ServiceRecovered, ScanChangeDirection.Better,
-                    $"{name} came back online",
-                    $"was {Describe(before.HttpStatus)}, now {Describe(svc.HttpStatus)}")
+                    $"{name} came back online", transition)
                 : new ScanChange(
                     ScanChangeKinds.ServiceDown, ScanChangeDirection.Worse,
                     $"{name} went offline",
-                    $"was {Describe(before.HttpStatus)}, now {Describe(svc.HttpStatus)}"));
+                    // "Did I break it?" answered in place: a deploy between the two scans is
+                    // the first suspect, so the outage line names it.
+                    DeployedSincePrevious(svc)
+                        ? $"{transition} · deployed {DescribeDeploy(svc.LastDeploy!)} since the last scan"
+                        : transition));
+        }
+
+        // ── Deploys that landed between the two scans ──
+        foreach (var svc in currentServices.Where(DeployedSincePrevious))
+        {
+            var name = string.IsNullOrWhiteSpace(svc.FriendlyName) ? svc.Name : svc.FriendlyName;
+            var deploy = svc.LastDeploy!;
+            var failed = deploy.Conclusion is { } c && !c.Equals("success", StringComparison.OrdinalIgnoreCase);
+            changes.Add(new ScanChange(
+                ScanChangeKinds.Deploy,
+                failed ? ScanChangeDirection.Worse : ScanChangeDirection.Neutral,
+                failed ? $"{name} deploy {deploy.Conclusion}" : $"{name} was deployed",
+                DescribeDeploy(deploy)));
         }
 
         // Services appearing/disappearing between scans. A service that vanished may have been
@@ -177,10 +202,11 @@ public static class DashboardInsightsBuilder
             {
                 ScanChangeKinds.ServiceDown => 0,
                 ScanChangeKinds.ServiceRecovered => 1,
-                ScanChangeKinds.Security => 2,
-                ScanChangeKinds.Cost => 3,
-                ScanChangeKinds.Performance => 4,
-                _ => 5,
+                ScanChangeKinds.Deploy => 2,
+                ScanChangeKinds.Security => 3,
+                ScanChangeKinds.Cost => 4,
+                ScanChangeKinds.Performance => 5,
+                _ => 6,
             })
             .ToList();
 
@@ -195,6 +221,13 @@ public static class DashboardInsightsBuilder
 
     private static string Describe(string? status) =>
         string.IsNullOrWhiteSpace(status) ? "unknown" : status;
+
+    /// <summary>"a1b2c3d (success)" — short SHA when there is one.</summary>
+    private static string DescribeDeploy(DeployInfo deploy)
+    {
+        var sha = deploy.Sha is { Length: >= 7 } s ? s[..7] : "a build";
+        return deploy.Conclusion is { Length: > 0 } c ? $"{sha} ({c})" : sha;
+    }
 
     // ─── Cost forecast ───────────────────────────────────────────────────────
 
@@ -238,7 +271,54 @@ public static class DashboardInsightsBuilder
             ProjectionDelta = previous is null
                 ? null
                 : Math.Round(projected - previous.ProjectedMonthCost, 2),
+            Anomalies = BuildCostAnomalies(current.Cost?.ResourceGroups),
         };
+    }
+
+    /// <summary>Days of history each group's latest day is compared against.</summary>
+    public const int CostBaselineDays = 14;
+
+    /// <summary>Dollar rise over baseline below which a spike is noise, however large in ratio.</summary>
+    private const double CostSpikeFloorUsd = 1.00;
+
+    /// <summary>
+    /// Resource groups whose most recent day of spend is out of character: at least
+    /// <see cref="CostSpikeFloorUsd"/> above their own <see cref="CostBaselineDays"/>-day mean,
+    /// at least double it, AND more than three standard deviations above it. All three, so a
+    /// cent-level group doubling is not news and a naturally lumpy group is judged against its
+    /// own lumpiness. A group with no baseline spend that suddenly costs a dollar a day is
+    /// flagged — new spend is exactly what this exists to catch.
+    ///
+    /// <para>"Most recent day" is the latest date in the whole series, not today: Cost
+    /// Management lags by up to a day, and a partial latest day can only under-report, so it
+    /// cannot raise a false alarm.</para>
+    /// </summary>
+    public static List<CostAnomaly> BuildCostAnomalies(IReadOnlyCollection<ResourceGroupCost>? groups)
+    {
+        var latest = (groups ?? []).SelectMany(g => g.Daily).Select(d => d.Date)
+            .DefaultIfEmpty("").Max(StringComparer.Ordinal);
+        if (!DateTime.TryParseExact(latest, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var latestDay))
+            return [];
+
+        var baselineDays = Enumerable.Range(1, CostBaselineDays)
+            .Select(i => latestDay.AddDays(-i).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+            .ToList();
+
+        var anomalies = new List<CostAnomaly>();
+        foreach (var group in groups!)
+        {
+            var byDay = group.Daily.GroupBy(d => d.Date).ToDictionary(g => g.Key, g => g.Sum(d => d.Cost));
+            var cost = byDay.GetValueOrDefault(latest!);
+            // Missing days are $0 days: Cost Management omits rows with no spend.
+            var baseline = baselineDays.Select(d => byDay.GetValueOrDefault(d)).ToList();
+            var mean = baseline.Average();
+            var sd = Math.Sqrt(baseline.Average(v => (v - mean) * (v - mean)));
+
+            if (cost - mean >= CostSpikeFloorUsd && cost >= 2 * mean && cost > mean + 3 * sd)
+                anomalies.Add(new CostAnomaly(group.Name, latest!, Math.Round(cost, 2), Math.Round(mean, 2)));
+        }
+
+        return anomalies.OrderByDescending(a => a.Cost - a.Baseline).ToList();
     }
 
     // ─── Uptime heatmap ──────────────────────────────────────────────────────
@@ -353,6 +433,23 @@ public static class DashboardInsightsBuilder
                 seenSoFar.Total + sample.TotalCount);
         }
 
+        // ── Deploy markers ──
+        // Every scan records the service's latest deploy, so the distinct dates across ALL
+        // history rows (not just those in the window — a scan after the window can still name
+        // a deploy inside it) are the deploy days. Only for services the grid already draws.
+        var deployDays = new Dictionary<string, SortedSet<int>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var point in history.SelectMany(h => h.Services))
+        {
+            if (point.LastDeployAt is not DateTime at
+                || !grid.ContainsKey(point.Name)
+                || !dayIndex.TryGetValue(at.Date, out var col))
+                continue;
+
+            if (!deployDays.TryGetValue(point.Name, out var set))
+                deployDays[point.Name] = set = new SortedSet<int>();
+            set.Add(col);
+        }
+
         var rows = grid
             .Select(kvp =>
             {
@@ -364,6 +461,7 @@ public static class DashboardInsightsBuilder
                     DaysWithData = kvp.Value.Count(c => c != UptimeState.NoData),
                     ScansObserved = seen.Total,
                     UptimePercent = seen.Total == 0 ? 100 : (int)Math.Round(seen.Healthy * 100d / seen.Total),
+                    DeployDays = deployDays.TryGetValue(kvp.Key, out var d) ? d.ToList() : new List<int>(),
                 };
             })
             // Worst uptime first: the grid exists to surface problems, not to be alphabetical.

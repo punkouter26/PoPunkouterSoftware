@@ -974,6 +974,22 @@ html[data-app-theme="dark"] .azure-ops-page {
 .azure-ops-page ::deep .azure-forecast__delta.dir-worse { color: var(--tone-bad); }
 .azure-ops-page ::deep .azure-forecast__delta.dir-better { color: var(--tone-good); }
 
+.azure-ops-page ::deep .azure-forecast__spikes {
+    margin-top: var(--app-space-xs);
+    padding-top: var(--app-space-xs);
+    border-top: 1px solid var(--app-border);
+}
+
+.azure-ops-page ::deep .azure-forecast__spikes ul {
+    margin: .25rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: .2rem;
+    font-size: var(--app-step--1);
+    color: var(--app-text-muted);
+}
+
 /* ── Uptime heatmap ───────────────────────────────────────────────────────── */
 
 /* 30 columns cannot fit a 390px viewport. The grid scrolls inside its own
@@ -1038,6 +1054,23 @@ html[data-app-theme="dark"] .azure-ops-page {
 .azure-ops-page ::deep .azure-uptime__cell.is-healthy { background: var(--tone-good); }
 .azure-ops-page ::deep .azure-uptime__cell.is-degraded { background: var(--tone-warn); }
 .azure-ops-page ::deep .azure-uptime__cell.is-broken { background: var(--tone-bad); }
+
+/* A deploy is a dot ON the day's colour, not a colour of its own: the cell still has to say
+   whether the app was up. The dot is the page background so it reads on every tone. */
+.azure-ops-page ::deep .azure-uptime__cell.has-deploy {
+    background-image: radial-gradient(circle, var(--app-bg) 0 28%, transparent 32%);
+}
+
+/* The ?focus= row: an outline on every cell rather than a fill, for the same reason. */
+.azure-ops-page ::deep .azure-uptime__label.is-focused {
+    color: var(--app-text);
+    font-weight: 700;
+}
+
+.azure-ops-page ::deep .azure-uptime__cell.is-focused {
+    outline: 1px solid var(--app-accent);
+    outline-offset: 1px;
+}
 
 /* A day with no scan is deliberately near-invisible: it is an absence of evidence,
    and colouring it would imply the fleet was observed to be in some state. */

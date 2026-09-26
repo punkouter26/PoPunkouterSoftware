@@ -152,6 +152,11 @@
     letter-spacing: -.02em;
 }
 
+.signins-page ::deep .signins-panel__title--sub {
+    margin-top: var(--app-space-sm);
+    font-size: var(--app-step-0);
+}
+
 .signins-page ::deep .signins-panel__subtitle {
     color: var(--app-text-soft);
     font-size: var(--app-step--2);

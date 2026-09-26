@@ -194,6 +194,42 @@ public class AppScreenshotService
         return versions;
     }
 
+    /// <summary>
+    /// Per-host PageSpeed Insights scores from <c>lighthouse.json</c>, which
+    /// <c>.github/workflows/screenshots.yml</c> writes nightly into this same container.
+    /// Empty when the file is absent or unreadable — a card simply shows no scores.
+    /// </summary>
+    public async Task<Dictionary<string, LighthouseScores>> LoadScoresAsync(CancellationToken ct = default)
+    {
+        var empty = new Dictionary<string, LighthouseScores>(StringComparer.OrdinalIgnoreCase);
+        var container = await GetContainerAsync(ct);
+        if (container is null)
+            return empty;
+
+        try
+        {
+            var content = await container.GetBlobClient(ScoresBlobName).DownloadContentAsync(ct);
+            var file = content.Value.Content.ToObjectFromJson<LighthouseFile>(ScoresJsonOptions);
+            return new Dictionary<string, LighthouseScores>(file?.Scores ?? empty, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not read {Blob}", ScoresBlobName);
+            return empty;
+        }
+    }
+
+    private const string ScoresBlobName = "lighthouse.json";
+
+    private static readonly System.Text.Json.JsonSerializerOptions ScoresJsonOptions =
+        new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    private sealed record LighthouseFile(Dictionary<string, LighthouseScores>? Scores);
+
     /// <summary>Opens a stored screenshot for streaming, or null when missing/unavailable.</summary>
     public async Task<Stream?> OpenReadAsync(string host, CancellationToken ct = default)
     {

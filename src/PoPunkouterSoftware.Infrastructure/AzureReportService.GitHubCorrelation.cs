@@ -84,7 +84,7 @@ public partial class AzureReportService
                 var repoUrl = repo.TryGetProperty("html_url", out var hu) ? hu.GetString() : null;
                 var defaultBranch = repo.TryGetProperty("default_branch", out var db) ? db.GetString() ?? "main" : "main";
 
-                var (runStatus, runConclusion, runCompleted, runUrl, runName) =
+                var (runStatus, runConclusion, runCompleted, runUrl, runName, runSha) =
                     await FetchLatestWorkflowRunAsync(http, fullName, defaultBranch, ct);
 
                 return new InfraReview
@@ -97,6 +97,7 @@ public partial class AzureReportService
                     LatestWorkflowRunCompletedAt = runCompleted,
                     LatestWorkflowRunUrl = runUrl,
                     LatestWorkflowRunName = runName,
+                    LatestWorkflowRunHeadSha = runSha,
                 };
             }, ct);
             reviews.AddRange(pageReviews);
@@ -110,39 +111,57 @@ public partial class AzureReportService
         return reviews;
     }
 
-    private async Task<(string? status, string? conclusion, DateTime? completedAt, string? runUrl, string? runName)>
+    /// <summary>
+    /// Latest PUSH-triggered run on the default branch. Push, because every Po repo deploys on
+    /// push to its default branch, and without the filter a nightly scheduled workflow (this
+    /// repo has two) would be reported as a deploy every single day.
+    /// </summary>
+    private async Task<(string? status, string? conclusion, DateTime? completedAt, string? runUrl, string? runName, string? headSha)>
         FetchLatestWorkflowRunAsync(HttpClient http, string fullName, string defaultBranch, CancellationToken ct)
     {
         try
         {
-            var url = $"https://api.github.com/repos/{fullName}/actions/runs?branch={Uri.EscapeDataString(defaultBranch)}&per_page=1";
+            var url = $"https://api.github.com/repos/{fullName}/actions/runs?branch={Uri.EscapeDataString(defaultBranch)}&event=push&per_page=1";
             var resp = await http.GetAsync(url, ct);
             if (!resp.IsSuccessStatusCode)
-                return (null, null, null, null, null);
+                return (null, null, null, null, null, null);
 
             var json = await resp.Content.ReadAsStringAsync(ct);
             using var doc = JsonDocument.Parse(json);
 
             if (!doc.RootElement.TryGetProperty("workflow_runs", out var runs) || runs.GetArrayLength() == 0)
-                return (null, null, null, null, null);
+                return (null, null, null, null, null, null);
 
             var run = runs[0];
             var status = run.TryGetProperty("status", out var st) ? st.GetString() : null;
             var conclusion = run.TryGetProperty("conclusion", out var conc) ? conc.GetString() : null;
             var runUrl = run.TryGetProperty("html_url", out var hu) ? hu.GetString() : null;
             var runName = run.TryGetProperty("name", out var rn) ? rn.GetString() : null;
+            var headSha = run.TryGetProperty("head_sha", out var hs) ? hs.GetString() : null;
 
             DateTime? completedAt = run.TryGetProperty("updated_at", out var ua)
                 && ua.ValueKind == JsonValueKind.String
                 && DateTime.TryParse(ua.GetString(), out var dt) ? dt : null;
 
-            return (status, conclusion, completedAt, runUrl, runName);
+            return (status, conclusion, completedAt, runUrl, runName, headSha);
         }
         catch
         {
-            return (null, null, null, null, null);
+            return (null, null, null, null, null, null);
         }
     }
+
+    /// <summary>A completed run as a deploy marker; null for a run still in flight.</summary>
+    private static DeployInfo? ToDeployInfo(InfraReview? review) =>
+        review is { LatestWorkflowRunStatus: "completed", LatestWorkflowRunCompletedAt: DateTime at }
+            ? new DeployInfo
+            {
+                CompletedAt = DateTime.SpecifyKind(at.ToUniversalTime(), DateTimeKind.Utc),
+                Conclusion = review.LatestWorkflowRunConclusion,
+                Sha = review.LatestWorkflowRunHeadSha,
+                Url = review.LatestWorkflowRunUrl,
+            }
+            : null;
 
     private static InfraReview? MatchServiceToInfraReview(RawService svc, List<InfraReview> reviews)
     {

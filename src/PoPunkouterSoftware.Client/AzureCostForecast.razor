@@ -74,6 +74,25 @@
         </dl>
     </div>
 
+    @* Spikes live on the spend card, not in "what changed": they are about the shape of
+       spending, and one can persist across several scans on the same billing day. Capped at
+       two lines so the spend pane still fits a phone screen; the push alert names them all. *@
+    @if (Forecast.Anomalies.Count > 0)
+    {
+        <div class="azure-forecast__spikes" role="group" aria-label="Unusual spend">
+            <div class="app-kicker">Unusual spend</div>
+            <ul>
+                @foreach (var spike in Forecast.Anomalies.Take(2))
+                {
+                    <li>
+                        <strong>@spike.ResourceGroup</strong> spent @Money(spike.Cost) on @DayLabel(spike.Day)
+                        <span class="azure-forecast__delta dir-worse">vs @Money(spike.Baseline)/day usual</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
     @if (Forecast.BudgetUsd is null)
     {
         <p class="azure-chart-note">
@@ -144,6 +163,11 @@
         : $"Projected {Money(Forecast.ProjectedMonthTotal)} this month; no budget configured";
 
     private static string Money(double value) => value.ToString("C2", CultureInfo.GetCultureInfo("en-US"));
+
+    private static string DayLabel(string day) =>
+        DateTime.TryParseExact(day, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+            ? d.ToString("MMM d", CultureInfo.GetCultureInfo("en-US"))
+            : day;
 
     private static string Fmt(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 }

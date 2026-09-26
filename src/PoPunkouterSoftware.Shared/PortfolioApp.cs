@@ -20,4 +20,6 @@ public record PortfolioApp
     public string Status { get; init; } = "unknown";
     /// <summary>API path of the stored home-page screenshot; null when none captured yet.</summary>
     public string? ScreenshotUrl { get; init; }
+    /// <summary>Latest nightly PageSpeed Insights scores; null until one has been captured.</summary>
+    public LighthouseScores? Scores { get; init; }
 }

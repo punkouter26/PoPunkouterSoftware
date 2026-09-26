@@ -21,6 +21,11 @@ internal static partial class PortfolioEndpoints
         portfolio.MapGet("/screenshots/{host}", GetScreenshot)
             .WithName("GetPortfolioScreenshot");
 
+        // Consumer: the README of each app's GitHub repo, as
+        // ![status](https://app-popunkoutersoftware.azurewebsites.net/api/portfolio/badge/<id>.svg)
+        portfolio.MapGet("/badge/{id}.svg", GetBadge)
+            .WithName("GetPortfolioBadge");
+
         return app;
     }
 
@@ -31,7 +36,8 @@ internal static partial class PortfolioEndpoints
         var inventoryTask = LoadInventoryAsync(env, store, logger, ct);
         var metadataTask = LoadMetadataAsync(env, logger, ct);
         var screenshotVersionsTask = screenshots.ListVersionsAsync(ct);
-        await Task.WhenAll(inventoryTask, metadataTask, screenshotVersionsTask);
+        var scoresTask = screenshots.LoadScoresAsync(ct);
+        await Task.WhenAll(inventoryTask, metadataTask, screenshotVersionsTask, scoresTask);
         var (report, services) = inventoryTask.Result;
         var metadata = metadataTask.Result;
         var screenshotVersions = screenshotVersionsTask.Result;
@@ -46,40 +52,7 @@ internal static partial class PortfolioEndpoints
             if (refreshRunner.TryStartAuto())
                 logger.LogInformation("Inventory is stale — background Azure rescan started");
         }
-        var metaByName = metadata
-            .GroupBy(m => PortfolioIdentity.NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.OrderBy(m => StatusRank(m.Status)).First(), StringComparer.OrdinalIgnoreCase);
-
-        // One dictionary per source — services as the primary list (live inventory wins on
-        // overlap), catalog filling in apps that have no live presence yet. The previous
-        // shape did the same merge with two imperative loops and a `ContainsKey` guard, but
-        // the precedence it implemented — Azure overwrites catalog when both exist — was
-        // implicit in the loop order and easy to invert by accident. Build the live list
-        // first, then add catalog entries for keys nothing else claimed.
-        var appsByName = services
-            .Where(s => !PortfolioIdentity.IsSelf(s.FriendlyName, s.Name))
-            .ToDictionary(
-                s => PortfolioIdentity.NormalizeName(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName),
-                s =>
-                {
-                    var key = PortfolioIdentity.NormalizeName(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName);
-                    metaByName.TryGetValue(key, out var meta);
-                    return ToPortfolioApp(meta, s, screenshotVersions);
-                },
-                StringComparer.OrdinalIgnoreCase);
-
-        foreach (var meta in metadata
-                     .Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase))
-                     .Where(m => !PortfolioIdentity.IsSelf(m.Name)))
-        {
-            var key = PortfolioIdentity.NormalizeName(meta.Name);
-            // Catalog entries marked active are the stable showcase, visible even when
-            // Azure inventory is stale or unavailable. Only added when no live service
-            // already claimed the key — otherwise the live entry's status wins.
-            appsByName.TryAdd(key, ToPortfolioApp(meta, null, screenshotVersions));
-        }
-
-        var apps = appsByName.Values.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        var apps = BuildApps(services, metadata, screenshotVersions, scoresTask.Result);
 
         // Any app whose screenshot is missing or over a week old: serve what is stored now
         // and capture just those in the background for the next visitor. Scan-derived
@@ -115,6 +88,97 @@ internal static partial class PortfolioEndpoints
             Apps = apps,
         });
     }
+
+    /// <summary>
+    /// The card list: live inventory merged with the curated catalog. Shared by the portfolio
+    /// and the README badge, so a badge can never disagree with the card it describes.
+    /// </summary>
+    private static List<PortfolioApp> BuildApps(
+        List<WebService> services, List<AppMeta> metadata,
+        IReadOnlyDictionary<string, long> screenshotVersions,
+        IReadOnlyDictionary<string, LighthouseScores> scores)
+    {
+        var metaByName = metadata
+            .GroupBy(m => PortfolioIdentity.NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderBy(m => StatusRank(m.Status)).First(), StringComparer.OrdinalIgnoreCase);
+
+        // One dictionary per source — services as the primary list (live inventory wins on
+        // overlap), catalog filling in apps that have no live presence yet. The previous
+        // shape did the same merge with two imperative loops and a `ContainsKey` guard, but
+        // the precedence it implemented — Azure overwrites catalog when both exist — was
+        // implicit in the loop order and easy to invert by accident. Build the live list
+        // first, then add catalog entries for keys nothing else claimed.
+        var appsByName = services
+            .Where(s => !PortfolioIdentity.IsSelf(s.FriendlyName, s.Name))
+            .ToDictionary(
+                s => PortfolioIdentity.NormalizeName(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName),
+                s =>
+                {
+                    var key = PortfolioIdentity.NormalizeName(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName);
+                    metaByName.TryGetValue(key, out var meta);
+                    return ToPortfolioApp(meta, s, screenshotVersions, scores);
+                },
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var meta in metadata
+                     .Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase))
+                     .Where(m => !PortfolioIdentity.IsSelf(m.Name)))
+        {
+            var key = PortfolioIdentity.NormalizeName(meta.Name);
+            // Catalog entries marked active are the stable showcase, visible even when
+            // Azure inventory is stale or unavailable. Only added when no live service
+            // already claimed the key — otherwise the live entry's status wins.
+            appsByName.TryAdd(key, ToPortfolioApp(meta, null, screenshotVersions, scores));
+        }
+
+        return appsByName.Values.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// Status plus 30-day uptime as an SVG badge, for each app's README. Read-only and cheap:
+    /// the stored report, the history summary rows and the pinger tallies — exactly what the
+    /// /azure uptime grid is built from — and none of the side effects GetPortfolio has (no
+    /// auto-rescan, no screenshot capture), because a README is fetched by crawlers and CDNs
+    /// that must not be able to start work on this server.
+    /// </summary>
+    private static async Task<IResult> GetBadge(
+        string id, IWebHostEnvironment env, AzureReportStore store, UptimeSampleStore uptimeSamples,
+        TimeProvider clock, HttpContext http, ILogger<Program> logger, CancellationToken ct)
+    {
+        var (_, services) = await LoadInventoryAsync(env, store, logger, ct);
+        var metadata = await LoadMetadataAsync(env, logger, ct);
+        var key = PortfolioIdentity.NormalizeName(id);
+        var app = BuildApps(services, metadata, EmptyVersions, EmptyScores)
+            .FirstOrDefault(a => PortfolioIdentity.NormalizeName(a.Id) == key || PortfolioIdentity.NormalizeName(a.Name) == key);
+        if (app is null)
+            return Results.NotFound();
+
+        var now = clock.GetUtcNow();
+        var history = await store.LoadHistorySummariesAsync(maxEntries: 30, ct);
+        var samples = await uptimeSamples.LoadRecentAsync(DashboardInsightsBuilder.UptimeWindowDays, now, ct);
+        var row = DashboardInsightsBuilder.BuildUptime(
+                history.IsSuccess ? history.Value ?? [] : [], now.UtcDateTime, PortfolioIdentity.IsSelf,
+                DashboardInsightsBuilder.UptimeWindowDays, samples)
+            .Rows.FirstOrDefault(r => PortfolioIdentity.NormalizeName(r.Name) == PortfolioIdentity.NormalizeName(app.Name));
+
+        // Fills measured against white text: 5.1:1, 5.9:1, 5.6:1, 6.2:1 — the badge is text.
+        var (message, color) = app.Status switch
+        {
+            "healthy" when row is { ScansObserved: > 0 } =>
+                ($"up · {row.UptimePercent}% 30d", row.UptimePercent >= 99 ? "#2e7d32" : "#8a5300"),
+            "healthy" => ("up", "#2e7d32"),
+            "unavailable" => ("down", "#c62828"),
+            _ => ("not monitored", "#616161"),
+        };
+
+        // Short: GitHub's image proxy re-fetches on its own schedule, and a badge that says "up"
+        // for an hour after an outage started is the badge lying.
+        http.Response.Headers.CacheControl = "public, max-age=300";
+        return Results.Text(StatusBadge.Render(app.Name, message, color), "image/svg+xml", System.Text.Encoding.UTF8);
+    }
+
+    private static readonly IReadOnlyDictionary<string, long> EmptyVersions = new Dictionary<string, long>();
+    private static readonly IReadOnlyDictionary<string, LighthouseScores> EmptyScores = new Dictionary<string, LighthouseScores>();
 
     private static async Task<IResult> GetScreenshot(
         string host, AppScreenshotService screenshots, HttpContext http, CancellationToken ct)
@@ -178,7 +242,8 @@ internal static partial class PortfolioEndpoints
     }
 
     private static PortfolioApp ToPortfolioApp(
-        AppMeta? meta, WebService? service, IReadOnlyDictionary<string, long> screenshotVersions)
+        AppMeta? meta, WebService? service, IReadOnlyDictionary<string, long> screenshotVersions,
+        IReadOnlyDictionary<string, LighthouseScores> scores)
     {
         var name = meta?.Name ?? service?.FriendlyName ?? service?.Name ?? "Unnamed app";
         // The curated catalog URL wins over the scanned one: inventory can lag reality by
@@ -199,6 +264,7 @@ internal static partial class PortfolioEndpoints
             Url = url,
             Status = status,
             ScreenshotUrl = hasScreenshot ? $"/api/portfolio/screenshots/{host}?v={version}" : null,
+            Scores = host is not null && scores.TryGetValue(host, out var score) ? score : null,
         };
     }
 

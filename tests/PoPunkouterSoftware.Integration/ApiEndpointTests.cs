@@ -53,28 +53,22 @@ public class ConfigEndpointTests
 
     public ConfigEndpointTests(TestWebApp factory) => _client = factory.CreateClient();
 
-    [Fact]
-    public async Task GetConfig_Returns200_WithAnAbsoluteApiBase()
-    {
-        var response = await _client.GetAsync("/api/config");
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("apiBase").GetString()
-            .Should().StartWith("http").And.EndWith("/api");
-    }
-
     /// <summary>
     /// The contract is exactly the three fields the WASM client's ConfigResponse binds.
     /// Anything else is payload nobody reads — this pins the response closed so it cannot
     /// silently regrow the discarded fields (isProduction, AI flags, model catalogue).
+    /// Folded in from GetConfig_Returns200_WithAnAbsoluteApiBase to pay for the rate-limit
+    /// test: same document, one more assertion.
     /// </summary>
     [Fact]
     public async Task GetConfig_ReturnsExactlyTheThreeFieldsTheClientBinds()
     {
-        var json = await _client.GetStringAsync("/api/config");
-        var doc = JsonDocument.Parse(json);
+        var response = await _client.GetAsync("/api/config");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        doc.RootElement.GetProperty("apiBase").GetString()
+            .Should().StartWith("http").And.EndWith("/api");
 
         doc.RootElement.EnumerateObject().Select(p => p.Name)
             .Should().BeEquivalentTo("apiBase", "isMockMode", "managementActionsEnabled");
@@ -172,6 +166,17 @@ public class PortfolioEndpointTests
             description.GetString().Should().NotBeNullOrWhiteSpace();
             app.TryGetProperty("status", out _).Should().BeTrue();
         }
+
+        // Every card has a README badge at /badge/<id>.svg, built from the same list — so the
+        // badge can never describe an app the catalogue does not show. Unknown ids are 404s.
+        var first = apps[0];
+        var badge = await _client.GetAsync($"/api/portfolio/badge/{first.GetProperty("id").GetString()}.svg");
+        badge.StatusCode.Should().Be(HttpStatusCode.OK);
+        badge.Content.Headers.ContentType?.MediaType.Should().Be("image/svg+xml");
+        badge.Headers.CacheControl?.MaxAge.Should().Be(TimeSpan.FromMinutes(5));
+        var svg = await badge.Content.ReadAsStringAsync();
+        svg.Should().StartWith("<svg").And.Contain(first.GetProperty("name").GetString()!);
+        (await _client.GetAsync("/api/portfolio/badge/no-such-app.svg")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>

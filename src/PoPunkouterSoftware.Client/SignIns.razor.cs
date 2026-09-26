@@ -29,6 +29,9 @@ public partial class SignIns
     /// </summary>
     private List<OpsMetricPoint> _reachPoints = new();
 
+    /// <summary>Cost per person, dearest first — held for the same reason as the reach points.</summary>
+    private List<OpsMetricPoint> _costPoints = new();
+
     protected override Task OnInitializedAsync() => LoadAsync();
 
     private async Task SetWindowAsync(int days)
@@ -66,6 +69,11 @@ public partial class SignIns
                 _report = loaded;
                 _reachPoints = loaded.Apps
                     .Select(a => new OpsMetricPoint(a.App, a.People))
+                    .ToList();
+                _costPoints = loaded.Apps
+                    .Where(a => a.CostPerPerson is not null)
+                    .OrderByDescending(a => a.CostPerPerson)
+                    .Select(a => new OpsMetricPoint(a.App, a.CostPerPerson!.Value))
                     .ToList();
             }
         }

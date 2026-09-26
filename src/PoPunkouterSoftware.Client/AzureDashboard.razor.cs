@@ -239,6 +239,22 @@ public partial class AzureDashboard
 
     private Task UnsnoozeEntryAsync(SnoozeEntry entry) => UnsnoozeAsync(entry.Key);
 
+    // ── Deep link: /azure?focus=<service> ──────────────────────────────────────
+    // What an outage notification links to (ServicePingerService.NotifyTransitionsAsync): the
+    // named service's uptime row is highlighted and scrolled into view once, on the first
+    // render that has a summary to show it in.
+    [SupplyParameterFromQuery] public string? Focus { get; set; }
+    private bool _focusRevealed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusRevealed || _summary is null || string.IsNullOrWhiteSpace(Focus))
+            return;
+
+        _focusRevealed = true;
+        await JS.InvokeVoidAsync("appRevealFocus", ".azure-uptime__label.is-focused");
+    }
+
     // ── SignalR hub connection ─────────────────────────────────────────────────
     private HubConnection? _hub;
 

@@ -91,6 +91,16 @@ public sealed record SignInAppReach
     public int SignIns { get; init; }
 
     public DateTime LastSeen { get; init; }
+
+    /// <summary>
+    /// 30-day spend of the app's own resource group, from the last stored scan. Null when the
+    /// app could not be matched to a scanned service or the scan carried no per-group costs.
+    /// Shared-plan compute billed to another group is not split out.
+    /// </summary>
+    public double? Cost30Days { get; init; }
+
+    /// <summary><see cref="Cost30Days"/> ÷ <see cref="People"/>.</summary>
+    public double? CostPerPerson { get; init; }
 }
 
 /// <summary>One app's daily sign-in count over the window.</summary>

@@ -141,8 +141,8 @@ public class PortfolioExclusionRegressionTests
     public PortfolioExclusionRegressionTests(TestWebApp factory) => _client = factory.CreateClient();
 
     /// <summary>
-    /// The card renders screenshot + name + description + link. Everything else was payload
-    /// serialised onto every app and read by nothing.
+    /// The card renders screenshot + name + description + PageSpeed chips + link. Everything
+    /// else was payload serialised onto every app and read by nothing.
     /// </summary>
     [Fact]
     public async Task Portfolio_Cards_CarryOnlyWhatTheCardBinds()
@@ -153,7 +153,7 @@ public class PortfolioExclusionRegressionTests
         foreach (var app in doc.RootElement.GetProperty("apps").EnumerateArray())
         {
             app.EnumerateObject().Select(p => p.Name).Should().BeSubsetOf(
-                new[] { "id", "name", "description", "url", "status", "screenshotUrl" });
+                new[] { "id", "name", "description", "url", "status", "screenshotUrl", "scores" });
         }
     }
 }

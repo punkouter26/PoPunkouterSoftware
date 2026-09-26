@@ -33,11 +33,7 @@ public class ResultTests
         result.Error.Should().Be("storage unavailable");
         result.Exception.Should().BeSameAs(boom);
         result.Value.Should().BeNull();
-    }
 
-    [Fact]
-    public void Failure_WithoutException_LeavesExceptionNull()
-    {
         // The degradation paths report a message with no exception far more often than
         // they report one with — "no report found" is not an error condition.
         Result<string>.Failure("no report").Exception.Should().BeNull();

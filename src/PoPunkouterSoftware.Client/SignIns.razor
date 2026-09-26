@@ -128,6 +128,20 @@
                         <span class="app-sr-only">
                             @string.Join(", ", report.Apps.Select(a => $"{a.App}: {a.People} people, {a.SignIns} sign-ins"))
                         </span>
+
+                        @* Same card, second ranking: what each of those people costs. The cost
+                           is the app's own resource group from the last stored scan — shared
+                           App Service plan compute billed elsewhere is not split out, so a
+                           $0.00 here means "nothing extra", not "free". *@
+                        @if (_costPoints.Count > 0)
+                        {
+                            <h3 class="signins-panel__title signins-panel__title--sub">Cost per person</h3>
+                            <div class="signins-panel__subtitle" aria-hidden="true">Own resource group, 30 days ÷ people</div>
+                            <MetricBars Points="@_costPoints" Tone="warm" Format="money" />
+                            <span class="app-sr-only">
+                                @string.Join(", ", _costPoints.Select(p => $"{p.Label}: ${p.Value:F2} per person"))
+                            </span>
+                        }
                     </article>
                 </section>
 

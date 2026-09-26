@@ -59,6 +59,13 @@ public record UptimeRow
 
     /// <summary>Scans that observed this service — the denominator behind <see cref="UptimePercent"/>.</summary>
     public int ScansObserved { get; init; }
+
+    /// <summary>
+    /// Indexes into <see cref="UptimeHeatmap.Days"/> on which a deploy landed. A floor, not a
+    /// complete log: each scan records only the latest deploy, so two on one day between scans
+    /// show as one marker.
+    /// </summary>
+    public List<int> DeployDays { get; init; } = new();
 }
 
 /// <summary>

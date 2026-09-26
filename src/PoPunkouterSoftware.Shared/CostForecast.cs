@@ -44,6 +44,9 @@ public record CostForecast
     /// prior scan to compare against.
     /// </summary>
     public double? ProjectionDelta { get; init; }
+
+    /// <summary>Resource groups whose latest day of spend spiked. Empty is the normal case.</summary>
+    public List<CostAnomaly> Anomalies { get; init; } = new();
 }
 
 /// <summary>Canonical <see cref="CostForecast.Verdict"/> values.</summary>

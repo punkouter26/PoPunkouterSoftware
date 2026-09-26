@@ -31,6 +31,22 @@ public record WebService
     public ConnectivityInfo? Connectivity { get; init; }
     public MetricsInfo? Metrics7Days { get; init; }
     public FreeTierCheckInfo? FreeTierCheck { get; init; }
+    /// <summary>
+    /// The last completed push-triggered GitHub Actions run on the repo matched to this service
+    /// — "deploy" in practice, since every Po repo deploys on push to its default branch. Null
+    /// with no PAT configured or no matching repo.
+    /// </summary>
+    public DeployInfo? LastDeploy { get; init; }
+}
+
+public record DeployInfo
+{
+    public DateTime CompletedAt { get; init; }
+    /// <summary>success | failure | cancelled — GitHub's run conclusion.</summary>
+    public string? Conclusion { get; init; }
+    /// <summary>Full commit SHA the run built.</summary>
+    public string? Sha { get; init; }
+    public string? Url { get; init; }
 }
 
 public record ConnectivityInfo

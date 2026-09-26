@@ -27,6 +27,11 @@ public record ServiceHistoryPoint
     public string HttpStatus { get; init; } = "";
     public int ResponseTimeMs { get; init; }
     public int Requests7d { get; init; }
+    /// <summary>
+    /// When the service's last deploy completed, as that scan saw it. Accumulated across the
+    /// history window this becomes the deploy markers on the uptime grid.
+    /// </summary>
+    public DateTime? LastDeployAt { get; init; }
 }
 
 // ─── Plan recommendation ────────────────────────────────────────────────────

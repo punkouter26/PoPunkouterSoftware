@@ -30,6 +30,8 @@ public sealed partial class ServicePingerService : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly AlertNotifier _alerts;
+    private readonly OutageTracker _outages = new();
     private readonly ILogger<ServicePingerService> _logger;
     private readonly TimeSpan _interval;
     private readonly bool _enabled;
@@ -39,11 +41,13 @@ public sealed partial class ServicePingerService : BackgroundService
     public ServicePingerService(
         IServiceScopeFactory scopeFactory,
         IHttpClientFactory httpClientFactory,
+        AlertNotifier alerts,
         IConfiguration config,
         ILogger<ServicePingerService> logger)
     {
         _scopeFactory = scopeFactory;
         _httpClientFactory = httpClientFactory;
+        _alerts = alerts;
         _logger = logger;
         _interval = TimeSpan.FromMinutes(config.GetValue<int>("Pinger:IntervalMinutes", 10));
         _enabled = config.GetValue("Pinger:Enabled", true);
@@ -169,9 +173,39 @@ public sealed partial class ServicePingerService : BackgroundService
             _logger.LogWarning(ex, "Could not persist uptime samples for this sweep (non-fatal)");
         }
 
+        await NotifyTransitionsAsync(results, ct);
+
         // Heartbeat: a flat sweep-counter rate means the background loop has silently died. (question 5)
         Telemetry.PingerSweeps.Add(1);
         LogSweepComplete(results.Length);
+    }
+
+    /// <summary>
+    /// Phone alert on each debounced up→down or down→up transition. Fed the same observations
+    /// the uptime grid records — timeouts are no observation — so a notification can never
+    /// disagree with the grid it links to.
+    /// </summary>
+    private async Task NotifyTransitionsAsync(PingResult[] results, CancellationToken ct)
+    {
+        foreach (var r in results)
+        {
+            var name = NameMatching.ServiceIdentity(r.FriendlyName, r.Name);
+            var transition = _outages.Observe(name, r.Status == "timeout" ? null : r.Status == "reachable");
+            if (transition is null)
+                continue;
+
+            var focus = $"/azure?focus={Uri.EscapeDataString(name)}";
+            if (transition == OutageTransition.WentDown)
+                await _alerts.SendAsync(
+                    $"{name} is down",
+                    $"{r.Status} on {_outages.FailuresBeforeAlert} checks in a row{(r.Error is null ? "" : $": {r.Error}")}\n{r.Url}",
+                    priority: 4, clickPath: focus, tags: ["rotating_light"], ct: ct);
+            else
+                await _alerts.SendAsync(
+                    $"{name} is back",
+                    $"Reachable again ({r.ResponseTimeMs} ms)\n{r.Url}",
+                    priority: 3, clickPath: focus, tags: ["white_check_mark"], ct: ct);
+        }
     }
 
     private DateTimeOffset _lastPruneAt = DateTimeOffset.MinValue;

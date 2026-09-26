@@ -38,6 +38,11 @@ public sealed class ProductionApp : WebApplicationFactory<Program>
                 ["AzureTableStorage:ConnectionString"] = "",
                 ["AzureBlobStorage:Endpoint"] = "",
                 ["Pinger:Enabled"] = "false",
+                // Unset = the instant "unavailable" branch, rather than a credential-chain walk
+                // against live Azure on every call the rate-limit test makes.
+                ["SignIns:ResourceId"] = "",
+                // Low enough to trip in one test; nothing else in this class calls /api/signins.
+                ["RateLimits:SignInsPerMinute"] = "2",
             }));
     }
 }
@@ -62,6 +67,21 @@ public class ProductionBootTests : IClassFixture<ProductionApp>
         // dependency is unhappy.
         ((int)response.StatusCode).Should().BeLessThan(500,
             because: $"{path} must serve in Production, not throw out of the auth pipeline. Body: {body}");
+    }
+
+    /// <summary>
+    /// The anonymous live-query endpoint has a ceiling in Production, and hitting it is a clean
+    /// 429 with a Retry-After — not a 500, and not an unlimited Log Analytics bill.
+    /// </summary>
+    [Fact]
+    public async Task AnonymousLiveQueryEndpoint_IsRateLimited_WithRetryAfter()
+    {
+        (await _client.GetAsync("/api/signins")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await _client.GetAsync("/api/signins")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var limited = await _client.GetAsync("/api/signins");
+        limited.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        limited.Headers.RetryAfter?.Delta.Should().BeGreaterThan(TimeSpan.Zero);
     }
 
     /// <summary>

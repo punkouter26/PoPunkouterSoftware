@@ -144,8 +144,10 @@ internal static class DiagEndpoints
             var result = await ai.SummarizeAsync(req, ct);
             return Results.Json(result);
         })
+        .RequireRateLimiting(RateLimits.AiRewrite)
         .WithName("AiTriage")
-        .Produces<AiTriageResult>(StatusCodes.Status200OK);
+        .Produces<AiTriageResult>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status429TooManyRequests);
 
         // ── Snooze / dismiss a finding ───────────────────────────────────────
         // Findings have no server-side identity — the client synthesizes its own opaque
