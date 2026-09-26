@@ -115,10 +115,30 @@
         write(pref);
         apply();
         syncToggle();
+        // The GPU backdrop reads accent tokens once; tell it they changed.
+        try { document.dispatchEvent(new CustomEvent('app:theme')); } catch (e) { }
     }
 
-    function toggle() {
-        set(effective() === 'dark' ? 'light' : 'dark');
+    /**
+     * Flip the theme. With an `origin` (the toggle that was pressed) and View Transitions
+     * support, the new palette wipes out from that point as a growing circle: the browser
+     * snapshots the old page, set() runs, and modern-ui.css clips the new snapshot with a
+     * circle keyed off the three --theme-reveal-* properties below. Without support, or
+     * under reduced motion, it is the same instant flip as before — nothing else differs.
+     */
+    function toggle(origin) {
+        var next = effective() === 'dark' ? 'light' : 'dark';
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!origin || reduce || !document.startViewTransition) { set(next); return; }
+
+        var x = origin.x, y = origin.y;
+        var r = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+        root.style.setProperty('--theme-reveal-x', x + 'px');
+        root.style.setProperty('--theme-reveal-y', y + 'px');
+        root.style.setProperty('--theme-reveal-r', r + 'px');
+        root.classList.add('is-theme-reveal');
+        var vt = document.startViewTransition(function () { set(next); });
+        vt.finished.finally(function () { root.classList.remove('is-theme-reveal'); });
     }
 
     // Delegated rather than bound per element: the header is re-inserted by enhanced
@@ -126,9 +146,12 @@
     // sound toggle in audio-kit.js.
     document.addEventListener('click', function (e) {
         if (!e.target || !e.target.closest) return;
-        if (e.target.closest('[data-theme-toggle]')) {
+        var btn = e.target.closest('[data-theme-toggle]');
+        if (btn) {
             e.preventDefault();
-            toggle();
+            // The button's centre, not the click point: a keyboard activation reports 0,0.
+            var r = btn.getBoundingClientRect();
+            toggle({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
         }
     });
 

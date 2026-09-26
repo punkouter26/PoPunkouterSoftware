@@ -334,6 +334,33 @@ offered to WebGPU can never yield a WebGL context, and `build()` had to clone an
 the node mid-init (reassigning `canvas` *before* `status()` ran, or the diagnostic landed
 on a detached node). `build()` is synchronous now.
 
+**Workflow moments drive five event effects, all uniforms on passes that already run.**
+`gpu-backdrop.js` maps moments to renderer calls: the rescan's progress is a radar sweep;
+its end is a shockwave from `[data-fx-origin="refresh"]` (red plus a colour-split tear on
+failure); a scan that takes the fleet from broken to all-green (`refreshEnd('recovered')`,
+decided in `RefreshAsync`) adds a particle bloom from `[data-fx-origin="health"]`; the particle
+field orbits every visible `[data-fx-attract=weight]` (down/degraded uptime rows, spend
+spikes); `/users` calls `appFx.comets(n)` once per visit for sign-ins in the last 24h; the
+pointer (or phone tilt, Android only) lights the glass rims. The scan lifecycle reaches the
+visuals as an `app:refresh` DOM event that `audio-kit.js` dispatches **before** its sound
+gate, so the dashboard's existing `audioKit.refresh*` calls drive both layers and neither
+references the other. Deferred effects run on a frame-advanced clock, not wall time, so a
+scan that ends in a background tab plays its shockwave on return.
+
+**Sound and touch follow the visitor's one opt-in.** `[data-sfx]` clicks are panned to the
+element's screen position; the sonification's stereo width *is* fleet health and its ticks
+walk left→right. `navigator.vibrate` mirrors the outcome sounds and sits behind the same
+`enabled` flag — no buzz for a visitor who never turned feedback on.
+
+**Three pieces of polish are plain CSS/platform.** The theme toggle is a circular View
+Transition reveal from the button (`theme-kit.js` + `.is-theme-reveal` in `modern-ui.css`;
+instant under reduced motion or without support). Cards and panes rise in on a scroll
+timeline (`animation-timeline: view()`, entry range, backwards fill, **opacity + translate
+only** — a `scale` there shrank off-screen panes and failed the pane-geometry test). The three
+accent tokens are `color(display-p3 …)` on wide-gamut screens, luminance-matched to the sRGB
+values so no contrast ratio moved; the WebGL canvas switches to `drawingBufferColorSpace =
+'display-p3'` to match, and both backdrop colour readers parse that syntax.
+
 **`data-glass` is the opt-in for shader-side glassmorphism.** `gpu-backdrop.js` collects the
 on-screen rect of every tagged element (rate-limited, signature-guarded, corner radius cached
 per element — `getComputedStyle` forces a style resolution and was the largest single cost)
@@ -343,7 +370,7 @@ CSS's only job is `html[data-gpu-backdrop] [data-glass]`, which makes those surf
 translucent enough for it to show — gated so that a machine with no WebGL does not get
 see-through cards over a flat background.
 
-### Three bugs here that all failed silently — check for them before adding shader code
+### Four bugs here that all failed silently — check for them before adding shader code
 
 1. **An opaque `<body>` background hid every backdrop layer.** `#app-gpu-backdrop` and the
    `body::before` grid are both `position: fixed` with **negative** z-index, and negative-z
@@ -360,6 +387,14 @@ see-through cards over a flat background.
    outside its own gaussian falloff and the whole field evaluated to zero — again with no
    error and no artefact. Check the *magnitude* of a noise term against the coordinate range
    it is perturbing.
+
+4. **The canvas is non-premultiplied** (`premultipliedAlpha: false`), so anything added to
+   `col.rgb` in the composite is multiplied by the field's near-zero alpha on screen — an
+   effect lands at roughly its intensity squared. The shockwave, sweep and burst glow were
+   all invisible this way while the layer reported `webgl2`. Emissive terms go into `emit`
+   and are folded in premultiplied at the end of `COMPOSITE_FS`. The same trap hid the
+   particles themselves (their blend squared alpha), which is why the particle pass uses
+   `blendFuncSeparate(SRC_ALPHA, ONE, ONE, ONE)`.
 
 The common thread: a decorative GPU layer has no failure mode that surfaces on its own. If
 you change a shader, look at the rendered pixels — `dataset.gpu` reporting `webgl2` only

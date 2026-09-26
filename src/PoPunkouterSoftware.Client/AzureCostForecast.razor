@@ -84,7 +84,7 @@
             <ul>
                 @foreach (var spike in Forecast.Anomalies.Take(2))
                 {
-                    <li>
+                    <li data-fx-attract="0.7">
                         <strong>@spike.ResourceGroup</strong> spent @Money(spike.Cost) on @DayLabel(spike.Day)
                         <span class="azure-forecast__delta dir-worse">vs @Money(spike.Baseline)/day usual</span>
                     </li>

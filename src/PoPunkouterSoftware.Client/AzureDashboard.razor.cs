@@ -422,6 +422,9 @@ public partial class AzureDashboard
             // the user's intent regardless of which path the wait took to get out.
             if (!_userCancelled)
             {
+                // Captured before the reload replaces _summary: red → all green is the one
+                // outcome that gets its own flourish (a "recovered" cadence and a particle bloom).
+                var brokenBefore = _summary?.BrokenServices ?? 0;
                 await LoadSummaryAsync();
                 if (_advancedOpen)
                     await LoadReportAsync();
@@ -433,7 +436,8 @@ public partial class AzureDashboard
                 else if (!_refreshCts.Token.IsCancellationRequested)
                 {
                     NotificationService.Notify(NotificationSeverity.Success, "Done", "Azure report refreshed successfully.");
-                    await SfxAsync("audioKit.refreshEnd", "success");
+                    await SfxAsync("audioKit.refreshEnd",
+                        brokenBefore > 0 && _summary?.BrokenServices == 0 ? "recovered" : "success");
                 }
             }
         }

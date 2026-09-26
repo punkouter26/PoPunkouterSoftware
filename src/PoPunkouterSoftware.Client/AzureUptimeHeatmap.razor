@@ -41,7 +41,11 @@
                 @foreach (var row in Map.Rows)
                 {
                     var focused = IsFocused(row);
-                    <div class="azure-uptime__label @(focused ? "is-focused" : "")" title="@row.Name">@row.Name</div>
+                    @* data-fx-attract: the GPU backdrop's particles orbit a row whose latest day
+                       is down (or, more gently, degraded). Absent — not "0" — on a healthy row. *@
+                    var latest = row.Cells.Count > 0 ? row.Cells[^1] : null;
+                    var attract = latest == UptimeState.Broken ? "1" : latest == UptimeState.Degraded ? "0.5" : null;
+                    <div class="azure-uptime__label @(focused ? "is-focused" : "")" title="@row.Name" data-fx-attract="@attract">@row.Name</div>
                     @for (var i = 0; i < row.Cells.Count; i++)
                     {
                         var state = row.Cells[i];

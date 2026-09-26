@@ -38,6 +38,22 @@
  *     MODALITY on facts the page already renders, not a second copy of them, so it does not
  *     violate the "each fact appears once on /azure" rule.
  * The third (`play('tap')` and friends) is ordinary UI feedback and is the least important.
+ *
+ * ── Space and touch ─────────────────────────────────────────────────────────────────────
+ * Every voice can be panned. A `[data-sfx]` click is panned to where the element sits on
+ * screen, so the sound comes from where you touched. The sonification pans its partials by
+ * fleet HEALTH (a healthy fleet is wide, a failing one collapses to the centre) and walks
+ * its countable ticks left → right, which makes eight ticks easier to count than eight
+ * ticks in one spot.
+ * Where the platform has `navigator.vibrate` (Android), the outcome sounds also buzz. Same
+ * opt-in as sound — `enabled` gates both — because a phone that vibrates at a visitor who
+ * never asked for feedback reads as broken in exactly the way unrequested sound does.
+ *
+ * ── The scan lifecycle is also an event ────────────────────────────────────────────────
+ * The refresh wrappers dispatch `app:refresh` on `document` BEFORE the enabled gate, so
+ * the GPU backdrop can draw the scan (sweep, shockwave) for a visitor with sound off. This
+ * file is simply where the dashboard already reports the lifecycle; nothing here knows
+ * who listens.
  */
 (function () {
     'use strict';
@@ -58,6 +74,39 @@
 
     // Live handle on the refresh drone so progress can retune it and End can resolve it.
     var drone = null;
+
+    // Default pan for voices that do not set one — set around a single synchronous SFX call
+    // by the click delegation, so a UI sound comes from where the element is.
+    var ambientPan = 0;
+
+    // Android-only in practice; a no-op elsewhere. Short on purpose: a buzz confirms, it
+    // does not narrate.
+    var HAPTIC = {
+        tap: [8],
+        success: [14, 60, 14],
+        recovered: [14, 50, 14, 50, 40],
+        failure: [45, 70, 45, 70, 90],
+        warn: [30, 90, 30],
+        cancel: [20],
+        arrive: [6]
+    };
+
+    function buzz(name) {
+        var pattern = HAPTIC[name];
+        if (!pattern || !navigator.vibrate) return;
+        try { navigator.vibrate(pattern); } catch (e) { /* blocked without user activation */ }
+    }
+
+    /** Send `node` to master, through a StereoPanner when pan is non-zero. Returns the tail. */
+    function route(node, pan) {
+        pan = pan == null ? ambientPan : pan;
+        if (!pan || !ctx.createStereoPanner) { node.connect(master); return node; }
+        var sp = ctx.createStereoPanner();
+        sp.pan.value = Math.max(-1, Math.min(1, pan));
+        node.connect(sp);
+        sp.connect(master);
+        return sp;
+    }
 
     function readPreference() {
         try { return window.localStorage.getItem(STORAGE_KEY) === '1'; }
@@ -160,10 +209,10 @@
         }
 
         osc.connect(g);
-        tail.connect(master);
+        var sink = route(tail, opts.pan);
         osc.start(t);
         osc.stop(t + dur + 0.02);
-        osc.onended = function () { try { tail.disconnect(); g.disconnect(); } catch (e) { } };
+        osc.onended = function () { try { sink.disconnect(); tail.disconnect(); g.disconnect(); } catch (e) { } };
         return osc;
     }
 
@@ -193,10 +242,10 @@
 
         src.connect(bp);
         bp.connect(g);
-        g.connect(master);
+        var sink = route(g, opts.pan);
         src.start(t);
         src.stop(t + dur + 0.02);
-        src.onended = function () { try { g.disconnect(); bp.disconnect(); } catch (e) { } };
+        src.onended = function () { try { sink.disconnect(); g.disconnect(); bp.disconnect(); } catch (e) { } };
     }
 
     /** A stack of voices sharing one envelope shape — used for every resolving cadence. */
@@ -210,7 +259,8 @@
                 gain: (opts.gain == null ? 0.16 : opts.gain) / Math.sqrt(freqs.length),
                 delay: (opts.delay || 0) + i * (opts.stagger == null ? 0.035 : opts.stagger),
                 cutoff: opts.cutoff || 3200,
-                attack: opts.attack
+                attack: opts.attack,
+                pan: opts.pan
             });
         }
     }
@@ -229,8 +279,39 @@
         failure: function () { chord([220, 233.08], { duration: 0.75, gain: 0.20, stagger: 0, type: 'sawtooth', cutoff: 1200 }); },
         warn: function () { voice({ freq: 520, type: 'square', duration: 0.13, gain: 0.09, cutoff: 1600 }); voice({ freq: 392, type: 'square', duration: 0.18, gain: 0.09, delay: 0.14, cutoff: 1400 }); },
         cancel: function () { voice({ freq: 500, toFreq: 180, type: 'triangle', duration: 0.28, gain: 0.13, cutoff: 1800 }); },
-        tick: function () { noise({ freq: 3200, duration: 0.035, gain: 0.06 }); }
+        tick: function () { noise({ freq: 3200, duration: 0.035, gain: 0.06 }); },
+        // The success cadence, then a rising sparkle an octave up: red → all green.
+        recovered: function () {
+            SFX.success();
+            var up = [1320, 1760, 2217, 2637];
+            for (var i = 0; i < up.length; i++) {
+                voice({ freq: up[i], type: 'sine', duration: 0.22, gain: 0.05, delay: 0.5 + i * 0.07, cutoff: 5200, pan: -0.6 + i * 0.4 });
+            }
+        },
+        // One soft pluck per sign-in arriving on /users. Pentatonic, so any run of them is
+        // consonant; a random position so a burst of arrivals spreads rather than stacks.
+        arrive: function () {
+            var notes = [523.25, 587.33, 659.25, 783.99, 880];
+            voice({
+                freq: notes[Math.floor(Math.random() * notes.length)], type: 'triangle',
+                duration: 0.38, gain: 0.07, cutoff: 2400, pan: Math.random() * 1.2 - 0.6
+            });
+        }
     };
+
+    /** Play a named SFX and its buzz. The single path every enabled one-shot takes. */
+    function fire(name) {
+        var fn = SFX[name];
+        if (!fn) return;
+        fn();
+        buzz(name);
+    }
+
+    /** Tell the visual layer about a scan phase. Sound on or off. */
+    function announce(detail) {
+        try { document.dispatchEvent(new CustomEvent('app:refresh', { detail: detail })); }
+        catch (e) { /* ancient browser without CustomEvent constructor: visuals just skip it */ }
+    }
 
     // ── Refresh lifecycle (the SignalR-driven scan) ─────────────────────────────────────
 
@@ -322,14 +403,13 @@
         if (silent) return;
     }
 
-    /** outcome: 'success' | 'failure' | 'cancelled' | 'timeout' */
+    /** outcome: 'success' | 'recovered' | 'failure' | 'cancelled' | 'timeout' */
     function refreshEnd(outcome) {
         refreshStop(true);
         if (!ensureContext()) return;
-        if (outcome === 'success') SFX.success();
-        else if (outcome === 'cancelled') SFX.cancel();
-        else if (outcome === 'timeout') SFX.warn();
-        else SFX.failure();
+        if (outcome === 'success' || outcome === 'recovered' || outcome === 'cancelled') fire(outcome === 'cancelled' ? 'cancel' : outcome);
+        else if (outcome === 'timeout') fire('warn');
+        else fire('failure');
     }
 
     // ── Sonification of the fleet (#2) ──────────────────────────────────────────────────
@@ -407,6 +487,12 @@
             partials.push({ mul: 0.5, gain: Math.min(0.09, 0.02 * cleanup), cents: 0 });
         }
 
+        // Stereo width IS health: partials fan out across the field in proportion to it, so
+        // a degrading fleet audibly narrows toward mono. The tritone (outages) and the low
+        // cleanup pulse sit dead centre — the serious facts are never off to one side.
+        var width = clamp(health, 0, 100) / 100;
+        var fan = [0, -0.55, 0.55, -0.85, 0.85, 0.3, -0.3];
+
         for (var i = 0; i < partials.length; i++) {
             var p = partials[i];
             var osc = ctx.createOscillator();
@@ -416,15 +502,25 @@
             var g = ctx.createGain();
             g.gain.value = p.gain;
             osc.connect(g);
-            g.connect(lp);
+            var centred = p.type === 'sawtooth' || p.mul < 1;
+            if (!centred && ctx.createStereoPanner) {
+                var sp = ctx.createStereoPanner();
+                sp.pan.value = (fan[i] || 0) * width;
+                g.connect(sp);
+                sp.connect(lp);
+            } else {
+                g.connect(lp);
+            }
             osc.start(t);
             osc.stop(t + 4.3);
         }
 
-        // Countable ticks for the actionable items, inside the sustained section.
+        // Countable ticks for the actionable items, inside the sustained section, walking
+        // left → right so each one has its own place as well as its own moment.
         var ticks = Math.min(8, Math.max(0, actionable | 0));
         for (var k = 0; k < ticks; k++) {
-            noise({ delay: 0.9 + k * 0.22, freq: 2600, duration: 0.05, gain: 0.09 });
+            noise({ delay: 0.9 + k * 0.22, freq: 2600, duration: 0.05, gain: 0.09,
+                    pan: ticks > 1 ? -0.8 + 1.6 * k / (ticks - 1) : 0 });
         }
 
         // Resolve. A healthy fleet ends on a consonant cadence; a broken one does not get
@@ -535,8 +631,9 @@
 
         var sfx = e.target.closest('[data-sfx]');
         if (sfx && enabled) {
-            var fn = SFX[sfx.getAttribute('data-sfx')];
-            if (fn) fn();
+            var r = sfx.getBoundingClientRect();
+            ambientPan = ((r.left + r.width / 2) / window.innerWidth * 2 - 1) * 0.7;
+            try { fire(sfx.getAttribute('data-sfx')); } finally { ambientPan = 0; }
         }
     });
 
@@ -578,15 +675,13 @@
 
         /** Semantic one-shot by name; unknown names are ignored rather than throwing. */
         play: function (name) {
-            if (!enabled) return;
-            var fn = SFX[name];
-            if (fn) fn();
+            if (enabled) fire(name);
         },
 
-        refreshStart: function () { if (enabled) refreshStart(); },
-        refreshProgress: function (percent) { if (enabled) refreshProgress(percent); },
-        refreshIndeterminate: function () { if (enabled) refreshIndeterminate(); },
-        refreshEnd: function (outcome) { if (enabled) refreshEnd(outcome); },
+        refreshStart: function () { announce({ phase: 'start' }); if (enabled) refreshStart(); },
+        refreshProgress: function (percent) { announce({ phase: 'progress', percent: percent }); if (enabled) refreshProgress(percent); },
+        refreshIndeterminate: function () { announce({ phase: 'indeterminate' }); if (enabled) refreshIndeterminate(); },
+        refreshEnd: function (outcome) { announce({ phase: 'end', outcome: outcome }); if (enabled) refreshEnd(outcome); },
 
         sonifyOps: function (health, broken, actionable, security, cleanup, forecastRatio, uptime) {
             if (enabled) sonifyOps(health, broken, actionable, security, cleanup, forecastRatio, uptime);

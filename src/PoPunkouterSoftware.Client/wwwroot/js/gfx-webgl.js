@@ -13,6 +13,19 @@
  *   3. DOWN/UP   dual-Kawase: sceneFBO → half-res → back up. Two 4-tap passes total.
  *   4. COMPOSITE sceneFBO + blur + glass mask → canvas, with edge refraction and dither.
  *
+ * ── Event effects (driven by gpu-backdrop.js, never by a timer of their own) ────────────
+ *   ATTRACT  up to 4 points the particle field bends toward and orbits (live findings).
+ *   BURST    up to 4 radial impulses in the particle field (recovery bloom, sign-in comets),
+ *            each paired with an expanding warm glow in the composite. The particles alone
+ *            are texture, not signal: at half resolution a pushed sprite is a speck.
+ *   SWEEP    a radar beam in the composite whose angle is the scan's progress.
+ *   SHOCK    one expanding refraction ring — accent on success, colour-split on failure.
+ *   LIGHT    a specular sheen on glass edges that follows the pointer / device tilt.
+ * All five are uniforms on passes that already run: no extra pass, no extra target. Their
+ * ages come from the renderer's own `clock`, which advances only on frames actually drawn,
+ * so a scan that finishes in a background tab plays its shockwave when the visitor comes
+ * back instead of having expired unseen against wall time.
+ *
  * ── Why dual-Kawase and not `backdrop-filter` ───────────────────────────────────────────
  * The 23 per-card `backdrop-filter` roots this layer replaced were the single largest
  * mobile GPU cost in the app, because each one forces its own backdrop snapshot and blur.
@@ -180,13 +193,38 @@
     in vec2 a_pos; in vec2 a_vel; in float a_seed;
     out vec2 v_pos; out vec2 v_vel; out float v_seed;
     uniform float u_dt; uniform float u_time; uniform float u_aspect; uniform float u_energy;
+    uniform vec4 u_attract[4]; uniform int u_attractCount;   // xy = point, z = weight
+    uniform vec4 u_burst[4];                                 // xy = origin, z = age s, w = strength
     ${SNOISE}
     ${CURL}
     void main(){
       vec2 f = curl(a_pos * 1.6, u_time * 0.35);
       // Audio raises the drive term, so the field visibly accelerates on a loud transient.
       float drive = 0.18 + u_energy * 0.35;
-      vec2 vel = a_vel * 0.94 + f * drive * u_dt;
+      vec2 acc = f * drive;
+
+      // Pull toward each live finding, plus a tangential term 1.2x as strong so particles
+      // ORBIT the point rather than collapsing onto it — a clump reads as a rendering bug,
+      // a slow vortex reads as "look here". Soft 1/(1+4r^2) falloff: a nudge, not a drain.
+      for (int i = 0; i < 4; i++){
+        if (i >= u_attractCount) break;
+        vec2 d = u_attract[i].xy - a_pos;
+        float r = length(d) + 0.05;
+        vec2 n = d / r;
+        acc += (n + vec2(-n.y, n.x) * 1.2) * u_attract[i].z * 0.9 / (1.0 + r * r * 4.0);
+      }
+
+      // Radial impulse that dies in ~0.5s — a bloom, not a detonation. It pushes particles
+      // past the "hot" speed in the draw pass, which is what makes them glow.
+      for (int i = 0; i < 4; i++){
+        vec4 b = u_burst[i];
+        if (b.w <= 0.0) continue;
+        vec2 d = a_pos - b.xy;
+        float r = length(d) + 0.02;
+        acc += d / r * b.w * 16.0 * exp(-b.z * 2.0) * exp(-r * r * 3.0);
+      }
+
+      vec2 vel = a_vel * 0.94 + acc * u_dt;
       vec2 pos = a_pos + vel * u_dt;
 
       // Toroidal wrap in aspect-corrected clip space. Respawning instead would make the
@@ -206,9 +244,12 @@
     void main(){
       gl_Position = vec4(a_pos / vec2(u_aspect, 1.0), 0.0, 1.0);
       float speed = clamp(length(a_vel) * 1.6, 0.0, 1.0);
-      gl_PointSize = u_size * (0.55 + a_seed * 0.9) * (1.0 + u_energy * 0.5);
-      v_alpha = (0.025 + speed * 0.085) * (0.4 + a_seed * 0.6);
-      v_warm = a_seed;
+      // "Hot" = well above the curl field's steady ~0.7 units/s, so only a burst reaches it
+      // and idle drift draws exactly as before. Hot sprites grow, brighten and warm up.
+      float hot = smoothstep(1.1, 2.4, length(a_vel));
+      gl_PointSize = u_size * (0.55 + a_seed * 0.9) * (1.0 + u_energy * 0.5) * (1.0 + hot * 1.5);
+      v_alpha = (0.025 + speed * 0.085) * (0.4 + a_seed * 0.6) + hot * 0.6;
+      v_warm = max(a_seed, hot);
     }`;
 
     var PARTICLE_DRAW_FS = `#version 300 es
@@ -290,11 +331,32 @@
     precision highp float;
     uniform sampler2D u_scene; uniform sampler2D u_blur; uniform sampler2D u_mask;
     uniform vec2 u_res; uniform vec3 u_tint; uniform float u_energy; uniform float u_glass;
+    uniform vec2 u_sweep;                       // x = progress 0..1, y = strength 0..1
+    uniform vec4 u_shock;                       // xy = origin px, z = age s, w = strength
+    uniform vec3 u_shockColor; uniform float u_glitch; uniform float u_time;
+    uniform vec3 u_light;                       // xy = px, z = strength
+    uniform vec4 u_puff[4];                     // xy = px, z = age s, w = strength (bursts)
+    uniform vec3 u_puffColor;
     out vec4 fragColor;
     ${DITHER}
     void main(){
       vec2 uv = gl_FragCoord.xy / u_res;
       vec2 e = 1.5 / u_res;
+      float big = max(u_res.x, u_res.y);
+
+      // ── Shock ring: a refraction band expanding from the button that caused it ──────
+      float shockFade = u_shock.w * exp(-u_shock.z * 1.6);
+      vec2 sd = gl_FragCoord.xy - u_shock.xy;
+      float sr = length(sd);
+      float ring = shockFade > 0.001
+        ? exp(-pow((sr - u_shock.z * big * 0.9) / (big * 0.035), 2.0)) * shockFade : 0.0;
+      uv += (sd / max(sr, 1.0)) * ring * 0.012;
+
+      // Failure: a brief horizontal tear on a few scan bands. Hashed per band per 1/20s,
+      // so it flickers like a signal fault rather than sliding like a transition.
+      float glitch = u_glitch * shockFade;
+      float tear = step(0.93, hash12(vec2(floor(uv.y * 38.0), floor(u_time * 20.0))));
+      uv.x += tear * glitch * 0.02;
 
       float m = texture(u_mask, uv).r * u_glass;
       // Central-difference gradient of the mask. Zero in the flat interior and outside, so
@@ -309,10 +371,51 @@
       vec4 soft = texture(u_blur, uv + refr);
       vec4 col = mix(sharp, soft, clamp(m, 0.0, 1.0));
 
+      // Chromatic split on failure only. Four extra taps, skipped entirely when idle.
+      if (glitch > 0.001){
+        vec2 ca = vec2(glitch * 0.006, 0.0);
+        col.r = mix(texture(u_scene, uv + refr + ca).r, texture(u_blur, uv + refr + ca).r, clamp(m, 0.0, 1.0));
+        col.b = mix(texture(u_scene, uv + refr - ca).b, texture(u_blur, uv + refr - ca).b, clamp(m, 0.0, 1.0));
+      }
+      // Event effects are EMISSIVE and summed here, then folded in premultiplied at the end.
+      // The canvas is non-premultiplied (premultipliedAlpha: false), so adding to col.rgb
+      // alone is multiplied again by a near-zero field alpha on screen — every effect
+      // rendered at roughly its intensity squared, i.e. invisible, while reporting healthy.
+      vec3 emit = u_shockColor * ring * 0.55;
+
+      // Burst glow: a soft puff that swells and fades with its particle impulse.
+      for (int i = 0; i < 4; i++){
+        vec4 b = u_puff[i];
+        if (b.w <= 0.0) continue;
+        vec2 bd = (gl_FragCoord.xy - b.xy) / (big * (0.035 + b.z * 0.09));
+        emit += u_puffColor * b.w * 0.5 * exp(-b.z * 1.6) * exp(-dot(bd, bd));
+      }
+
+      // ── Radar sweep: the scan's progress as an angle, clockwise from 12 o'clock ─────
+      if (u_sweep.y > 0.001){
+        vec2 p = (gl_FragCoord.xy - u_res * 0.5) / (u_res.y * 0.5);
+        float ang = fract(0.25 - atan(p.y, p.x) / 6.2831853);
+        float behind = fract(u_sweep.x - ang);          // 0 at the beam head, 1 a lap behind
+        float beam = exp(-behind * 14.0);
+        float swept = step(ang, u_sweep.x) * 0.045;     // the covered arc, faintly lit
+        float fall = 1.0 - smoothstep(0.1, 1.5, length(p));
+        emit += u_tint * (beam * 0.30 + swept) * fall * u_sweep.y;
+      }
+
       // Rim light along the glass edge, lifted slightly by output level so the frame
       // catches the beat of a sonification.
       float rim = clamp(length(g) * 22.0, 0.0, 1.0);
       col.rgb += u_tint * rim * (0.045 + u_energy * 0.05);
+
+      // Specular sheen: strongest on the rim nearest the light, faint across the pane face.
+      if (u_light.z > 0.001){
+        vec2 ld = (gl_FragCoord.xy - u_light.xy) / (big * 0.22);
+        float spec = exp(-dot(ld, ld)) * u_light.z;
+        emit += mix(u_tint, vec3(1.0), 0.6) * (rim * 0.30 + clamp(m, 0.0, 1.0) * 0.035) * spec;
+      }
+
+      float ea = clamp(col.a + max(emit.r, max(emit.g, emit.b)), 0.0, 1.0);
+      col = vec4((col.rgb * col.a + emit) / max(ea, 1e-4), ea);
 
       fragColor = vec4(dither(col.rgb, gl_FragCoord.xy), col.a);
     }`;
@@ -411,10 +514,25 @@
         if (!gl) gl = canvas.getContext('webgl', attrs);
         if (!gl) return null;
 
+        // Wide gamut where the screen has it. The colours handed to setColors() must then be
+        // P3 coordinates — gpu-backdrop.js converts, keyed off the `p3` flag returned below.
+        var p3 = 'drawingBufferColorSpace' in gl && window.matchMedia('(color-gamut: p3)').matches;
+        if (p3) gl.drawingBufferColorSpace = 'display-p3';
+
         var colors = [[0.357, 0.486, 0.839], [0.945, 0.714, 0.388], [0.576, 0.706, 0.961]];
         var quality = { scale: 0.5, particles: 0.55, effects: false };
         var W = 1, H = 1;
         var energy = 0;
+
+        // Event-effect state. `clock` advances only on drawn frames — see the header.
+        var clock = 0;
+        var attract = new Float32Array(16), attractCount = 0;
+        var bursts = new Float32Array(16), burstAt = [-1e3, -1e3, -1e3, -1e3], burstNext = 0;
+        var burstUniform = new Float32Array(16);
+        var burstUv = new Float32Array(8), puffUniform = new Float32Array(16);
+        var sweep = [0, 0];
+        var shockAt = -1e3, shock = [0, 0, 0], shockColor = [0, 0, 0], glitch = 0;
+        var light = [0, 0, 0];
 
         // Fullscreen triangle. One draw, no index buffer, no wasted diagonal fragments.
         var quad = gl.createBuffer();
@@ -532,6 +650,7 @@
 
         function frame(dt, elapsed, level) {
             energy = level || 0;
+            clock += dt;
 
             // ── Field ───────────────────────────────────────────────────────────────────
             var target = g2 ? g2.scene : null;
@@ -560,6 +679,16 @@
                 gl.uniform1f(g2.updateU.u_time, elapsed);
                 gl.uniform1f(g2.updateU.u_aspect, aspect);
                 gl.uniform1f(g2.updateU.u_energy, energy);
+                gl.uniform1i(g2.updateU.u_attractCount, attractCount);
+                if (attractCount > 0) gl.uniform4fv(g2.updateU.u_attract, attract);
+                for (var b = 0; b < 4; b++) {
+                    var age = clock - burstAt[b];
+                    burstUniform[b * 4] = bursts[b * 4];
+                    burstUniform[b * 4 + 1] = bursts[b * 4 + 1];
+                    burstUniform[b * 4 + 2] = age;
+                    burstUniform[b * 4 + 3] = age < 2 ? bursts[b * 4 + 3] : 0;
+                }
+                gl.uniform4fv(g2.updateU.u_burst, burstUniform);
 
                 gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, g2.tf);
                 gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, g2.bufs[1].pos);
@@ -586,7 +715,10 @@
                 gl.uniform3fv(g2.drawU.u_c1, colors[0]);
                 gl.uniform3fv(g2.drawU.u_c2, colors[1]);
                 gl.enable(gl.BLEND);
-                gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+                // Alpha channel ONE,ONE: with plain SRC_ALPHA,ONE the scene's alpha grew by a²,
+                // and the non-premultiplied composite then scaled each sprite by that — a
+                // particle over an empty patch of field drew at ~1% of its colour.
+                gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE);
                 gl.drawArrays(gl.POINTS, 0, g2.count);
                 gl.disable(gl.BLEND);
             }
@@ -630,7 +762,28 @@
             gl.uniform1f(g2.compU.u_energy, energy);
             gl.uniform1f(g2.compU.u_glass, quality.effects ? 1.0 : 0.55);
             gl.uniform3fv(g2.compU.u_tint, colors[2]);
+            var shockAge = clock - shockAt;
+            gl.uniform2f(g2.compU.u_sweep, sweep[0], sweep[1]);
+            gl.uniform4f(g2.compU.u_shock, shock[0] * W, (1 - shock[1]) * H, shockAge, shockAge < 3 ? shock[2] : 0);
+            gl.uniform3fv(g2.compU.u_shockColor, shockColor);
+            gl.uniform1f(g2.compU.u_glitch, glitch);
+            gl.uniform1f(g2.compU.u_time, clock);
+            gl.uniform3f(g2.compU.u_light, light[0] * W, (1 - light[1]) * H, light[2]);
+            for (var pb = 0; pb < 4; pb++) {
+                var pAge = clock - burstAt[pb];
+                puffUniform[pb * 4] = burstUv[pb * 2] * W;
+                puffUniform[pb * 4 + 1] = (1 - burstUv[pb * 2 + 1]) * H;
+                puffUniform[pb * 4 + 2] = pAge;
+                puffUniform[pb * 4 + 3] = pAge < 2 ? bursts[pb * 4 + 3] : 0;
+            }
+            gl.uniform4fv(g2.compU.u_puff, puffUniform);
+            gl.uniform3fv(g2.compU.u_puffColor, colors[1]);
             drawFullscreen();
+        }
+
+        /** Viewport uv (0..1, y DOWN, as the DOM measures it) → particle space. */
+        function toParticle(u, v) {
+            return [(u * 2 - 1) * (W / Math.max(1, H)), 1 - v * 2];
         }
 
         function resize(w, h) {
@@ -657,6 +810,7 @@
         return {
             tier: isGL2 ? (g2 ? 'webgl2' : 'webgl2-field') : 'webgl1',
             gl: gl,
+            p3: p3,
 
             resize: resize,
 
@@ -690,6 +844,39 @@
             },
 
             frame: frame,
+
+            // ── Event effects. Every coordinate is viewport uv, y down. No-ops on WebGL1:
+            // the uniforms they feed only exist in the WebGL2 passes. ──────────────────────
+
+            /** list: [u, v, weight] × n, n ≤ 4. */
+            setAttractors: function (list, n) {
+                attractCount = Math.min(4, n | 0);
+                for (var i = 0; i < attractCount; i++) {
+                    var p = toParticle(list[i * 3], list[i * 3 + 1]);
+                    attract[i * 4] = p[0]; attract[i * 4 + 1] = p[1]; attract[i * 4 + 2] = list[i * 3 + 2];
+                }
+            },
+
+            /** Radial particle impulse. Four slots, oldest overwritten. */
+            burst: function (u, v, strength) {
+                var p = toParticle(u, v), i = burstNext;
+                burstNext = (burstNext + 1) % 4;
+                bursts[i * 4] = p[0]; bursts[i * 4 + 1] = p[1]; bursts[i * 4 + 3] = strength;
+                burstUv[i * 2] = u; burstUv[i * 2 + 1] = v;
+                burstAt[i] = clock;
+            },
+
+            /** progress 0..1, strength 0..1 (0 hides the beam). */
+            setSweep: function (progress, strength) { sweep[0] = progress; sweep[1] = strength; },
+
+            /** One ring at a time; a new one replaces the last. glitch 0..1 adds the tear/split. */
+            shock: function (u, v, rgb, glitchAmount) {
+                shock[0] = u; shock[1] = v; shock[2] = 1;
+                shockColor = rgb; glitch = glitchAmount || 0;
+                shockAt = clock;
+            },
+
+            setLight: function (u, v, strength) { light[0] = u; light[1] = v; light[2] = strength; },
 
             dispose: function () {
                 var lose = gl.getExtension('WEBGL_lose_context');

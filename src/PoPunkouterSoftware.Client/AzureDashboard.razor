@@ -68,7 +68,8 @@ else if (_summary is not null)
     </section>
 
     <section class="app-pane azure-pane-status">
-    <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")" data-glass>
+    @* data-fx-origin: where the GPU backdrop's recovery bloom starts (js/gpu-backdrop.js). *@
+    <header class="azure-command-header @(summary.AttentionCount > 0 ? "has-attention" : "is-healthy")" data-glass data-fx-origin="health">
         <div class="azure-command-copy">
             <div class="app-kicker">Azure · @summary.SubscriptionName</div>
             @* The badge is a SIBLING of the h1, not a child, and the flex row is what keeps
@@ -137,6 +138,7 @@ else if (_summary is not null)
                    which is worth knowing before clicking it. *@
                 <RadzenButton Text="@(_refreshing ? "Rescanning Azure…" : "Rescan Azure")" Icon="refresh"
                               ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Disabled="@_refreshing" Click="RefreshAsync"
+                              data-fx-origin="refresh"
                               title="Runs a full Azure subscription scan (roughly 30 seconds). Progress streams live, and you can leave the page while it runs." />
                 @if (_refreshing)
                 {

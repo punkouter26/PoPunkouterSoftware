@@ -36,6 +36,19 @@
  *   • The audio coupling (#4): one float per frame, PULLED from js/audio-kit.js. Pull, not
  *     push, so nothing is computed on frames the governor never serves, and the graphics
  *     have no reference to the audio graph.
+ *   • The event effects — which moment triggers which renderer effect, and where on screen:
+ *       scan start/progress  → radar sweep       (`app:refresh` DOM event, see below)
+ *       scan end             → shockwave from [data-fx-origin="refresh"]; red + tear on failure
+ *       scan end 'recovered' → particle bloom from [data-fx-origin="health"]
+ *       [data-fx-attract=w]  → the particle field orbits each visible one (weight w, max 4)
+ *       appFx.comets(n)      → n comet trails, one per recent sign-in on /users
+ *       pointer / tilt       → specular light on the glass edges
+ *     The scan lifecycle arrives as an `app:refresh` event that js/audio-kit.js dispatches
+ *     from the calls the dashboard already makes, BEFORE its own sound-enabled gate: the
+ *     visuals must follow a scan whether or not the visitor turned sound on, and neither
+ *     layer holds a reference to the other.
+ *     Deferred effects run off `fxClock`, which only advances on drawn frames — a scan that
+ *     ends in a background tab plays its shockwave when the visitor returns.
  *
  * ── What this file no longer owns ───────────────────────────────────────────────────────
  * The rAF loop, the frame cap, the hidden/blur/reduced-motion pauses and the suppression
@@ -49,33 +62,64 @@
     var MAX_GLASS_RECTS = 24;
     var GLASS_INTERVAL_MS = 66;      // at most ~15 collections/second
 
-    /** Read a CSS custom property and normalise it to [r,g,b] in 0..1. */
-    function readColor(name, fallback) {
+    /** sRGB → Display-P3, same colour. Both spaces share the sRGB transfer curve. */
+    function srgbToP3(c) {
+        var lin = c.map(function (v) { return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+        var p = [
+            0.8225 * lin[0] + 0.1774 * lin[1],
+            0.0332 * lin[0] + 0.9669 * lin[1],
+            0.0171 * lin[0] + 0.0724 * lin[1] + 0.9108 * lin[2]
+        ];
+        return p.map(function (v) { return v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055; });
+    }
+
+    /**
+     * Read a CSS custom property as [r,g,b] in 0..1, in the canvas's colour space. The
+     * accent tokens are `color(display-p3 …)` on wide-gamut screens (see modern-ui.css), and
+     * the generic number-grabbing branch below would read the "3" out of "p3" as red.
+     * A P3 token on an sRGB canvas is used as-is: that only happens on a P3 screen whose
+     * browser lacks `drawingBufferColorSpace`, and the result is merely a little duller.
+     */
+    function readColor(name, fallback, p3) {
         var raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         if (!raw) return fallback;
+        var wide = raw.match(/^color\(display-p3\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+        if (wide) return [+wide[1], +wide[2], +wide[3]];
+        var c;
         if (raw[0] === '#') {
             var hex = raw.slice(1);
             if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
             if (hex.length < 6) return fallback;
-            return [
+            c = [
                 parseInt(hex.slice(0, 2), 16) / 255,
                 parseInt(hex.slice(2, 4), 16) / 255,
                 parseInt(hex.slice(4, 6), 16) / 255
             ];
+        } else {
+            var m = raw.match(/-?\d+(\.\d+)?/g);
+            if (!m || m.length < 3) return fallback;
+            c = [m[0] / 255, m[1] / 255, m[2] / 255];
         }
-        var m = raw.match(/-?\d+(\.\d+)?/g);
-        if (!m || m.length < 3) return fallback;
-        return [m[0] / 255, m[1] / 255, m[2] / 255];
+        return p3 ? srgbToP3(c) : c;
     }
 
-    function palette() {
+    function palette(p3) {
         return [
-            readColor('--app-accent-strong', [0.357, 0.486, 0.839]),
-            readColor('--app-accent-warm', [0.945, 0.714, 0.388]),
+            readColor('--app-accent-strong', [0.357, 0.486, 0.839], p3),
+            readColor('--app-accent-warm', [0.945, 0.714, 0.388], p3),
             // The third band reuses the plain `--app-accent` token rather than requiring a
             // new CSS variable — it already exists in both themes, so no theme can forget it.
-            readColor('--app-accent', [0.576, 0.706, 0.961])
+            readColor('--app-accent', [0.576, 0.706, 0.961], p3)
         ];
+    }
+
+    /** Viewport-uv centre of the first element matching `selector`, or null. */
+    function centreOf(selector) {
+        var el = document.querySelector(selector);
+        if (!el) return null;
+        var r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return null;
+        return [(r.left + r.width / 2) / window.innerWidth, (r.top + r.height / 2) / window.innerHeight];
     }
 
     function start() {
@@ -109,6 +153,7 @@
             if (!renderer || !renderer.setGlass) return;
             if (nowMs - glassAt < GLASS_INTERVAL_MS) return;
             glassAt = nowMs;
+            collectAttractors();
 
             var nodes = document.querySelectorAll('[data-glass]');
             var vw = window.innerWidth, vh = window.innerHeight;
@@ -141,6 +186,125 @@
             renderer.setGlass(glassBuf, n, vw, vh);
         }
 
+        // ── Attractors: live findings the particle field bends toward ───────────────────
+        // Same cadence as the glass rects (it rides collectGlass's rate limit), no signature
+        // guard: setAttractors is a 12-float copy, not a GPU upload.
+        var attractBuf = new Float32Array(12);
+        function collectAttractors() {
+            var nodes = document.querySelectorAll('[data-fx-attract]');
+            var vw = window.innerWidth, vh = window.innerHeight, n = 0;
+            for (var i = 0; i < nodes.length && n < 4; i++) {
+                var r = nodes[i].getBoundingClientRect();
+                if (r.bottom < 0 || r.top > vh || r.width < 1) continue;
+                attractBuf[n * 3] = (r.left + r.width / 2) / vw;
+                attractBuf[n * 3 + 1] = (r.top + r.height / 2) / vh;
+                attractBuf[n * 3 + 2] = parseFloat(nodes[i].getAttribute('data-fx-attract')) || 1;
+                n++;
+            }
+            renderer.setAttractors(attractBuf, n);
+        }
+
+        // ── Event effects ───────────────────────────────────────────────────────────────
+        var fxClock = 0;
+        var queue = [];                    // { at, fn } — fired from the frame, never a timer
+        var scan = { active: false, target: 0, shown: 0, strength: 0, indeterminate: false };
+        var light = { at: [0.5, 0.3], goal: [0.5, 0.3], level: 0, want: 0 };
+
+        function later(delay, fn) { queue.push({ at: fxClock + delay, fn: fn }); }
+
+        function ease(from, to, rate, dt) { return from + (to - from) * Math.min(1, dt * rate); }
+
+        function tickFx(dt) {
+            fxClock += dt;
+            for (var i = 0; i < queue.length; i++) {
+                if (queue[i].at > fxClock) continue;
+                var job = queue.splice(i--, 1)[0];
+                if (renderer) job.fn();
+            }
+
+            // Indeterminate (hub down, no percent arriving): an honest slow orbit, one lap per
+            // ~8s, the same "working, no idea how far" the bar and the drone's tremolo give.
+            if (scan.indeterminate) scan.shown = (scan.shown + dt * 0.12) % 1;
+            else scan.shown = ease(scan.shown, scan.target, 4, dt);
+            scan.strength = ease(scan.strength, scan.active ? 1 : 0, 2.5, dt);
+            renderer.setSweep(scan.shown, scan.strength);
+
+            light.at[0] = ease(light.at[0], light.goal[0], 6, dt);
+            light.at[1] = ease(light.at[1], light.goal[1], 6, dt);
+            light.level = ease(light.level, light.want, 3, dt);
+            renderer.setLight(light.at[0], light.at[1], light.level);
+        }
+
+        function finishScan(outcome) {
+            if (!renderer || outcome === 'cancelled') return;
+            var at = centreOf('[data-fx-origin="refresh"]') || [0.5, 0.5];
+            var p3 = renderer.p3;
+            if (outcome === 'failure') {
+                renderer.shock(at[0], at[1], readColor('--app-danger-soft', [0.949, 0.533, 0.533], p3), 1);
+            } else if (outcome === 'timeout') {
+                renderer.shock(at[0], at[1], readColor('--app-accent-warm', [0.945, 0.714, 0.388], p3), 0.35);
+            } else {
+                renderer.shock(at[0], at[1], readColor('--app-accent', [0.576, 0.706, 0.961], p3), 0);
+            }
+            if (outcome === 'recovered') {
+                // Red → all green is the one moment on an ops page that has earned a flourish.
+                var o = centreOf('[data-fx-origin="health"]') || [0.5, 0.35];
+                later(0.25, function () { renderer.burst(o[0], o[1], 1); });
+                later(0.45, function () { renderer.burst(o[0] - 0.2, o[1] + 0.08, 0.6); });
+                later(0.60, function () { renderer.burst(o[0] + 0.2, o[1] + 0.08, 0.6); });
+            }
+        }
+
+        document.addEventListener('app:refresh', function (e) {
+            var d = e.detail || {};
+            if (d.phase === 'start') {
+                scan.active = true; scan.indeterminate = false; scan.target = scan.shown = 0;
+            } else if (d.phase === 'progress') {
+                scan.indeterminate = false;
+                scan.target = Math.max(0, Math.min(1, (d.percent || 0) / 100));
+            } else if (d.phase === 'indeterminate') {
+                scan.indeterminate = true;
+            } else if (d.phase === 'end') {
+                scan.active = false;
+                finishScan(d.outcome);
+            }
+        });
+
+        /** One comet: five small bursts along a diagonal, 70ms apart — a wake, not a dot. */
+        function comet(delay) {
+            var u = 0.08 + Math.random() * 0.55, v = 0.02 + Math.random() * 0.15;
+            var du = 0.07 + Math.random() * 0.04, dv = 0.05 + Math.random() * 0.03;
+            later(delay, function () { if (window.audioKit) window.audioKit.play('arrive'); });
+            for (var k = 0; k < 5; k++) {
+                (function (k) {
+                    later(delay + k * 0.07, function () { renderer.burst(u + du * k, v + dv * k, 0.55); });
+                })(k);
+            }
+        }
+
+        window.appFx.comets = function (n) {
+            n = Math.min(6, Math.max(0, n | 0));
+            if (!renderer) { fallbackComets(n); return; }
+            for (var c = 0; c < n; c++) comet(0.6 + c * 0.9);
+        };
+
+        // Pointer light. Mouse leaving the window drops it; a touch screen gets it from tilt
+        // instead. iOS gates deviceorientation behind a permission prompt, and a decorative
+        // highlight is not worth asking for one, so there it simply never fires.
+        window.addEventListener('pointermove', function (e) {
+            light.goal = [e.clientX / window.innerWidth, e.clientY / window.innerHeight];
+            light.want = 1;
+        }, { passive: true });
+        document.documentElement.addEventListener('mouseleave', function () { light.want = 0; });
+        if (window.matchMedia('(pointer: coarse)').matches) {
+            window.addEventListener('deviceorientation', function (e) {
+                if (e.gamma == null || e.beta == null) return;
+                var clamp = function (x) { return x < -1 ? -1 : (x > 1 ? 1 : x); };
+                light.goal = [0.5 + clamp(e.gamma / 40) * 0.45, 0.5 + clamp((e.beta - 45) / 40) * 0.45];
+                light.want = 0.8;
+            }, { passive: true });
+        }
+
         // ── Sizing ──────────────────────────────────────────────────────────────────────
         function applySize() {
             if (!renderer) return;
@@ -154,7 +318,7 @@
         // ── Build / teardown ────────────────────────────────────────────────────────────
         function attach(r) {
             renderer = r;
-            renderer.setColors(palette());
+            renderer.setColors(palette(renderer.p3));
             if (window.motionKit) {
                 renderer.setQuality(window.motionKit.quality);
                 qualitySub = window.motionKit.onQuality(function (q) {
@@ -172,6 +336,7 @@
             subscription = window.motionKit.subscribe('app-gpu-backdrop', function (dt, elapsed) {
                 var energy = window.audioKit ? window.audioKit.energy() : 0;
                 collectGlass(performance.now());
+                tickFx(dt);
                 renderer.frame(dt, elapsed, energy);
             }, { fps: 30 });
 
@@ -229,8 +394,11 @@
 
         var scheme = window.matchMedia('(prefers-color-scheme: dark)');
         if (scheme.addEventListener) {
-            scheme.addEventListener('change', function () { if (renderer) renderer.setColors(palette()); });
+            scheme.addEventListener('change', function () { if (renderer) renderer.setColors(palette(renderer.p3)); });
         }
+        // An explicit header toggle changes the tokens without any media query changing, so
+        // it needs its own signal — before this the backdrop kept the old theme's accents.
+        document.addEventListener('app:theme', function () { if (renderer) renderer.setColors(palette(renderer.p3)); });
 
         // Registered whether or not the query matches at load — the previous version
         // returned early before reaching this line, so a visitor who arrived with
@@ -248,9 +416,19 @@
         window.gpuBackdrop = {
             get tier() { return renderer ? renderer.tier : null; },
             get status() { return canvas.dataset.gpu || null; },
-            get glassRects() { return glassSig ? glassSig.split(';').length - 1 : 0; }
+            get glassRects() { return glassSig ? glassSig.split(';').length - 1 : 0; },
+            get sweep() { return Math.round(scan.strength * 100) / 100; }
         };
     }
+
+    /** No GPU layer (reduced motion, minimal device, no WebGL): the arrivals are still heard. */
+    function fallbackComets(n) {
+        if (n > 0 && window.audioKit) window.audioKit.play('arrive');
+    }
+
+    // Defined before start() so a page can call it whatever the layer ends up doing;
+    // start() swaps in the real one once a renderer exists.
+    window.appFx = { comets: fallbackComets };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start, { once: true });

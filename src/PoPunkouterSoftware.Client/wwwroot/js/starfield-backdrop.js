@@ -65,6 +65,11 @@
     function readColor(name, fallback) {
         var raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         if (!raw) return fallback;
+        // Wide-gamut accent tokens (modern-ui.css). Three.js draws sRGB here, so the P3
+        // coordinates are used as-is — slightly duller than the CSS, never wrong-hued. The
+        // generic branch below would read the "3" of "p3" as the red channel.
+        var wide = raw.match(/^color\(display-p3\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+        if (wide) return [+wide[1], +wide[2], +wide[3]];
         if (raw[0] === '#') {
             var hex = raw.slice(1);
             if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];

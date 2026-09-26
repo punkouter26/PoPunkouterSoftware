@@ -1,3 +1,4 @@
+using Microsoft.JSInterop;
 using PoPunkouterSoftware.Shared;
 using System.Net.Http.Json;
 
@@ -31,6 +32,10 @@ public partial class SignIns
 
     /// <summary>Cost per person, dearest first — held for the same reason as the reach points.</summary>
     private List<OpsMetricPoint> _costPoints = new();
+
+    /// <summary>Comets play once per visit, on the first load — a window switch re-reads the
+    /// same recent arrivals and must not replay them.</summary>
+    private bool _cometsPlayed;
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -75,6 +80,12 @@ public partial class SignIns
                     .OrderByDescending(a => a.CostPerPerson)
                     .Select(a => new OpsMetricPoint(a.App, a.CostPerPerson!.Value))
                     .ToList();
+
+                if (!_cometsPlayed)
+                {
+                    _cometsPlayed = true;
+                    await PlayArrivalsAsync(loaded);
+                }
             }
         }
         catch (Exception ex)
@@ -88,5 +99,26 @@ public partial class SignIns
             _loading = false;
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// One comet across the GPU backdrop (and one soft pluck, if sound is on) per sign-in in
+    /// the last 24 hours, capped at six by js/gpu-backdrop.js. 24h rather than 1h: at this
+    /// estate's traffic an hour is nearly always empty, and "who showed up today" is the
+    /// question the page opens on. Decorative, so every interop failure is swallowed.
+    /// </summary>
+    private async Task PlayArrivalsAsync(SignInReport loaded)
+    {
+        var since = DateTime.UtcNow.AddHours(-24);
+        var arrivals = loaded.Recent.Count(e => e.Timestamp >= since);
+        if (arrivals == 0)
+            return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("appFx.comets", arrivals);
+        }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
     }
 }
