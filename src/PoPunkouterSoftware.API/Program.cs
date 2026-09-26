@@ -5,6 +5,7 @@ using Azure.ResourceManager;
 using OpenTelemetry;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Instrumentation.Http;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using PoPunkouterSoftware.API;
@@ -119,13 +120,14 @@ try
 
             // Cost cap: drop the noisy ASP.NET HTTP client/hosting pre-aggregated meters.
             // They were the #1 ingestion source for this app (~80% of the last 3-day bill)
-            // and are mostly duplicates of traces already captured. Flip the flag off to
-            // re-enable at runtime via configuration without a redeploy.
+            // and are mostly duplicates of traces already captured. Set the flag to true to
+            // re-enable via configuration without a redeploy. OTel has no "remove meter" —
+            // a view returning Drop is how an instrument is suppressed.
             if (!builder.Configuration.GetValue("ApplicationInsights:EnableAspNetCoreMeters", false))
             {
-                // Names match the AspNetCore.Hosting / AspNetCore.HttpClient instrumentations.
-                m.RemoveMeter("Microsoft.AspNetCore.Hosting");
-                m.RemoveMeter("Microsoft.AspNetCore.HttpClient");
+                m.AddView(i => i.Meter.Name is "Microsoft.AspNetCore.Hosting" or "System.Net.Http"
+                    ? MetricStreamConfiguration.Drop
+                    : null);
             }
         })
         // Custom spans (background refresh root + per-step children) — without this source
