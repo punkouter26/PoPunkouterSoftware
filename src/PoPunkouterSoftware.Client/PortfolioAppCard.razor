@@ -30,7 +30,12 @@
                the fold by definition. Every other card stays lazy. *@
             <img src="@App.ScreenshotUrl" alt="@($"Preview of {App.Name}")"
                  loading="@(IsFirst ? "eager" : "lazy")" fetchpriority="@(IsFirst ? "high" : "auto")"
-                 decoding="async" width="1600" height="1000" />
+                 decoding="async" width="1600" height="1000"
+                 onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='grid';" />
+            <div class="app-screenshot-thumb app-screenshot-thumb--missing" style="display:none; width:100%; height:100%;">
+                <RadzenIcon Icon="image" />
+                <span>Preview unavailable</span>
+            </div>
         </div>
     }
     else

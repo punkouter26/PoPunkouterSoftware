@@ -181,12 +181,38 @@ internal static partial class PortfolioEndpoints
     private static readonly IReadOnlyDictionary<string, LighthouseScores> EmptyScores = new Dictionary<string, LighthouseScores>();
 
     private static async Task<IResult> GetScreenshot(
-        string host, AppScreenshotService screenshots, HttpContext http, CancellationToken ct)
+        string host, IWebHostEnvironment env, AzureReportStore store, AppScreenshotService screenshots,
+        HttpContext http, ILogger<Program> logger, CancellationToken ct)
     {
         if (!HostPattern().IsMatch(host))
             return Results.BadRequest(new { error = "Invalid host." });
 
         var stream = await screenshots.OpenReadAsync(host, ct);
+        if (stream is null)
+        {
+            // On-demand capture fallback: find matching app URL from catalog or inventory
+            try
+            {
+                var (_, services) = await LoadInventoryAsync(env, store, logger, ct);
+                var metadata = await LoadMetadataAsync(env, logger, ct);
+                var targets = AppScreenshotService.CombinedTargets(env, new AzureReport
+                {
+                    WebServices = new WebServicesInfo { Services = services }
+                });
+
+                var target = targets.FirstOrDefault(t => string.Equals(t.Host, host, StringComparison.OrdinalIgnoreCase));
+                if (target.Url is not null)
+                {
+                    logger.LogInformation("No screenshot exists for {Host} — navigating to {Url} to capture live", host, target.Url);
+                    stream = await screenshots.CaptureOneAsync(host, target.Url, ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Live screenshot capture on demand failed for {Host}", host);
+            }
+        }
+
         if (stream is null)
             return Results.NotFound();
 
@@ -263,7 +289,7 @@ internal static partial class PortfolioEndpoints
                 !string.IsNullOrWhiteSpace(service?.Description) ? service.Description : $"Open {name}.",
             Url = url,
             Status = status,
-            ScreenshotUrl = hasScreenshot ? $"/api/portfolio/screenshots/{host}?v={version}" : null,
+            ScreenshotUrl = host is not null ? $"/api/portfolio/screenshots/{host}?v={version}" : null,
             Scores = host is not null && scores.TryGetValue(host, out var score) ? score : null,
         };
     }

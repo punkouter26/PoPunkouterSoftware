@@ -311,11 +311,6 @@ public class AppScreenshotService
         {
             _lastAttemptUtc = DateTimeOffset.UtcNow;
             var container = await GetContainerAsync(ct);
-            if (container is null)
-            {
-                _logger.LogWarning("Screenshot capture skipped — blob storage unavailable");
-                return;
-            }
 
             using var pw = await CreatePlaywrightWithBrowserAsync();
             if (pw is null)
@@ -323,6 +318,20 @@ public class AppScreenshotService
 
             await using var browser = await pw.Chromium.LaunchAsync(new() { Headless = true });
             var captured = 0;
+
+            string? localDir = null;
+            if (_env is not null)
+            {
+                try
+                {
+                    localDir = ReportFileCache.GetScreenshotsDir(_env);
+                    Directory.CreateDirectory(localDir);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Could not ensure local screenshots directory");
+                }
+            }
 
             foreach (var (host, url) in targets)
             {
@@ -333,6 +342,8 @@ public class AppScreenshotService
                     {
                         ViewportSize = new() { Width = ViewportWidth, Height = ViewportHeight },
                         IsMobile = true,
+                        HasTouch = true,
+                        DeviceScaleFactor = 2,
                     });
                     try
                     {
@@ -344,10 +355,37 @@ public class AppScreenshotService
                         catch (System.TimeoutException) { }
 
                         var png = await page.ScreenshotAsync(new() { Type = ScreenshotType.Png });
-                        await container.GetBlobClient($"{host}.png").UploadAsync(
-                            new BinaryData(png),
-                            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = "image/png" } },
-                            ct);
+
+                        // 1. Persist to Blob Storage if container is active
+                        if (container is not null)
+                        {
+                            try
+                            {
+                                await container.GetBlobClient($"{host}.png").UploadAsync(
+                                    new BinaryData(png),
+                                    new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = "image/png" } },
+                                    ct);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to upload screenshot to blob storage for {Host}", host);
+                            }
+                        }
+
+                        // 2. Persist to local disk so immediate and offline loads serve it
+                        if (localDir is not null)
+                        {
+                            try
+                            {
+                                var localPath = Path.Combine(localDir, $"{host}.png");
+                                await File.WriteAllBytesAsync(localPath, png, ct);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogDebug(ex, "Failed to write local screenshot for {Host}", host);
+                            }
+                        }
+
                         captured++;
                     }
                     finally
@@ -366,6 +404,91 @@ public class AppScreenshotService
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(ex, "Screenshot capture run failed");
+        }
+        finally
+        {
+            _captureLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Captures a screenshot on-demand for a single target, saving to both local disk and blob storage.
+    /// </summary>
+    public async Task<Stream?> CaptureOneAsync(string host, string url, CancellationToken ct = default)
+    {
+        if (!ScreenshotsEnabled)
+            return null;
+
+        await _captureLock.WaitAsync(ct);
+        try
+        {
+            var container = await GetContainerAsync(ct);
+            using var pw = await CreatePlaywrightWithBrowserAsync();
+            if (pw is null)
+                return null;
+
+            await using var browser = await pw.Chromium.LaunchAsync(new() { Headless = true });
+            var page = await browser.NewPageAsync(new()
+            {
+                ViewportSize = new() { Width = ViewportWidth, Height = ViewportHeight },
+                IsMobile = true,
+                HasTouch = true,
+                DeviceScaleFactor = 2,
+            });
+
+            try
+            {
+                try
+                {
+                    await page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30_000 });
+                }
+                catch (System.TimeoutException) { }
+
+                var png = await page.ScreenshotAsync(new() { Type = ScreenshotType.Png });
+
+                // 1. Upload to Blob Storage if available
+                if (container is not null)
+                {
+                    try
+                    {
+                        await container.GetBlobClient($"{host}.png").UploadAsync(
+                            new BinaryData(png),
+                            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = "image/png" } },
+                            ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to upload on-demand screenshot to blob storage for {Host}", host);
+                    }
+                }
+
+                // 2. Save to local disk cache
+                if (_env is not null)
+                {
+                    try
+                    {
+                        var localDir = ReportFileCache.GetScreenshotsDir(_env);
+                        Directory.CreateDirectory(localDir);
+                        var localPath = Path.Combine(localDir, $"{host}.png");
+                        await File.WriteAllBytesAsync(localPath, png, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Failed to save on-demand screenshot to disk for {Host}", host);
+                    }
+                }
+
+                return new MemoryStream(png);
+            }
+            finally
+            {
+                await page.CloseAsync();
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "On-demand screenshot capture failed for {Host}", host);
+            return null;
         }
         finally
         {
