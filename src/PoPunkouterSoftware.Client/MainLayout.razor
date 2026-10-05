@@ -57,53 +57,9 @@
                 <a href="/users" class="app-topbar-link @NavClass("/users")">
                     <span class="material-symbols-outlined" aria-hidden="true">group</span>Users
                 </a>
-                <a href="/settings" class="app-topbar-link @NavClass("/settings")">
-                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>Settings
-                </a>
             </div>
 
             <div class="app-topbar-session">
-                @* Theme toggle. Same treatment as the sound toggle below it and for the same
-                   reasons: wired by DELEGATION from js/theme-kit.js (this layout is static
-                   SSR, so @onclick never fires, and enhanced navigation re-inserts the header
-                   on every page change, which would lose a direct listener or double-bind it),
-                   and rendered in the OS-following state on the server because that is the
-                   honest default — theme-kit.js corrects the glyph, the label and the
-                   `data-theme-state` attribute the moment it runs.
-
-                   `dark_mode` is the server-rendered glyph, not a guess: with no stored
-                   choice the OS decides, and a moon is the one state that reads correctly
-                   whether the visitor is on a dark OS (already in that state) or a light one
-                   (one click away). No `aria-pressed`: the control has three states — follow
-                   the system, light, dark — and `aria-pressed` cannot express that without
-                   lying. The accessible name carries the state instead. *@
-                @* Quick Command Palette (Ctrl+K / Cmd+K) trigger *@
-                <button type="button" class="app-topbar-search" data-palette-toggle
-                        aria-label="Open command palette (Ctrl+K)"
-                        title="Search apps, navigate, and run commands (Ctrl+K)">
-                    <span class="material-symbols-outlined" aria-hidden="true">search</span>
-                    <kbd class="app-topbar-kbd">Ctrl K</kbd>
-                </button>
-                <button type="button" class="app-topbar-theme" data-theme-toggle
-                        data-theme-state="system"
-                        aria-label="Theme follows your system setting. Switch theme"
-                        title="Theme follows your system setting. Switch theme">
-                    <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>
-                </button>
-                @* Sound toggle. Wired from js/audio-kit.js by DELEGATION on document, not by
-                   a Blazor @onclick (which can never fire here) and not by a direct listener
-                   either — enhanced navigation re-inserts this header on every page change,
-                   which would lose a bound listener or double-bind it.
-
-                   Rendered in the OFF state on the server unconditionally. The real value
-                   lives in localStorage and is applied by audio-kit.js the moment it runs;
-                   guessing "on" here would flash a speaker icon at a visitor who has never
-                   enabled sound. Silence is the default and the markup says so. *@
-                <button type="button" class="app-topbar-sound" data-sound-toggle aria-pressed="false"
-                        aria-label="Turn sound on"
-                        title="Sound off — click to enable interface and status audio">
-                    <span class="material-symbols-outlined" aria-hidden="true">volume_off</span>
-                </button>
                 <button type="button" class="app-topbar-menu" aria-expanded="false" aria-controls="app-topbar-drawer"
                         aria-label="Toggle navigation menu">
                     <span class="material-symbols-outlined" aria-hidden="true">menu</span>
