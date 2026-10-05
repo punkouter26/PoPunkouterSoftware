@@ -46,18 +46,29 @@
 
     @if (data is not null && data.Apps.Count > 0)
     {
-        <div class="portfolio-summary" aria-live="polite">
-            <strong>@data.Apps.Count apps</strong>
-            @if (data.GeneratedAt is DateTime updated)
-            {
-                @* Focusable because the exact read time exists nowhere else on the page: the
-                   visible text is relative, and `title` — which is what this used to be —
-                   never appears on a touch device and is not announced on focus. *@
-                <AppHint Class="@(data.Stale ? "is-stale" : "")" Focusable="true"
-                         Text="@($"Last read {updated:u}.{(data.Stale ? " This page treats that as stale; the server rescans a stale inventory on its own." : "")} The list is re-read on every visit, and weekly in a tab left open.")">
-                    Inventory updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
-                </AppHint>
-            }
+        <div class="portfolio-action-bar" role="search" aria-label="Filter web applications">
+            <div class="portfolio-search-box">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input type="search" class="portfolio-search-input" placeholder="Search apps by name, description or host..."
+                       @bind="_searchQuery" @bind:event="oninput" aria-label="Search apps" />
+                @if (!string.IsNullOrWhiteSpace(_searchQuery))
+                {
+                    <button type="button" class="portfolio-search-clear" aria-label="Clear search" @onclick="@(() => _searchQuery = string.Empty)">×</button>
+                }
+            </div>
+            <div class="portfolio-summary" aria-live="polite">
+                <strong>@FilteredApps.Count of @data.Apps.Count apps</strong>
+                @if (data.GeneratedAt is DateTime updated)
+                {
+                    @* Focusable because the exact read time exists nowhere else on the page: the
+                       visible text is relative, and `title` — which is what this used to be —
+                       never appears on a touch device and is not announced on focus. *@
+                    <AppHint Class="@(data.Stale ? "is-stale" : "")" Focusable="true"
+                             Text="@($"Last read {updated:u}.{(data.Stale ? " This page treats that as stale; the server rescans a stale inventory on its own." : "")} The list is re-read on every visit, and weekly in a tab left open.")">
+                        Updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
+                    </AppHint>
+                }
+            </div>
         </div>
     }
 
@@ -82,13 +93,21 @@
     }
     else if (data is not null)
     {
-        <section class="app-grid cards" aria-label="Web applications">
-            @for (var i = 0; i < data.Apps.Count; i++)
-            {
-                var app = data.Apps[i];
-                <PortfolioAppCard @key="app.Id" App="app" IsFirst="@(i == 0)" />
-            }
-        </section>
+        var apps = FilteredApps;
+        if (apps.Count == 0)
+        {
+            <div class="app-empty-state">No apps match "@_searchQuery".</div>
+        }
+        else
+        {
+            <section class="app-grid cards" aria-label="Web applications">
+                @for (var i = 0; i < apps.Count; i++)
+                {
+                    var app = apps[i];
+                    <PortfolioAppCard @key="app.Id" App="app" IsFirst="@(i == 0)" />
+                }
+            </section>
+        }
     }
 </main>
 
@@ -98,6 +117,14 @@
     private bool _buildMismatchDismissed;
     private bool _loading;
     private string? _loadError;
+    private string _searchQuery = string.Empty;
+    private IReadOnlyList<PortfolioApp> FilteredApps =>
+        data?.Apps is null ? []
+        : string.IsNullOrWhiteSpace(_searchQuery) ? data.Apps
+        : data.Apps.Where(a =>
+            a.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+            (!string.IsNullOrEmpty(a.Description) && a.Description.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(a.Url) && a.Url.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))).ToList();
 
     // Auto-refresh: every visit reads the catalog fresh, and a tab left open re-reads it
     // weekly. There is no manual "Reload catalog" button any more — the owner's call

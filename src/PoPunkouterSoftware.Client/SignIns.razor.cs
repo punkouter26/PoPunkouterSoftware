@@ -25,6 +25,15 @@ public partial class SignIns
     public int? QueryDays { get; set; }
 
     private int _windowDays = 30;
+    private string _personSearch = string.Empty;
+
+    private IReadOnlyList<SignInPerson> FilteredPeople =>
+        _report?.People is null ? []
+        : string.IsNullOrWhiteSpace(_personSearch) ? _report.People
+        : _report.People.Where(p =>
+            (!string.IsNullOrEmpty(p.DisplayName) && p.DisplayName.Contains(_personSearch, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(p.MaskedEmail) && p.MaskedEmail.Contains(_personSearch, StringComparison.OrdinalIgnoreCase)) ||
+            p.Apps.Any(a => a.Contains(_personSearch, StringComparison.OrdinalIgnoreCase))).ToList();
 
     /// <summary>
     /// Built once per load and held, NOT computed in the markup. MetricBars guards its render

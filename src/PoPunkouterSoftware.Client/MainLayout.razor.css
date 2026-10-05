@@ -37,7 +37,8 @@
    the theme toggle never uses it (it has three states, described on the button itself).
 */
 .app-topbar-sound,
-.app-topbar-theme {
+.app-topbar-theme,
+.app-topbar-search {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -52,10 +53,33 @@
                 background var(--app-dur-fast) var(--app-ease-smooth);
 }
 
+.app-topbar-search {
+    gap: var(--app-space-2xs);
+    padding: 0.35rem 0.55rem;
+}
+
+.app-topbar-kbd {
+    font-size: 0.68rem;
+    font-family: inherit;
+    font-weight: 600;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: var(--app-radius-sm);
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-soft);
+    color: var(--app-text-soft);
+}
+
 .app-topbar-sound:hover,
-.app-topbar-theme:hover {
+.app-topbar-theme:hover,
+.app-topbar-search:hover {
     border-color: var(--app-accent);
     color: var(--app-text);
+}
+
+.app-topbar-search:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 2px;
 }
 
 /* On state is a real colour change, not just an icon swap: the icon glyph alone is a

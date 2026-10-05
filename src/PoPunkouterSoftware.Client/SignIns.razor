@@ -95,8 +95,21 @@
             {
                 <section class="signins-panels">
                     <article class="app-card" data-glass>
-                        <h2 class="signins-panel__title">Everyone who has signed in</h2>
-                        <div class="signins-panel__subtitle" aria-hidden="true">Most recent first</div>
+                        <div class="signins-panel__header">
+                            <div>
+                                <h2 class="signins-panel__title">Everyone who has signed in</h2>
+                                <div class="signins-panel__subtitle" aria-hidden="true">Most recent first</div>
+                            </div>
+                            <div class="signins-search-wrap">
+                                <span class="material-symbols-outlined signins-search-icon" aria-hidden="true">search</span>
+                                <input type="search" class="signins-search-input" placeholder="Filter person or app..."
+                                       @bind="_personSearch" @bind:event="oninput" aria-label="Filter people or apps" />
+                                @if (!string.IsNullOrWhiteSpace(_personSearch))
+                                {
+                                    <button type="button" class="signins-search-clear" aria-label="Clear filter" @onclick="@(() => _personSearch = string.Empty)">×</button>
+                                }
+                            </div>
+                        </div>
                         @* tabindex="0" + role="group" for the same reason the uptime grid
                            carries them: this is a horizontally scrollable region, and with
                            no focus stop a keyboard-only visitor cannot reach anything past
@@ -106,7 +119,7 @@
                            screen where it scrolls. *@
                         <div class="app-table-scroll" tabindex="0" role="group"
                              aria-label="Sign-in roster. Scrolls sideways when the table is wider than this window.">
-                            <SignInRoster People="@report.People" />
+                            <SignInRoster People="@FilteredPeople" />
                         </div>
                     </article>
 

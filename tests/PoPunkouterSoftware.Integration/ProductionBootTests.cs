@@ -49,6 +49,15 @@ public sealed class ProductionApp : WebApplicationFactory<Program>
     protected override Microsoft.Extensions.Hosting.IHost CreateHost(Microsoft.Extensions.Hosting.IHostBuilder builder)
     {
         return base.CreateHost(builder);
+        try
+        {
+            return base.CreateHost(builder);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[CREATEHOST EXCEPTION]: {ex}");
+            throw;
+        }
     }
 }
 

@@ -1624,10 +1624,25 @@ html.is-theme-reveal::view-transition-new(root) {
 
 /* ── Zero-scroll desktop container utility (Audit #21) ─────────────────────── */
 @media (min-width: 1280px) {
-    .app-page--locked {
-        height: calc(100vh - 64px);
-        overflow: hidden;
+    .app-page--locked,
+    html[data-zero-scroll="true"] .app-page {
+        max-height: calc(100vh - 72px);
+        overflow-y: auto;
+        overflow-x: hidden;
     }
+}
+
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+}
+
+html[data-reduce-motion="true"] #app-gpu-backdrop,
+html[data-reduce-motion="true"] #catalog-starfield {
+    display: none !important;
 }
 
 

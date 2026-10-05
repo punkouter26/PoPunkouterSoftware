@@ -58,6 +58,66 @@
     max-width: 60ch;
 }
 
+/* ── Universal action bar (search + summary) ───────────────────────── */
+.portfolio-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--app-space-md);
+    padding: var(--app-space-xs) var(--app-space-sm);
+    background: var(--app-surface-soft);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-lg);
+}
+
+.portfolio-search-box {
+    display: flex;
+    align-items: center;
+    gap: var(--app-space-xs);
+    flex: 1 1 280px;
+    max-width: 440px;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-pill);
+    padding: 0 var(--app-space-sm);
+    height: 38px;
+    transition: border-color var(--app-dur-fast) var(--app-ease-smooth);
+}
+
+.portfolio-search-box:focus-within {
+    border-color: var(--app-accent);
+}
+
+.portfolio-search-box .material-symbols-outlined {
+    font-size: 1.15rem;
+    color: var(--app-text-muted);
+}
+
+.portfolio-search-input {
+    flex: 1 1 auto;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--app-text);
+    font-size: 0.88rem;
+    min-width: 0;
+}
+
+.portfolio-search-clear {
+    background: transparent;
+    border: 0;
+    color: var(--app-text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+.portfolio-search-clear:hover {
+    color: var(--app-text);
+}
+
 /* ── Freshness summary row ───────────────────────────────────────────────────
    `display: flex` + `gap` is the rule that keeps the count, the "updated N ago"
    text and the auto-update note apart. */

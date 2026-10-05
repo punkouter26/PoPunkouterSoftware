@@ -524,6 +524,7 @@ try
 }
 catch (Exception ex)
 {
+    Console.Error.WriteLine($"[STARTUP FATAL ERROR]: {ex}");
     Log.Fatal(ex, "PoPunkouterSoftware terminated unexpectedly");
 }
 finally

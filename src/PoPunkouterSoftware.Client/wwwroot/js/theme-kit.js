@@ -31,6 +31,7 @@
     'use strict';
 
     var KEY = 'pops:theme';
+    var DENSITY_KEY = 'pops:density';
     var root = document.documentElement;
     var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -38,6 +39,30 @@
     // adding a name here without adding it to SCRIPTS/Build-IconFontSubset.py renders the
     // literal word "dark_mode" in the button (see the icon-font note in CLAUDE.md).
     var ICON = { dark: 'dark_mode', light: 'light_mode' };
+
+    function readDensity() {
+        try {
+            return localStorage.getItem(DENSITY_KEY) === 'true';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function setDensity(isCompact) {
+        try {
+            if (isCompact) localStorage.setItem(DENSITY_KEY, 'true');
+            else localStorage.removeItem(DENSITY_KEY);
+        } catch (e) { }
+        applyDensity();
+    }
+
+    function applyDensity() {
+        if (readDensity()) {
+            root.setAttribute('data-compact', 'true');
+        } else {
+            root.removeAttribute('data-compact');
+        }
+    }
 
     function read() {
         try {
@@ -174,11 +199,14 @@
 
     // Apply before anything else can paint content, then hydrate the toggle.
     apply();
+    applyDensity();
     syncToggle();
 
     window.themeKit = {
         get preference() { return read(); },
         get effective() { return effective(); },
+        get isCompact() { return readDensity(); },
+        setDensity: setDensity,
         set: set,
         toggle: toggle,
         sync: syncToggle

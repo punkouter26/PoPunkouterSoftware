@@ -14,6 +14,7 @@ public class LocalStorageUserSettingsService(IJSRuntime js) : IUserSettingsServi
         {
             var themeVal = await js.InvokeAsync<string?>("localStorage.getItem", "pops:theme");
             var soundVal = await js.InvokeAsync<string?>("localStorage.getItem", "pops:sound");
+            var densityVal = await js.InvokeAsync<string?>("localStorage.getItem", "pops:density");
             var json = await js.InvokeAsync<string?>("localStorage.getItem", StorageKey);
 
             var settings = !string.IsNullOrWhiteSpace(json)
@@ -28,6 +29,10 @@ public class LocalStorageUserSettingsService(IJSRuntime js) : IUserSettingsServi
             if (soundVal == "1")
             {
                 settings.SoundEnabled = true;
+            }
+            if (densityVal == "true")
+            {
+                settings.CompactDensity = true;
             }
 
             _cached = settings;
@@ -63,8 +68,27 @@ public class LocalStorageUserSettingsService(IJSRuntime js) : IUserSettingsServi
             // Synchronize audio kit
             await js.InvokeVoidAsync("audioKit.setEnabled", settings.SoundEnabled);
 
-            // Synchronize compact density attribute on html element
-            await js.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-compact', '{settings.CompactDensity.ToString().ToLowerInvariant()}')");
+            // Synchronize compact density attribute on html element and storage
+            await js.InvokeVoidAsync("themeKit.setDensity", settings.CompactDensity);
+
+            // Synchronize zero-scroll and reduced motion attributes on html element
+            if (settings.DesktopZeroScroll)
+            {
+                await js.InvokeVoidAsync("eval", "document.documentElement.setAttribute('data-zero-scroll', 'true')");
+            }
+            else
+            {
+                await js.InvokeVoidAsync("eval", "document.documentElement.removeAttribute('data-zero-scroll')");
+            }
+
+            if (settings.ReduceAnimations)
+            {
+                await js.InvokeVoidAsync("eval", "document.documentElement.setAttribute('data-reduce-motion', 'true')");
+            }
+            else
+            {
+                await js.InvokeVoidAsync("eval", "document.documentElement.removeAttribute('data-reduce-motion')");
+            }
         }
         catch
         {
