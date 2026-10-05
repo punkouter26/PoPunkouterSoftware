@@ -40,6 +40,14 @@ public static class ReportFileCache
             ? Path.Combine(env.WebRootPath, "data")
             : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "data"));
 
+    /// <summary>
+    /// Local screenshots directory fallback when blob storage is unavailable or offline.
+    /// </summary>
+    public static string GetScreenshotsDir(IWebHostEnvironment env) =>
+        env.WebRootPath is not null
+            ? Path.Combine(env.WebRootPath, "screenshots")
+            : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "screenshots"));
+
     public static string GetReportPath(IWebHostEnvironment env) =>
         Path.Combine(GetCacheDir(env), ReportFileName);
 

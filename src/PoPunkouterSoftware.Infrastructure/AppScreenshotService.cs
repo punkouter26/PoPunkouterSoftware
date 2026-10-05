@@ -59,10 +59,13 @@ public class AppScreenshotService
         }
     }
 
-    public AppScreenshotService(ILogger<AppScreenshotService> logger, IConfiguration config)
+    private readonly IWebHostEnvironment? _env;
+
+    public AppScreenshotService(ILogger<AppScreenshotService> logger, IConfiguration config, IWebHostEnvironment? env = null)
     {
         _logger = logger;
         _config = config;
+        _env = env;
     }
 
     /// <summary>
@@ -175,6 +178,28 @@ public class AppScreenshotService
     public async Task<Dictionary<string, long>> ListVersionsAsync(CancellationToken ct = default)
     {
         var versions = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+        // Fallback: check local disk cache first (or alongside) if environment is available
+        if (_env is not null)
+        {
+            try
+            {
+                var localDir = ReportFileCache.GetScreenshotsDir(_env);
+                if (Directory.Exists(localDir))
+                {
+                    foreach (var file in Directory.EnumerateFiles(localDir, "*.png"))
+                    {
+                        var name = Path.GetFileNameWithoutExtension(file);
+                        versions[name] = new DateTimeOffset(File.GetLastWriteTimeUtc(file)).ToUnixTimeSeconds();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not check local screenshots directory");
+            }
+        }
+
         var container = await GetContainerAsync(ct);
         if (container is null)
             return versions;
@@ -189,7 +214,7 @@ public class AppScreenshotService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not list app screenshots");
+            _logger.LogWarning(ex, "Could not list app screenshots from blob storage");
         }
         return versions;
     }
@@ -234,19 +259,36 @@ public class AppScreenshotService
     public async Task<Stream?> OpenReadAsync(string host, CancellationToken ct = default)
     {
         var container = await GetContainerAsync(ct);
-        if (container is null)
-            return null;
+        if (container is not null)
+        {
+            try
+            {
+                var blob = container.GetBlobClient($"{host}.png");
+                if (await blob.ExistsAsync(ct))
+                    return await blob.OpenReadAsync(cancellationToken: ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not read screenshot for {Host} from blob storage", host);
+            }
+        }
 
-        try
+        // Local filesystem fallback
+        if (_env is not null)
         {
-            var blob = container.GetBlobClient($"{host}.png");
-            return await blob.ExistsAsync(ct) ? await blob.OpenReadAsync(cancellationToken: ct) : null;
+            try
+            {
+                var localPath = Path.Combine(ReportFileCache.GetScreenshotsDir(_env), $"{host}.png");
+                if (File.Exists(localPath))
+                    return File.OpenRead(localPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not read local screenshot for {Host}", host);
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not read screenshot for {Host}", host);
-            return null;
-        }
+
+        return null;
     }
 
     /// <summary>
