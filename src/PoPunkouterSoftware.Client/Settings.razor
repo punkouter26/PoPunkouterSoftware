@@ -102,22 +102,6 @@
                     </div>
                     <RadzenSwitch @bind-Value="_settings.AutoRefreshEnabled" Change="@(_ => OnSaveAsync())" />
                 </div>
-
-                <div class="settings-group settings-toggle-row">
-                    <div>
-                        <strong>Desktop Zero-Scroll Locking</strong>
-                        <div class="app-note">Lock viewport to 100vh on wide screens and scroll only internal tables and cards.</div>
-                    </div>
-                    <RadzenSwitch @bind-Value="_settings.DesktopZeroScroll" Change="@(_ => OnSaveAsync())" />
-                </div>
-
-                <div class="settings-group settings-toggle-row">
-                    <div>
-                        <strong>Minimal Motion &amp; Animations</strong>
-                        <div class="app-note">Disable canvas particles, 3D backdrops and layout transitions for maximum performance.</div>
-                    </div>
-                    <RadzenSwitch @bind-Value="_settings.ReduceAnimations" Change="@(_ => OnSaveAsync())" />
-                </div>
             </section>
 
             <!-- Reset to Defaults -->

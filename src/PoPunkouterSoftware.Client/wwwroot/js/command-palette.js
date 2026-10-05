@@ -183,15 +183,6 @@
         if (window.audioKit) window.audioKit.play('close');
     }
 
-    document.addEventListener('click', function (e) {
-        if (!e.target || !e.target.closest) return;
-        var btn = e.target.closest('[data-palette-toggle]');
-        if (btn) {
-            e.preventDefault();
-            if (isOpen) close(); else open();
-        }
-    });
-
     document.addEventListener('keydown', function (e) {
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
             e.preventDefault();
