@@ -1,0 +1,17 @@
+@* Reusable KPI tile for metrics with support for sparklines and status tones *@
+
+<div class="kpi-tile @(Tone is not null ? $"kpi-tile--{Tone}" : "")">
+    <strong>@Value</strong>
+    <span>@Label</span>
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Tone { get; set; } // "good", "warn", "bad", "accent"
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -83,6 +83,13 @@
        five breakpoints this file and AzureDashboard.razor.css used to carry. Change the
        dial, not the steps. */
     --app-density: 1;
+}
+
+:root[data-compact="true"] {
+    --app-density: 0.82;
+}
+
+:root {
     --app-space-3xs: calc(0.25rem * var(--app-density));
     --app-space-2xs: calc(0.35rem * var(--app-density));
     --app-space-xs: calc(0.5rem * var(--app-density));
@@ -765,7 +772,8 @@ a {
     gap: var(--app-space-xs);
 }
 
-.app-kpis > div {
+.app-kpis > div,
+.app-kpis .kpi-tile {
     display: grid;
     gap: .15rem;
     align-content: start;
@@ -1480,3 +1488,113 @@ html.is-theme-reveal::view-transition-new(root) {
         display: none;
     }
 }
+
+/* ── Command Palette (Cmd+K) ─────────────────────────────────────────────── */
+.app-palette-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+}
+
+.app-palette-backdrop.is-open {
+    display: flex;
+}
+
+.app-palette-modal {
+    width: min(600px, 92vw);
+    background: var(--app-surface-strong);
+    border: 1px solid var(--app-border-strong);
+    border-radius: var(--app-radius-xl);
+    box-shadow: var(--app-shadow-lg);
+    overflow: hidden;
+    animation: app-palette-drop 160ms var(--app-ease-out) both;
+}
+
+@keyframes app-palette-drop {
+    from { opacity: 0; transform: translateY(-16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.app-palette-header {
+    display: flex;
+    align-items: center;
+    gap: var(--app-space-xs);
+    padding: var(--app-space-sm) var(--app-space-md);
+    border-bottom: 1px solid var(--app-border);
+}
+
+.app-palette-search-icon {
+    color: var(--app-text-muted);
+}
+
+.app-palette-input {
+    flex: 1 1 auto;
+    background: transparent;
+    border: 0;
+    outline: none;
+    font-size: 1rem;
+    color: var(--app-text);
+}
+
+.app-palette-kbd {
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-soft);
+    color: var(--app-text-muted);
+}
+
+.app-palette-list {
+    max-height: 340px;
+    overflow-y: auto;
+    padding: var(--app-space-2xs);
+}
+
+.app-palette-item {
+    display: flex;
+    align-items: center;
+    gap: var(--app-space-sm);
+    padding: var(--app-space-sm);
+    border-radius: var(--app-radius-md);
+    cursor: pointer;
+    transition: background-color var(--app-dur-fast) var(--app-ease-smooth);
+}
+
+.app-palette-item.is-active,
+.app-palette-item:hover {
+    background: var(--app-accent-wash);
+}
+
+.app-palette-item-icon {
+    font-size: 1.2rem;
+    color: var(--app-accent);
+}
+
+.app-palette-item-title {
+    flex: 1 1 auto;
+    font-size: 0.92rem;
+    color: var(--app-text);
+}
+
+.app-palette-item-category {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--app-text-soft);
+}
+
+.app-palette-empty {
+    padding: var(--app-space-lg);
+    text-align: center;
+    color: var(--app-text-muted);
+    font-size: 0.88rem;
+}
+

@@ -1,0 +1,171 @@
+@page "/settings"
+@rendermode WasmRenderModes.Interactive
+@inject IUserSettingsService SettingsService
+@inject NotificationService NotificationService
+@inject IJSRuntime JS
+
+<PageTitle>PoPunkouterSoftware — Settings</PageTitle>
+
+<main id="main-content" class="app-page settings-page" tabindex="-1">
+    <header class="settings-header">
+        <div class="settings-title">
+            <h1>Preferences &amp; Settings</h1>
+            <AppHint Focusable="true"
+                     Text="All settings are stored locally in your browser and default to optimal values. Primary workflow views stay clean and uncluttered." />
+        </div>
+    </header>
+
+    @if (_loading)
+    {
+        <LoadingSkeleton Variant="summary" TileCount="2" AriaLabel="Loading settings" />
+    }
+    else
+    {
+        <div class="settings-grid">
+            <!-- Appearance -->
+            <section class="app-card settings-card" data-glass>
+                <h2>
+                    <span class="material-symbols-outlined" aria-hidden="true">palette</span>
+                    Appearance &amp; Theme
+                </h2>
+                <p class="app-card-copy">Customize color scheme and interface visual density.</p>
+
+                <div class="settings-group">
+                    <label class="settings-label" for="theme-select">Theme Mode</label>
+                    <RadzenDropDown TValue="string"
+                                    @bind-Value="_settings.Theme"
+                                    Data="@_themeOptions"
+                                    TextProperty="Text"
+                                    ValueProperty="Value"
+                                    Style="width: 100%; max-width: 320px;"
+                                    Change="@((object _) => OnSaveAsync())"
+                                    Name="Theme" />
+                </div>
+
+                <div class="settings-group settings-toggle-row">
+                    <div>
+                        <strong>Compact Density Mode</strong>
+                        <div class="app-note">Tighter table padding and reduced whitespace for high-resolution screens.</div>
+                    </div>
+                    <RadzenSwitch @bind-Value="_settings.CompactDensity" Change="@(_ => OnSaveAsync())" />
+                </div>
+            </section>
+
+            <!-- Sound & Audio Feedback -->
+            <section class="app-card settings-card" data-glass>
+                <h2>
+                    <span class="material-symbols-outlined" aria-hidden="true">volume_up</span>
+                    Sound &amp; Audio Feedback
+                </h2>
+                <p class="app-card-copy">Web Audio API procedural sound cues, sonification chords, and haptic feedback.</p>
+
+                <div class="settings-group settings-toggle-row">
+                    <div>
+                        <strong>Enable Interface Audio</strong>
+                        <div class="app-note">Procedural sonification of Azure health, scan completion chords, and button clicks. Muted by default.</div>
+                    </div>
+                    <RadzenSwitch @bind-Value="_settings.SoundEnabled" Change="@(_ => OnSaveAsync())" />
+                </div>
+
+                <div class="settings-actions">
+                    <RadzenButton Text="Test Chime"
+                                  Icon="graphic_eq"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Size="ButtonSize.Small"
+                                  Click="TestAudioAsync"
+                                  Disabled="@(!_settings.SoundEnabled)" />
+                </div>
+            </section>
+
+            <!-- Telemetry & Workflow Defaults -->
+            <section class="app-card settings-card" data-glass>
+                <h2>
+                    <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+                    Telemetry &amp; Defaults
+                </h2>
+                <p class="app-card-copy">Default history windows and background auto-refresh timers.</p>
+
+                <div class="settings-group">
+                    <label class="settings-label">Default Sign-In Activity Window</label>
+                    <RadzenSelectBar TValue="int"
+                                     @bind-Value="_settings.DefaultSignInDays"
+                                     Data="@_windowChoices"
+                                     TextProperty="Text"
+                                     ValueProperty="Value"
+                                     Change="@((int _) => OnSaveAsync())" />
+                </div>
+
+                <div class="settings-group settings-toggle-row">
+                    <div>
+                        <strong>Auto-Refresh Telemetry</strong>
+                        <div class="app-note">Automatically poll and stream fresh telemetry when the tab is kept open.</div>
+                    </div>
+                    <RadzenSwitch @bind-Value="_settings.AutoRefreshEnabled" Change="@(_ => OnSaveAsync())" />
+                </div>
+            </section>
+
+            <!-- Reset to Defaults -->
+            <section class="app-card settings-card settings-card--footer" data-glass>
+                <div>
+                    <strong>Reset to Optimal Defaults</strong>
+                    <div class="app-note">Reverts all preferences to zero-clutter defaults (System theme, muted audio, 30-day window).</div>
+                </div>
+                <RadzenButton Text="Reset Defaults"
+                              Icon="restart_alt"
+                              ButtonStyle="ButtonStyle.Base"
+                              Size="ButtonSize.Small"
+                              Click="ResetDefaultsAsync" />
+            </section>
+        </div>
+    }
+</main>
+
+@code {
+    private AppUserSettings _settings = new();
+    private bool _loading = true;
+
+    private readonly record struct Option(string Text, string Value);
+    private readonly record struct IntOption(string Text, int Value);
+
+    private readonly List<Option> _themeOptions =
+    [
+        new("System Default", "system"),
+        new("Dark Mode", "dark"),
+        new("Light Mode", "light")
+    ];
+
+    private readonly List<IntOption> _windowChoices =
+    [
+        new("7 Days", 7),
+        new("30 Days", 30),
+        new("90 Days", 90)
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SettingsService.GetSettingsAsync();
+        _loading = false;
+    }
+
+    private async Task OnSaveAsync()
+    {
+        await SettingsService.SaveSettingsAsync(_settings);
+        NotificationService.Notify(NotificationSeverity.Success, "Preferences Saved", "Your settings have been updated.", 2500);
+    }
+
+    private async Task TestAudioAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("audioKit.play", "success");
+        }
+        catch { }
+    }
+
+    private async Task ResetDefaultsAsync()
+    {
+        _settings = new AppUserSettings();
+        await SettingsService.SaveSettingsAsync(_settings);
+        NotificationService.Notify(NotificationSeverity.Info, "Defaults Restored", "Settings have been reset to factory defaults.", 2500);
+    }
+}

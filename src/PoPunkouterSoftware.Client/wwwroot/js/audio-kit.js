@@ -280,6 +280,8 @@
         warn: function () { voice({ freq: 520, type: 'square', duration: 0.13, gain: 0.09, cutoff: 1600 }); voice({ freq: 392, type: 'square', duration: 0.18, gain: 0.09, delay: 0.14, cutoff: 1400 }); },
         cancel: function () { voice({ freq: 500, toFreq: 180, type: 'triangle', duration: 0.28, gain: 0.13, cutoff: 1800 }); },
         tick: function () { noise({ freq: 3200, duration: 0.035, gain: 0.06 }); },
+        click: function () { noise({ freq: 4400, duration: 0.012, gain: 0.08 }); },
+        delete: function () { voice({ freq: 380, toFreq: 120, type: 'sawtooth', duration: 0.22, gain: 0.14, cutoff: 1500 }); },
         // The success cadence, then a rising sparkle an octave up: red → all green.
         recovered: function () {
             SFX.success();
@@ -669,6 +671,13 @@
         get enabled() { return enabled; },
         setEnabled: setEnabled,
         toggle: function () { setEnabled(!enabled); },
+        get volume() { return master ? master.gain.value : MASTER_LEVEL; },
+        setVolume: function (v) {
+            MASTER_LEVEL = Math.max(0, Math.min(1, Number(v) || 0.5));
+            if (master && ctx) {
+                master.gain.setValueAtTime(MASTER_LEVEL, ctx.currentTime);
+            }
+        },
 
         /** True only when a context exists AND is actually running. */
         get live() { return !!ctx && ctx.state === 'running'; },

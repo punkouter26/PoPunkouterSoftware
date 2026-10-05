@@ -95,21 +95,16 @@ else if (_summary is not null)
            than two points renders nothing rather than a misleading single dot.
            role="group" is what makes the aria-label count: a bare <div> takes no name. *@
         <div class="app-kpis azure-command-kpis" role="group" aria-label="Azure status summary">
-            <div>
-                <strong>@summary.HealthPercent%</strong>
-                <span>@(summary.BrokenServices == 0 ? "Service health" : $"Health · {summary.BrokenServices} down")</span>
+            <KpiTile Value="@($"{summary.HealthPercent}%")"
+                     Label="@(summary.BrokenServices == 0 ? "Service health" : $"Health · {summary.BrokenServices} down")">
                 <Sparkline Points="@summary.HealthHistory" Tone="good" AriaLabel="Service health over the last 30 scans" />
-            </div>
-            <div>
-                <strong>@summary.CostFormatted</strong>
-                <span>30-day cost</span>
+            </KpiTile>
+            <KpiTile Value="@summary.CostFormatted" Label="30-day cost">
                 <Sparkline Points="@summary.CostHistory" Tone="accent" AriaLabel="30-day cost over the last 30 scans" />
-            </div>
-            <div>
-                <strong>@summary.TotalResources</strong>
-                <span>Resources</span>
+            </KpiTile>
+            <KpiTile Value="@summary.TotalResources.ToString()" Label="Resources">
                 <Sparkline Points="@summary.ResourceHistory" Tone="accent" AriaLabel="Resource count over the last 30 scans" />
-            </div>
+            </KpiTile>
         </div>
         <div class="azure-command-actions">
             @if (_managementActionsEnabled)

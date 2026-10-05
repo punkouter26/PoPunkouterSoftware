@@ -9,6 +9,7 @@
        "PoPunkouterSoftware — <section>" form as those so the brand never varies. *@
     <title>PoPunkouterSoftware</title>
     <link rel="icon" href="images/favicon.ico" type="image/x-icon" />
+    <link rel="manifest" href="manifest.json" />
     @* No Google Fonts link here, deliberately. Radzen.Blazor already ships the Material
        Symbols variable font and self-hosts it under the family name "Material Symbols";
        every <RadzenIcon> in the app has always used that copy. The remote stylesheet was
@@ -68,6 +69,8 @@
     <script src="js/motion-kit.js"></script>
     <script src="js/audio-kit.js"></script>
     <script src="js/helpers.js"></script>
+    <script src="js/command-palette.js"></script>
+    <script src="js/numeric-ticker.js"></script>
     @* The WebGL2/WebGL1 renderer — now the top of the backdrop ladder. A lazily-fetched
        WebGPU renderer sat above it until 2026-09-05; see the header of js/gpu-backdrop.js
        for why a second full renderer of the same decoration was not worth keeping. *@

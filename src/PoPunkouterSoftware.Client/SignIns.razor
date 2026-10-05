@@ -3,6 +3,7 @@
 @using PoPunkouterSoftware.Shared
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject IUserSettingsService SettingsService
 
 <PageTitle>PoPunkouterSoftware — Who signed in</PageTitle>
 
@@ -69,18 +70,9 @@
         else
         {
             <div class="app-kpis" role="group" aria-label="Sign-in totals">
-                <div>
-                    <strong>@report.TotalPeople</strong>
-                    <span>@(report.TotalPeople == 1 ? "Person" : "People")</span>
-                </div>
-                <div>
-                    <strong>@report.TotalSignIns</strong>
-                    <span>Sign-ins</span>
-                </div>
-                <div>
-                    <strong>@report.TotalApps</strong>
-                    <span>@(report.TotalApps == 1 ? "App used" : "Apps used")</span>
-                </div>
+                <KpiTile Value="@report.TotalPeople.ToString()" Label="@(report.TotalPeople == 1 ? "Person" : "People")" />
+                <KpiTile Value="@report.TotalSignIns.ToString()" Label="Sign-ins" />
+                <KpiTile Value="@report.TotalApps.ToString()" Label="@(report.TotalApps == 1 ? "App used" : "Apps used")" />
             </div>
 
             <p class="signins-meta">

@@ -1,0 +1,87 @@
+/* Scoped styles for Settings.razor */
+
+.settings-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-space-lg);
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--app-border);
+    padding-bottom: var(--app-space-sm);
+}
+
+.settings-title {
+    display: flex;
+    align-items: center;
+    gap: var(--app-space-xs);
+}
+
+.settings-title h1 {
+    margin: 0;
+    font-size: var(--app-step-3);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.settings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-space-md);
+}
+
+.settings-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-space-sm);
+}
+
+.settings-card h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--app-space-xs);
+    margin: 0;
+    font-size: var(--app-step-1);
+    color: var(--app-text);
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-space-2xs);
+    padding-top: var(--app-space-2xs);
+}
+
+.settings-toggle-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--app-space-xs);
+    border-top: 1px solid var(--app-border);
+}
+
+.settings-label {
+    font-size: var(--app-step--1);
+    font-weight: 600;
+    color: var(--app-text-muted);
+}
+
+.settings-actions {
+    display: flex;
+    gap: var(--app-space-sm);
+    padding-top: var(--app-space-xs);
+}
+
+.settings-card--footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--app-surface-soft);
+    border-style: dashed;
+}

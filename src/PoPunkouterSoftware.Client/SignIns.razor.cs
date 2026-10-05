@@ -37,7 +37,20 @@ public partial class SignIns
     /// same recent arrivals and must not replay them.</summary>
     private bool _cometsPlayed;
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var settings = await SettingsService.GetSettingsAsync();
+            if (WindowChoices.Contains(settings.DefaultSignInDays))
+            {
+                _windowDays = settings.DefaultSignInDays;
+            }
+        }
+        catch { }
+
+        await LoadAsync();
+    }
 
     private async Task SetWindowAsync(int days)
     {
