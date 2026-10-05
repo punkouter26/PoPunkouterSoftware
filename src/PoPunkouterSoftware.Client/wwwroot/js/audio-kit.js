@@ -97,10 +97,41 @@
         try { navigator.vibrate(pattern); } catch (e) { /* blocked without user activation */ }
     }
 
-    /** Send `node` to master, through a StereoPanner when pan is non-zero. Returns the tail. */
+    /** Send `node` to master, through a 3D HRTF PannerNode or StereoPanner when pan is non-zero. Returns the tail. */
     function route(node, pan) {
         pan = pan == null ? ambientPan : pan;
-        if (!pan || !ctx.createStereoPanner) { node.connect(master); return node; }
+        if (!pan) { node.connect(master); return node; }
+        
+        // 3D Spatial Audio via PannerNode with HRTF if available
+        if (ctx.createPanner) {
+            try {
+                var panner = ctx.createPanner();
+                panner.panningModel = 'HRTF';
+                panner.distanceModel = 'inverse';
+                panner.refDistance = 1;
+                panner.maxDistance = 10000;
+                panner.rolloffFactor = 1;
+                panner.coneInnerAngle = 360;
+                
+                var clampedPan = Math.max(-1, Math.min(1, pan));
+                var x = clampedPan;
+                var z = 1 - Math.abs(clampedPan) * 0.5;
+                if (panner.positionX) {
+                    panner.positionX.setValueAtTime(x, now());
+                    panner.positionY.setValueAtTime(0, now());
+                    panner.positionZ.setValueAtTime(z, now());
+                } else if (panner.setPosition) {
+                    panner.setPosition(x, 0, z);
+                }
+                node.connect(panner);
+                panner.connect(master);
+                return panner;
+            } catch (e) {
+                // fallback to stereo panner
+            }
+        }
+
+        if (!ctx.createStereoPanner) { node.connect(master); return node; }
         var sp = ctx.createStereoPanner();
         sp.pan.value = Math.max(-1, Math.min(1, pan));
         node.connect(sp);

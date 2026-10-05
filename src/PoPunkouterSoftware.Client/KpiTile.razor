@@ -1,7 +1,8 @@
 @* Reusable KPI tile for metrics with support for sparklines and status tones *@
+@inject IJSRuntime JS
 
-<div class="kpi-tile @(Tone is not null ? $"kpi-tile--{Tone}" : "")">
-    <strong>@Value</strong>
+<div class="kpi-tile @(Tone is not null ? $"kpi-tile--{Tone}" : "")" id="@_tileId">
+    <strong class="kpi-value">@Value</strong>
     <span>@Label</span>
     @if (ChildContent is not null)
     {
@@ -14,4 +15,22 @@
     [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
     [Parameter] public string? Tone { get; set; } // "good", "warn", "bad", "accent"
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private readonly string _tileId = $"kpi-{Guid.NewGuid().ToString("N")[..8]}";
+    private string? _previousValue;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_previousValue is not null && _previousValue != Value)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("numericTicker.animate", $"#{_tileId} .kpi-value", Value, 400);
+            }
+            catch (JSException) { }
+            catch (InvalidOperationException) { }
+        }
+        _previousValue = Value;
+    }
 }
+

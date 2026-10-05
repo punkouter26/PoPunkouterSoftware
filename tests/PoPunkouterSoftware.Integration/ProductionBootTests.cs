@@ -45,6 +45,11 @@ public sealed class ProductionApp : WebApplicationFactory<Program>
                 ["RateLimits:SignInsPerMinute"] = "2",
             }));
     }
+
+    protected override Microsoft.Extensions.Hosting.IHost CreateHost(Microsoft.Extensions.Hosting.IHostBuilder builder)
+    {
+        return base.CreateHost(builder);
+    }
 }
 
 public class ProductionBootTests : IClassFixture<ProductionApp>

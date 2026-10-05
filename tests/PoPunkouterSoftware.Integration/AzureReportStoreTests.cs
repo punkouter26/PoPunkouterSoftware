@@ -29,7 +29,8 @@ public class AzureReportStoreNoConnectionTests
 
 public class AzureReportStoreAzuriteTests : IAsyncLifetime
 {
-    private readonly AzuriteContainer _container = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
+    private readonly AzuriteContainer _container = new AzuriteBuilder()
+        .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
         .Build();
 
     public async Task InitializeAsync() => await _container.StartAsync();
@@ -99,7 +100,8 @@ public class AzureReportStoreAzuriteTests : IAsyncLifetime
 
 public class AzureReportStoreHistoryTests : IAsyncLifetime
 {
-    private readonly AzuriteContainer _container = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
+    private readonly AzuriteContainer _container = new AzuriteBuilder()
+        .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
         .Build();
 
     public async Task InitializeAsync() => await _container.StartAsync();

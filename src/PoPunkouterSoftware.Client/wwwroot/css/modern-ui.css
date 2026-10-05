@@ -1598,3 +1598,36 @@ html.is-theme-reveal::view-transition-new(root) {
     font-size: 0.88rem;
 }
 
+/* ── Mobile safe area & touch compliance (Audit #22) ───────────────────────── */
+@supports (padding: env(safe-area-inset-bottom)) {
+    .app-page {
+        padding-bottom: max(var(--app-space-lg), env(safe-area-inset-bottom));
+        padding-left: max(var(--app-space-md), env(safe-area-inset-left));
+        padding-right: max(var(--app-space-md), env(safe-area-inset-right));
+    }
+}
+
+.signins-range__btn,
+.app-action-btn,
+.rz-button {
+    min-height: 38px;
+    touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+    .signins-range__btn,
+    .app-action-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* ── Zero-scroll desktop container utility (Audit #21) ─────────────────────── */
+@media (min-width: 1280px) {
+    .app-page--locked {
+        height: calc(100vh - 64px);
+        overflow: hidden;
+    }
+}
+
+

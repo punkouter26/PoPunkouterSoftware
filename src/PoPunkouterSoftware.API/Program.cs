@@ -35,7 +35,11 @@ try
     // ─── Azure Key Vault — default to shared PoShared vault unless overridden ───
     // Skipped under the "Testing" environment so integration/E2E runs are hermetic
     // and never bind to (or leak secrets from) the real shared vault.
-    var kvUriStr = builder.Configuration["KeyVault:Uri"] ?? builder.Configuration["AzureKeyVaultUri"] ?? "https://kv-poshared.vault.azure.net/";
+    var kvUriStr = builder.Configuration["KeyVault:Uri"] ?? builder.Configuration["AzureKeyVaultUri"];
+    if (kvUriStr is null)
+    {
+        kvUriStr = "https://kv-poshared.vault.azure.net/";
+    }
     if (!builder.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(kvUriStr))
     {
         try

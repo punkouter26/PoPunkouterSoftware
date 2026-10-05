@@ -21,6 +21,9 @@ public partial class SignIns
     private SignInReport? _report;
     private bool _loading = true;
     private string? _loadError;
+    [Microsoft.AspNetCore.Components.SupplyParameterFromQuery(Name = "days")]
+    public int? QueryDays { get; set; }
+
     private int _windowDays = 30;
 
     /// <summary>
@@ -39,15 +42,22 @@ public partial class SignIns
 
     protected override async Task OnInitializedAsync()
     {
-        try
+        if (QueryDays.HasValue && WindowChoices.Contains(QueryDays.Value))
         {
-            var settings = await SettingsService.GetSettingsAsync();
-            if (WindowChoices.Contains(settings.DefaultSignInDays))
-            {
-                _windowDays = settings.DefaultSignInDays;
-            }
+            _windowDays = QueryDays.Value;
         }
-        catch { }
+        else
+        {
+            try
+            {
+                var settings = await SettingsService.GetSettingsAsync();
+                if (WindowChoices.Contains(settings.DefaultSignInDays))
+                {
+                    _windowDays = settings.DefaultSignInDays;
+                }
+            }
+            catch { }
+        }
 
         await LoadAsync();
     }
@@ -58,6 +68,11 @@ public partial class SignIns
             return;
 
         _windowDays = days;
+        try
+        {
+            NavManager.NavigateTo($"/users?days={days}", replace: true);
+        }
+        catch { }
         await LoadAsync();
     }
 
