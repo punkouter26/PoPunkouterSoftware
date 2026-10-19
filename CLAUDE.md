@@ -182,7 +182,10 @@ integration test asserts `/api/diag/summary` does not contain `webServices`.
 `ReportRefreshRunner` runs the scan on a background task and broadcasts progress over the
 `RefreshHub` SignalR hub (`/hubs/refresh`). The client also polls `/api/diag/summary` as a fallback
 and shows an *indeterminate* progress bar when the hub is down, because percent values arrive only
-over the hub.
+over the hub. The home page's **Sync** button (owner's ask, 2026-10-19) starts the same scan and
+simply polls `/api/portfolio` until `refreshInProgress` clears — it needs no progress UI. Both
+buttons render only when `/api/config` reports `managementActionsEnabled`, so in Production
+(where the endpoint also wants a management key the browser lacks) neither is shown.
 
 **Degradation is a designed path, not an error path.** Table Storage unavailable falls back to a
 local JSON report file (`ReportFileCache`); a corrupt cache degrades to "no report", never a 500.
@@ -715,6 +718,12 @@ proves a context and program were created, not that anything reached the screen.
     403 is a real outage, not an auth handshake.
   - The pinger stops when the app does (F1 has no Always-On), which is why
     `.github/workflows/uptime-scan.yml` exists — see CI/CD below.
+- **A local scan uses YOUR `az login`, pinned to the personal tenant.** `launchSettings.json`
+  sets `AZURE_TENANT_ID=1639b208-…` (the "Punkouter26" subscription's tenant), which every
+  `DefaultAzureCredential()` here honours. Without it, a CLI defaulted to a work account fails
+  every scan with `InvalidAuthenticationTokenTenant`. With it, the CLI still needs a live
+  login to that tenant (`az login --tenant 1639b208-d5bf-4d71-9096-06163884a5e4`); a stale one
+  fails with AADSTS90072. Production uses the managed identity and ignores this.
 - **Secrets.** Key Vault `kv-poshared`, prefix `PoPunkouterSoftware--`, loaded at startup via
   System-Assigned Managed Identity, and **skipped entirely under the `Testing` environment**. The
   grant is a classic access policy, not RBAC — the vault is shared across Po* apps, so switching

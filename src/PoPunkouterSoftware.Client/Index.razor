@@ -4,6 +4,7 @@
 @implements IAsyncDisposable
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject NotificationService NotificationService
 
 <PageTitle>PoPunkouterSoftware — Web apps</PageTitle>
 
@@ -68,6 +69,13 @@
                         Updated @RelativeTime.Format(updated)@(data.Stale ? " · stale" : "")
                     </AppHint>
                 }
+                @if (_canSync)
+                {
+                    <RadzenButton Icon="sync" Text="@(_syncing ? "Syncing…" : "Sync")" Size="ButtonSize.Small"
+                                  ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
+                                  Disabled="_syncing" Click="SyncAsync" class="portfolio-sync"
+                                  aria-label="Rescan Azure and refresh app statuses" />
+                }
             </div>
         </div>
     }
@@ -127,16 +135,23 @@
             (!string.IsNullOrEmpty(a.Url) && a.Url.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))).ToList();
 
     // Auto-refresh: every visit reads the catalog fresh, and a tab left open re-reads it
-    // weekly. There is no manual "Reload catalog" button any more — the owner's call
-    // (2026-09-26): the list changes on the scale of days, so a button and a 5-minute
-    // timer were both answering a question nobody asks. Screenshots follow the same
+    // weekly. There is no "Reload catalog" button (owner's call, 2026-09-26): re-reading
+    // the same stored list answers a question nobody asks. Sync below is a different
+    // thing (owner's ask, 2026-10-19): it rescans Azure, so the list has something new to show. Screenshots follow the same
     // weekly rhythm server-side (AppScreenshotService.MaxAge).
     private static readonly TimeSpan AutoRefreshEvery = TimeSpan.FromDays(7);
     private Timer? _autoRefreshTimer;
 
+    // Sync = the same subscription rescan as /azure's "Rescan Azure". Shown only when the
+    // server will accept it (/api/config): in Production the endpoint needs a management
+    // key the browser does not have, and a button that can only fail is a lie.
+    private bool _canSync;
+    private bool _syncing;
+    private static readonly TimeSpan SyncTimeout = TimeSpan.FromMinutes(2);
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadAppsAsync();
+        await Task.WhenAll(LoadAppsAsync(), LoadSyncAvailabilityAsync());
         _autoRefreshTimer = new Timer(
             _ => _ = InvokeAsync(LoadAppsAsync), null, AutoRefreshEvery, AutoRefreshEvery);
     }
@@ -259,6 +274,62 @@
             // not keep, and a card whose app went down kept rendering as healthy until someone
             // pressed the button. Rendering here covers every caller; the redundant render on
             // the event paths is one diff of a page whose children are all ShouldRender-guarded.
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadSyncAvailabilityAsync()
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var cfg = await Http.GetFromJsonAsync("/api/config", AppJsonContext.Default.ConfigResponse, cts.Token);
+            _canSync = cfg?.ManagementActionsEnabled ?? false;
+        }
+        catch
+        {
+            _canSync = false; // No answer, no button.
+        }
+    }
+
+    private async Task SyncAsync()
+    {
+        _syncing = true;
+        var baseline = data?.GeneratedAt;
+        try
+        {
+            // 409 means a scan is already running: wait for that one instead of failing.
+            using var resp = await Http.PostAsync("/api/diag/refresh", null);
+            if (!resp.IsSuccessStatusCode && resp.StatusCode != System.Net.HttpStatusCode.Conflict)
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Sync rejected",
+                    $"The server refused the rescan ({(int)resp.StatusCode}).");
+                return;
+            }
+
+            // The runner takes its lock before answering 202, so RefreshInProgress is
+            // already true on the first poll; poll the portfolio until it clears.
+            var deadline = DateTime.UtcNow + SyncTimeout;
+            do
+            {
+                await Task.Delay(3000);
+                await LoadAppsAsync();
+            }
+            while (data?.RefreshInProgress == true && DateTime.UtcNow < deadline);
+
+            if (data?.GeneratedAt is { } updated && updated != baseline)
+                NotificationService.Notify(NotificationSeverity.Success, "Synced", $"{data.Apps.Count} apps, statuses from Azure just now.");
+            else
+                NotificationService.Notify(NotificationSeverity.Error, "Sync failed",
+                    "The scan finished without a new report. The server log has the reason.");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Sync failed", FriendlyError.Describe(ex));
+        }
+        finally
+        {
+            _syncing = false;
             StateHasChanged();
         }
     }
