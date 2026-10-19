@@ -35,18 +35,16 @@ public static class ReportFileCache
     // env.WebRootPath is null on the server because the server has no wwwroot of its own.
     // In dev, resolve to the Client project's wwwroot; in production, UseStaticWebAssets()
     // publishes client assets under ContentRootPath/wwwroot, so WebRootPath is non-null.
-    public static string GetCatalogDir(IWebHostEnvironment env) =>
-        env.WebRootPath is not null
-            ? Path.Combine(env.WebRootPath, "data")
-            : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "data"));
+    public static string GetCatalogDir(IWebHostEnvironment env) => Path.Combine(GetWebRoot(env), "data");
 
     /// <summary>
     /// Local screenshots directory fallback when blob storage is unavailable or offline.
     /// </summary>
-    public static string GetScreenshotsDir(IWebHostEnvironment env) =>
-        env.WebRootPath is not null
-            ? Path.Combine(env.WebRootPath, "screenshots")
-            : Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot", "screenshots"));
+    public static string GetScreenshotsDir(IWebHostEnvironment env) => Path.Combine(GetWebRoot(env), "screenshots");
+
+    private static string GetWebRoot(IWebHostEnvironment env) =>
+        env.WebRootPath
+        ?? Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "PoPunkouterSoftware.Client", "wwwroot"));
 
     public static string GetReportPath(IWebHostEnvironment env) =>
         Path.Combine(GetCacheDir(env), ReportFileName);

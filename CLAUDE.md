@@ -17,6 +17,12 @@ tally. `/users` was added 2026-09-12 because the answer it gives lives nowhere e
 estate: an Azure Monitor workbook nobody opens. Adding a fourth needs the same standard —
 a question the existing pages cannot answer without becoming two pages in a trench coat.
 
+**A fourth page exists anyway: `/settings`** (`Settings.razor`, added 2026-10-04, preferences
+held in `localStorage` via `LocalStorageUserSettingsService`). It was added without meeting
+that standard. Since the header link was removed on 2026-10-05, the only way to reach it is the
+Ctrl+K command palette (`js/command-palette.js`). The owner has not yet decided whether to
+keep it or fold it back into the header. Do not cite it as a precedent for adding more pages.
+
 `AGENT.MD` used to hold this context and no longer exists — this file is the single context map.
 [AGENTS.md](AGENTS.md) exists only to point non-Claude agents here; never put rules in it.
 Update it in the same change whenever you cross an architectural boundary; drift here actively
@@ -125,7 +131,7 @@ the profile it binds :5000 instead of :8000.
 
 | Project | Role |
 |---|---|
-| [src/PoPunkouterSoftware.API/](src/PoPunkouterSoftware.API/) | ASP.NET Core host + BFF, and the Blazor WASM host. Slices are `Features/<Area>/<Area>Endpoints.cs` (**Config, Diag, Portfolio, SignIns**), each exposing `Map<Area>Endpoints(this WebApplication)` called from [Program.cs](src/PoPunkouterSoftware.API/Program.cs). Host-level plumbing belonging to no slice lives in `Host/`. **The namespace is flat** — every file is `PoPunkouterSoftware.API` regardless of folder. |
+| [src/PoPunkouterSoftware.API/](src/PoPunkouterSoftware.API/) | ASP.NET Core host + BFF, and the Blazor WASM host. Slices are `Features/<Area>/<Area>Endpoints.cs` (**Config, Diag, Portfolio, SignIns**), each exposing `Map<Area>Endpoints(this WebApplication)` called from [Program.cs](src/PoPunkouterSoftware.API/Program.cs). Host-level plumbing belonging to no slice lives in `Host/`. **The namespace is flat** — every file is `PoPunkouterSoftware.API` regardless of folder — with one exception: `Platform/PoPlatform.cs` (namespace `.Platform`) is **generated** from `po-shared/src/PoPlatform.cs.tmpl` in a separate repo and shared by every Po app. Never edit this copy; change the template and run `python po-shared/sync.py`. `Automation/` holds a PowerShell report script, not app code. |
 | [src/PoPunkouterSoftware.Client/](src/PoPunkouterSoftware.Client/) | Blazor WASM (Radzen, mobile-first). `wwwroot` lives **only** here. The layout is **flat** — every component sits in the project root, named for what it is; there is no `Components/` tree. `wwwroot/js` holds the graphics and audio layers — see [Graphics and audio](#graphics-and-audio) below. |
 | [src/PoPunkouterSoftware.Shared/](src/PoPunkouterSoftware.Shared/) | DTOs + `DomainVocabulary.cs` only. **No PackageReferences at all**, no server- or browser-only deps — it ships in the WASM bundle (`IsTrimmable`). |
 | [src/PoPunkouterSoftware.Infrastructure/](src/PoPunkouterSoftware.Infrastructure/) | Azure adapters (Table Storage, ARM, pinger, incident, AI triage, telemetry) plus cross-slice helpers (`ReportFileCache`, `AttentionItemsBuilder`, `SecretMasking`). **Slices must not reference each other** — shared logic goes here. |
@@ -312,7 +318,7 @@ no scroller at all.
 
 ## Graphics and audio
 
-Nine files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
+Ten files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
 comment in each before changing it; they document the reasoning, this is the map.
 
 | File | Role |
@@ -323,9 +329,16 @@ comment in each before changing it; they document the reasoning, this is the map
 | `gfx-webgl.js` | WebGL2 renderer (curl-noise field, transform-feedback particles, dual-Kawase blur, glass composite) with a WebGL1 field-only fallback. **The top of the ladder.** |
 | `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. |
 | `helpers.js` | Topbar, snap pager, clipboard, download, `appRevealFocus` (the `/azure?focus=` scroll) — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
-| `theme-kit.js` | The visitor's light/dark choice, and the header toggle that sets it. Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
+| `theme-kit.js` | The visitor's light/dark choice, and the toggle that sets it (`themeKit.toggle()`, called from the command palette and `/settings` — the header button was removed 2026-10-05). Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
 | `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
 | `blazor-hooks.js` | Registers the enhanced-navigation callbacks. Must load **after** `blazor.web.js`, which defines `Blazor`. Also ex-inline. |
+| `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation (including `/settings`, which has no other entry point) plus theme and sound toggles. |
+
+`app-boot.js` also registers **`wwwroot/service-worker.js`**. That worker precaches the pages
+and JS/CSS listed in it under a fixed cache name (`pops-pwa-v1`) and serves them cache-first.
+Change that list whenever you add or rename a page or script, and bump `CACHE_NAME` whenever
+you change any precached file. A visitor who already has the worker installed keeps getting
+the cached copy until the cache name changes.
 
 **One rAF loop, and reduced motion stops it.** Every animated layer is a named `motionKit`
 subscriber. Nothing else may call `requestAnimationFrame` for animation. The governor's gate
@@ -340,9 +353,10 @@ replaced a `data-suppress-gpu-backdrop` attribute plus a MutationObserver.
 **Silence is the default and it is an accessibility floor.** `audioKit.enabled` starts false;
 the `AudioContext` is not even *constructed* until a user gesture, because one built during
 page load is a suspended context that silently swallows sound plus an unrequested hardware
-claim. The header toggle is wired by **delegation on `document`** (enhanced navigation
-re-inserts the header, so a direct listener would be lost or double-bound), as are
-`[data-sfx]` / `[data-sfx-hover]`. Sound carries information in exactly two places — the
+claim. Sound is switched on from the command palette, `/settings` or `/azure`'s Listen
+button; the header toggle and its `[data-sound-toggle]` wiring went on 2026-10-05.
+`[data-sfx]` / `[data-sfx-hover]` are wired by **delegation on `document`** (enhanced
+navigation re-inserts the header, so a direct listener would be lost or double-bound). Sound carries information in exactly two places — the
 refresh lifecycle (a ~30s scan is exactly how long it takes someone to switch tabs) and the
 `/azure` sonification, which is a second *modality* on facts already on the page, not a
 second copy of them. Only primitives cross the interop boundary.
@@ -595,8 +609,8 @@ proves a context and program were created, not that anything reached the screen.
   instance from `CreateClient(name)` — handler chains are pooled, so a per-call mutation leaks that
   header, credentials included, to every other consumer. The `github` PAT is bound once in
   `Program.cs`. Pass per-call values on the `HttpRequestMessage`.
-- **The theme is a choice, not only a media query.** `theme-kit.js` owns it: the header toggle
-  (rendered by `MainLayout`, wired by delegation, re-synced after enhanced navigation) writes
+- **The theme is a choice, not only a media query.** `theme-kit.js` owns it: the toggle
+  (command palette and `/settings`; the `MainLayout` header button went on 2026-10-05) writes
   `localStorage` `pops:theme` and sets `data-app-theme` on `<html>`. Rejected alternatives, so they
   are not re-litigated: Radzen's `RadzenTheme`/`RadzenAppearanceToggle` would make a second theme
   authority alongside this app's own token block, which is the same class of bug as the Radzen token
@@ -820,7 +834,12 @@ proves a context and program were created, not that anything reached the screen.
 - **Screenshots pin `PLAYWRIGHT_BROWSERS_PATH`** to the persistent `%HOME%` share and install only
   the Chromium headless shell — the worker's ephemeral disk previously filled with a full Chromium
   download and broke every deployment (2026-07-10). Kill switch:
-  `FeatureFlags:EnableScreenshots=false`. In-process capture is off in Production for that reason,
+  `FeatureFlags:EnableScreenshots=false`. Since 2026-10-05, a cache miss on
+  `GET /api/portfolio/screenshots/{host}` launches a headless browser and captures that host on
+  demand (`AppScreenshotService.CaptureOneAsync`). While the flag is on, every card gets a
+  `screenshotUrl` even if no image exists yet. On-demand capture never waits behind a batch run,
+  and it backs off for 30 minutes after a failure. That endpoint is anonymous, so leave the flag
+  off anywhere a crawler can reach. In-process capture is off in Production for that reason,
   and `appsettings.json` said the capture happened in `screenshots.yml` instead — **a workflow that
   did not exist**, so every production card rendered `screenshotUrl: null` for months. It exists now
   (see CI/CD below) and writes the same container, blob names and viewport as `AppScreenshotService`,

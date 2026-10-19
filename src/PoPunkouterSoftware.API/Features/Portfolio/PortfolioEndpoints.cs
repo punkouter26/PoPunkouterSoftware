@@ -52,7 +52,7 @@ internal static partial class PortfolioEndpoints
             if (refreshRunner.TryStartAuto())
                 logger.LogInformation("Inventory is stale — background Azure rescan started");
         }
-        var apps = BuildApps(services, metadata, screenshotVersions, scoresTask.Result);
+        var apps = BuildApps(services, metadata, screenshotVersions, scoresTask.Result, screenshots.ScreenshotsEnabled);
 
         // Any app whose screenshot is missing or over a week old: serve what is stored now
         // and capture just those in the background for the next visitor. Scan-derived
@@ -96,7 +96,7 @@ internal static partial class PortfolioEndpoints
     private static List<PortfolioApp> BuildApps(
         List<WebService> services, List<AppMeta> metadata,
         IReadOnlyDictionary<string, long> screenshotVersions,
-        IReadOnlyDictionary<string, LighthouseScores> scores)
+        IReadOnlyDictionary<string, LighthouseScores> scores, bool captureOnDemand = false)
     {
         var metaByName = metadata
             .GroupBy(m => PortfolioIdentity.NormalizeName(m.Name), StringComparer.OrdinalIgnoreCase)
@@ -116,7 +116,7 @@ internal static partial class PortfolioEndpoints
                 {
                     var key = PortfolioIdentity.NormalizeName(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName);
                     metaByName.TryGetValue(key, out var meta);
-                    return ToPortfolioApp(meta, s, screenshotVersions, scores);
+                    return ToPortfolioApp(meta, s, screenshotVersions, scores, captureOnDemand);
                 },
                 StringComparer.OrdinalIgnoreCase);
 
@@ -128,7 +128,7 @@ internal static partial class PortfolioEndpoints
             // Catalog entries marked active are the stable showcase, visible even when
             // Azure inventory is stale or unavailable. Only added when no live service
             // already claimed the key — otherwise the live entry's status wins.
-            appsByName.TryAdd(key, ToPortfolioApp(meta, null, screenshotVersions, scores));
+            appsByName.TryAdd(key, ToPortfolioApp(meta, null, screenshotVersions, scores, captureOnDemand));
         }
 
         return appsByName.Values.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();
@@ -188,19 +188,14 @@ internal static partial class PortfolioEndpoints
             return Results.BadRequest(new { error = "Invalid host." });
 
         var stream = await screenshots.OpenReadAsync(host, ct);
-        if (stream is null)
+        if (stream is null && screenshots.ScreenshotsEnabled)
         {
             // On-demand capture fallback: find matching app URL from catalog or inventory
             try
             {
-                var (_, services) = await LoadInventoryAsync(env, store, logger, ct);
-                var metadata = await LoadMetadataAsync(env, logger, ct);
-                var targets = AppScreenshotService.CombinedTargets(env, new AzureReport
-                {
-                    WebServices = new WebServicesInfo { Services = services }
-                });
-
-                var target = targets.FirstOrDefault(t => string.Equals(t.Host, host, StringComparison.OrdinalIgnoreCase));
+                var (report, _) = await LoadInventoryAsync(env, store, logger, ct);
+                var target = AppScreenshotService.CombinedTargets(env, report)
+                    .FirstOrDefault(t => string.Equals(t.Host, host, StringComparison.OrdinalIgnoreCase));
                 if (target.Url is not null)
                 {
                     logger.LogInformation("No screenshot exists for {Host} — navigating to {Url} to capture live", host, target.Url);
@@ -269,7 +264,7 @@ internal static partial class PortfolioEndpoints
 
     private static PortfolioApp ToPortfolioApp(
         AppMeta? meta, WebService? service, IReadOnlyDictionary<string, long> screenshotVersions,
-        IReadOnlyDictionary<string, LighthouseScores> scores)
+        IReadOnlyDictionary<string, LighthouseScores> scores, bool captureOnDemand)
     {
         var name = meta?.Name ?? service?.FriendlyName ?? service?.Name ?? "Unnamed app";
         // The curated catalog URL wins over the scanned one: inventory can lag reality by
@@ -289,7 +284,9 @@ internal static partial class PortfolioEndpoints
                 !string.IsNullOrWhiteSpace(service?.Description) ? service.Description : $"Open {name}.",
             Url = url,
             Status = status,
-            ScreenshotUrl = host is not null ? $"/api/portfolio/screenshots/{host}?v={version}" : null,
+            // With capture on, a missing image is captured when the card requests it.
+            ScreenshotUrl = hasScreenshot || (host is not null && captureOnDemand)
+                ? $"/api/portfolio/screenshots/{host}?v={version}" : null,
             Scores = host is not null && scores.TryGetValue(host, out var score) ? score : null,
         };
     }

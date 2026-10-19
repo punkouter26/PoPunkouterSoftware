@@ -22,8 +22,10 @@
         { id: 'act-reload', title: 'Hard Reload Application', icon: 'refresh', category: 'System', action: function () { window.location.reload(); } }
     ];
 
+    // Enhanced navigation when Blazor is up, like any other in-app link.
     function navigate(url) {
-        window.location.href = url;
+        if (window.Blazor && window.Blazor.navigateTo) window.Blazor.navigateTo(url);
+        else window.location.href = url;
     }
 
     function createPalette() {
@@ -191,10 +193,4 @@
             close();
         }
     });
-
-    window.commandPalette = {
-        open: open,
-        close: close,
-        toggle: function () { if (isOpen) close(); else open(); }
-    };
 })();

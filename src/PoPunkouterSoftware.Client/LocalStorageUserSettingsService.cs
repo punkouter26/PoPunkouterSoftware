@@ -55,40 +55,14 @@ public class LocalStorageUserSettingsService(IJSRuntime js) : IUserSettingsServi
             var json = System.Text.Json.JsonSerializer.Serialize(settings, AppJsonContext.Default.AppUserSettings);
             await js.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
 
-            // Synchronize theme with theme-kit
-            if (settings.Theme == "system")
-            {
-                await js.InvokeVoidAsync("themeKit.set", (string?)null);
-            }
-            else
-            {
-                await js.InvokeVoidAsync("themeKit.set", settings.Theme);
-            }
+            // Synchronize theme with theme-kit; null means "follow the system"
+            await js.InvokeVoidAsync("themeKit.set", settings.Theme == "system" ? null : settings.Theme);
 
             // Synchronize audio kit
             await js.InvokeVoidAsync("audioKit.setEnabled", settings.SoundEnabled);
 
             // Synchronize compact density attribute on html element and storage
             await js.InvokeVoidAsync("themeKit.setDensity", settings.CompactDensity);
-
-            // Synchronize zero-scroll and reduced motion attributes on html element
-            if (settings.DesktopZeroScroll)
-            {
-                await js.InvokeVoidAsync("eval", "document.documentElement.setAttribute('data-zero-scroll', 'true')");
-            }
-            else
-            {
-                await js.InvokeVoidAsync("eval", "document.documentElement.removeAttribute('data-zero-scroll')");
-            }
-
-            if (settings.ReduceAnimations)
-            {
-                await js.InvokeVoidAsync("eval", "document.documentElement.setAttribute('data-reduce-motion', 'true')");
-            }
-            else
-            {
-                await js.InvokeVoidAsync("eval", "document.documentElement.removeAttribute('data-reduce-motion')");
-            }
         }
         catch
         {

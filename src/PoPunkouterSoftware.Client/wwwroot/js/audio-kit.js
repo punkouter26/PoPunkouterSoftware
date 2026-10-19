@@ -311,8 +311,6 @@
         warn: function () { voice({ freq: 520, type: 'square', duration: 0.13, gain: 0.09, cutoff: 1600 }); voice({ freq: 392, type: 'square', duration: 0.18, gain: 0.09, delay: 0.14, cutoff: 1400 }); },
         cancel: function () { voice({ freq: 500, toFreq: 180, type: 'triangle', duration: 0.28, gain: 0.13, cutoff: 1800 }); },
         tick: function () { noise({ freq: 3200, duration: 0.035, gain: 0.06 }); },
-        click: function () { noise({ freq: 4400, duration: 0.012, gain: 0.08 }); },
-        delete: function () { voice({ freq: 380, toFreq: 120, type: 'sawtooth', duration: 0.22, gain: 0.14, cutoff: 1500 }); },
         // The success cadence, then a rising sparkle an octave up: red → all green.
         recovered: function () {
             SFX.success();
@@ -617,23 +615,9 @@
         document.addEventListener('keydown', fire, true);
     }
 
-    /** Push `enabled` onto every toggle in the DOM. Idempotent; safe after enhanced nav. */
-    function syncToggles() {
-        var nodes = document.querySelectorAll('[data-sound-toggle]');
-        for (var i = 0; i < nodes.length; i++) {
-            var el = nodes[i];
-            el.setAttribute('aria-pressed', String(enabled));
-            el.setAttribute('title', enabled ? 'Sound on — click to mute' : 'Sound off — click to enable interface and status audio');
-            el.setAttribute('aria-label', enabled ? 'Turn sound off' : 'Turn sound on');
-            var icon = el.querySelector('.material-symbols-outlined');
-            if (icon) icon.textContent = enabled ? 'volume_up' : 'volume_off';
-            el.classList.toggle('is-on', enabled);
-        }
-    }
-
     function setEnabled(on) {
         on = !!on;
-        if (on === enabled) { syncToggles(); return; }
+        if (on === enabled) return;
         enabled = on;
         writePreference(on);
 
@@ -643,7 +627,6 @@
         } else if (ensureContext()) {
             SFX.copy();     // confirmation: you turned it on, and here is what "on" sounds like
         }
-        syncToggles();
     }
 
     // Delegated rather than bound per element: MainLayout is statically server-rendered and
@@ -654,13 +637,6 @@
     // no OnAfterRender hook and no disposal path. It just writes the attribute.
     document.addEventListener('click', function (e) {
         if (!e.target || !e.target.closest) return;
-
-        var toggle = e.target.closest('[data-sound-toggle]');
-        if (toggle) {
-            e.preventDefault();
-            setEnabled(!enabled);
-            return;
-        }
 
         var sfx = e.target.closest('[data-sfx]');
         if (sfx && enabled) {
@@ -682,33 +658,10 @@
         if (fn) fn();
     }, true);
 
-    // Re-apply state to a header that enhanced navigation has just re-inserted.
-    var syncQueued = false;
-    new MutationObserver(function () {
-        if (syncQueued) return;
-        syncQueued = true;
-        requestAnimationFrame(function () { syncQueued = false; syncToggles(); });
-    }).observe(document.documentElement, { childList: true, subtree: true });
-
-    // Hydrate the toggle(s) on first paint. The static SSR markup hardcodes the "sound off"
-    // treatment (the only honest default — a JS-driven guess would flash a speaker icon at a
-    // visitor who has never enabled sound), so without this call a returning user with
-    // localStorage `pops:sound = '1'` saw a one-frame "volume_off" before the next
-    // MutationObserver tick corrected it. Sync once at module load so the header reflects
-    // the saved preference before the first paint settles.
-    syncToggles();
-
     window.audioKit = {
         get enabled() { return enabled; },
         setEnabled: setEnabled,
         toggle: function () { setEnabled(!enabled); },
-        get volume() { return master ? master.gain.value : MASTER_LEVEL; },
-        setVolume: function (v) {
-            MASTER_LEVEL = Math.max(0, Math.min(1, Number(v) || 0.5));
-            if (master && ctx) {
-                master.gain.setValueAtTime(MASTER_LEVEL, ctx.currentTime);
-            }
-        },
 
         /** True only when a context exists AND is actually running. */
         get live() { return !!ctx && ctx.state === 'running'; },
@@ -744,9 +697,4 @@
     // Arm the gesture unlock only when the visitor has already opted in; otherwise the
     // context is not created until they press the toggle (which is itself the gesture).
     if (enabled) bindUnlock();
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', syncToggles, { once: true });
-    } else {
-        syncToggles();
-    }
 })();

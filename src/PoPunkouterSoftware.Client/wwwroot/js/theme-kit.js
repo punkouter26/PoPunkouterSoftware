@@ -1,6 +1,6 @@
 /*
- * Theme preference — the visitor's explicit light/dark choice, and the header toggle
- * that sets it.
+ * Theme preference — the visitor's explicit light/dark choice. Set from the command
+ * palette and /settings; the header toggle was removed 2026-10-05.
  *
  * WHY THIS IS A FILE AND NOT A RADZEN COMPONENT
  * `RadzenTheme` + `RadzenAppearanceToggle` exist, but the app does not use them, and
@@ -34,11 +34,6 @@
     var DENSITY_KEY = 'pops:density';
     var root = document.documentElement;
     var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    // Two glyphs, one per state, swapped on the toggle. Both are in the icon-font subset —
-    // adding a name here without adding it to SCRIPTS/Build-IconFontSubset.py renders the
-    // literal word "dark_mode" in the button (see the icon-font note in CLAUDE.md).
-    var ICON = { dark: 'dark_mode', light: 'light_mode' };
 
     function readDensity() {
         try {
@@ -109,37 +104,9 @@
         }
     }
 
-    /** Push the current choice onto the header toggle. Idempotent; safe after enhanced nav. */
-    function syncToggle() {
-        var nodes = document.querySelectorAll('[data-theme-toggle]');
-        if (!nodes.length) return;
-        var pref = read();
-        var current = effective();
-        var followingSystem = !pref;
-        for (var i = 0; i < nodes.length; i++) {
-            var el = nodes[i];
-            var label = followingSystem
-                ? 'Theme follows your system setting. Switch to ' + (current === 'dark' ? 'light' : 'dark') + ' theme'
-                : 'Switch to ' + (current === 'dark' ? 'light' : 'dark') + ' theme';
-            el.setAttribute('aria-label', label);
-            el.setAttribute('title', label);
-            // aria-pressed describes a two-state control whose state is ON/OFF, and here it
-            // would have to mean "dark is on" — which is a lie while following the system.
-            // The label carries the state instead.
-            el.removeAttribute('aria-pressed');
-            el.setAttribute('data-theme-state', followingSystem ? 'system' : current);
-            var icon = el.querySelector('.material-symbols-outlined');
-            if (icon) {
-                var want = ICON[current];
-                if (icon.textContent !== want) icon.textContent = want;
-            }
-        }
-    }
-
     function set(pref) {
         write(pref);
         apply();
-        syncToggle();
         // The GPU backdrop reads accent tokens once; tell it they changed.
         try { document.dispatchEvent(new CustomEvent('app:theme')); } catch (e) { }
     }
@@ -166,49 +133,21 @@
         vt.finished.finally(function () { root.classList.remove('is-theme-reveal'); });
     }
 
-    // Delegated rather than bound per element: the header is re-inserted by enhanced
-    // navigation, so a direct listener would be lost or double-bound. Same reasoning as the
-    // sound toggle in audio-kit.js.
-    document.addEventListener('click', function (e) {
-        if (!e.target || !e.target.closest) return;
-        var btn = e.target.closest('[data-theme-toggle]');
-        if (btn) {
-            e.preventDefault();
-            // The button's centre, not the click point: a keyboard activation reports 0,0.
-            var r = btn.getBoundingClientRect();
-            toggle({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
-        }
-    });
-
     // An OS theme change must be picked up while the visitor is following the system.
     // Not re-applied over an explicit choice — that is the whole point of the choice.
-    var onSystemChange = function () { if (!read()) { apply(); syncToggle(); } };
+    var onSystemChange = function () { if (!read()) apply(); };
     if (darkQuery.addEventListener) darkQuery.addEventListener('change', onSystemChange);
     else if (darkQuery.addListener) darkQuery.addListener(onSystemChange);
 
-    // Re-apply to a header enhanced navigation has just re-inserted. Debounced through rAF
-    // for the same reason audio-kit.js does it — this is a coalescer, not an animation
-    // frame, and it keeps a busy render (the 30-second scan streams ~20 updates) from
-    // running a full-document query per mutation batch.
-    var queued = false;
-    new MutationObserver(function () {
-        if (queued) return;
-        queued = true;
-        requestAnimationFrame(function () { queued = false; syncToggle(); });
-    }).observe(document.documentElement, { childList: true, subtree: true });
-
-    // Apply before anything else can paint content, then hydrate the toggle.
+    // Apply before anything else can paint content.
     apply();
     applyDensity();
-    syncToggle();
 
     window.themeKit = {
         get preference() { return read(); },
         get effective() { return effective(); },
-        get isCompact() { return readDensity(); },
         setDensity: setDensity,
         set: set,
-        toggle: toggle,
-        sync: syncToggle
+        toggle: toggle
     };
 })();

@@ -1,7 +1,7 @@
 // Service Worker for PoPunkouterSoftware PWA
 // Provides offline read-through caching for application shells and telemetry snapshots.
 
-const CACHE_NAME = 'pops-pwa-v1';
+const CACHE_NAME = 'pops-pwa-v2';
 const PRECACHE_URLS = [
     '/',
     '/azure',
@@ -15,7 +15,6 @@ const PRECACHE_URLS = [
     '/js/audio-kit.js',
     '/js/helpers.js',
     '/js/command-palette.js',
-    '/js/numeric-ticker.js',
     '/images/favicon.ico'
 ];
 

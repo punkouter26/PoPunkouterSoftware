@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using PoPunkouterSoftware.Infrastructure;
 
@@ -10,7 +12,19 @@ public class AppScreenshotServiceTests
         NullLogger<AppScreenshotService>.Instance,
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["FeatureFlags:EnableScreenshots"] = enabled.ToString() })
-            .Build());
+            .Build(),
+        new StubEnv());
+
+    // The constructor only derives the local screenshots path from this; nothing is read.
+    private sealed class StubEnv : IWebHostEnvironment
+    {
+        public string WebRootPath { get; set; } = Path.GetTempPath();
+        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
+        public string ApplicationName { get; set; } = "Test";
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+        public string ContentRootPath { get; set; } = Path.GetTempPath();
+        public string EnvironmentName { get; set; } = "Testing";
+    }
 
     [Fact]
     public void DueForCapture_PicksMissingAndWeekOldHostsOnly_AndNothingWhenDisabled()
