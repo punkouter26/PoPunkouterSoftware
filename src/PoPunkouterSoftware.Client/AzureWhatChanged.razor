@@ -1,5 +1,12 @@
-@* "What changed since the last scan" — the single most useful thing an ops dashboard can
-   say, and until now the only thing the stored history could answer that nothing asked.
+@* "What changed since the last scan", inside the hero under the lead paragraph.
+
+   It was a pane of its own until 2026-10-19, and on desktop the half-width card beside the
+   uptime grid: usually one to three lines in a 129px card next to a 342px one, a ~210px hole
+   on every visit. The answer to "what moved?" belongs with the answer to "what is going on?",
+   so it is part of the status pane now — one fewer pane to page through on a phone.
+
+   The first scan on record renders nothing: "there is nothing to compare against yet" is not
+   status worth a line in the hero.
 
    The delta is computed server-side (DashboardInsightsBuilder.BuildDelta) and arrives on
    OpsSummary.Changes, so this component never diffs anything itself. It also never infers
@@ -7,49 +14,38 @@
    change upstream cannot silently turn an outage green. *@
 @using PoPunkouterSoftware.Shared
 
-<section class="azure-changed" aria-label="Changes since the previous scan">
-    <div class="azure-section-heading">
-        <h2>What changed</h2>
-        @if (Delta.HasBaseline && Delta.PreviousScanAt is DateTime prev)
-        {
-            <span class="app-note" title="@prev.ToString("u")">
-                compared with @RelativeTime.Format(prev)
-            </span>
-        }
-    </div>
-
-    @if (!Delta.HasBaseline)
-    {
-        <div class="azure-compact-state">
-            This is the first scan on record — there is nothing to compare it against yet.
-            The next rescan will show what moved.
-        </div>
-    }
-    else if (Delta.Changes.Count == 0)
-    {
-        <div class="azure-compact-state success">
-            <RadzenIcon Icon="check_circle" /> Nothing changed since the previous scan.
-        </div>
-    }
-    else
-    {
-        <ul class="azure-change-list">
-            @foreach (var change in Delta.Changes)
+@if (Delta.HasBaseline)
+{
+    <section class="azure-changed" aria-label="Changes since the previous scan">
+        <h2 class="azure-changed__title">
+            Since the last scan
+            @if (Delta.PreviousScanAt is DateTime prev)
             {
-                <li class="azure-change @($"dir-{change.Direction}")">
-                    <RadzenIcon Icon="@IconFor(change)" />
-                    <div class="azure-change__copy">
+                <AppHint Text="@($"Compared with the scan at {prev:u}.")"><span class="azure-changed__when">· @RelativeTime.Format(prev)</span></AppHint>
+            }
+        </h2>
+        @if (Delta.Changes.Count == 0)
+        {
+            <p class="azure-changed__none">Nothing changed.</p>
+        }
+        else
+        {
+            <ul class="azure-change-list">
+                @foreach (var change in Delta.Changes)
+                {
+                    <li class="azure-change @($"dir-{change.Direction}")">
+                        <RadzenIcon Icon="@IconFor(change)" />
                         <span class="azure-change__text">@change.Text</span>
                         @if (!string.IsNullOrWhiteSpace(change.Detail))
                         {
                             <span class="azure-change__detail">@change.Detail</span>
                         }
-                    </div>
-                </li>
-            }
-        </ul>
-    }
-</section>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}
 
 @code {
     [Parameter, EditorRequired] public ScanDelta Delta { get; set; } = new();

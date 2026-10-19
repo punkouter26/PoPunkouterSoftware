@@ -2,9 +2,9 @@
 @using Radzen
 
 @* Stripped-down card per the design pass: only the screenshot, the app name, and a
-   one-line description. Status badges, technology chips, action buttons, and
-   "checked at" timestamps were removed so the grid reads as a clean visual catalogue
-   rather than a dashboard tile.
+   one-line description. Technology chips, action buttons, and "checked at" timestamps were
+   removed so the grid reads as a clean visual catalogue rather than a dashboard tile. A
+   status badge came back on 2026-10-19, but only for a card that is down or degraded.
 
    ONE link per card: the title, stretched over the whole card by `::after` (see
    PortfolioAppCard.razor.css). The screenshot and an "Open app" pill used to be two more
@@ -78,6 +78,15 @@
        Home_FirstScreen_ShowsAWholeCard at 390px. Days since the app's last bad day on the
        /azure uptime grid — the same row, so the two can never disagree. *@
     <div class="app-card-foot">
+        @* Live status, on the foot line for the same reason as the streak. Only when it is
+           news: a healthy card says so with its flame, and a status chip on all eleven would be
+           eleven copies of "fine". This existed as a field on every card while the down app's
+           card looked exactly like the others. *@
+        @if (App.Status is "unavailable" or "degraded")
+        {
+            <RadzenBadge Text="@(App.Status == "unavailable" ? "Down" : "Degraded")" IsPill="true"
+                         BadgeStyle="@(App.Status == "unavailable" ? BadgeStyle.Danger : BadgeStyle.Warning)" />
+        }
         @if (App.CleanDays is > 0 and var days)
         {
             <span class="app-card-streak">
@@ -87,7 +96,7 @@
         }
         @if (Host is { } host)
         {
-            <span class="app-card-host" aria-hidden="true"><RadzenIcon Icon="open_in_new" />@host</span>
+            <span class="app-card-host" aria-hidden="true"><RadzenIcon Icon="open_in_new" /><span class="app-card-host__name">@host</span></span>
         }
     </div>
 </article>
@@ -119,8 +128,14 @@
 
     private bool _renderedFirst;
 
-    /// <summary>The URL's host, for the "where this goes" line; null when there is no link.</summary>
-    private string? Host => Uri.TryCreate(App.Url, UriKind.Absolute, out var uri) ? uri.Host : null;
+    /// <summary>
+    /// The URL's host, for the "where this goes" line; null when there is no link. The shared
+    /// <c>.azurewebsites.net</c> tail is dropped: it was identical on most cards and was the
+    /// part a 280px card had room for least, so every host was cut mid-word.
+    /// </summary>
+    private string? Host => Uri.TryCreate(App.Url, UriKind.Absolute, out var uri)
+        ? uri.Host.Replace(".azurewebsites.net", "", StringComparison.OrdinalIgnoreCase)
+        : null;
 
     /// <summary>Lighthouse's own bands: 90+ good, 50–89 needs work, below 50 poor.</summary>
     private static string ScoreClass(int score) => score >= 90 ? "is-good" : score >= 50 ? "is-warn" : "is-bad";

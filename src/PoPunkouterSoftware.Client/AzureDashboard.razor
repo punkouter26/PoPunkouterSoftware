@@ -54,8 +54,9 @@ else if (_summary is not null)
     var narrativeTone = summary.BrokenServices > 0 ? "bad"
         : summary.ActionableCount > 0 ? "warn"
         : "good";
-    // The queue replaces the plain attention list in place once the full report is in.
-    var showQueue = _advancedOpen && report is not null;
+    // The queue replaces the plain attention list in place once the full report is in —
+    // loaded the first time Advanced diagnostics is opened, and kept after its drawer closes.
+    var showQueue = report is not null;
 
     @* One pane for "what is going on": headline, the plain-English lead paragraph under it,
        and the numbers. The paragraph used to be a separate glass card in a pane of its own
@@ -75,9 +76,10 @@ else if (_summary is not null)
                the meta row below. Never put a badge, chip or count INSIDE a heading element:
                it joins the accessible name that <FocusOnNavigate Selector="h1"> announces. *@
             <h1 class="azure-hero-title">
-                @(summary.AttentionCount == 0 ? "Everything looks good" : $"{summary.AttentionCount} item(s) need attention")
+                @(summary.AttentionCount switch { 0 => "Everything looks good", 1 => "1 item needs attention", var n => $"{n} items need attention" })
             </h1>
             <AzureStatusNarrative Summary="@CurrentAiSummary" AttentionItems="@summary.AttentionItems" Tone="@narrativeTone" />
+            <AzureWhatChanged Delta="@summary.Changes" />
             @* Freshness is stated ONCE. It used to be "Updated 3d ago", a Current/Stale badge,
                and the age again inside two KPI labels ("Health as of 3d ago", "Unavailable
                (3d ago)"). A green "Current" badge said nothing, so the badge now appears only
@@ -118,8 +120,7 @@ else if (_summary is not null)
                    which is worth knowing before clicking it. *@
                 <RadzenButton Text="@(_refreshing ? "Rescanning Azure…" : "Rescan Azure")" Icon="refresh"
                               ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Disabled="@_refreshing" Click="RefreshAsync"
-                              data-fx-origin="refresh"
-                              title="Runs a full Azure subscription scan (roughly 30 seconds). Progress streams live, and you can leave the page while it runs." />
+                              data-fx-origin="refresh" />
                 @if (_refreshing)
                 {
                     <RadzenButton Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="CancelRefreshAsync" />
@@ -143,8 +144,12 @@ else if (_summary is not null)
                click is itself the user gesture the autoplay policy requires, so this is the
                one place where opting in and hearing the result can happen in one action. *@
             <RadzenButton Text="Listen" Icon="graphic_eq" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
-                          Click="SonifyAsync" Disabled="@_sonifying"
-                          title="Plays the fleet status as a four-second sound: health tunes the chord, outages add dissonance, spend sets the pulse rate, uptime opens the filter. Turns sound on if it is off." />
+                          Click="SonifyAsync" Disabled="@_sonifying" />
+            @* ONE hint for both buttons. Each used to carry a `title` — mouse-only text no phone
+               or keyboard visitor could reach (see AppHint). *@
+            <AppHint Focusable="true"
+                     Text="@((_managementActionsEnabled ? "Rescan runs a full Azure subscription scan (about 30 seconds); progress streams live and you can leave the page. " : "")
+                            + "Listen plays the fleet status as a four-second sound: health tunes the chord, outages add dissonance, spend sets the pulse rate, uptime opens the filter. It turns sound on if it is off.")" />
         </div>
     </header>
 
@@ -156,6 +161,54 @@ else if (_summary is not null)
                               Percent="@_progressPercent" Step="@_progressStep"
                               Determinate="@(_hub?.State == HubConnectionState.Connected)" />
     }
+    </section>
+
+    @* ONE list of what needs doing, and it comes SECOND. It sat last, below the fold at
+       1440x1000 (y=1106 in a 935px viewport) and on the fifth page of the phone pager —
+       the only list on the page a visitor acts on, behind four that they only read.
+
+       First paint shows the server's plain attention sentences; once Advanced diagnostics
+       has loaded the full report, the same section shows the ranked queue (commands, impact,
+       snooze) instead. They used to be two lists on one page — this one plus a "Full priority
+       queue" further down — and the security/cleanup count badges that sat in this heading
+       repeated two of the sentences directly beneath them.
+
+       --tall while the queue is showing: it is as long as the estate is broken, and it
+       scrolls rather than being cut. *@
+    <section class="app-pane azure-pane-actions @(showQueue ? "app-pane--tall" : null)">
+    <section class="azure-attention-summary">
+        <div class="azure-section-heading">
+            <h2>Needs attention</h2>
+            @* ButtonStyle.Base (not .Light): Radzen's "Light" style hardcodes `color:
+               var(--rz-base-200)` for the outlined variant in every theme — a near-white label,
+               invisible on the light-mode surface. Base resolves to --rz-text-color, which the
+               token bridge maps to --app-text, so it tracks both schemes. *@
+            <div class="azure-advanced-toggle">
+                <RadzenButton Text="Advanced diagnostics" Icon="tune" ButtonStyle="ButtonStyle.Base"
+                              Variant="Variant.Outlined" Size="ButtonSize.Small" Click="OpenDiagnosticsAsync" />
+            </div>
+        </div>
+        @if (showQueue)
+        {
+            <AzurePriorityQueue Items="@PriorityQueue"
+                                BadgeFor="@ActionabilityBadge"
+                                OnCopyCommand="@CopyText"
+                                OnSnooze="@SnoozePriorityItemAsync"
+                                CanRestart="@_managementActionsEnabled"
+                                OnRestart="@RestartSiteAsync" />
+            <AzureSnoozedItems Items="@_activeSnoozes" OnUnsnooze="@UnsnoozeEntryAsync" />
+        }
+        else if (summary.AttentionItems.Count == 0)
+        {
+            <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No action is needed.</div>
+        }
+        else
+        {
+            <ol class="azure-simple-attention">
+                @foreach (var item in summary.AttentionItems) { <li>@item</li> }
+            </ol>
+        }
+    </section>
     </section>
 
     @* One grid, three cards. There used to be two grids and four cards, and the extra card
@@ -203,74 +256,22 @@ else if (_summary is not null)
 
     </section>
 
-    @* 30 day-columns at 10px: a phone scrolls them inside their own container, and a
-       desktop half (~630px) holds the whole grid, so it pairs with "what changed" there. *@
+    @* Its own full-width row at every viewport. It used to be the half-width partner of
+       "what changed", which now lives in the hero; the day columns stretch to the card
+       (see GridStyle in AzureUptimeHeatmap) instead of leaving two thirds of it empty, and
+       a phone still scrolls them inside their own container. Each row name opens that
+       app's drawer. *@
     <section class="app-pane azure-pane-uptime">
-    <AzureUptimeHeatmap Map="@summary.Uptime" Focus="@Focus" />
+    <AzureUptimeHeatmap Map="@summary.Uptime" Focus="@Focus" OnSelect="@OpenAppAsync" />
     </section>
 
-    @* Its own pane: "what moved" is the question a returning visitor actually arrives with,
-       and it deserves a screen rather than a footnote under the hero. Answered from stored
-       history with no extra request. AFTER uptime, not straight after the hero: on desktop
-       the two are a half-width pair (see the >=1100px block in the stylesheet), which frees
-       the spend pane to span the page its three cards need. DOM order is the pairing order,
-       so reading and tab order still match what is on screen. *@
-    <section class="app-pane azure-pane-changed">
-    <AzureWhatChanged Delta="@summary.Changes" />
-    </section>
+    @* The two drawers. Both are native <dialog>s INSIDE this page (see AppDrawer.razor for
+       why not Radzen's side dialog): closed they are display:none and take no pane, so the
+       snap pager and the desktop column never see them; open they sit in the top layer.
 
-    @* ONE list of what needs doing. First paint shows the server's plain attention sentences;
-       once Advanced diagnostics has loaded the full report, the same section shows the ranked
-       queue (commands, impact, snooze) instead. They used to be two lists on one page — this
-       one plus a "Full priority queue" further down — and the security/cleanup count badges
-       that sat in this heading repeated two of the sentences directly beneath them.
-
-       --tall while the queue is showing: it is as long as the estate is broken, and like the
-       advanced pane it scrolls rather than being cut. *@
-    <section class="app-pane azure-pane-actions @(showQueue ? "app-pane--tall" : null)">
-    <section class="azure-attention-summary">
-        <div class="azure-section-heading">
-            <h2>Needs attention</h2>
-            @* ButtonStyle.Base (not .Light): Radzen's "Light" style hardcodes `color:
-               var(--rz-base-200)` for the outlined variant in every theme — a near-white label,
-               invisible on the light-mode surface. Base resolves to --rz-text-color, which the
-               token bridge maps to --app-text, so it tracks both schemes. *@
-            <div class="azure-advanced-toggle">
-                <RadzenButton Text="@(_advancedOpen ? "Hide advanced diagnostics" : "Advanced diagnostics")"
-                              Icon="@(_advancedOpen ? "expand_less" : "tune")" ButtonStyle="ButtonStyle.Base"
-                              Variant="Variant.Outlined" Size="ButtonSize.Small" Click="ToggleAdvancedAsync" />
-            </div>
-        </div>
-        @if (showQueue)
-        {
-            <AzurePriorityQueue Items="@PriorityQueue"
-                                BadgeFor="@ActionabilityBadge"
-                                OnCopyCommand="@CopyText"
-                                OnSnooze="@SnoozePriorityItemAsync"
-                                CanRestart="@_managementActionsEnabled"
-                                OnRestart="@RestartSiteAsync" />
-            <AzureSnoozedItems Items="@_activeSnoozes" OnUnsnooze="@UnsnoozeEntryAsync" />
-        }
-        else if (summary.AttentionItems.Count == 0)
-        {
-            <div class="azure-compact-state success"><RadzenIcon Icon="check_circle" /> No action is needed.</div>
-        }
-        else
-        {
-            <ol class="azure-simple-attention">
-                @foreach (var item in summary.AttentionItems) { <li>@item</li> }
-            </ol>
-        }
-    </section>
-    </section>
-
-    @if (_advancedOpen)
-    {
-        @* --tall: the only body of content on this page that cannot honestly be compressed
-           into one screen. It still snaps to the top of the viewport, then scrolls
-           internally - the alternative would be to truncate it, which is exactly what the
-           paging exists to avoid. *@
-        <section class="app-pane app-pane--tall azure-advanced" aria-label="Advanced Azure diagnostics">
+       Advanced diagnostics used to expand inline as an `.app-pane--tall` pane that pushed
+       everything below it down and was the phone pager's one declared exception. *@
+    <AppDrawer @ref="_diagnosticsDrawer" Title="Advanced diagnostics">
         @* Banner alongside, not instead of — see the note on the page-level banner above. *@
         @if (!string.IsNullOrWhiteSpace(_advancedError))
         {
@@ -296,13 +297,13 @@ else if (_summary is not null)
                                    StatusBadgeFor="@ExplorerStatusBadge"
                                    RiskClassFor="@RiskClass">
                 <HeadingActions>
-                    @* One-tap: the primary action fires on the main button; the secondary export
-                       lives behind the same control's caret instead of a second sibling button.
-                       It sits in the explorer's heading row rather than a toolbar row of its own. *@
-                    <RadzenSplitButton Text="Download report" Icon="download" Size="ButtonSize.Small" Click="OnDownloadClick">
-                        <RadzenSplitButtonItem Text="Full report (JSON)" Value="json" Icon="data_object" />
-                        <RadzenSplitButtonItem Text="Audit script (PowerShell)" Value="script" Icon="terminal" />
-                    </RadzenSplitButton>
+                    @* Two plain buttons, not the RadzenSplitButton this was: a split button's
+                       menu is a Radzen popup, and anything outside a modal <dialog> is inert —
+                       a popup that escapes the dialog cannot be clicked. *@
+                    <RadzenButton Text="Report JSON" Icon="download" Size="ButtonSize.Small"
+                                  ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="DownloadReportAsync" />
+                    <RadzenButton Text="Audit script" Icon="terminal" Size="ButtonSize.Small"
+                                  ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="DownloadAutomationScript" />
                 </HeadingActions>
             </AzureResourceExplorer>
 
@@ -310,7 +311,18 @@ else if (_summary is not null)
                                       SecurityIssueCount="@securityIssueCount"
                                       StepTimingTotalMs="@StepTimingTotalMs" />
         }
-        </section>
-    }
+    </AppDrawer>
+
+    <AppDrawer @ref="_appDrawer" Title="@(_selectedRow?.Name ?? "App")">
+        @if (_selectedRow is { } selected)
+        {
+            var key = DashboardDerivations.AppMatchKey(selected.Name);
+            <AzureAppDetail Row="@selected" Days="@summary.Uptime.Days"
+                            ResponseMs="@summary.ResponseTimes.FirstOrDefault(p => DashboardDerivations.AppMatchKey(p.Label) == key)?.Value"
+                            Attention="@summary.AttentionItems.Where(i => i.Contains(selected.Name, StringComparison.OrdinalIgnoreCase)).ToList()"
+                            Changes="@summary.Changes.Changes.Where(c => c.Text.Contains(selected.Name, StringComparison.OrdinalIgnoreCase)).ToList()"
+                            SignIns="@_signIns" />
+        }
+    </AppDrawer>
 }
 </main>

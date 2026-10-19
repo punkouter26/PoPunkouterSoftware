@@ -13,7 +13,7 @@ namespace PoPunkouterSoftware.Shared;
 /// </summary>
 public record CostForecast
 {
-    /// <summary>Spend so far in the current 30-day window.</summary>
+    /// <summary>Spend so far this calendar month — the base <see cref="ProjectedMonthTotal"/> extrapolates from. The rolling 30-day total only when the scan has no burn-rate series.</summary>
     public double SpentToDate { get; init; }
 
     /// <summary>Projected total for the month, from the scan's burn-rate step.</summary>

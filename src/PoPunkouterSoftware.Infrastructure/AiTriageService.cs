@@ -215,15 +215,20 @@ public sealed class AiTriageService
     /// </summary>
     private string _authMode = "none";
 
+    // The text sits beside tiles that already print every number in the report. "Use the
+    // actual numbers" produced ~90 words restating them (health %, 30-day cost, projection,
+    // budget, three cost drivers) — 355px of a phone's first screen saying the tiles twice.
+    // Bump the "narrator:N" input in ToHashInputs when this changes, or the cache keeps the old text.
     private const string SystemPrompt =
         "You are the status narrator for a personal Azure web-app portfolio dashboard. " +
-        "Given a structured status report, write ONE paragraph of 2 to 4 sentences, in plain " +
-        "English, that tells the owner what is going on with their websites right now. " +
-        "Lead with whatever matters most: anything offline, then security or cost problems, " +
-        "then the all-clear. Name specific apps when they are named in the data. Use the " +
-        "actual numbers. Be direct and factual, write for a person glancing at a dashboard, " +
-        "and never invent anything that is not in the data. No bullet points, no headings, " +
-        "no markdown, no preamble - return only the paragraph.";
+        "Your text sits beside tiles that already show the health percentage, the 30-day cost, " +
+        "the resource count, the month-end forecast against budget, the top cost drivers and " +
+        "the slowest response times. Write at most TWO short sentences, under 40 words in " +
+        "total, in plain English: what is wrong right now and the single most useful next step, " +
+        "or a one-sentence all-clear. Lead with anything offline, then security, then cost. " +
+        "Name specific apps when they are named in the data. Do not repeat numbers the tiles " +
+        "already show, and never invent anything that is not in the data. No bullet points, " +
+        "no headings, no markdown, no preamble - return only the text.";
 
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..max] + "…";
@@ -308,11 +313,12 @@ public sealed class AiTriageService
         if (facts.BrokenServices > 0)
         {
             var named = facts.BrokenServiceNames.Take(3).ToList();
-            var subject = named.Count > 0 ? JoinNames(named) : $"{facts.BrokenServices} service(s)";
+            var subject = named.Count > 0 ? JoinNames(named) : (facts.BrokenServices == 1 ? "1 service" : $"{facts.BrokenServices} services");
             var extra = facts.BrokenServices > named.Count && named.Count > 0
                 ? $" (and {facts.BrokenServices - named.Count} more)"
                 : "";
-            sentences.Add($"{subject}{extra} {(facts.BrokenServices == 1 && named.Count == 1 ? "is" : "are")} currently unavailable, so {facts.ActiveServices} of {facts.TotalServices} apps are healthy ({facts.HealthPercent}%).");
+            // No "N of M apps healthy (P%)": the health tile beside this text says exactly that.
+            sentences.Add($"{subject}{extra} {(facts.BrokenServices == 1 ? "is" : "are")} currently unavailable.");
         }
         else if (facts.TotalServices > 0)
         {
@@ -321,19 +327,15 @@ public sealed class AiTriageService
 
         var problems = new List<string>();
         if (facts.SecurityFindings > 0)
-            problems.Add($"{facts.SecurityFindings} security configuration finding(s)");
+            problems.Add($"{facts.SecurityFindings} security configuration finding{(facts.SecurityFindings == 1 ? "" : "s")}");
         if (facts.CleanupCandidates > 0)
-            problems.Add($"{facts.CleanupCandidates} resource(s) worth cleaning up");
+            problems.Add($"{facts.CleanupCandidates} resource{(facts.CleanupCandidates == 1 ? "" : "s")} worth cleaning up");
         if (problems.Count > 0)
-            sentences.Add($"There {(problems.Count == 1 ? "is" : "are")} also {JoinNames(problems)} across {facts.TotalResources} resources.");
+            sentences.Add($"There {(problems.Count == 1 ? "is" : "are")} also {JoinNames(problems)}.");
 
-        if (facts.Cost30Days > 0)
-        {
-            var budgetNote = facts.BudgetUsd is > 0
-                ? $", against a ${facts.BudgetUsd:F0} budget"
-                : "";
-            sentences.Add($"Spend is ${facts.Cost30Days:F2} over the last 30 days, on pace for about ${facts.ProjectedMonthCost:F2} this month{budgetNote}.");
-        }
+        // Spend is on the cost tile and the forecast card; it earns a sentence only when it is news.
+        if (facts.BudgetUsd is > 0 and var budget && facts.ProjectedMonthCost > budget)
+            sentences.Add($"This month is on pace to overrun the ${budget:F0} budget.");
 
         if (facts.IsStale)
             sentences.Add("This data is stale — run a refresh for the current picture.");
@@ -513,6 +515,8 @@ public sealed record StatusFacts
     {
         var inputs = new List<string>
         {
+            // The prompt's version: a reworded prompt must invalidate text cached under the old one.
+            "narrator:2",
             $"health:{HealthPercent}",
             $"broken:{BrokenServices}",
             $"total:{TotalServices}",

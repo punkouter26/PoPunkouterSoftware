@@ -1,6 +1,7 @@
 /*
- * Theme preference — the visitor's explicit light/dark choice. Set from the command
- * palette and /settings; the header toggle was removed 2026-10-05.
+ * Theme preference — the visitor's explicit light/dark choice, plus the compact-density
+ * flag. Both are set from the command palette (the header toggle went 2026-10-05, the
+ * /settings page 2026-10-19).
  *
  * WHY THIS IS A FILE AND NOT A RADZEN COMPONENT
  * `RadzenTheme` + `RadzenAppearanceToggle` exist, but the app does not use them, and
@@ -147,6 +148,7 @@
         get preference() { return read(); },
         get effective() { return effective(); },
         setDensity: setDensity,
+        toggleDensity: function () { setDensity(!readDensity()); },
         set: set,
         toggle: toggle
     };

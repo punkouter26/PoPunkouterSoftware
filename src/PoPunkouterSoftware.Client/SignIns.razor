@@ -3,7 +3,6 @@
 @using PoPunkouterSoftware.Shared
 @inject HttpClient Http
 @inject IJSRuntime JS
-@inject IUserSettingsService SettingsService
 @inject NavigationManager NavManager
 
 <PageTitle>PoPunkouterSoftware — Who signed in</PageTitle>
@@ -22,6 +21,23 @@
             <AppHint Focusable="true"
                      Text="Every Po app writes the same UserSignedIn record to one shared Application Insights workspace, so this is the whole estate in a single list — the same data as the “Po Sign-ins” workbook in Azure. Addresses are partially hidden, because this page has no login." />
         </div>
+
+        @* The totals are one line under the title, not three KPI tiles: each tile spent a
+           third of a 1280px row on a one- or two-digit number. Same three facts, ~110px
+           shorter, and the read time rides on the end of it instead of a line of its own. *@
+        @if (_report is { Available: true } totals)
+        {
+            <p class="signins-stats" aria-live="polite">
+                <span><strong>@totals.TotalPeople</strong> @(totals.TotalPeople == 1 ? "person" : "people")</span>
+                <span><strong>@totals.TotalSignIns</strong> @(totals.TotalSignIns == 1 ? "sign-in" : "sign-ins")</span>
+                <span><strong>@totals.TotalApps</strong> @(totals.TotalApps == 1 ? "app" : "apps")</span>
+                <span class="signins-stats__read">read @RelativeTime.Format(totals.GeneratedAt)</span>
+                @if (totals.Truncated)
+                {
+                    <span class="signins-meta__warn">capped at the query row limit, so these are minimums</span>
+                }
+            </p>
+        }
 
         @* Three fixed windows rather than a date picker: 90 is the component's retention
            ceiling, so a free range could only ever ask for less than it implies. *@
@@ -70,21 +86,6 @@
         }
         else
         {
-            <div class="app-kpis" role="group" aria-label="Sign-in totals">
-                <KpiTile Value="@report.TotalPeople.ToString()" Label="@(report.TotalPeople == 1 ? "Person" : "People")" />
-                <KpiTile Value="@report.TotalSignIns.ToString()" Label="Sign-ins" />
-                <KpiTile Value="@report.TotalApps.ToString()" Label="@(report.TotalApps == 1 ? "App used" : "Apps used")" />
-            </div>
-
-            <p class="signins-meta">
-                @* No "Last N days": the pressed window button above already says so. *@
-                Read @RelativeTime.Format(report.GeneratedAt)
-                @if (report.Truncated)
-                {
-                    <span class="signins-meta__warn">· capped at the query row limit, so these are minimums</span>
-                }
-            </p>
-
             @if (report.TotalSignIns == 0)
             {
                 <div class="app-empty-state">
@@ -123,30 +124,45 @@
                         </div>
                     </article>
 
+                    @* One table, not two rankings. It was "Reach per app" (bars) over "Cost per
+                       person" (bars) — and on the live estate the second was five bars of $0.00.
+                       The cost column now appears only when some app's own resource group
+                       actually billed something; each app name links to its uptime row. *@
                     <article class="app-card" data-glass>
                         <h2 class="signins-panel__title">Reach per app</h2>
-                        <div class="signins-panel__subtitle" aria-hidden="true">Distinct people, this window</div>
-                        @* MetricBars, not a chart: a pre-sorted top-N ranking, which is the
-                           case the repo reserves it for. The trend below is the continuous
-                           series, and that one is a chart. *@
-                        <MetricBars Points="@_reachPoints" Tone="accent" Format="count" />
-                        <span class="app-sr-only">
-                            @string.Join(", ", report.Apps.Select(a => $"{a.App}: {a.People} people, {a.SignIns} sign-ins"))
-                        </span>
-
-                        @* Same card, second ranking: what each of those people costs. The cost
-                           is the app's own resource group from the last stored scan — shared
-                           App Service plan compute billed elsewhere is not split out, so a
-                           $0.00 here means "nothing extra", not "free". *@
-                        @if (_costPoints.Count > 0)
-                        {
-                            <h3 class="signins-panel__title signins-panel__title--sub">Cost per person</h3>
-                            <div class="signins-panel__subtitle" aria-hidden="true">Own resource group, 30 days ÷ people</div>
-                            <MetricBars Points="@_costPoints" Tone="warm" Format="money" />
-                            <span class="app-sr-only">
-                                @string.Join(", ", _costPoints.Select(p => $"{p.Label}: ${p.Value:F2} per person"))
-                            </span>
-                        }
+                        <div class="signins-panel__subtitle" aria-hidden="true">Distinct people this window, widest first</div>
+                        <div class="app-table-scroll" tabindex="0" role="group" aria-label="Reach per app">
+                            <table class="app-table signins-reach">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">App</th>
+                                        <th scope="col" class="is-numeric">People</th>
+                                        <th scope="col" class="is-numeric">Sign-ins</th>
+                                        @if (ShowCost)
+                                        {
+                                            <th scope="col" class="is-numeric">$ / person</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var app in report.Apps)
+                                    {
+                                        <tr @key="app.App">
+                                            <th scope="row">
+                                                <a href="@($"/azure?focus={Uri.EscapeDataString(app.App)}")">@app.App</a>
+                                                <span class="signins-reach__bar" style="@($"width: {ReachPercent(app)}%")" aria-hidden="true"></span>
+                                            </th>
+                                            <td class="is-numeric">@app.People</td>
+                                            <td class="is-numeric">@app.SignIns</td>
+                                            @if (ShowCost)
+                                            {
+                                                <td class="is-numeric">@(app.CostPerPerson is double c ? $"${c:F2}" : "—")</td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </article>
                 </section>
 

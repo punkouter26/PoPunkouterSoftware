@@ -165,8 +165,8 @@ public static class DashboardInsightsBuilder
             changes.Add(new ScanChange(
                 ScanChangeKinds.Resources, ScanChangeDirection.Neutral,
                 resourceDelta > 0
-                    ? $"{resourceDelta} resource(s) added"
-                    : $"{Math.Abs(resourceDelta)} resource(s) removed",
+                    ? $"{resourceDelta} resource{(resourceDelta == 1 ? "" : "s")} added"
+                    : $"{Math.Abs(resourceDelta)} resource{(resourceDelta == -1 ? "" : "s")} removed",
                 $"{previous.TotalResources} → {resourcesNow}"));
         }
 
@@ -243,7 +243,13 @@ public static class DashboardInsightsBuilder
     public static CostForecast BuildForecast(
         AzureReport current, IReadOnlyCollection<HistorySummary> history, double? budgetUsd)
     {
-        var spent = current.Cost?.TotalCost30Days ?? 0;
+        // Month to date, from the same series the projection is extrapolated from. This was the
+        // rolling 30-day total, so on 2026-10-19 the card read "spent $22.01, projected $7.08"
+        // — $17.67 of those 30 days had landed in September. Both numbers were true; side by
+        // side under "so far" and "month" they contradicted each other.
+        var spent = current.BurnRate?.DailyCosts is { Count: > 0 } days
+            ? days.Sum(d => d.Cost)
+            : current.Cost?.TotalCost30Days ?? 0;
         var projected = current.BurnRate?.ProjectedMonthTotal ?? 0;
 
         // A scan that produced no burn-rate step still has a usable answer: spend to date is

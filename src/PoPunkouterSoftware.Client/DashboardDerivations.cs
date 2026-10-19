@@ -401,7 +401,7 @@ public static class DashboardDerivations
                         Source: $"Advisor · {g.Key.Category}",
                         ImpactScore: (high ? 70 : 40) + Math.Min(20, names.Count),
                         Confidence: "high",
-                        Reason: $"{names.Count} resource(s): {string.Join(", ", names.Take(3))}{(names.Count > 3 ? "…" : "")}"
+                        Reason: $"{Plural(names.Count, "resource")}: {string.Join(", ", names.Take(3))}{(names.Count > 3 ? "…" : "")}"
                             + (savings > 0 ? $" · saves ~${savings:F2}/mo" : ""),
                         Owner: "unassigned",
                         Environment: "unknown",
@@ -567,4 +567,64 @@ public static class DashboardDerivations
             return "Remove Candidate";
         return "Watch";
     }
+
+    // ── Uptime rows ────────────────────────────────────────────────────────────
+    // Shared by AzureUptimeHeatmap (its screen-reader sentences) and AzureAppDetail (the
+    // drawer's visible prose), which is why they left the heatmap's private @code block.
+
+    /// <summary>
+    /// Letters and digits only, lower-cased, so <c>?focus=pomemevideo</c>, an uptime row's
+    /// <c>PoMemeVideo</c>, a sign-in roster's app name and an alert's link all match.
+    /// </summary>
+    public static string AppMatchKey(string? value) =>
+        string.Concat((value ?? "").Where(char.IsLetterOrDigit)).ToLowerInvariant();
+
+    public static string DescribeUptimeState(string state) => state switch
+    {
+        UptimeState.Healthy => "healthy",
+        UptimeState.Broken => "unavailable",
+        UptimeState.Degraded => "degraded",
+        _ => "no scan that day",
+    };
+
+    /// <summary>
+    /// One uptime row as a sentence. Bad days are NAMED rather than counted, capped at four
+    /// with an "and N more" tail: which days an app was down is the reason to look, and a
+    /// 30-item date list read aloud is no more usable than the 30 cells it replaces. Days
+    /// with no scan are never folded into the good or the bad — the percentage's own rule.
+    /// </summary>
+    public static string DescribeUptimeRow(UptimeRow row, IReadOnlyList<DateTime> days)
+    {
+        if (row.ScansObserved == 0)
+            return $"{row.Name}: never observed in this window.";
+
+        var bad = new List<string>();
+        for (var i = 0; i < row.Cells.Count && i < days.Count; i++)
+        {
+            if (row.Cells[i] is UptimeState.Broken or UptimeState.Degraded)
+                bad.Add($"{days[i]:MMM d} {DescribeUptimeState(row.Cells[i])}");
+        }
+
+        var text = $"{row.Name}: healthy on {row.UptimePercent} percent of {Plural(row.ScansObserved, "check")} "
+            + $"across {Plural(row.DaysWithData, "observed day")} of {days.Count}.";
+
+        if (row.Errors24h is > 0)
+            text += $" {Plural(row.Errors24h.Value, "exception")} in the last 24 hours{(row.TopError is { } t ? $", mostly {t}" : "")}.";
+        if (row.SecurityAlerts is > 0)
+            text += $" {Plural(row.SecurityAlerts.Value, "open Dependabot alert")}.";
+
+        if (row.DeployDays.Count > 0)
+            text += $" Deployed {string.Join(", ", row.DeployDays.Where(i => i < days.Count).Select(i => $"{days[i]:MMM d}"))}.";
+
+        if (bad.Count == 0)
+            return text + " No bad days.";
+
+        var named = string.Join(", ", bad.Take(4));
+        return bad.Count <= 4
+            ? $"{text} Bad days: {named}."
+            : $"{text} Bad days: {named}, and {bad.Count - 4} more.";
+    }
+
+    /// <summary>"1 check", "3 checks" — instead of the "(s)" the UI used to print.</summary>
+    public static string Plural(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count:N0} {noun}s";
 }

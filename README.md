@@ -43,7 +43,7 @@ The app runs locally on HTTP port `8000`.
 ## Runtime Notes
 
 - `/health` is the deep probe (Key Vault, Table Storage); `/healthz` is a static liveness ping.
-- `/api/diag/*` (summary, report, refresh, cancel-refresh, restart/{name}, ai, snooze, automation-script) expose diagnostics; `/diag` itself was removed 2026-09-04 — diagnostics surface in the `/azure` Advanced panel. `restart/{name}` restarts (or starts) one scanned App Service and sits behind the same management gate as `refresh`; in Azure it also needs Website Contributor, which infra does not grant.
+- `/api/diag/*` (summary, report, refresh, cancel-refresh, restart/{name}, ai, snooze, automation-script) expose diagnostics; `/diag` itself was removed 2026-09-04 — diagnostics surface in the `/azure` Advanced diagnostics drawer. `restart/{name}` restarts (or starts) one scanned App Service and sits behind the same management gate as `refresh`; in Azure it also needs Website Contributor, which infra does not grant.
 - Each scan also reads Azure Resource Health (for down apps), Azure Advisor, 24h exception counts per app from the shared Application Insights component (`SignIns:ResourceId`), and open Dependabot alerts per matched repo (needs Dependabot enabled on the repo and a PAT with "Dependabot alerts: read").
 - Push alerts go through ntfy (`Alerts:NtfyTopic`): app down/up, failed scan, spend spike, an SSL certificate crossing 14 days, the month-end forecast crossing the budget. `deploy.yml` (rollback) and `screenshots.yml` (Lighthouse drop of 15+ points) send to the same topic via the optional `NTFY_TOPIC` GitHub secret, falling back to the Key Vault secret.
 - `deploy.yml` backs up the live site, smoke-tests `/healthz`, `/health` and `/api/diag/summary` after deploying, and redeploys the backup if the smoke test fails.
@@ -61,5 +61,5 @@ The app runs locally on HTTP port `8000`.
 ## Developer Guidance
 
 - Read `CLAUDE.md` before broad changes — it is the single context map. (`AGENT.MD` was merged into it and deleted; `AGENTS.md` only points there.)
-- Keep `/api/diag/*` available but do not link them from the UI — diagnostics surface only in the `/azure` Advanced panel.
+- Keep `/api/diag/*` available but do not link them from the UI — diagnostics surface only in the `/azure` Advanced diagnostics drawer.
 - Preserve Po-prefixed naming and strict build quality defaults from `Directory.Build.props`.

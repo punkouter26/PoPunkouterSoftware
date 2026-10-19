@@ -18,9 +18,19 @@ public partial class AzureDashboard
     private List<SafeToRemoveItem> safeToRemove = new();
     private bool _loading = true;
     private string? _loadError;
-    private bool _advancedOpen;
     private bool _advancedLoading;
     private string? _advancedError;
+
+    // ── Drawers (AppDrawer.razor) ───────────────────────────────────────────────
+    private AppDrawer? _diagnosticsDrawer;
+    private AppDrawer? _appDrawer;
+    private UptimeRow? _selectedRow;
+
+    // The app drawer's reach and own-group cost. /api/signins is a live Log Analytics query
+    // (rate-limited, see Host/RateLimits.cs), so it is fetched once per visit, on the first
+    // drawer open — most visits never open one — and never on first paint.
+    private SignInReport? _signIns;
+    private bool _signInsRequested;
 
     // ── Status narrative (see AzureStatusNarrative.razor) ───────────────────────
     // The persisted per-scan summary comes from whichever of the two read contracts is
@@ -132,19 +142,6 @@ public partial class AzureDashboard
 
     private void DownloadAutomationScript() =>
         NavManager.NavigateTo("/api/diag/automation-script", forceLoad: true);
-
-    /// <summary>
-    /// RadzenSplitButton passes <c>null</c> when the primary (left) half is pressed, and the
-    /// selected <see cref="RadzenSplitButtonItem"/> when a menu entry is chosen. The primary
-    /// half performs the common action — downloading the full JSON report.
-    /// </summary>
-    private async Task OnDownloadClick(RadzenSplitButtonItem? item)
-    {
-        if (item?.Value == "script")
-            DownloadAutomationScript();
-        else
-            await DownloadReportAsync();
-    }
 
     private async Task CopyText(string text)
     {
@@ -324,11 +321,40 @@ public partial class AzureDashboard
         }
     }
 
-    private async Task ToggleAdvancedAsync()
+    /// <summary>Opens the drawer first, then loads into it: the visitor sees the progress bar
+    /// where the explorer will appear, not a button that does nothing for a second.</summary>
+    private async Task OpenDiagnosticsAsync()
     {
-        _advancedOpen = !_advancedOpen;
-        if (_advancedOpen && report is null)
+        if (_diagnosticsDrawer is not null)
+            await _diagnosticsDrawer.OpenAsync();
+        if (report is null && !_advancedLoading)
             await LoadReportAsync();
+    }
+
+    private async Task OpenAppAsync(UptimeRow row)
+    {
+        _selectedRow = row;
+        StateHasChanged();
+        await Task.Yield(); // let the drawer's content render before it slides in
+        if (_appDrawer is not null)
+            await _appDrawer.OpenAsync();
+
+        if (_signInsRequested)
+            return;
+        _signInsRequested = true;
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            _signIns = await Http.GetFromJsonAsync("/api/signins?days=30", AppJsonContext.Default.SignInReport, cts.Token);
+        }
+        catch (Exception ex)
+        {
+            // Decorative to this page: a 429 or a timeout says "Unavailable" in one row of
+            // the drawer, never a banner over the dashboard.
+            Console.Error.WriteLine($"Sign-in reach load error: {ex.Message}");
+        }
+        _signIns ??= new SignInReport { Available = false };
+        StateHasChanged();
     }
 
     private async Task LoadReportAsync()
@@ -442,7 +468,7 @@ public partial class AzureDashboard
                 // outcome that gets its own flourish (a "recovered" cadence and a particle bloom).
                 var brokenBefore = _summary?.BrokenServices ?? 0;
                 await LoadSummaryAsync();
-                if (_advancedOpen)
+                if (report is not null)
                     await LoadReportAsync();
                 if (_refreshFailed)
                 {

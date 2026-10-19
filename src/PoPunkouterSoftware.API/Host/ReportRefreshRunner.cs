@@ -231,7 +231,7 @@ internal sealed class ReportRefreshRunner(
         foreach (var ssl in AlertTriggers.NewSslExpiries(report, previous))
         {
             await alerts.SendAsync(
-                $"Certificate for {ssl.Name} expires in {ssl.DaysLeft} day(s)",
+                $"Certificate for {ssl.Name} expires in {ssl.DaysLeft} day{(ssl.DaysLeft == 1 ? "" : "s")}",
                 $"{ssl.Url ?? ssl.Name} — expiry {ssl.Expiry ?? "unknown"}",
                 priority: ssl.DaysLeft <= 3 ? 5 : 4, clickPath: "/azure", tags: ["lock"], ct: CancellationToken.None);
         }

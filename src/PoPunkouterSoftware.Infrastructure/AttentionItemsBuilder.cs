@@ -79,16 +79,16 @@ public static class AttentionItemsBuilder
                     null => "",
                 }));
         if (security > 0)
-            attention.Add($"{security} security configuration finding(s)");
+            attention.Add($"{security} security configuration finding{(security == 1 ? "" : "s")}");
         if (cleanup > 0)
-            attention.Add($"{cleanup} cleanup candidate(s)");
+            attention.Add($"{cleanup} cleanup candidate{(cleanup == 1 ? "" : "s")}");
         // High-impact Cost and Security only. Everything else ranks in the priority queue, but
         // live, Advisor raised 62 "high impact" availability tips (zone redundancy, paid tiers)
         // against a free-tier estate — counting those would mean the hero never once says
         // "everything looks good".
         var advisor = report.AdvisorRecommendations.Count(a => a.Impact == "High" && a.Category is "Cost" or "Security");
         if (advisor > 0)
-            attention.Add($"{advisor} high-impact Azure Advisor cost/security recommendation(s)");
+            attention.Add($"{advisor} high-impact Azure Advisor cost/security recommendation{(advisor == 1 ? "" : "s")}");
         var isStale = PortfolioFreshness.IsStale(report.GeneratedAt, DateTime.UtcNow);
         if (isStale)
             attention.Add("Azure data is stale and should be refreshed");

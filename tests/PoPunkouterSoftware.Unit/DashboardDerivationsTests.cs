@@ -109,7 +109,7 @@ public class DashboardDerivationsTests
         queue.Should().ContainSingle(i => i.Source == "Advisor · Cost")
             .Which.Should().Match<PriorityQueueItem>(i => i.Actionability == "Fix Soon" && i.Reason.Contains("$12.50/mo"));
         queue.Should().ContainSingle(i => i.Source == "Advisor · HighAvailability")
-            .Which.Should().Match<PriorityQueueItem>(i => i.Actionability == "Watch" && i.Reason.StartsWith("2 resource(s): app-1, app-2"));
+            .Which.Should().Match<PriorityQueueItem>(i => i.Actionability == "Watch" && i.Reason.StartsWith("2 resources: app-1, app-2"));
         queue.Should().NotContain(i => i.Item == "Nice to have");
     }
 
@@ -306,5 +306,32 @@ public class DashboardDerivationsTests
         leaky.Type.Should().Be("Storage Accounts");
 
         DashboardDerivations.BuildResourceExplorerItems(null, [], []).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void UptimeRow_IsOneSentence_NamingBadDaysAndMatchingAppsAcrossSpellings()
+    {
+        // The sentence is the uptime grid's whole accessible rendering AND the app drawer's
+        // visible prose, so it must name the bad days, cap them at four, and say "1 check"
+        // rather than the "1 check(s)" it used to print.
+        var days = Enumerable.Range(0, 6).Select(i => new DateTime(2026, 10, 14 + i)).ToList();
+        var row = new UptimeRow
+        {
+            Name = "PoSeeReview",
+            Cells = [UptimeState.Broken, UptimeState.Broken, UptimeState.Degraded, UptimeState.Broken, UptimeState.Broken, UptimeState.Healthy],
+            UptimePercent = 76,
+            ScansObserved = 1,
+            DaysWithData = 6,
+            Errors24h = 3,
+            TopError = "HttpRequestException",
+        };
+
+        DashboardDerivations.DescribeUptimeRow(row, days).Should().Be(
+            "PoSeeReview: healthy on 76 percent of 1 check across 6 observed days of 6. "
+            + "3 exceptions in the last 24 hours, mostly HttpRequestException. "
+            + "Bad days: Oct 14 unavailable, Oct 15 unavailable, Oct 16 degraded, Oct 17 unavailable, and 1 more.");
+
+        // ?focus=, the uptime row and the /users roster spell the same app three ways.
+        DashboardDerivations.AppMatchKey("po-see review").Should().Be(DashboardDerivations.AppMatchKey("PoSeeReview"));
     }
 }

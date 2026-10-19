@@ -150,13 +150,20 @@ public class CostForecastTests
         var report = new AzureReport
         {
             GeneratedAt = Now,
-            Cost = new CostInfo { TotalCost30Days = 12.08 },
-            BurnRate = new BurnRateInfo { ProjectedMonthTotal = 38.00 },
+            Cost = new CostInfo { TotalCost30Days = 22.01 },
+            BurnRate = new BurnRateInfo
+            {
+                ProjectedMonthTotal = 7.08,
+                DailyCosts = [new() { Date = "2026-08-01", Cost = 3.00 }, new() { Date = "2026-08-02", Cost = 1.34 }],
+            },
         };
 
         var forecast = DashboardInsightsBuilder.BuildForecast(report, [], budgetUsd: null);
 
-        forecast.ProjectedMonthTotal.Should().Be(38.00);
+        forecast.ProjectedMonthTotal.Should().Be(7.08);
+        // "Spent so far" is month to date, not the 30-day total — the live card once showed
+        // $22.01 spent beside a $7.08 projection for the same month.
+        forecast.SpentToDate.Should().Be(4.34);
         forecast.PercentOfBudget.Should().BeNull();
         forecast.Verdict.Should().Be(CostVerdict.Unknown);
     }

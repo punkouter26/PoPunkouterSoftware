@@ -307,9 +307,10 @@ public class PortfolioUiTests : IAsyncLifetime
     /// genuinely FIT one screen. The last is the one that rots — it is what stops a new
     /// section being dropped into whichever pane happens to be nearest.</para>
     ///
-    /// <para><c>.app-pane--tall</c> is excluded on purpose. Advanced diagnostics cannot
+    /// <para><c>.app-pane--tall</c> is excluded on purpose. The ranked priority queue cannot
     /// honestly be compressed to a screen, so it scrolls internally instead of being cut;
-    /// that is a declared exception, not a failure. It is closed here anyway.</para>
+    /// that is a declared exception, not a failure. It is not loaded here anyway. (Advanced
+    /// diagnostics was the other exception until it moved into a drawer.)</para>
     /// </summary>
     [Fact]
     public async Task Azure_MobilePortrait_PanesFitTheViewport()
@@ -621,7 +622,7 @@ public class PortfolioUiTests : IAsyncLifetime
         var unavailable = await page.Locator(".signins-unavailable").CountAsync();
         if (unavailable == 0)
         {
-            await Assertions.Expect(page.Locator(".app-kpis")).ToBeVisibleAsync();
+            await Assertions.Expect(page.Locator(".signins-stats")).ToBeVisibleAsync();
             // The masking contract, asserted over the rendered TEXT rather than the API
             // response — this is what a visitor can actually read — and over every token that
             // looks like an address rather than over one CSS class. The roster omits the email

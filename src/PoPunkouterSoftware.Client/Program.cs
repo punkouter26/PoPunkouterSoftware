@@ -23,6 +23,5 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddRadzenComponents();
 builder.Services.AddScoped<DialogService>();
 builder.Services.AddScoped<NotificationService>();
-builder.Services.AddScoped<IUserSettingsService, LocalStorageUserSettingsService>();
 
 await builder.Build().RunAsync();

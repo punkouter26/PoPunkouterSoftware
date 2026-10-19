@@ -15,8 +15,10 @@
         { id: 'nav-apps', title: 'Go to Apps Portfolio', icon: 'home', category: 'Navigation', action: function () { navigate('/'); } },
         { id: 'nav-azure', title: 'Go to Azure Ops Dashboard', icon: 'monitor_heart', category: 'Navigation', action: function () { navigate('/azure'); } },
         { id: 'nav-users', title: 'Go to User Sign-Ins', icon: 'group', category: 'Navigation', action: function () { navigate('/users'); } },
-        { id: 'nav-settings', title: 'Open Settings & Preferences', icon: 'settings', category: 'Navigation', action: function () { navigate('/settings'); } },
         { id: 'act-theme', title: 'Toggle Light / Dark Theme', icon: 'dark_mode', category: 'Actions', action: function () { if (window.themeKit) window.themeKit.toggle(); } },
+        // Was a switch on the /settings page, deleted 2026-10-19 — the palette was already the
+        // only way to reach that page, so the preference now lives where the visitor already was.
+        { id: 'act-density', title: 'Toggle Compact Density', icon: 'tune', category: 'Actions', action: function () { if (window.themeKit) window.themeKit.toggleDensity(); } },
         { id: 'act-sound', title: 'Toggle Audio SFX & Sonification', icon: 'volume_up', category: 'Actions', action: function () { if (window.audioKit) window.audioKit.toggle(); } },
         { id: 'act-sonify', title: 'Play Fleet Sonification Audio', icon: 'graphic_eq', category: 'Actions', action: function () { if (window.audioKit) window.audioKit.play('success'); } },
         { id: 'act-reload', title: 'Hard Reload Application', icon: 'refresh', category: 'System', action: function () { window.location.reload(); } }

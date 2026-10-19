@@ -17,11 +17,13 @@ tally. `/users` was added 2026-09-12 because the answer it gives lives nowhere e
 estate: an Azure Monitor workbook nobody opens. Adding a fourth needs the same standard —
 a question the existing pages cannot answer without becoming two pages in a trench coat.
 
-**A fourth page exists anyway: `/settings`** (`Settings.razor`, added 2026-10-04, preferences
-held in `localStorage` via `LocalStorageUserSettingsService`). It was added without meeting
-that standard. Since the header link was removed on 2026-10-05, the only way to reach it is the
-Ctrl+K command palette (`js/command-palette.js`). The owner has not yet decided whether to
-keep it or fold it back into the header. Do not cite it as a precedent for adding more pages.
+**A fourth page, `/settings`, existed from 2026-10-04 to 2026-10-19 and was deleted.** It was
+added without meeting that standard, was reachable only from the Ctrl+K palette, and of its four
+controls one (auto-refresh) was saved and read by nothing, two (theme, sound) were already
+palette commands, and its own heading icon rendered as the word "PALETTE" because the glyph
+was never in the icon subset. Compact density became a palette command
+(`themeKit.toggleDensity()`); the default sign-in window became `/users` remembering the last
+window picked (`localStorage` `pops:signin-days`). Do not cite it as a precedent for a page.
 
 `AGENT.MD` used to hold this context and no longer exists — this file is the single context map.
 [AGENTS.md](AGENTS.md) exists only to point non-Claude agents here; never put rules in it.
@@ -164,7 +166,9 @@ exception: `/api/signins`, below.
 
 **`/api/signins` is that exception, and the reason is the shape of the data, not convenience.**
 `SignInQueryService` runs one Log Analytics query against the shared Application Insights
-component on every load of `/users`. The inventory scan is a ~30-second ARM walk whose answer
+component on every load of `/users`, and once per `/azure` visit on the first open of an
+app drawer (`AzureAppDetail` shows that app's reach and own-group cost) — lazily, never on
+first paint. The inventory scan is a ~30-second ARM walk whose answer
 changes slowly, so storing it and projecting it is right. A sign-in roster is one cheap query
 whose whole value is being current: folding it into the nightly scan would mean somebody who
 signed in an hour ago does not appear until tomorrow, which is the only question the page
@@ -175,7 +179,7 @@ a live query.
 
 **Two read contracts, deliberately split.** `/api/diag/summary` returns the compact `OpsSummary`
 (built by `DiagEndpoints.BuildOpsSummary`) and is the *only* first-paint fetch for `/azure`. The full
-`AzureReport` and the 30-day history load lazily, only when Advanced diagnostics is opened. Adding a
+`AzureReport` loads lazily, only when Advanced diagnostics is opened. Adding a
 field to the first-paint path means adding it to `OpsSummary`, not returning the full graph — an
 integration test asserts `/api/diag/summary` does not contain `webServices`.
 
@@ -221,13 +225,16 @@ draws. Trend belongs in the sparkline, breakdown in the chart, ratio in the hero
 `FleetHealth` with the donut; if you add a field to the first-paint contract, make sure nothing on
 the page already renders it.
 
-The 2026-09-26 consolidation applied the same rule to the rest of the page. The AI narrative is
+The 2026-09-26 consolidation applied the same rule to the rest of the page (2026-10-19 went
+further: see the pane order below). The AI narrative is
 the hero's lead paragraph under the h1, not a glass card in a pane of its own above it (the page
 opened by saying the same thing twice). Health % and the unavailable count are one tile
 ("80% · Health · 2 down"), so the hero has three tiles and `OpsSummary` lost `BrokenHistory`.
-Freshness is stated once ("Updated 2h ago" plus a badge only when stale). There is ONE list of what
-needs doing: "Needs attention" shows the server's plain sentences on first paint and is replaced
-in place by the ranked `AzurePriorityQueue` once Advanced diagnostics has loaded the report —
+Freshness is stated once ("Updated 2h ago" plus a badge only when stale). "What changed since
+the last scan" is part of the hero, under the lead paragraph, not a pane of its own. There is ONE
+list of what needs doing: "Needs attention" shows the server's plain sentences on first paint and
+is replaced in place by the ranked `AzurePriorityQueue` once Advanced diagnostics has loaded the
+report (and stays replaced after its drawer closes) —
 it used to be two lists, plus count badges that repeated two of the sentences. The "Cleanup
 evidence" disclosure is gone (every row was already a "Remove Candidate" in the queue, with a
 second snooze button), and so is the 30-day history disclosure with its `/api/diag/history`
@@ -262,28 +269,29 @@ smallest type in the app, so re-measure it against `--app-surface` (the darker o
 these sit on, and the one `[data-glass]` makes translucent), not against `--app-bg`.
 
 **`/azure` pages instead of scrolling at mobile portrait; `/` guarantees its first screen.** The
-two routes answer "fit the viewport" differently on purpose. `/azure` is pane-shaped — status,
-what changed, spend, uptime, actions — so `[data-snap-pager]` makes it a one-viewport-tall
+two routes answer "fit the viewport" differently on purpose. `/azure` is pane-shaped — status
+(with what changed), actions, spend, uptime — so `[data-snap-pager]` makes it a one-viewport-tall
 scroll-snap container whose `.app-pane` children are a screen each; `js/helpers.js`
 (`appSnapPager`) injects the dot strip, driven off the **computed** `scroll-snap-type` so the CSS
 media query stays the single source of truth for when paging is on. `/` is an 11-item catalogue —
 a list, and paging a list fights the reader — so it keeps ordinary scrolling and instead
 guarantees the first screen is complete. **Neither route truncates.** The one body of content that
-cannot honestly be compressed to a screen (advanced diagnostics) opts out with `.app-pane--tall`
-and scrolls internally. Both contracts are held by `PortfolioUiTests`
+cannot honestly be compressed to a screen (the ranked priority queue, once loaded) opts out with
+`.app-pane--tall` and scrolls internally; advanced diagnostics is not a pane at all but a drawer
+(see "Drawers are native dialogs" below). Both contracts are held by `PortfolioUiTests`
 (`Azure_MobilePortrait_PanesFitTheViewport`, `Home_FirstScreen_ShowsAWholeCard`) — a new section
 dropped into whichever pane is nearest will fail the first of those.
 
-At **≥1100px** the five panes (status, spend, uptime, changed, actions) go two-up, because
-the pane shape is not a phone-only idea: stacking them in one column at 1440×1000 measured
-**1707px of content in a 1000px viewport**. `AzureDashboard.razor.css`'s
-`@media (min-width: 1100px)` sets two columns; status, spend, actions and the advanced pane span
-both, and uptime + "what changed" are the half-width pair. Spend spans because it is three cards
-— in a 632px half each was ~190px, the forecast badge clipped and every metric bar drew 0px.
-Uptime fits a half whole at 10px cells (~540px). That pairing is why "what changed" comes
-AFTER uptime in the DOM: DOM order is the pairing order, so reading and tab order match the
-screen. `align-items: start` so a short pane keeps its own height. Measured after: ~1140px of
-content at 1440×1000, down from ~1330px.
+**At every width `/azure` is one column of four panes, in the order status, actions, spend,
+uptime** — what is going on, what to do about it, then the evidence. "Needs attention" is
+SECOND because it is the one list a visitor acts on; until 2026-10-19 it was last, below the fold
+at 1440×1000 (y=1106 in a 935px viewport) and page five of the phone pager. From 2026-09 to
+2026-10-19 a `@media (min-width: 1100px)` block made the page two-up, but its only half-width
+pair was uptime beside "what changed" — a 129px card next to a 342px one, a ~210px hole on every
+visit — and every other pane spanned both columns anyway. With "what changed" in the hero there
+is no pair left. The uptime grid's day columns are `minmax(var(--uptime-cell), 1fr)` (set inline
+in `AzureUptimeHeatmap.GridStyle`): at least a cell wide, so a phone still scrolls the grid inside
+its container, and stretched to the card on desktop, where `--uptime-cell` is 14px.
 
 `/users` answers it the way `/` does, not the way `/azure` does: it is a roster of unknown
 length, so it scrolls ordinarily and carries no `[data-snap-pager]`. Its one concession is
@@ -318,7 +326,8 @@ no scroller at all.
   `DashboardDerivationsTests`. Markup blocks are
   sibling components in the client root (`AzureStatusNarrative`, `AzureWhatChanged`,
   `AzureCostForecast`, `AzureUptimeHeatmap`, `Sparkline`, `AzurePriorityQueue`,
-  `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureSnoozedItems`).
+  `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureSnoozedItems`, `AzureAppDetail`),
+  plus the shared `AppDrawer`.
 
 ## Graphics and audio
 
@@ -333,14 +342,14 @@ comment in each before changing it; they document the reasoning, this is the map
 | `gfx-webgl.js` | WebGL2 renderer (curl-noise field, stable-fluids sim, transform-feedback particles with per-service flocks, dual-Kawase blur + bloom, Gray-Scott scars, glass composite with prism edges) with a WebGL1 field-only fallback. **The top of the ladder.** Also `createOrb()`, the hero's metaball health orb on its own small canvas. |
 | `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. Places each body's fleet hum in 3D and reacts to the command palette (FOV lean / punch). |
 | `ui-physics.js` | Physics on the DOM, not a canvas: `[data-fx-shatter]` breaks its card into Voronoi shards (real cloned pixels, WAAPI keyframes integrated up front), KPI values count up on a spring, catalogue cards tilt toward the mouse on an underdamped spring. Per-frame work is motionKit subscribers that unsubscribe when settled. |
-| `helpers.js` | Topbar, snap pager, clipboard, download, `appRevealFocus` (the `/azure?focus=` scroll) — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
-| `theme-kit.js` | The visitor's light/dark choice, and the toggle that sets it (`themeKit.toggle()`, called from the command palette and `/settings` — the header button was removed 2026-10-05). Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
+| `helpers.js` | Topbar, snap pager, clipboard, download, `appRevealFocus` (the `/azure?focus=` scroll), `appShowDialog` (opens an `AppDrawer`) — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
+| `theme-kit.js` | The visitor's light/dark choice, and the toggle that sets it (`themeKit.toggle()`, called from the command palette — the header button went 2026-10-05, `/settings` 2026-10-19), plus the compact-density flag (`toggleDensity()`, also a palette command). Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
 | `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
 | `blazor-hooks.js` | Registers the enhanced-navigation callbacks. Must load **after** `blazor.web.js`, which defines `Blazor`. Also ex-inline. |
-| `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation (including `/settings`, which has no other entry point), theme and sound toggles, and a launcher — open / copy link / show uptime for every app (from `/api/portfolio`, fetched on first open) plus "Rescan Azure" when management actions are on. Fuzzy matching is hand-written: the CSP's `script-src 'self'` rules out a CDN library. |
+| `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation, theme, density and sound toggles, and a launcher — open / copy link / show uptime for every app (from `/api/portfolio`, fetched on first open) plus "Rescan Azure" when management actions are on. Fuzzy matching is hand-written: the CSP's `script-src 'self'` rules out a CDN library. |
 
 `app-boot.js` also registers **`wwwroot/service-worker.js`**. That worker precaches the pages
-and JS/CSS listed in it under a fixed cache name (`pops-pwa-v4`) and serves them cache-first.
+and JS/CSS listed in it under a fixed cache name (`pops-pwa-v5`) and serves them cache-first.
 Change that list whenever you add or rename a page or script, and bump `CACHE_NAME` whenever
 you change any precached file. A visitor who already has the worker installed keeps getting
 the cached copy until the cache name changes.
@@ -358,7 +367,7 @@ replaced a `data-suppress-gpu-backdrop` attribute plus a MutationObserver.
 **Silence is the default and it is an accessibility floor.** `audioKit.enabled` starts false;
 the `AudioContext` is not even *constructed* until a user gesture, because one built during
 page load is a suspended context that silently swallows sound plus an unrequested hardware
-claim. Sound is switched on from the command palette, `/settings` or `/azure`'s Listen
+claim. Sound is switched on from the command palette or `/azure`'s Listen
 button; the header toggle and its `[data-sound-toggle]` wiring went on 2026-10-05.
 `[data-sfx]` / `[data-sfx-hover]` are wired by **delegation on `document`** (enhanced
 navigation re-inserts the header, so a direct listener would be lost or double-bound). Sound carries information in three places — the
@@ -676,7 +685,7 @@ proves a context and program were created, not that anything reached the screen.
   header, credentials included, to every other consumer. The `github` PAT is bound once in
   `Program.cs`. Pass per-call values on the `HttpRequestMessage`.
 - **The theme is a choice, not only a media query.** `theme-kit.js` owns it: the toggle
-  (command palette and `/settings`; the `MainLayout` header button went on 2026-10-05) writes
+  (the command palette; the `MainLayout` header button went on 2026-10-05, `/settings` on 2026-10-19) writes
   `localStorage` `pops:theme` and sets `data-app-theme` on `<html>`. Rejected alternatives, so they
   are not re-litigated: Radzen's `RadzenTheme`/`RadzenAppearanceToggle` would make a second theme
   authority alongside this app's own token block, which is the same class of bug as the Radzen token
@@ -712,6 +721,19 @@ proves a context and program were created, not that anything reached the screen.
   use — a hint on each of twelve catalogue cards would otherwise add twenty-four tab stops.
   With **no child content** it renders an ⓘ glyph plus the text as sr-only content: that is
   where read-once prose goes (methodology, owner-facing config keys) instead of a paragraph.
+- **Drawers are native `<dialog>`s, not Radzen's side dialog.** `AppDrawer.razor` renders a
+  `<dialog>` INSIDE the page and opens it with `showModal()` (`js/helpers.js` `appShowDialog`);
+  closing is a `<form method="dialog">` button, Escape, or `closedby="any"` on the backdrop.
+  `DialogService.OpenSide` was rejected because it renders in the `<RadzenComponents>` outlet in
+  `MainLayout`, outside the page: the content loses the page's state (a filter click would not
+  re-render it) and every `.azure-ops-page ::deep …` rule, so it arrives unstyled. `showModal()`
+  lifts the dialog into the top layer without moving it in the DOM, so scoped CSS still reaches it.
+  Two consequences: **no Radzen popup inside a drawer** (a `RadzenSplitButton` menu escapes the
+  modal and is then inert — the diagnostics download is two plain buttons for that reason), and
+  the drawer background is the surface tone laid over `--app-bg`, fully opaque, because the GPU
+  glass pass never sees the top layer. `/azure` has two: Advanced diagnostics (it was an inline
+  `.app-pane--tall` pane) and one per app, opened from an uptime row name (`AzureAppDetail`: the
+  row's sentence, response time, attention lines and changes naming it, and its reach/cost).
 - **KPI tiles, disclosures and tables are shared classes** in `modern-ui.css`: `.app-kpis`,
   `.app-disclosure` (`__heading`, `__title`, `__body`), `.app-table` and `.app-table-scroll`.
   Each used to exist once per page stylesheet and the copies had drifted. A page stylesheet
@@ -731,7 +753,12 @@ proves a context and program were created, not that anything reached the screen.
   version. `MinVer` is referenced from `Directory.Build.props`, not from any csproj.
 - **Status narrative (AI).** `AiTriageService` calls **Azure AI Foundry** chat completions on the
   shared `po-aiservices-shared` account in the `poshared` resource group — deployment
-  `gpt-5.4-nano`, the cheapest one there that writes a coherent paragraph. It produces the
+  `gpt-5.4-nano`, the cheapest one there that writes a coherent paragraph. **The prompt asks for
+at most two sentences that do NOT repeat the numbers the hero tiles print** — "use the actual
+numbers" produced ~90 words restating health %, cost, projection, budget and three cost drivers
+(2026-10-19). The rule-based fallback follows the same rule. Changing the prompt means bumping
+the `"narrator:N"` input in `StatusFacts.ToHashInputs`, or cached text from the old prompt is
+served until the facts happen to change. It produces the
   plain-English lead paragraph on `/azure` from the full fact set assembled by
   `StatusFactsBuilder`, not from the attention list alone. On by default
   (`FeatureFlags:EnableAiSummary`), and it degrades to a rule-based narrative
@@ -755,6 +782,10 @@ proves a context and program were created, not that anything reached the screen.
   collides with nothing. Its endpoint and deployment deliberately do **not** fall back to the vault's
   `AzureOpenAI--*` values either — `PoPunkouterSoftware--AzureOpenAI--DeploymentName` is stale
   (`gpt-4.1-nano`, which 404s on that account). Only the API key falls back there.
+- **The forecast card's "Spent this month" is month to date** (the burn-rate series the
+  projection is extrapolated from), not `Cost.TotalCost30Days`. It was the 30-day total until
+  2026-10-19, when the card read "spent $22.01, projected $7.08" — $17.67 of those 30 days had
+  landed in September. The 30-day figure lives on the hero's cost tile.
 - **History-backed dashboard insights.** `DashboardInsightsBuilder` (pure, Unit-tested) derives
   "what changed since last scan", the month-end cost forecast, and the 30-day uptime grid. All three
   are projected onto `OpsSummary`, so they cost the first paint nothing extra. Two honesty rules are
@@ -919,7 +950,7 @@ proves a context and program were created, not that anything reached the screen.
   without which `GetContainerAsync` returns null and stored images never appear —
   indistinguishable from never having captured any.
 
-## Tests — four projects, one per tier (budget 105/52/25/25, currently 100/54/21/25)
+## Tests — four projects, one per tier (budget 105/52/25/25, currently 101/54/21/25)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the

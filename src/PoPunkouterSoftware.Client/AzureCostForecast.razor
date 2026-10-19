@@ -15,7 +15,7 @@
         <h2 class="azure-glance-title">Month-end forecast</h2>
         @if (Forecast.Verdict != CostVerdict.Unknown)
         {
-            <RadzenBadge Text="@VerdictLabel" IsPill="true" BadgeStyle="@VerdictBadge" title="@VerdictTitle" />
+            <AppHint Text="@VerdictTitle"><RadzenBadge Text="@VerdictLabel" IsPill="true" BadgeStyle="@VerdictBadge" /></AppHint>
         }
         else if (Forecast.BudgetUsd is null)
         {
@@ -51,7 +51,7 @@
 
         <dl class="azure-forecast__facts">
             <div>
-                <dt>Spent so far</dt>
+                <dt>Spent this month</dt>
                 <dd>@Money(Forecast.SpentToDate)</dd>
             </div>
             <div>

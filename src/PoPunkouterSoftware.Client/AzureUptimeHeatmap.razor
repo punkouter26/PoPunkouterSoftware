@@ -35,12 +35,14 @@
     else
     {
         @* tabindex="0": this is a horizontally scrolling region, and without it a keyboard-only
-           visitor cannot reach the days that are off-screen at all. The grid inside is marked
-           aria-hidden and the sentences below carry the same facts in a form worth listening to
-           — see the note on Summarise(). *@
+           visitor cannot reach the days that are off-screen at all. The cells and percentages
+           are aria-hidden and the sentences below carry the same facts in a form worth
+           listening to (DashboardDerivations.DescribeUptimeRow). The row names are NOT hidden:
+           they are the buttons that open each app's drawer, and a focusable control inside
+           aria-hidden is the one thing axe flags as serious here. *@
         <div class="azure-uptime__scroll" tabindex="0" role="group"
              aria-label="Daily uptime grid, scrolls sideways. A written summary of every row follows it.">
-            <div class="azure-uptime__grid" style="@GridStyle" aria-hidden="true">
+            <div class="azure-uptime__grid" style="@GridStyle">
                 @foreach (var row in Map.Rows)
                 {
                     var focused = IsFocused(row);
@@ -51,29 +53,28 @@
                     @* data-fx-flock: this service's particle flock and its bead in the hero orb
                        (js/gpu-backdrop.js). Absent for a row with no observation on its latest day. *@
                     var flock = latest == UptimeState.Healthy ? "up" : latest == UptimeState.Degraded ? "warn" : latest == UptimeState.Broken ? "down" : null;
-                    <div class="azure-uptime__label @(focused ? "is-focused" : "")" title="@row.Name" data-fx-attract="@attract" data-fx-flock="@flock">
+                    @* The row name opens the app's drawer (AzureAppDetail), which now carries what
+                       the `title` tooltips on the name, the chips, every cell and the percentage
+                       used to — mouse-only text no phone or keyboard visitor could reach. *@
+                    <button type="button" class="azure-uptime__label @(focused ? "is-focused" : "")" data-fx-attract="@attract" data-fx-flock="@flock"
+                            @onclick="() => OnSelect.InvokeAsync(row)">
                         @row.Name
                         @if (row.Errors24h is > 0)
                         {
                             @* Up is not the same as working: an app answering HEAD while throwing
                                on every real request shows green cells and this chip. *@
-                            <span class="azure-uptime__chip is-error" title="@($"{row.Errors24h} exception(s) in the 24h before the last scan{(row.TopError is { } t ? $", mostly {t}" : "")}")"><RadzenIcon Icon="bug_report" />@row.Errors24h</span>
+                            <span class="azure-uptime__chip is-error"><RadzenIcon Icon="bug_report" />@row.Errors24h</span>
                         }
                         @if (row.SecurityAlerts is > 0)
                         {
-                            <span class="azure-uptime__chip is-alert" title="@($"{row.SecurityAlerts} open Dependabot alert(s) on the repo")"><RadzenIcon Icon="shield" />@row.SecurityAlerts</span>
+                            <span class="azure-uptime__chip is-alert"><RadzenIcon Icon="shield" />@row.SecurityAlerts</span>
                         }
-                    </div>
+                    </button>
                     @for (var i = 0; i < row.Cells.Count; i++)
                     {
-                        var state = row.Cells[i];
-                        var day = Map.Days[i];
-                        var deployed = row.DeployDays.Contains(i);
-                        <div class="azure-uptime__cell @($"is-{state}") @(deployed ? "has-deploy" : "") @(focused ? "is-focused" : "")"
-                             title="@($"{row.Name} — {day:ddd MMM dd}: {Describe(state)}{(deployed ? " · deployed" : "")}")"></div>
+                        <div class="azure-uptime__cell @($"is-{row.Cells[i]}") @(row.DeployDays.Contains(i) ? "has-deploy" : "") @(focused ? "is-focused" : "")" aria-hidden="true"></div>
                     }
-                    <div class="azure-uptime__pct @(row.UptimePercent < 100 ? "is-degraded" : "")"
-                         title="@($"Healthy on {row.UptimePercent}% of the {row.ScansObserved} scan(s) that checked it, across {row.DaysWithData} day(s)")">
+                    <div class="azure-uptime__pct @(row.UptimePercent < 100 ? "is-degraded" : "")" aria-hidden="true">
                         @row.UptimePercent%
                     </div>
                 }
@@ -90,7 +91,7 @@
         <ul class="app-sr-only">
             @foreach (var row in Map.Rows)
             {
-                <li>@Summarise(row)</li>
+                <li>@DashboardDerivations.DescribeUptimeRow(row, Map.Days)</li>
             }
         </ul>
 
@@ -120,6 +121,10 @@
     /// <summary>A service name from <c>/azure?focus=</c>; its row is highlighted.</summary>
     [Parameter] public string? Focus { get; set; }
 
+    /// <summary>A row name was clicked: the page opens that app's drawer. Not part of the
+    /// ShouldRender comparison — a callback is a fresh object every parent render.</summary>
+    [Parameter] public EventCallback<UptimeRow> OnSelect { get; set; }
+
     private UptimeHeatmap? _rendered;
     private string? _renderedFocus;
 
@@ -139,23 +144,22 @@
         return true;
     }
 
-    /// <summary>
-    /// Letters and digits only, so ?focus=pomemevideo, ?focus=PoMemeVideo and the alert's own
-    /// link all land on the same row.
-    /// </summary>
+    /// <summary>?focus=pomemevideo, ?focus=PoMemeVideo and the alert's own link all land on the same row.</summary>
     private bool IsFocused(UptimeRow row) =>
-        !string.IsNullOrWhiteSpace(Focus) && Normalize(row.Name) == Normalize(Focus);
-
-    private static string Normalize(string value) =>
-        string.Concat(value.Where(char.IsLetterOrDigit)).ToLowerInvariant();
+        !string.IsNullOrWhiteSpace(Focus) && DashboardDerivations.AppMatchKey(row.Name) == DashboardDerivations.AppMatchKey(Focus);
 
     /// <summary>
     /// One label column, one column per day, one percentage column. Set inline rather than in
     /// CSS because the day count is data-driven; everything else about the grid is styled in
     /// AzureDashboard.razor.css.
+    ///
+    /// <para>Day columns are <c>minmax(cell, 1fr)</c>: at least a cell wide — so a phone still
+    /// scrolls the grid inside its container — and stretched to the card's width beyond that.
+    /// The grid now has a full-width row of its own on desktop, and fixed 10px cells left
+    /// two thirds of it empty.</para>
     /// </summary>
     private string GridStyle =>
-        $"grid-template-columns: max-content repeat({Map.Days.Count}, var(--uptime-cell)) max-content;";
+        $"grid-template-columns: max-content repeat({Map.Days.Count}, minmax(var(--uptime-cell), 1fr)) max-content;";
 
     /// <summary>
     /// Names both evidence sources. Reporting scans alone would say "3 scans on record" for a
@@ -170,55 +174,6 @@
         + "missed cold start is not an outage.";
 
     private string EvidenceLabel => Map.PingCount > 0
-        ? $"{Map.ScanCount} scan(s) · {Map.PingCount:N0} ping(s)"
-        : $"{Map.ScanCount} scan(s) on record";
-
-    private static string Describe(string state) => state switch
-    {
-        UptimeState.Healthy => "healthy",
-        UptimeState.Broken => "unavailable",
-        UptimeState.Degraded => "degraded",
-        _ => "no scan that day",
-    };
-
-    /// <summary>
-    /// One row as a sentence — the accessible rendering of a row of colour swatches.
-    ///
-    /// <para>Bad days are NAMED rather than counted, and capped at four with an "and N more"
-    /// tail: which days an app was down is the whole reason to look at this grid, and a
-    /// 30-item date list read aloud is no more usable than the 30 cells it replaced. Days with
-    /// no scan are reported separately and explicitly, never folded into the good or the bad —
-    /// the same honesty rule the percentage follows.</para>
-    /// </summary>
-    private string Summarise(UptimeRow row)
-    {
-        var bad = new List<string>();
-        for (var i = 0; i < row.Cells.Count && i < Map.Days.Count; i++)
-        {
-            if (row.Cells[i] is UptimeState.Broken or UptimeState.Degraded)
-                bad.Add($"{Map.Days[i]:MMM d} {Describe(row.Cells[i])}");
-        }
-
-        if (row.ScansObserved == 0)
-            return $"{row.Name}: never observed in this window.";
-
-        var text = $"{row.Name}: healthy on {row.UptimePercent} percent of {row.ScansObserved} check(s) "
-            + $"across {row.DaysWithData} observed day(s) of {Map.Days.Count}.";
-
-        if (row.Errors24h is > 0)
-            text += $" {row.Errors24h} exception(s) in the last 24 hours{(row.TopError is { } t ? $", mostly {t}" : "")}.";
-        if (row.SecurityAlerts is > 0)
-            text += $" {row.SecurityAlerts} open Dependabot alert(s).";
-
-        if (row.DeployDays.Count > 0)
-            text += $" Deployed {string.Join(", ", row.DeployDays.Where(i => i < Map.Days.Count).Select(i => $"{Map.Days[i]:MMM d}"))}.";
-
-        if (bad.Count == 0)
-            return text + " No bad days.";
-
-        var named = string.Join(", ", bad.Take(4));
-        return bad.Count <= 4
-            ? $"{text} Bad days: {named}."
-            : $"{text} Bad days: {named}, and {bad.Count - 4} more.";
-    }
+        ? $"{DashboardDerivations.Plural(Map.ScanCount, "scan")} · {DashboardDerivations.Plural(Map.PingCount, "ping")}"
+        : $"{DashboardDerivations.Plural(Map.ScanCount, "scan")} on record";
 }

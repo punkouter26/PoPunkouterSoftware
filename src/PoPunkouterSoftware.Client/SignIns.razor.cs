@@ -35,15 +35,23 @@ public partial class SignIns
             (!string.IsNullOrEmpty(p.MaskedEmail) && p.MaskedEmail.Contains(_personSearch, StringComparison.OrdinalIgnoreCase)) ||
             p.Apps.Any(a => a.Contains(_personSearch, StringComparison.OrdinalIgnoreCase))).ToList();
 
-    /// <summary>
-    /// Built once per load and held, NOT computed in the markup. MetricBars guards its render
-    /// on reference identity, so a fresh list per render would defeat the guard and redraw the
-    /// ranking on every page render — the exact cost that component exists to remove.
-    /// </summary>
-    private List<OpsMetricPoint> _reachPoints = new();
+    /// <summary>The $/person column only when some app's own group billed something — on the
+    /// live estate every value was $0.00, a column of zeros.</summary>
+    private bool ShowCost => _report?.Apps.Any(a => a.CostPerPerson is > 0) == true;
 
-    /// <summary>Cost per person, dearest first — held for the same reason as the reach points.</summary>
-    private List<OpsMetricPoint> _costPoints = new();
+    /// <summary>Bar width under each app name: its reach as a share of the widest app's.</summary>
+    private int ReachPercent(SignInAppReach app)
+    {
+        var max = _report?.Apps.Max(a => (int?)a.People) ?? 0;
+        return max == 0 ? 0 : (int)Math.Round(app.People * 100d / max);
+    }
+
+    /// <summary>
+    /// The window a visitor last picked, remembered in this browser only. This replaced the
+    /// "Default sign-in window" setting on the deleted /settings page: the same preference,
+    /// learned from the picker instead of configured on a page of its own.
+    /// </summary>
+    private const string WindowKey = "pops:signin-days";
 
     /// <summary>Comets play once per visit, on the first load — a window switch re-reads the
     /// same recent arrivals and must not replay them.</summary>
@@ -59,13 +67,11 @@ public partial class SignIns
         {
             try
             {
-                var settings = await SettingsService.GetSettingsAsync();
-                if (WindowChoices.Contains(settings.DefaultSignInDays))
-                {
-                    _windowDays = settings.DefaultSignInDays;
-                }
+                if (int.TryParse(await JS.InvokeAsync<string?>("localStorage.getItem", WindowKey), out var saved)
+                    && WindowChoices.Contains(saved))
+                    _windowDays = saved;
             }
-            catch { }
+            catch { } // prerender, blocked storage: the default window is fine
         }
 
         await LoadAsync();
@@ -80,6 +86,7 @@ public partial class SignIns
         try
         {
             NavManager.NavigateTo($"/users?days={days}", replace: true);
+            await JS.InvokeVoidAsync("localStorage.setItem", WindowKey, days.ToString());
         }
         catch { }
         await LoadAsync();
@@ -109,14 +116,6 @@ public partial class SignIns
             if (loaded is not null)
             {
                 _report = loaded;
-                _reachPoints = loaded.Apps
-                    .Select(a => new OpsMetricPoint(a.App, a.People))
-                    .ToList();
-                _costPoints = loaded.Apps
-                    .Where(a => a.CostPerPerson is not null)
-                    .OrderByDescending(a => a.CostPerPerson)
-                    .Select(a => new OpsMetricPoint(a.App, a.CostPerPerson!.Value))
-                    .ToList();
 
                 if (!_cometsPlayed)
                 {

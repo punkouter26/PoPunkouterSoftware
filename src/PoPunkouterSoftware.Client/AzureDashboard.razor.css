@@ -49,7 +49,6 @@
 
 .azure-ops-page ::deep .azure-simple-attention { display: grid; gap: .35rem; margin: 0; padding-left: 1.4rem; color: var(--app-text-muted); }
 .azure-ops-page ::deep .azure-advanced-toggle { display: flex; }
-.azure-ops-page ::deep .azure-advanced { display: grid; gap: 1.25rem; padding-top: .5rem; border-top: 1px solid var(--app-border); }
 
 .azure-ops-page ::deep .azure-command-header {
     display: grid;
@@ -340,7 +339,18 @@
 /* The segmented control is now built from plain buttons with `aria-pressed` (see
    AzureResourceExplorer.razor). Radzen's selected-button treatment is `rz-state-active` —
    re-declared here so the look matches what the RadzenSelectBar used to render, instead
-   of leaving the active button indistinguishable from its siblings. */
+   of leaving the active button indistinguishable from its siblings.
+
+   The unselected rule is needed too: the markup's `rz-button-text` is not a class Radzen 10
+   emits or styles (its variants are `rz-variant-*`), so every UNselected filter fell back to
+   the filled primary button and read as more selected than the selected one. */
+.azure-ops-page ::deep .azure-filter-bar .rz-button {
+    color: var(--app-text-muted);
+    background: transparent;
+    border: 1px solid var(--app-border);
+    box-shadow: none;
+}
+
 .azure-ops-page ::deep .azure-filter-bar .rz-state-active {
     color: var(--app-text);
     background: var(--app-accent-wash);
@@ -709,44 +719,47 @@ html[data-app-theme="dark"] .azure-ops-page {
 .azure-ops-page ::deep .app-sparkline.tone-warn { --tone-accent: var(--tone-warn); }
 .azure-ops-page ::deep .app-sparkline.tone-bad { --tone-accent: var(--tone-bad); }
 
-/* ── What changed ─────────────────────────────────────────────────────────── */
+/* ── What changed (inside the hero, under the lead paragraph) ─────────────── */
 
 .azure-ops-page ::deep .azure-changed {
     display: grid;
-    gap: .6rem;
-    padding: .9rem;
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-lg);
-    background: var(--app-surface);
+    gap: .3rem;
+    margin-top: var(--app-space-xs);
 }
+
+.azure-ops-page ::deep .azure-changed__title {
+    margin: 0;
+    font-size: var(--app-step--2);
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--app-text-soft);
+}
+
+.azure-ops-page ::deep .azure-changed__when { font-weight: 400; letter-spacing: 0; text-transform: none; }
+.azure-ops-page ::deep .azure-changed__none { margin: 0; color: var(--app-text-muted); }
 
 .azure-ops-page ::deep .azure-change-list {
     display: grid;
-    gap: .35rem;
+    gap: .2rem;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
+/* One line per change: icon, sentence, then its before→after detail on the same line. */
 .azure-ops-page ::deep .azure-change {
     display: flex;
-    gap: .6rem;
-    align-items: flex-start;
-    padding: .5rem .65rem;
-    border-radius: var(--app-radius-md);
-    background: var(--app-surface-soft);
+    flex-wrap: wrap;
+    gap: .15rem .5rem;
+    align-items: baseline;
 }
 
-.azure-ops-page ::deep .azure-change__copy {
-    display: grid;
-    gap: .1rem;
-    min-width: 0;
-}
-
+.azure-ops-page ::deep .azure-change .rz-icon { align-self: center; font-size: 1.05rem; }
 .azure-ops-page ::deep .azure-change__text { color: var(--app-text); }
 
 .azure-ops-page ::deep .azure-change__detail {
-    font-size: .76rem;
+    font-size: var(--app-step--2);
     color: var(--app-text-soft);
     font-variant-numeric: tabular-nums;
 }
@@ -901,26 +914,47 @@ html[data-app-theme="dark"] .azure-ops-page {
 
    `background` is not decoration here: a sticky cell with a transparent background lets the
    day cells slide visibly underneath it. It has to match the card, which is --app-surface. */
+/* A <button> since 2026-10-19 — it opens the app's drawer — so the button chrome is reset
+   and the underline on hover/focus is the only cue it is one. */
 .azure-ops-page ::deep .azure-uptime__label {
     position: sticky;
     left: 0;
     z-index: 1;
-    padding-right: .5rem;
+    padding: 0 .5rem 0 0;
+    border: 0;
     background: var(--app-surface);
+    font: inherit;
     font-size: var(--app-step--2);
+    text-align: left;
     color: var(--app-text-muted);
     white-space: nowrap;
-    max-width: 14ch;
+    max-width: 16ch;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
 }
 
+.azure-ops-page ::deep .azure-uptime__label:hover,
+.azure-ops-page ::deep .azure-uptime__label:focus-visible {
+    color: var(--app-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.azure-ops-page ::deep .azure-uptime__label:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 1px;
+}
+
+/* No width: the grid's minmax(cell, 1fr) columns size the cell, so it stretches to the card.
+   The legend's swatches are not in that grid and keep a cell's width explicitly. */
 .azure-ops-page ::deep .azure-uptime__cell {
-    width: var(--uptime-cell);
     height: var(--uptime-cell);
     border-radius: 2px;
     background: var(--app-surface-soft);
 }
+
+.azure-ops-page ::deep .azure-uptime__legend .azure-uptime__cell { width: var(--uptime-cell); }
 
 .azure-ops-page ::deep .azure-uptime__cell.is-healthy { background: var(--tone-good); }
 .azure-ops-page ::deep .azure-uptime__cell.is-degraded { background: var(--tone-warn); }
@@ -1018,38 +1052,79 @@ html[data-app-theme="dark"] .azure-ops-page {
     }
 }
 
-/* ── Desktop landscape: two columns ──────────────────────────────────────────
-   The page is pane-shaped — five panes, each answering one question — and on a phone the
-   snap pager gives each of them a screen of its own. At 1440x1000 the panes (six then) were
-   stacked in ONE column: measured at 1707px of content in a 1000px viewport, i.e. a
-   desktop visitor scrolled 71% more than a phone visitor did, while two thirds of the
-   1280px column sat empty beside a 712px-wide paragraph. Two columns is the desktop
-   answer to the question the pager answers on mobile.
+/* ── Desktop landscape: one column, four full-width panes ────────────────────
+   There was a two-column block here from 2026-09 to 2026-10-19. Its only half-width pair
+   was uptime beside "what changed" — a 129px card next to a 342px one, ~210px of nothing
+   on every visit — and every other pane already spanned both columns. With "what changed"
+   folded into the hero there is no pair left, so the block went. What stays is the order:
+   status, actions, spend, uptime — what is going on, what to do about it, then the evidence.
 
-   Which panes span both columns is not cosmetic. The status hero spans because it carries
-   the lead paragraph beside its three tiles and its actions. The spend pane spans because
-   it is three cards: in a 632px half each was ~190px, the forecast title wrapped to three
-   lines, its verdict badge was clipped at the card edge, and every metric bar resolved to
-   0px wide. Uptime and "what changed" are the half-width pair instead — at 10px cells the
-   30-day grid is ~540px and fits a half whole, and "what changed" is a short list that
-   left most of a full-width row empty. The actions pane spans because the ranked queue that
-   replaces its list is a wide row per finding, and advanced diagnostics keeps its own
-   full-width row for the same reason it has `.app-pane--tall` on mobile.
-
-   `align-items: start` so a short pane keeps its own height instead of being stretched to
-   its row partner. DOM order is status, spend, uptime, changed, actions — the pairing order
-   — so the reading order and the tab order match the screen at every width. */
+   Uptime cells are taller here because the row now has the whole width: the day columns
+   stretch (minmax(cell, 1fr)) and a 10px-tall bar 40px wide read as a dash. */
 @media (min-width: 1100px) {
     .azure-ops-page {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        --uptime-cell: 14px;
         align-content: start;
-        align-items: start;
-    }
-
-    .azure-ops-page > .azure-pane-status,
-    .azure-ops-page > .azure-pane-spend,
-    .azure-ops-page > .azure-pane-actions,
-    .azure-ops-page > .app-pane--tall {
-        grid-column: 1 / -1;
     }
 }
+
+/* ── App drawer (AzureAppDetail) ─────────────────────────────────────────────
+   Inside .azure-ops-page in the DOM — the <dialog> is lifted into the top layer, not moved
+   — which is why these rules, and the uptime-cell colours the strip reuses, still reach it. */
+.azure-ops-page ::deep .azure-app-detail {
+    display: grid;
+    gap: var(--app-space-sm);
+}
+
+.azure-ops-page ::deep .azure-app-detail__status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+    font-size: var(--app-step-1);
+}
+
+.azure-ops-page ::deep .azure-app-detail__dot {
+    width: .75rem;
+    height: .75rem;
+    border-radius: 50%;
+    background: var(--app-text-soft);
+}
+
+.azure-ops-page ::deep .azure-app-detail__status.is-healthy .azure-app-detail__dot { background: var(--tone-good); }
+.azure-ops-page ::deep .azure-app-detail__status.is-degraded .azure-app-detail__dot { background: var(--tone-warn); }
+.azure-ops-page ::deep .azure-app-detail__status.is-broken .azure-app-detail__dot { background: var(--tone-bad); }
+
+.azure-ops-page ::deep .azure-app-detail__strip {
+    display: grid;
+    gap: 3px;
+}
+
+.azure-ops-page ::deep .azure-app-detail__strip .azure-uptime__cell { height: 18px; }
+
+.azure-ops-page ::deep .azure-app-detail__prose { margin: 0; color: var(--app-text-muted); }
+
+.azure-ops-page ::deep .azure-app-detail__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--app-space-xs);
+    margin: 0;
+}
+
+.azure-ops-page ::deep .azure-app-detail__facts > div {
+    padding: var(--app-space-xs) var(--app-space-sm);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-md);
+    background: var(--app-surface-soft);
+}
+
+.azure-ops-page ::deep .azure-app-detail__facts dt { font-size: var(--app-step--2); color: var(--app-text-soft); }
+.azure-ops-page ::deep .azure-app-detail__facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.azure-ops-page ::deep .azure-app-detail__heading {
+    margin: 0 0 .3rem;
+    font-size: var(--app-step-0);
+}
+
+.azure-ops-page ::deep .azure-app-detail__list { margin: 0; padding-left: 1.2rem; color: var(--app-text-muted); }
+.azure-ops-page ::deep .azure-app-detail__link { justify-self: start; color: var(--app-accent); }

@@ -224,3 +224,13 @@
     flex: 0 0 auto;
     font-size: 0.95rem;
 }
+
+/* text-overflow only applies to a block's own inline content, and the host's text was a bare
+   flex item of .app-card-host — so it was clipped mid-character with no ellipsis. */
+.app-card-host__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-card-foot .rz-badge { flex: 0 0 auto; }

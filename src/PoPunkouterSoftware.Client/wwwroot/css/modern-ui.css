@@ -898,6 +898,82 @@ a {
     font-variant-numeric: tabular-nums;
 }
 
+/* AppDrawer: a modal <dialog> pinned to the right edge — full screen on a phone, where
+   min() resolves to 100vw. Fully opaque — the surface tone laid over the page colour —
+   because the top layer sits above the GPU backdrop's glass pass, which never frosts it:
+   --app-surface-strong alone (96–98%) let the page ghost through the panel. */
+.app-drawer {
+    inset: 0 0 0 auto;
+    width: min(46rem, 100vw);
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-left: 1px solid var(--app-border-strong);
+    background: linear-gradient(var(--app-surface-strong), var(--app-surface-strong)) var(--app-bg);
+    color: var(--app-text);
+    box-shadow: var(--app-shadow-lg);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.app-drawer::backdrop {
+    background: rgb(2 6 16 / .5);
+}
+
+.app-drawer__header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--app-space-xs);
+    padding: var(--app-space-sm) var(--app-space-md);
+    border-bottom: 1px solid var(--app-border);
+    background: inherit;
+}
+
+.app-drawer__title {
+    margin: 0;
+    font-family: var(--app-headline-font);
+    font-size: var(--app-step-2);
+    letter-spacing: -.02em;
+}
+
+.app-drawer__header form { margin: 0; }
+
+.app-drawer__close {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--app-text);
+    cursor: pointer;
+}
+
+.app-drawer__close:hover { background: var(--app-hover-wash); }
+
+.app-drawer__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-space-md);
+    padding: var(--app-space-md);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .app-drawer[open] { animation: app-drawer-in .28s var(--app-ease-out); }
+    .app-drawer[open]::backdrop { animation: app-drawer-fade .28s ease-out; }
+}
+
+@keyframes app-drawer-in { from { transform: translateX(100%); } }
+@keyframes app-drawer-fade { from { opacity: 0; } }
+
 .app-page code {
     font-family: Consolas, "Cascadia Code", monospace;
     background: var(--app-hover-wash);

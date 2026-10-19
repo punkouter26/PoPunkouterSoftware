@@ -83,18 +83,57 @@
     cursor: default;
 }
 
-/* ── Totals ───────────────────────────────────────────────────────────────── */
+/* ── Totals: one line in the header ───────────────────────────────────────── */
 
-/* The tiles themselves are the shared `.app-kpis` in modern-ui.css. */
-
-.signins-page ::deep .signins-meta {
+/* Ordered after the title and before the window picker in the DOM; `order` puts the picker
+   on the title's line and the stats on a line of their own beneath both. */
+.signins-page ::deep .signins-stats {
+    order: 3;
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .2rem 1.1rem;
     margin: 0;
-    color: var(--app-text-soft);
+    color: var(--app-text-muted);
+    font-size: var(--app-step--1);
+}
+
+.signins-page ::deep .signins-stats strong {
+    color: var(--app-text);
+    font-size: var(--app-step-1);
+    font-variant-numeric: tabular-nums;
+}
+
+.signins-page ::deep .signins-stats__read,
+.signins-page ::deep .signins-meta__warn {
+    align-self: flex-end;
     font-size: var(--app-step--2);
+    color: var(--app-text-soft);
 }
 
 .signins-page ::deep .signins-meta__warn {
     color: var(--app-accent-warm);
+}
+
+/* ── Reach per app ────────────────────────────────────────────────────────── */
+
+.signins-page ::deep .signins-reach a {
+    color: var(--app-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.signins-page ::deep .signins-reach a:hover,
+.signins-page ::deep .signins-reach a:focus-visible {
+    text-decoration: underline;
+}
+
+.signins-page ::deep .signins-reach__bar {
+    display: block;
+    height: 4px;
+    margin-top: .25rem;
+    border-radius: 999px;
+    background: var(--app-accent);
 }
 
 /* ── Panels ───────────────────────────────────────────────────────────────── */
