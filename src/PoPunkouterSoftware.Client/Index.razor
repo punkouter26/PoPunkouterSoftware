@@ -24,41 +24,14 @@
             <h1>Web apps</h1>
             <p>Small tools and experiments built with .NET and Azure.</p>
         </div>
-    </header>
-
-    @* Cache-mismatch banner: server BuildId has changed since the WASM bundle loaded,
-       meaning what is on screen was rendered against outdated server state — offer a
-       gentle "reload" that doesn't punish the visitor with a hard refresh. *@
-    @if (data is not null
-         && _buildIdAtLoad is not null
-         && data.BuildId != _buildIdAtLoad
-         && !_buildMismatchDismissed)
-    {
-        <div class="portfolio-build-banner" role="status">
-            <RadzenIcon Icon="cloud_sync" />
-            <div class="portfolio-build-banner__copy">
-                <strong>The dashboard has been updated since this page loaded.</strong>
-                <span>A newer build is live; click "Reload" to pick up the freshest inventory and live status.</span>
-            </div>
-            <button type="button" class="portfolio-build-banner__action" @onclick="HardReloadAsync">Reload</button>
-            <button type="button" class="portfolio-build-banner__dismiss" aria-label="Dismiss update banner" @onclick="@(() => _buildMismatchDismissed = true)">×</button>
-        </div>
-    }
-
-    @if (data is not null && data.Apps.Count > 0)
-    {
-        <div class="portfolio-action-bar" role="search" aria-label="Filter web applications">
-            <div class="portfolio-search-box">
-                <span class="material-symbols-outlined" aria-hidden="true">search</span>
-                <input type="search" class="portfolio-search-input" placeholder="Search apps by name, description or host..."
-                       @bind="_searchQuery" @bind:event="oninput" aria-label="Search apps" />
-                @if (!string.IsNullOrWhiteSpace(_searchQuery))
-                {
-                    <button type="button" class="portfolio-search-clear" aria-label="Clear search" @onclick="@(() => _searchQuery = string.Empty)">×</button>
-                }
-            </div>
+        @* The count, freshness and Sync sit on the title row. They had a bordered bar of their
+           own beside a search box; the search went (owner's call, 2026-10-19 — eleven cards,
+           and Ctrl+K already finds any app by name) and the bar would have been a grey strip
+           around three words. *@
+        @if (data is not null && data.Apps.Count > 0)
+        {
             <div class="portfolio-summary" aria-live="polite">
-                <strong>@FilteredApps.Count of @data.Apps.Count apps</strong>
+                <strong>@data.Apps.Count apps</strong>
                 @if (data.GeneratedAt is DateTime updated)
                 {
                     @* Focusable because the exact read time exists nowhere else on the page: the
@@ -80,8 +53,28 @@
                        axe caught it — CoreRoutes_HaveNoSeriousAxeViolations. *@
                 }
             </div>
+        }
+    </header>
+
+    @* Cache-mismatch banner: server BuildId has changed since the WASM bundle loaded,
+       meaning what is on screen was rendered against outdated server state — offer a
+       gentle "reload" that doesn't punish the visitor with a hard refresh. *@
+    @if (data is not null
+         && _buildIdAtLoad is not null
+         && data.BuildId != _buildIdAtLoad
+         && !_buildMismatchDismissed)
+    {
+        <div class="portfolio-build-banner" role="status">
+            <RadzenIcon Icon="cloud_sync" />
+            <div class="portfolio-build-banner__copy">
+                <strong>The dashboard has been updated since this page loaded.</strong>
+                <span>A newer build is live; click "Reload" to pick up the freshest inventory and live status.</span>
+            </div>
+            <button type="button" class="portfolio-build-banner__action" @onclick="HardReloadAsync">Reload</button>
+            <button type="button" class="portfolio-build-banner__dismiss" aria-label="Dismiss update banner" @onclick="@(() => _buildMismatchDismissed = true)">×</button>
         </div>
     }
+
 
     @* The error banner sits ALONGSIDE the catalog, never instead of it. This used to be an
        `else if` ahead of the render branch while `data` was left populated, so one failed
@@ -104,21 +97,13 @@
     }
     else if (data is not null)
     {
-        var apps = FilteredApps;
-        if (apps.Count == 0)
-        {
-            <div class="app-empty-state">No apps match "@_searchQuery".</div>
-        }
-        else
-        {
-            <section class="app-grid cards" aria-label="Web applications">
-                @for (var i = 0; i < apps.Count; i++)
-                {
-                    var app = apps[i];
-                    <PortfolioAppCard @key="app.Id" App="app" IsFirst="@(i == 0)" />
-                }
-            </section>
-        }
+        <section class="app-grid cards" aria-label="Web applications">
+            @for (var i = 0; i < data.Apps.Count; i++)
+            {
+                var app = data.Apps[i];
+                <PortfolioAppCard @key="app.Id" App="app" IsFirst="@(i == 0)" />
+            }
+        </section>
     }
 </main>
 
@@ -128,14 +113,6 @@
     private bool _buildMismatchDismissed;
     private bool _loading;
     private string? _loadError;
-    private string _searchQuery = string.Empty;
-    private IReadOnlyList<PortfolioApp> FilteredApps =>
-        data?.Apps is null ? []
-        : string.IsNullOrWhiteSpace(_searchQuery) ? data.Apps
-        : data.Apps.Where(a =>
-            a.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
-            (!string.IsNullOrEmpty(a.Description) && a.Description.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)) ||
-            (!string.IsNullOrEmpty(a.Url) && a.Url.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))).ToList();
 
     // Auto-refresh: every visit reads the catalog fresh, and a tab left open re-reads it
     // weekly. There is no "Reload catalog" button (owner's call, 2026-09-26): re-reading
