@@ -18,6 +18,7 @@ estate: an Azure Monitor workbook nobody opens. Adding a fourth needs the same s
 a question the existing pages cannot answer without becoming two pages in a trench coat.
 
 `AGENT.MD` used to hold this context and no longer exists — this file is the single context map.
+[AGENTS.md](AGENTS.md) exists only to point non-Claude agents here; never put rules in it.
 Update it in the same change whenever you cross an architectural boundary; drift here actively
 misleads the next agent.
 
@@ -49,12 +50,21 @@ Standing instructions from the owner. They outrank default habits and apply to e
 - **Run only the tests that cover what you changed.** Not the whole tier, and never all four tiers,
   after an ordinary code change — `--filter "FullyQualifiedName~<TypeUnderTest>Tests"` against the
   one project that holds them. The full fast tier is a **pre-push gate**, not a per-edit habit; see
-  [Git workflow](#git-workflow--master-only).
+  [Git workflow](#git-workflow--master-only). A minor edit (copy, comment, docs, a CSS value) can
+  skip tests entirely.
 - **Never hand the owner a command to type.** If you can run it, run it — build, test, restart,
   `curl` a local endpoint, read a log, check a workflow. A reply ending in "now run this" is a task
   you left half-finished. The exceptions are the things you genuinely cannot do: pushing without the
   ask, out-of-band `az deployment` runs, and anything needing a credential you do not hold.
 - **Answers over ~100 words end with a 20-word TLDR.**
+- **A code change over 20 lines ends with a three-tier summary**, exactly one line each:
+  **Toddler** (the simple idea), **Child** (what it does now), **Adult** (the technical or
+  architectural change).
+- **A UI change ships a before/after page.** Capture the old and new states, annotate what moved,
+  save it as `SCREENSHOTS/YYMMDD-feature-name.html` (self-contained, images inlined) and give the
+  owner its full absolute path.
+- **Keep [README.md](README.md) in step with this file** whenever a dependency, configuration key
+  or major endpoint changes — in the same change, like the rule above for this file.
 - **Treat compile warnings as errors and make sure they are fixed.** The build command above
   already runs with `TreatWarningsAsErrors=true` solution-wide (see `Directory.Build.props`), so
   the rule is enforced by the compiler — a warning is a build failure. Don't ship a commit

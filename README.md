@@ -4,7 +4,7 @@ PoPunkouterSoftware is a .NET 10 Blazor Web App with a server host, a WebAssembl
 
 ## Solution Layout
 
-- `src/PoPunkouterSoftware.API/`: ASP.NET Core host + BFF. Feature slices under `Features/<Area>/` (Config, Diag, Portfolio); host-level plumbing that belongs to no slice lives in `Host/`. Hosts the Blazor WASM shell.
+- `src/PoPunkouterSoftware.API/`: ASP.NET Core host + BFF. Feature slices under `Features/<Area>/` (Config, Diag, Portfolio, SignIns); host-level plumbing that belongs to no slice lives in `Host/`. Hosts the Blazor WASM shell.
 - `src/PoPunkouterSoftware.Client/`: WASM UI, layouts, pages, and static assets.
 - `src/PoPunkouterSoftware.Shared/`: contracts and models shared between the host and client.
 - `src/PoPunkouterSoftware.Infrastructure/`: Azure and integration adapters.
@@ -53,10 +53,10 @@ The app runs locally on HTTP port `8000`.
 - Unit tests (`PoPunkouterSoftware.Unit`) cover pure logic and API helpers, no I/O.
 - Integration tests (`PoPunkouterSoftware.Integration`) cover host configuration, diagnostics endpoints, and Azure Table Storage behavior via `WebApplicationFactory` + Testcontainers Azurite.
 - E2E tests (`PoPunkouterSoftware.E2EAPI`, `PoPunkouterSoftware.E2EUI`) cover the HTTP contract and browser flows against a live instance; on demand, not in CI.
-- Each tier has a hard test budget — 100 Unit, 50 Integration, 25 E2E-API, 25 E2E-UI. Adding a test means removing one; prefer widening an existing test's assertions.
+- Each tier has a hard test budget — 105 Unit, 52 Integration, 25 E2E-API, 25 E2E-UI. Adding a test means removing one; prefer widening an existing test's assertions.
 
 ## Developer Guidance
 
-- Read `CLAUDE.md` before broad changes — it is the single context map. (`AGENT.MD` was merged into it and deleted.)
+- Read `CLAUDE.md` before broad changes — it is the single context map. (`AGENT.MD` was merged into it and deleted; `AGENTS.md` only points there.)
 - Keep `/api/diag/*` available but do not link them from the UI — diagnostics surface only in the `/azure` Advanced panel.
 - Preserve Po-prefixed naming and strict build quality defaults from `Directory.Build.props`.
