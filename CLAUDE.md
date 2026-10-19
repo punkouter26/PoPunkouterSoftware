@@ -58,9 +58,10 @@ Standing instructions from the owner. They outrank default habits and apply to e
   one project that holds them. The full fast tier is a **pre-push gate**, not a per-edit habit; see
   [Git workflow](#git-workflow--master-only). A minor edit (copy, comment, docs, a CSS value) can
   skip tests entirely.
-- **Never hand the owner a command to type.** If you can run it, run it — build, test, restart,
-  `curl` a local endpoint, read a log, check a workflow. A reply ending in "now run this" is a task
-  you left half-finished. The exceptions are the things you genuinely cannot do: pushing without the
+- **Never hand the owner a command to type — or a portal to click through.** If you can run it,
+  run it — build, test, restart, `curl` a local endpoint, read a log, check a workflow, and do via
+  `az`/`gh` what would otherwise be a click in the Azure portal or GitHub UI. A reply ending in
+  "now run this" (or "now go click that") is a task you left half-finished. The exceptions are the things you genuinely cannot do: pushing without the
   ask, out-of-band `az deployment` runs, and anything needing a credential you do not hold.
 - **Answers over ~100 words end with a 20-word TLDR.**
 - **A code change over 20 lines ends with a three-tier summary**, exactly one line each:
