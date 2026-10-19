@@ -31,6 +31,23 @@ public record AzureReport
     /// before this field existed.
     /// </summary>
     public AiSummaryResult? AiSummary { get; init; }
+    /// <summary>Azure Advisor's open recommendations. Empty when Advisor has none or did not answer.</summary>
+    public List<AdvisorRecommendation> AdvisorRecommendations { get; init; } = new();
+    /// <summary>Exceptions per app over the 24 hours before the scan, from the shared Application Insights.</summary>
+    public List<AppErrorSummary> AppErrors { get; init; } = new();
+}
+
+/// <summary>One app's exception count over the last 24 hours, and its most frequent exception TYPE.</summary>
+public record AppErrorSummary
+{
+    /// <summary>cloud_RoleName as the app reports it to Application Insights.</summary>
+    public string App { get; init; } = "";
+    public int Count24h { get; init; }
+    /// <summary>
+    /// The exception type only, never the message: messages can carry user data, and this
+    /// reaches the anonymous first-paint contract.
+    /// </summary>
+    public string? TopType { get; init; }
 }
 
 public record SubscriptionInfo { public string Name { get; init; } = ""; }

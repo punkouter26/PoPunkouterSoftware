@@ -34,8 +34,7 @@ public class SnoozeStoreNoConnectionTests
 /// </summary>
 public class SnoozeStoreAzuriteTests : IAsyncLifetime
 {
-    private readonly AzuriteContainer _container = new AzuriteBuilder()
-        .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
+    private readonly AzuriteContainer _container = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
         .Build();
 
     public async Task InitializeAsync() => await _container.StartAsync();

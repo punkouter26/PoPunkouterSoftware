@@ -66,6 +66,23 @@ public record UptimeRow
     /// show as one marker.
     /// </summary>
     public List<int> DeployDays { get; init; } = new();
+
+    /// <summary>
+    /// Days since this row's most recent down or degraded day — the streak on the home-page
+    /// card and the README badge. Equal to the window length when the window holds no bad day
+    /// (the UI says "30+"), and null when the service was never observed, because an
+    /// unobserved service has no streak to claim.
+    /// </summary>
+    public int? CleanDays { get; init; }
+
+    /// <summary>Exceptions in the 24 hours before the latest scan, from Application Insights. Null when none were logged.</summary>
+    public int? Errors24h { get; init; }
+
+    /// <summary>The most frequent exception TYPE behind <see cref="Errors24h"/>.</summary>
+    public string? TopError { get; init; }
+
+    /// <summary>Open Dependabot alerts on the app's repo at the latest scan. Null when unknown.</summary>
+    public int? SecurityAlerts { get; init; }
 }
 
 /// <summary>

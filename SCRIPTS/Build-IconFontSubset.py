@@ -61,6 +61,12 @@ APP_ICONS = [
     "expand_less", "tune",
     # Dynamic: AzureWhatChanged.IconFor.
     "cloud_off", "cloud_done", "trending_up", "trending_down", "shield", "sync_alt",
+    # js/command-palette.js (set as textContent at runtime): its search glyph, the settings
+    # entry, and the per-app launcher rows.
+    "search", "settings", "my_location", "link",
+    # AzurePriorityQueue restart/start, AzureUptimeHeatmap error and alert chips,
+    # PortfolioAppCard streak chip.
+    "restart_alt", "play_arrow", "bug_report", "local_fire_department",
 ]
 
 # Emitted by Radzen.Blazor's own components. Not greppable from this repo — they live in the

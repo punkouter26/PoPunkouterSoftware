@@ -89,6 +89,7 @@ public partial class AzureReportService
 
                 return new InfraReview
                 {
+                    FullName = fullName,
                     RepoName = repo.TryGetProperty("name", out var rn) ? rn.GetString() ?? "" : "",
                     RepoUrl = repoUrl,
                     DefaultBranch = defaultBranch,
@@ -149,6 +150,41 @@ public partial class AzureReportService
         {
             return (null, null, null, null, null, null);
         }
+    }
+
+    /// <summary>
+    /// Open Dependabot alerts per repo, for the repos a scanned service matched — not every
+    /// owned repo, which would be a hundred calls for numbers nothing shows. A repo the PAT
+    /// cannot read alerts on (403: the token lacks "Dependabot alerts: read"; 404: Dependabot
+    /// is off) is simply absent, never zero — zero would claim a clean bill of health.
+    /// </summary>
+    private async Task<Dictionary<string, int>> FetchSecurityAlertCountsAsync(
+        IEnumerable<string> fullNames, CancellationToken ct)
+    {
+        var http = _httpClientFactory.CreateClient("github");
+        var counts = await BoundedParallelAsync(
+            fullNames.Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase), maxConcurrency: 6,
+            async name =>
+            {
+                try
+                {
+                    // ponytail: one page of 100 — "100+" is as actionable as an exact count.
+                    using var resp = await http.GetAsync(
+                        $"https://api.github.com/repos/{name}/dependabot/alerts?state=open&per_page=100", ct);
+                    if (!resp.IsSuccessStatusCode)
+                        return (name, (int?)null);
+                    using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+                    return (name, doc.RootElement.ValueKind == JsonValueKind.Array ? doc.RootElement.GetArrayLength() : (int?)null);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    _logger.LogDebug(ex, "Dependabot alert count failed for {Repo}", name);
+                    return (name, (int?)null);
+                }
+            }, ct);
+
+        return counts.Where(c => c.Item2 is not null)
+            .ToDictionary(c => c.name, c => c.Item2!.Value, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>A completed run as a deploy marker; null for a run still in flight.</summary>

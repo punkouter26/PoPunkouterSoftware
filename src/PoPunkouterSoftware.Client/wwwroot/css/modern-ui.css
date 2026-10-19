@@ -504,8 +504,15 @@ a {
     text-decoration: none;
 }
 
+/* The label is --app-text, not --app-accent: light-theme accent on the accent wash measured
+   4.37:1 (axe, CoreRoutes_HaveNoSeriousAxeViolations), under AA for 13.6px text. The glyph
+   keeps the accent — an icon is non-text and needs 3:1 — so the active cue is unchanged. */
 .app-topbar-link.active {
     background: var(--app-accent-wash);
+    color: var(--app-text);
+}
+
+.app-topbar-link.active .material-symbols-outlined {
     color: var(--app-accent);
 }
 

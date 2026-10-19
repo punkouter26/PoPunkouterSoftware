@@ -222,3 +222,31 @@ jobs:
               --content-type "application/json" --overwrite true --output none
             echo "Uploaded PageSpeed scores for $(jq '.scores | length' merged.json) hosts."
           fi
+
+      # A Lighthouse regression is the one alert the app cannot send for itself: the scores
+      # are produced here, nightly, and the previous night's file is only on hand right now.
+      # Same ntfy topic as AlertNotifier. NTFY_TOPIC is an optional secret; without it the
+      # step tries the app's own Key Vault secret, and without either it is a no-op.
+      - name: Alert on Lighthouse drops
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          [ -f previous.json ] && [ -f lighthouse.json ] || exit 0
+          TOPIC="${NTFY_TOPIC:-$(az keyvault secret show --vault-name kv-poshared \
+            --name PoPunkouterSoftware--Alerts--NtfyTopic --query value -o tsv 2>/dev/null || true)}"
+          [ -n "$TOPIC" ] || { echo "No ntfy topic available — skipping."; exit 0; }
+          echo "::add-mask::$TOPIC"
+          # ponytail: 15 points, because PageSpeed's own run-to-run noise is ~5-10 on
+          # performance. Per-category thresholds if this proves too quiet or too chatty.
+          jq -r --argjson min 15 -s '
+            (.[0].scores // {}) as $old | (.[1].scores // {}) as $new
+            | $new | to_entries[] | .key as $host | select($old[$host])
+            | [ .value | to_entries[] | select(($old[$host][.key] // .value) - .value >= $min)
+                | "\(.key) \($old[$host][.key])→\(.value)" ]
+            | select(length > 0) | "\($host): \(join(", "))"' previous.json lighthouse.json > drops.txt
+          [ -s drops.txt ] || { echo "No score dropped by 15+ points."; exit 0; }
+          cat drops.txt
+          jq -n --arg topic "$TOPIC" --rawfile body drops.txt --arg click "$SITE_URL/" \
+            '{topic: $topic, title: "Lighthouse scores dropped", message: $body, priority: 3, tags: ["chart_with_downwards_trend"], click: $click}' \
+            | curl -fsS -X POST -H 'Content-Type: application/json' --data-binary @- https://ntfy.sh/ > /dev/null

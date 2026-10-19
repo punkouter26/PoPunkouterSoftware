@@ -240,6 +240,11 @@ public class DowntimeDiagnosisService(
                 }
                 catch (Exception ex) { _logger.LogDebug(ex, "Kudu SCM fetch failed for {Name}", svc.Name); }
 
+                // 5b — Azure Resource Health: the platform's own verdict on this resource, which is
+                // the only signal here that separates "Azure is down under you" from "your app
+                // is broken". Reader covers the read; a failure leaves it unknown, not false.
+                var platform = await GetPlatformHealthAsync(client, svc.ResourceId!, armToken, tok);
+
                 // 6 — App Insights exception correlation
                 appInsightsByService.TryGetValue(svc.Name, out var aiMetrics);
 
@@ -267,6 +272,12 @@ public class DowntimeDiagnosisService(
                 {
                     likelyCause = "App Service is stopped";
                     suggestedFix = $"az webapp start --name \"{svc.Name}\" --resource-group \"{svc.ResourceGroup}\"";
+                }
+                else if (platform.Caused == true)
+                {
+                    likelyCause = $"Azure platform event — Resource Health reports {platform.State}"
+                        + (platform.Summary is { Length: > 0 } s ? $": {s}" : "");
+                    suggestedFix = "Nothing to fix in the app. Track the incident in Azure Service Health; the app recovers when the platform does.";
                 }
                 else if (deployments.Any(d => d.StatusCode == 3))
                 {
@@ -350,6 +361,9 @@ public class DowntimeDiagnosisService(
                     GitHubWorkflowCompletedAt = ghRun?.CompletedAt,
                     KuduProcesses = kuduProcesses,
                     KuduReachable = kuduReachable,
+                    PlatformHealth = platform.State,
+                    PlatformHealthSummary = platform.Summary,
+                    PlatformCaused = platform.Caused,
                 };
             }
             catch (Exception ex)
@@ -372,6 +386,54 @@ public class DowntimeDiagnosisService(
         });
 
         return (await Task.WhenAll(tasks)).ToList();
+    }
+
+    /// <summary>
+    /// Resource Health's current status for one resource. <c>Caused</c> is true when Azure
+    /// itself says the resource is down for a platform reason (planned maintenance or an
+    /// unplanned platform fault), false when Azure says it is available or that a user action
+    /// caused the state, and null when Resource Health did not answer.
+    /// </summary>
+    private async Task<(string? State, string? Summary, bool? Caused)> GetPlatformHealthAsync(
+        HttpClient client, string resourceId, string armToken, CancellationToken ct)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                $"https://management.azure.com{resourceId}/providers/Microsoft.ResourceHealth/availabilityStatuses/current?api-version=2022-10-01");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", armToken);
+            using var resp = await client.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode)
+                return (null, null, null);
+
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+            return ReadPlatformHealth(doc.RootElement);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            _logger.LogDebug(ex, "Resource Health lookup failed for {ResourceId}", resourceId);
+            return (null, null, null);
+        }
+    }
+
+    /// <summary>Pure: one availabilityStatuses/current document to the verdict above.</summary>
+    public static (string? State, string? Summary, bool? Caused) ReadPlatformHealth(JsonElement root)
+    {
+        if (!root.TryGetProperty("properties", out var p))
+            return (null, null, null);
+
+        static string? Str(JsonElement e, string name) =>
+            e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+        var state = Str(p, "availabilityState");
+        var reason = Str(p, "reasonType");
+        bool? caused = state switch
+        {
+            null or "Unknown" => null,
+            "Available" => false,
+            _ => reason is "Unplanned" or "Planned",
+        };
+        return (state, Str(p, "summary"), caused);
     }
 }
 

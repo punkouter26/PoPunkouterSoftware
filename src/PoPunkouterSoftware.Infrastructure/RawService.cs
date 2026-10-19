@@ -25,6 +25,7 @@ internal record RawService
     public string? AppServicePlan { get; init; }
     public string? AppServicePlanSku { get; init; }
     public DeployInfo? LastDeploy { get; init; }
+    public int? OpenSecurityAlerts { get; init; }
 
     public WebService ToWebService() => new()
     {
@@ -43,5 +44,6 @@ internal record RawService
         AppServicePlanSku = AppServicePlanSku,
         ResourceId = ResourceId,
         LastDeploy = LastDeploy,
+        OpenSecurityAlerts = OpenSecurityAlerts,
     };
 }

@@ -48,16 +48,18 @@ public class ManagementActionFilterTests
     [Fact]
     public async Task FlagDisabled_ManagementEndpoints_Return403()
     {
-        const string path = "/api/diag/refresh";
         await using var app = new ManagementGateApp(new()
         {
             ["FeatureFlags:EnableManagementActions"] = "false",
         });
         var client = app.CreateClient();
 
-        var resp = await client.PostAsync(path, content: null);
-
-        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        // Restart touches a live site, so it must sit behind exactly the same gate as a scan.
+        foreach (var path in new[] { "/api/diag/refresh", "/api/diag/restart/any-app" })
+        {
+            var resp = await client.PostAsync(path, content: null);
+            resp.StatusCode.Should().Be(HttpStatusCode.Forbidden, path);
+        }
     }
 
     [Fact]

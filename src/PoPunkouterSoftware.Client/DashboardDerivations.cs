@@ -378,8 +378,39 @@ public static class DashboardDerivations
                     Environment: InferEnvironment(drift.ResourceGroup, drift.Name),
                     Command: null));
 
+        // Azure Advisor, ranked into the same queue rather than shown as a list of its own —
+        // one row per RECOMMENDATION, not per resource. Live, Advisor repeats the same five
+        // availability tips across every free-tier app and storage account (75 rows); grouped,
+        // that is ~10, and snoozing a row silences that tip everywhere at once. Only Cost and
+        // Security at High impact earn "Fix Soon": "add zone redundancy" to a hobby estate is
+        // worth knowing, not worth fixing now. Low impact is left out entirely.
+        IEnumerable<PriorityQueueItem> FromAdvisor() =>
+            (r?.AdvisorRecommendations ?? [])
+                .Where(a => a.Impact is "High" or "Medium")
+                .GroupBy(a => (a.Category, a.Problem))
+                .Select(g =>
+                {
+                    var high = g.Any(a => a.Impact == "High");
+                    var urgent = high && g.Key.Category is "Cost" or "Security";
+                    var names = g.Select(a => a.ImpactedName).Where(n => n.Length > 0)
+                        .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    var savings = g.Sum(a => a.MonthlySavings ?? 0);
+                    return new PriorityQueueItem(
+                        Actionability: urgent ? "Fix Soon" : "Watch",
+                        Item: g.Key.Problem,
+                        Source: $"Advisor · {g.Key.Category}",
+                        ImpactScore: (high ? 70 : 40) + Math.Min(20, names.Count),
+                        Confidence: "high",
+                        Reason: $"{names.Count} resource(s): {string.Join(", ", names.Take(3))}{(names.Count > 3 ? "…" : "")}"
+                            + (savings > 0 ? $" · saves ~${savings:F2}/mo" : ""),
+                        Owner: "unassigned",
+                        Environment: "unknown",
+                        Command: null);
+                });
+
         return Enumerable.Empty<PriorityQueueItem>()
             .Concat(FromReliability())
+            .Concat(FromAdvisor())
             .Concat(FromSafeToRemove())
             .Concat(FromSsl())
             .Concat(FromOrphans())

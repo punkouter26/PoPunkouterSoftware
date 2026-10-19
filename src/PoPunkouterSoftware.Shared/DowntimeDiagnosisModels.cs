@@ -46,6 +46,15 @@ public record ServiceDowntimeDiagnosis
     public string? KuduProcesses { get; init; }
     /// <summary>True when the Kudu SCM site was reachable.</summary>
     public bool KuduReachable { get; init; }
+    /// <summary>Azure Resource Health availabilityState: Available | Unavailable | Degraded | Unknown.</summary>
+    public string? PlatformHealth { get; init; }
+    /// <summary>Resource Health's own one-line explanation, when it gives one.</summary>
+    public string? PlatformHealthSummary { get; init; }
+    /// <summary>
+    /// True: Azure says the platform caused this. False: Azure says the platform is fine (or a
+    /// user action caused it), so the fault is the app's. Null: Resource Health did not answer.
+    /// </summary>
+    public bool? PlatformCaused { get; init; }
 }
 
 /// <summary>One entry from the Kudu/ARM deployment history of an App Service.</summary>

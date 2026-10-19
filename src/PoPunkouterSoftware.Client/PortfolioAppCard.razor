@@ -74,10 +74,22 @@
             <li class="@ScoreClass(scores.Seo)"><span aria-hidden="true">SEO</span><span class="app-sr-only">Search engine optimisation</span> @scores.Seo</li>
         </ul>
     }
-    @if (Host is { } host)
-    {
-        <span class="app-card-host" aria-hidden="true"><RadzenIcon Icon="open_in_new" />@host</span>
-    }
+    @* The streak shares the host line rather than adding one: a taller card fails
+       Home_FirstScreen_ShowsAWholeCard at 390px. Days since the app's last bad day on the
+       /azure uptime grid — the same row, so the two can never disagree. *@
+    <div class="app-card-foot">
+        @if (App.CleanDays is > 0 and var days)
+        {
+            <span class="app-card-streak">
+                <RadzenIcon Icon="local_fire_department" /><span aria-hidden="true">@(days >= 30 ? "30d+" : $"{days}d")</span>
+                <span class="app-sr-only">@(days >= 30 ? "No outage in 30 days" : $"{days} days without an outage")</span>
+            </span>
+        }
+        @if (Host is { } host)
+        {
+            <span class="app-card-host" aria-hidden="true"><RadzenIcon Icon="open_in_new" />@host</span>
+        }
+    </div>
 </article>
 
 @code {

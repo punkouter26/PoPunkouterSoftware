@@ -37,6 +37,11 @@ public record WebService
     /// with no PAT configured or no matching repo.
     /// </summary>
     public DeployInfo? LastDeploy { get; init; }
+    /// <summary>
+    /// Open Dependabot alerts on the matched repo (capped at 100). Null when there is no
+    /// matched repo or the PAT cannot read its alerts — unknown, not clean.
+    /// </summary>
+    public int? OpenSecurityAlerts { get; init; }
 }
 
 public record DeployInfo

@@ -912,6 +912,23 @@ html[data-app-theme="dark"] .azure-ops-page {
 }
 
 /* The ?focus= row: an outline on every cell rather than a fill, for the same reason. */
+/* Errors and Dependabot alerts on a row. Text stays --app-text: the tones are graded for
+   3:1 as strokes, not 4.5:1 as text, so they colour the border only. */
+.azure-ops-page ::deep .azure-uptime__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .1rem;
+    margin-left: .35rem;
+    padding: 0 .3rem;
+    border: 1px solid var(--tone-bad);
+    border-radius: 999px;
+    color: var(--app-text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.3;
+}
+.azure-ops-page ::deep .azure-uptime__chip.is-alert { border-color: var(--tone-warn); }
+.azure-ops-page ::deep .azure-uptime__chip .rz-icon { font-size: .9em; }
+
 .azure-ops-page ::deep .azure-uptime__label.is-focused {
     color: var(--app-text);
     font-weight: 700;

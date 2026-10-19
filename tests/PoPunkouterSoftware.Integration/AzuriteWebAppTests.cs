@@ -19,8 +19,7 @@ namespace PoPunkouterSoftware.Integration;
 /// </summary>
 public sealed class AzuriteWebApp : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly AzuriteContainer _azurite = new AzuriteBuilder()
-        .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
+    private readonly AzuriteContainer _azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
         .Build();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

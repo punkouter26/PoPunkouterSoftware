@@ -238,12 +238,23 @@ public class UptimeHeatmapTests
         var old = Scan(Today.AddDays(-20), ("app-a", ServiceHealth.Active));
         old = old with { Services = [old.Services[0] with { LastDeployAt = Today.AddDays(-20) }] };
 
-        var map = DashboardInsightsBuilder.BuildUptime([scan, old], Today, NothingExcluded, windowDays: 7);
+        // The latest scan's per-app facts ride on the row: App Insights reports its own role
+        // name, so "App-A" must still find "app-a".
+        var latest = new AzureReport
+        {
+            WebServices = new WebServicesInfo { Services = [new WebService { Name = "app-a", OpenSecurityAlerts = 3 }] },
+            AppErrors = [new AppErrorSummary { App = "App-A", Count24h = 12, TopType = "System.TimeoutException" }],
+        };
+
+        var map = DashboardInsightsBuilder.BuildUptime([scan, old], Today, NothingExcluded, windowDays: 7, latest: latest);
 
         map.Days.Should().HaveCount(7);
         map.Rows.Should().ContainSingle().Which.Cells.Should().HaveCount(7);
         map.Rows[0].Cells.Count(c => c == UptimeState.NoData).Should().Be(6);
         map.Rows[0].DeployDays.Should().Equal(4);
+        map.Rows[0].CleanDays.Should().Be(7, "no bad day in the window is the whole window clean");
+        map.Rows[0].Should().Match<UptimeRow>(r =>
+            r.Errors24h == 12 && r.TopError == "System.TimeoutException" && r.SecurityAlerts == 3);
     }
 
     [Fact]
@@ -261,6 +272,7 @@ public class UptimeHeatmapTests
         var map = DashboardInsightsBuilder.BuildUptime(history, Today, NothingExcluded, windowDays: 3);
 
         map.Rows[0].Cells[^1].Should().Be(UptimeState.Broken);
+        map.Rows[0].CleanDays.Should().Be(0, "a bad day today ends the streak");
     }
 
     [Fact]

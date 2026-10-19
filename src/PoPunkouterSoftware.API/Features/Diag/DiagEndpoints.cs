@@ -1,4 +1,8 @@
 using System.Text.Json;
+using Azure;
+using Azure.Core;
+using Azure.ResourceManager;
+using Azure.ResourceManager.AppService;
 using PoPunkouterSoftware.Infrastructure;
 using PoPunkouterSoftware.Shared;
 
@@ -99,6 +103,46 @@ internal static class DiagEndpoints
                 ? Results.Accepted()
                 : Results.Problem(detail: "Refresh already in progress.", statusCode: 409))
         .RequireManagementActions();
+
+        // ── Restart (or start) one App Service ───────────────────────────────
+        // Consumer: the Restart/Start button on Reliability rows of the priority queue. The
+        // resource id comes from the stored report, never from the caller, so this can only
+        // ever touch a site the scan already found. Management-gated like refresh; in Azure it
+        // also needs the site's identity to hold Website Contributor, which infra does not
+        // grant — so in Production it answers 403 until someone deliberately grants it.
+        diag.MapPost("/restart/{name}", async (
+            string name, IWebHostEnvironment env, AzureReportStore store, ArmClient arm,
+            ILogger<Program> logger, CancellationToken ct) =>
+        {
+            var report = await LoadLatestReportAsync(env, store, logger, ct);
+            var key = NameMatching.Normalize(name);
+            var svc = (report?.WebServices?.Services ?? [])
+                .FirstOrDefault(s => s.ResourceType == "Microsoft.Web/sites" && s.ResourceId is not null
+                    && (NameMatching.Normalize(s.Name) == key || NameMatching.Normalize(s.FriendlyName) == key));
+            if (svc is null)
+                return Results.Problem(detail: $"No App Service named '{name}' in the latest scan.", statusCode: StatusCodes.Status404NotFound);
+
+            var site = arm.GetWebSiteResource(new ResourceIdentifier(svc.ResourceId!));
+            var start = string.Equals(svc.PlatformState, "Stopped", StringComparison.OrdinalIgnoreCase);
+            try
+            {
+                if (start)
+                    await site.StartAsync(ct);
+                else
+                    await site.RestartAsync(cancellationToken: ct);
+            }
+            catch (RequestFailedException ex) when (ex.Status is 401 or 403)
+            {
+                return Results.Problem(
+                    detail: "This deployment's Azure identity is not allowed to restart sites (needs Website Contributor).",
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            logger.LogInformation("{Action} requested for {Site}", start ? "Start" : "Restart", svc.Name);
+            return Results.Json(new { action = start ? "started" : "restarted", site = svc.Name });
+        })
+        .RequireManagementActions()
+        .WithName("RestartSite");
 
         // ── Cancel in-progress refresh ───────────────────────────────────────
         diag.MapPost("/cancel-refresh", (RefreshSessionManager session) =>
@@ -242,14 +286,14 @@ internal static class DiagEndpoints
             CostFormatted = report.Cost?.TotalFormatted ?? "$0.00",
             CleanupCandidates = cleanup,
             SecurityFindings = security,
-            AttentionCount = broken + security + cleanup + (isStale ? 1 : 0),
+            AttentionCount = broken + security + cleanup + built.AdvisorFindings + (isStale ? 1 : 0),
             // Everything the operator can actually act on. Staleness is excluded because it
             // is resolved by refreshing, not by fixing a resource; broken services are very
             // much included. The hero badge used to render only security + cleanup while its
             // own tooltip claimed it excluded "the staleness flag itself" — on live data that
             // read "8 item(s) need attention" beside "3 actionable", silently dropping the
             // four unavailable services, the most actionable items on the page.
-            ActionableCount = broken + security + cleanup,
+            ActionableCount = broken + security + cleanup + built.AdvisorFindings,
             CostDrivers = (report.Cost?.TopCostDrivers ?? new()).Where(x => x.Cost > 0).Take(5)
                 .Select(x => new OpsMetricPoint(x.Name, Math.Round(x.Cost, 2))).ToList(),
             ResponseTimes = services.Where(s => s.Connectivity?.ResponseTime > 0)
@@ -274,7 +318,7 @@ internal static class DiagEndpoints
             Forecast = DashboardInsightsBuilder.BuildForecast(report, history, budgetUsd),
             Uptime = DashboardInsightsBuilder.BuildUptime(
                 history, utcNow, PortfolioIdentity.IsSelf,
-                DashboardInsightsBuilder.UptimeWindowDays, pingSamples),
+                DashboardInsightsBuilder.UptimeWindowDays, pingSamples, report),
         };
     }
 

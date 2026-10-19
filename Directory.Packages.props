@@ -58,5 +58,7 @@
     <PackageVersion Include="Testcontainers.Azurite" Version="4.14.0" />
     <PackageVersion Include="FluentAssertions" Version="8.10.0" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.49.0" />
+    <!-- axe-core accessibility rules inside the E2EUI Playwright tier (Deque, MPL-2.0). -->
+    <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
   </ItemGroup>
 </Project>

@@ -175,11 +175,33 @@
 /* Where the card goes, as one quiet line — the visible "this leaves the site" cue that the
    "Open app" pill used to be. aria-hidden: the link's name is the app name, and the host
    would only be noise read after it. */
+.app-card-foot {
+    display: flex;
+    align-items: center;
+    gap: var(--app-space-xs);
+    margin-top: auto;
+    min-width: 0;
+}
+
+.app-card-streak {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--app-space-3xs);
+    color: var(--app-text-muted);
+    font-size: var(--app-step--2);
+    font-variant-numeric: tabular-nums;
+}
+
+.app-card-streak .rz-icon {
+    font-size: 0.95rem;
+    color: var(--app-accent-warm);
+}
+
 .app-card-host {
     display: inline-flex;
     align-items: center;
     gap: var(--app-space-3xs);
-    margin-top: auto;
     min-width: 0;
     overflow: hidden;
     color: var(--app-text-soft);

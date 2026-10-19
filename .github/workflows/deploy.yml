@@ -126,6 +126,24 @@ jobs:
       - name: Zip publish output
         run: cd publish && zip -qr ../deploy.zip .
 
+      # The site as it is right now, so a release that fails the smoke test below can be put
+      # back. Kudu's zip API with the same OIDC identity — Contributor on the resource group
+      # covers SCM access — so no publish profile and no new secret. A failed backup (first
+      # deploy, SCM briefly unavailable) is a warning: it costs the rollback, not the deploy.
+      - name: Back up the live site
+        id: backup
+        run: |
+          TOKEN=$(az account get-access-token --query accessToken -o tsv)
+          if curl -fsS --max-time 300 -H "Authorization: Bearer $TOKEN" -o previous.zip \
+               "https://${{ steps.targets.outputs.app_name }}.scm.azurewebsites.net/api/zip/site/wwwroot/" \
+             && [ -s previous.zip ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "Backed up $(du -h previous.zip | cut -f1) of the live site."
+          else
+            echo "::warning title=No backup::Could not download the live site — this deploy cannot be rolled back automatically."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy to Azure App Service (zipdeploy)
         run: |
           az webapp deployment source config-zip \
@@ -133,3 +151,50 @@ jobs:
             --name "${{ steps.targets.outputs.app_name }}" \
             --src deploy.zip \
             --timeout 600
+
+      # A green deploy step proves the zip was accepted, not that the app starts. Three
+      # checks a broken release fails: liveness (/healthz), the deep probe (/health answers
+      # 200 even when degraded — a 5xx means the pipeline itself is broken), and the
+      # first-paint contract /azure renders from. Generous retries: F1 cold-starts slowly.
+      - name: Smoke test
+        id: smoke
+        run: |
+          HOST=$(az webapp show --resource-group "${{ steps.targets.outputs.resource_group }}" \
+            --name "${{ steps.targets.outputs.app_name }}" --query defaultHostName -o tsv)
+          BASE="https://$HOST"
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          check() {
+            for i in $(seq 1 12); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$BASE$1" || echo 000)
+              case " $2 " in *" $code "*) echo "$1 -> $code"; return 0;; esac
+              echo "$1 -> $code (attempt $i)"; sleep 15
+            done
+            echo "::error title=Smoke test failed::$1 never answered $2"; return 1
+          }
+          check /healthz 200
+          check /health 200
+          # 404 is a legitimate answer before the first scan has ever run.
+          check /api/diag/summary "200 404"
+
+      - name: Roll back
+        if: failure() && steps.smoke.conclusion == 'failure' && steps.backup.outputs.ok == 'true'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          az webapp deployment source config-zip \
+            --resource-group "${{ steps.targets.outputs.resource_group }}" \
+            --name "${{ steps.targets.outputs.app_name }}" \
+            --src previous.zip \
+            --timeout 600
+          echo "::error title=Rolled back::${{ github.sha }} failed its smoke test; the previous build is live again."
+          # Same ntfy topic as AlertNotifier: optional NTFY_TOPIC secret, else the app's own
+          # Key Vault secret, else no push (the red workflow still emails).
+          TOPIC="${NTFY_TOPIC:-$(az keyvault secret show --vault-name kv-poshared \
+            --name PoPunkouterSoftware--Alerts--NtfyTopic --query value -o tsv 2>/dev/null || true)}"
+          if [ -n "$TOPIC" ]; then
+            echo "::add-mask::$TOPIC"
+            jq -n --arg topic "$TOPIC" --arg sha "${GITHUB_SHA::7}" \
+              --arg click "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              '{topic: $topic, title: "Deploy rolled back", message: "\($sha) failed its smoke test; the previous build is live again.", priority: 4, tags: ["rewind"], click: $click}' \
+              | curl -fsS -X POST -H 'Content-Type: application/json' --data-binary @- https://ntfy.sh/ > /dev/null || true
+          fi

@@ -10,30 +10,23 @@ namespace PoPunkouterSoftware.Unit;
 
 public class ServiceHealthTests
 {
-    [Theory]
-    [InlineData("active", true)]
-    [InlineData("ACTIVE", true)]          // case-insensitive
-    [InlineData("  active  ", false)]     // but NOT trimmed — the wire format is exact
-    [InlineData("broken", false)]
-    [InlineData(null, false)]
-    public void IsHealthy_MatchesOnlyActive_CaseInsensitive(string? status, bool expected)
-    {
-        ServiceHealth.IsHealthy(status).Should().Be(expected);
-    }
-
-    [Theory]
-    [InlineData("broken", true)]
-    [InlineData("Unreachable", true)]     // second broken synonym, and case-insensitive
-    [InlineData("active", false)]
-    [InlineData(null, false)]
-    public void IsBroken_MatchesBrokenAndUnreachable_CaseInsensitive(string? status, bool expected)
-    {
-        ServiceHealth.IsBroken(status).Should().Be(expected);
-    }
-
+    /// <summary>
+    /// One rule's worth of coverage in one test: this used to be ten theory cases, six of them
+    /// casing variants of the same comparison.
+    /// </summary>
     [Fact]
-    public void UnknownStatus_IsNeitherHealthyNorBroken()
+    public void ActiveIsHealthy_BrokenAndUnreachableAreBroken_CaseInsensitiveButNotTrimmed()
     {
+        ServiceHealth.IsHealthy("ACTIVE").Should().BeTrue();
+        ServiceHealth.IsHealthy("  active  ").Should().BeFalse("the wire format is exact");
+        ServiceHealth.IsHealthy("broken").Should().BeFalse();
+        ServiceHealth.IsHealthy(null).Should().BeFalse();
+
+        ServiceHealth.IsBroken("broken").Should().BeTrue();
+        ServiceHealth.IsBroken("Unreachable").Should().BeTrue();
+        ServiceHealth.IsBroken("active").Should().BeFalse();
+        ServiceHealth.IsBroken(null).Should().BeFalse();
+
         ServiceHealth.IsHealthy(ServiceHealth.Unknown).Should().BeFalse();
         ServiceHealth.IsBroken(ServiceHealth.Unknown).Should().BeFalse();
     }

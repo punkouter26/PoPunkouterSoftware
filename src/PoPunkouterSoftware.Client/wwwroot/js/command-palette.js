@@ -22,6 +22,42 @@
         { id: 'act-reload', title: 'Hard Reload Application', icon: 'refresh', category: 'System', action: function () { window.location.reload(); } }
     ];
 
+    // Per-app launcher rows, built from /api/portfolio the first time the palette opens.
+    // Fetched lazily and once per page: the palette is a convenience, and a portfolio request
+    // on every page load for a palette most visits never open would be a tax on all of them.
+    var appCommands = [];
+    var appsRequested = false;
+
+    function loadApps() {
+        if (appsRequested) return;
+        appsRequested = true;
+        Promise.all([
+            fetch('/api/portfolio').then(function (r) { return r.ok ? r.json() : { apps: [] }; }),
+            fetch('/api/config').then(function (r) { return r.ok ? r.json() : {}; })
+        ]).then(function (res) {
+            var cmds = [];
+            (res[0].apps || []).forEach(function (app) {
+                if (app.url) {
+                    cmds.push({ id: 'open-' + app.id, title: 'Open ' + app.name, icon: 'open_in_new', category: 'Apps', app: true,
+                        action: function () { window.open(app.url, '_blank', 'noopener'); } });
+                    cmds.push({ id: 'copy-' + app.id, title: 'Copy ' + app.name + ' link', icon: 'link', category: 'Apps', app: true,
+                        action: function () { if (navigator.clipboard) navigator.clipboard.writeText(app.url); } });
+                }
+                cmds.push({ id: 'focus-' + app.id, title: 'Show ' + app.name + ' uptime', icon: 'my_location', category: 'Apps', app: true,
+                    action: function () { navigate('/azure?focus=' + encodeURIComponent(app.name)); } });
+            });
+            // Same gate as the Rescan and Sync buttons: shown only where the server will accept it.
+            if (res[1].managementActionsEnabled) {
+                cmds.push({ id: 'act-rescan', title: 'Rescan Azure now', icon: 'sync', category: 'Actions',
+                    action: function () {
+                        fetch('/api/diag/refresh', { method: 'POST' }).finally(function () { navigate('/azure'); });
+                    } });
+            }
+            appCommands = cmds;
+            if (isOpen) renderList();
+        }).catch(function () { /* offline or API down: the static commands still work */ });
+    }
+
     // Enhanced navigation when Blazor is up, like any other in-app link.
     function navigate(url) {
         if (window.Blazor && window.Blazor.navigateTo) window.Blazor.navigateTo(url);
@@ -51,7 +87,7 @@
         input = document.createElement('input');
         input.type = 'text';
         input.className = 'app-palette-input';
-        input.placeholder = 'Type a command or search (e.g. "azure", "theme", "settings")...';
+        input.placeholder = 'Type a command or an app name (e.g. "azure", "theme", "meme")...';
         input.setAttribute('aria-autocomplete', 'list');
 
         var kbd = document.createElement('kbd');
@@ -103,13 +139,42 @@
         });
     }
 
+    /**
+     * Fuzzy subsequence score: every query character must appear in order. Consecutive hits
+     * and hits at a word start score extra, so "pmv" finds "Open PoMemeVideo" and "azure"
+     * still ranks "Go to Azure Ops Dashboard" first. -1 means no match. Hand-written rather
+     * than Fuse.js: twenty lines, and the CSP's script-src 'self' rules out a CDN anyway.
+     */
+    function fuzzyScore(query, text) {
+        var t = text.toLowerCase(), score = 0, ti = 0, run = 0;
+        for (var qi = 0; qi < query.length; qi++) {
+            var c = query.charAt(qi);
+            if (c === ' ') continue;
+            var found = t.indexOf(c, ti);
+            if (found === -1) return -1;
+            run = found === ti ? run + 1 : 0;
+            var wordStart = found === 0 || /[\s\-_.]/.test(t.charAt(found - 1)) || text.charAt(found) !== t.charAt(found);
+            score += 1 + run * 2 + (wordStart ? 3 : 0);
+            ti = found + 1;
+        }
+        return score - t.length * 0.01;
+    }
+
     function getFilteredCommands() {
         var query = (input ? input.value : '').toLowerCase().trim();
-        if (!query) return COMMANDS;
-        return COMMANDS.filter(function (cmd) {
-            return cmd.title.toLowerCase().indexOf(query) !== -1 ||
-                   cmd.category.toLowerCase().indexOf(query) !== -1;
-        });
+        // With no query the list stays short — the per-app rows only appear once you type.
+        if (!query) return COMMANDS.concat(appCommands.filter(function (c) { return !c.app; }));
+        var ranked = COMMANDS.concat(appCommands)
+            .map(function (cmd) { return { cmd: cmd, score: Math.max(fuzzyScore(query, cmd.title), fuzzyScore(query, cmd.category) - 5) }; })
+            .filter(function (x) { return x.score >= 0; })
+            .sort(function (a, b) { return b.score - a.score; });
+        // A subsequence matches almost anything once the letters are spread out ("pomeme"
+        // finds "Show PoMode uptime"), so rows far below the best match are noise, not hits.
+        var floor = ranked.length ? ranked[0].score * 0.6 : 0;
+        return ranked
+            .filter(function (x) { return x.score >= floor; })
+            .slice(0, 30)
+            .map(function (x) { return x.cmd; });
     }
 
     function renderList() {
@@ -169,6 +234,7 @@
 
     function open() {
         createPalette();
+        loadApps();
         isOpen = true;
         overlay.classList.add('is-open');
         input.value = '';

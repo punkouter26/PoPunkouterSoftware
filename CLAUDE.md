@@ -336,10 +336,10 @@ comment in each before changing it; they document the reasoning, this is the map
 | `theme-kit.js` | The visitor's light/dark choice, and the toggle that sets it (`themeKit.toggle()`, called from the command palette and `/settings` — the header button was removed 2026-10-05). Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
 | `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
 | `blazor-hooks.js` | Registers the enhanced-navigation callbacks. Must load **after** `blazor.web.js`, which defines `Blazor`. Also ex-inline. |
-| `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation (including `/settings`, which has no other entry point) plus theme and sound toggles. |
+| `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation (including `/settings`, which has no other entry point), theme and sound toggles, and a launcher — open / copy link / show uptime for every app (from `/api/portfolio`, fetched on first open) plus "Rescan Azure" when management actions are on. Fuzzy matching is hand-written: the CSP's `script-src 'self'` rules out a CDN library. |
 
 `app-boot.js` also registers **`wwwroot/service-worker.js`**. That worker precaches the pages
-and JS/CSS listed in it under a fixed cache name (`pops-pwa-v1`) and serves them cache-first.
+and JS/CSS listed in it under a fixed cache name (`pops-pwa-v3`) and serves them cache-first.
 Change that list whenever you add or rename a page or script, and bump `CACHE_NAME` whenever
 you change any precached file. A visitor who already has the worker installed keeps getting
 the cached copy until the cache name changes.
@@ -496,15 +496,21 @@ proves a context and program were created, not that anything reached the screen.
   no DOM change and no message at all. Interactive WASM islands on one page share a single
   WebAssembly host and therefore one DI container (a scoped service is a per-host singleton there),
   which is why the island and the page resolve the same instance. Do not remove the attribute.
-- **Push alerts go through ntfy, and only three things send one.** `AlertNotifier` POSTs JSON to
+- **Push alerts go through ntfy, and every sender fires on a crossing, never a state.** `AlertNotifier` POSTs JSON to
   `Alerts:NtfyServer` (default ntfy.sh) when `Alerts:NtfyTopic` is set — Key Vault secret
   `PoPunkouterSoftware--Alerts--NtfyTopic`, because on ntfy.sh the topic name IS the credential.
   Senders: `ServicePingerService` on a debounced up/down transition (`OutageTracker`: 2
   consecutive failed probes, timeouts are no observation — the uptime grid's own rule, so an
-  alert cannot disagree with the grid it links to); `ReportRefreshRunner` on a failed scan and
-  on a NEW spend spike (anomalies the previous report already carried are not re-sent). Each
-  links to `/azure?focus=<service>`, which highlights and scrolls to that uptime row.
+  alert cannot disagree with the grid it links to); `ReportRefreshRunner` on a failed scan, on
+  a NEW spend spike (anomalies the previous report already carried are not re-sent), and — via
+  `AlertTriggers`, compared against the previous report — on an SSL certificate crossing 14
+  days and on the month-end forecast crossing `Budget:MonthlyUsd`. Outage alerts link to
+  `/azure?focus=<service>`, which highlights and scrolls to that uptime row.
   Tracker state is in-memory: an app still down when this site restarts is re-alerted.
+  Two senders live in GitHub Actions because only they hold the facts: `deploy.yml` on a
+  rollback and `screenshots.yml` on a Lighthouse category dropping 15+ points overnight. Both
+  read the optional `NTFY_TOPIC` GitHub secret and fall back to the Key Vault secret (which
+  works only if the OIDC identity can read `kv-poshared`); with neither they stay silent.
 - **Two anonymous endpoints are rate-limited, globally.** `Host/RateLimits.cs`: `/api/signins`
   (live Log Analytics) 30/min, `POST /api/diag/ai` (paid completion) 20/hour. Global windows,
   not per-IP, on purpose — a hard cost ceiling IP rotation cannot beat, and no trust in
@@ -514,21 +520,47 @@ proves a context and program were created, not that anything reached the screen.
   the "every endpoint needs a consumer" rule is satisfied by a README, not by a component.
   Built from the same `BuildApps` list as the cards plus `BuildUptime`, with none of
   `GetPortfolio`'s side effects (no auto-rescan, no screenshot capture) — crawlers fetch it.
+  It carries the clean streak ("up 12d · 99% 30d"): `UptimeRow.CleanDays`, days since the
+  row's last down/degraded day, which `/api/portfolio` also puts on each card
+  (`PortfolioApp.CleanDays`, the flame chip on the card's host line — on that line, not a new
+  one, because a taller card fails `Home_FirstScreen_ShowsAWholeCard`).
 - **Every scanned service carries its last deploy.** GitHub correlation now runs for all services,
   not only broken ones, and asks for the latest **push**-event run on the default branch (a
   scheduled workflow would otherwise read as a deploy every night). It becomes
   `WebService.LastDeploy` → `ServiceHistoryPoint.LastDeployAt` → `UptimeRow.DeployDays` (dots
   on the grid) and a `deploy` change in "what changed", which an outage line cites when a
-  deploy landed between the two scans.
+  deploy landed between the two scans. The matched repo's open Dependabot alert count rides the
+  same correlation (`WebService.OpenSecurityAlerts` → the shield chip on the uptime row); it is
+  null, not zero, when the repo has Dependabot off or the PAT lacks "Dependabot alerts: read".
+  As of 2026-10-19 Dependabot alerts are **disabled on every Po repo**, so the chip never shows.
+- **The scan reads three more Azure sources, all covered by the existing Reader grant.**
+  `DowntimeDiagnosisService` asks **Resource Health** for each down app: `PlatformCaused` true
+  becomes "Azure platform event", false "app-side, Azure reports the platform healthy", and
+  the verdict rides on the first-paint attention sentence. **Azure Advisor**
+  (`AzureReportService.Advisor`) feeds the priority queue as ONE row per recommendation, not
+  per resource — live it returned 75 rows, all HighAvailability ("zone redundancy", "paid
+  tier") — and only High-impact Cost/Security count toward the hero, or the hero would never
+  say "everything looks good". A subscription-level recommendation's bare GUID is replaced
+  with "subscription": `MaskSubscriptionIds` only rewrites `/subscriptions/<guid>` paths.
+  **Exceptions per app over 24h** (`AzureReportService.AppErrors`) come from the shared App
+  Insights component at `SignIns:ResourceId` — stored with the scan, so this is not a second
+  live query — and carry the exception TYPE only, never the message, because messages can
+  hold user data and this reaches the anonymous summary. Shown as the bug chip on the uptime
+  row; null (no chip), never a manufactured 0, for an app that logged nothing.
 - **Spend spikes are per resource group, from one extra Cost Management query.**
   `GetResourceGroupCostsAsync` (30 days × daily × group, no nextLink paging — see its ponytail
   note) fills `CostInfo.ResourceGroups`; `DashboardInsightsBuilder.BuildCostAnomalies` flags a
   group whose latest day is ≥$1 over, ≥2× and >3σ above its own 14-day mean. Shown on the
   forecast card, capped at two lines so the spend pane still fits a phone.
-- **Management gate.** Mutating/expensive endpoints (`/api/diag/refresh`, `/api/diag/cancel-refresh`)
+- **Management gate.** Mutating/expensive endpoints (`/api/diag/refresh`, `/api/diag/cancel-refresh`,
+  `/api/diag/restart/{name}` — the Restart button on Reliability rows of the priority queue)
   carry `.RequireManagementActions()`, which enforces `FeatureFlags:EnableManagementActions` (on in
   Development/Testing, otherwise opt-in) plus an optional `Security:ManagementApiKey` via the
   `X-Management-Key` header. `/api/diag/ai` and the snooze endpoints are deliberately unprivileged.
+  Restart resolves the site from the STORED report, never from the caller, so it can only touch
+  a site the scan found; it starts a stopped site and restarts a running one. In Azure it also
+  needs Website Contributor, which infra deliberately does not grant — it 403s cleanly there.
+  Note a local Development run restarts the REAL site with your `az login`.
 - **Routing.** `/api/diag/*` and `/api/portfolio/*` use `MapGroup`. `/health` (deep probe, one
   `IHealthCheck` per external dependency) and `/healthz` (static liveness) sit off the `/api` group.
   **`/openapi/v1.json` and `/scalar/v1` are mapped only outside Production** — they were
@@ -782,7 +814,7 @@ proves a context and program were created, not that anything reached the screen.
   Material Symbols variable font (~3,600 glyphs, 1,068,920 bytes) and self-hosts it as family
   `"Material Symbols"`. This app draws about thirty of those glyphs, so
   [SCRIPTS/Build-IconFontSubset.py](SCRIPTS/Build-IconFontSubset.py) builds
-  `wwwroot/fonts/material-symbols-subset.woff2` (16,000 bytes) and `modern-ui.css` declares the
+  `wwwroot/fonts/material-symbols-subset.woff2` (19,612 bytes) and `modern-ui.css` declares the
   family against that. **Material Symbols renders through LIGATURES** — the element's text is the
   icon's name — so a name missing from the subset does not degrade to a blank box: it renders the
   literal word "refresh" inside the button. Add the name to `APP_ICONS` and re-run the script; it
@@ -857,7 +889,7 @@ proves a context and program were created, not that anything reached the screen.
   without which `GetContainerAsync` returns null and stored images never appear —
   indistinguishable from never having captured any.
 
-## Tests — four projects, one per tier (budget 105/52/25/25, currently 105/51/21/23)
+## Tests — four projects, one per tier (budget 105/52/25/25, currently 100/54/21/25)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the
@@ -880,7 +912,11 @@ rule's worth of coverage.
   the entry point under `Production` with every external dependency blanked — the only coverage of
   that environment's hosting pipeline.
 - **`PoPunkouterSoftware.E2EAPI`** / **`.E2EUI`** — pure HTTP and Playwright against a live instance
-  via `BASE_URL`. On demand, not in CI.
+  via `BASE_URL`. On demand, not in CI. E2EUI runs **axe-core** (`Deque.AxeCore.Playwright`,
+  WCAG 2.1 A/AA) over all three pages at both viewports and fails on serious/critical only. Its
+  first run found three real defects: the active nav link at 4.37:1, the Sync button's
+  aria-label not containing "Sync" (WCAG 2.5.3), and `aria-label` on the role-less loading
+  skeleton. It waits for `appRepairRadzenA11y` first, or it reports icon ligatures in names.
 
 ## Git workflow — master only
 
@@ -906,8 +942,13 @@ push. Everywhere else, run only the tests covering what changed.
 **CI/CD:** three workflows. Only `deploy.yml` runs tests, and only the Unit tier — the other
 three tiers still run locally before a push.
 
-- [deploy.yml](.github/workflows/deploy.yml) — build, **unit tests**, deploy. Target is App
-  Service `app-popunkoutersoftware` via OIDC, no secrets in the workflow. Unit is the only tier
+- [deploy.yml](.github/workflows/deploy.yml) — build, **unit tests**, back up, deploy, **smoke
+  test**, roll back. The live site is downloaded through Kudu's zip API (same OIDC identity)
+  before the deploy; afterwards `/healthz`, `/health` and `/api/diag/summary` (200, or 404
+  before any scan) must answer within ~3 minutes of retries, or the backup is redeployed, the
+  job goes red and ntfy is told. No backup (first deploy, SCM down) means no rollback, with a
+  warning. Target is App
+  Service `app-popunkoutersoftware` via OIDC, no required secrets in the workflow. Unit is the only tier
   that belongs in a deploy pipeline: no Docker, no network, no live host, ~0.5s for 100 tests
   against an assembly the job already built. Integration needs Testcontainers Azurite; both E2E
   tiers need a running app and a `BASE_URL`. Adding any of them would trade a fast gate for a

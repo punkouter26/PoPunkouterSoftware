@@ -48,7 +48,19 @@
                        is down (or, more gently, degraded). Absent — not "0" — on a healthy row. *@
                     var latest = row.Cells.Count > 0 ? row.Cells[^1] : null;
                     var attract = latest == UptimeState.Broken ? "1" : latest == UptimeState.Degraded ? "0.5" : null;
-                    <div class="azure-uptime__label @(focused ? "is-focused" : "")" title="@row.Name" data-fx-attract="@attract">@row.Name</div>
+                    <div class="azure-uptime__label @(focused ? "is-focused" : "")" title="@row.Name" data-fx-attract="@attract">
+                        @row.Name
+                        @if (row.Errors24h is > 0)
+                        {
+                            @* Up is not the same as working: an app answering HEAD while throwing
+                               on every real request shows green cells and this chip. *@
+                            <span class="azure-uptime__chip is-error" title="@($"{row.Errors24h} exception(s) in the 24h before the last scan{(row.TopError is { } t ? $", mostly {t}" : "")}")"><RadzenIcon Icon="bug_report" />@row.Errors24h</span>
+                        }
+                        @if (row.SecurityAlerts is > 0)
+                        {
+                            <span class="azure-uptime__chip is-alert" title="@($"{row.SecurityAlerts} open Dependabot alert(s) on the repo")"><RadzenIcon Icon="shield" />@row.SecurityAlerts</span>
+                        }
+                    </div>
                     @for (var i = 0; i < row.Cells.Count; i++)
                     {
                         var state = row.Cells[i];
@@ -85,6 +97,16 @@
             <span><i class="azure-uptime__cell is-broken"></i> down</span>
             <span><i class="azure-uptime__cell is-no-data"></i> no scan</span>
             <span><i class="azure-uptime__cell is-healthy has-deploy"></i> deploy landed</span>
+            @* Keyed only when a row actually carries the chip: a legend for marks that are not
+               on screen is one more line to read for nothing. *@
+            @if (Map.Rows.Any(r => r.Errors24h > 0))
+            {
+                <span><span class="azure-uptime__chip is-error">n</span> exceptions, 24h</span>
+            }
+            @if (Map.Rows.Any(r => r.SecurityAlerts > 0))
+            {
+                <span><span class="azure-uptime__chip is-alert">n</span> Dependabot alerts</span>
+            }
         </div>
     }
 </article>
@@ -179,6 +201,11 @@
 
         var text = $"{row.Name}: healthy on {row.UptimePercent} percent of {row.ScansObserved} check(s) "
             + $"across {row.DaysWithData} observed day(s) of {Map.Days.Count}.";
+
+        if (row.Errors24h is > 0)
+            text += $" {row.Errors24h} exception(s) in the last 24 hours{(row.TopError is { } t ? $", mostly {t}" : "")}.";
+        if (row.SecurityAlerts is > 0)
+            text += $" {row.SecurityAlerts} open Dependabot alert(s).";
 
         if (row.DeployDays.Count > 0)
             text += $" Deployed {string.Join(", ", row.DeployDays.Where(i => i < Map.Days.Count).Select(i => $"{Map.Days[i]:MMM d}"))}.";

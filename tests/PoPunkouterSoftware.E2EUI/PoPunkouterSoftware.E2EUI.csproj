@@ -14,6 +14,7 @@
     <!-- E2EUI tier: C# Playwright. After build, install browsers once:
          pwsh tests/PoPunkouterSoftware.E2EUI/bin/Debug/net10.0/playwright.ps1 install -->
     <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="Deque.AxeCore.Playwright" />
   </ItemGroup>
 
   <ItemGroup>

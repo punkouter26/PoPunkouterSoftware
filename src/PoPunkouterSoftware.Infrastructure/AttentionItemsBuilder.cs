@@ -29,7 +29,8 @@ public static class AttentionItemsBuilder
         int Broken,
         int SecurityFindings,
         int CleanupCandidates,
-        bool IsStale);
+        bool IsStale,
+        int AdvisorFindings = 0);
 
     /// <param name="report">The scan result to summarize.</param>
     /// <param name="isExcluded">
@@ -61,18 +62,37 @@ public static class AttentionItemsBuilder
         var security = insecureStorage + criticalDrift;
         var attention = new List<string>();
 
+        // Resource Health's verdict rides on the sentence, because "is it me or Azure?" is the
+        // first question an outage raises and the diagnosis that answers it sits behind
+        // Advanced diagnostics.
+        var platformCaused = (report.DowntimeDiagnoses ?? [])
+            .GroupBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().PlatformCaused, StringComparer.OrdinalIgnoreCase);
         attention.AddRange(services
             .Where(s => !ServiceHealth.IsHealthy(s.HttpStatus))
             .Take(3)
-            .Select(s => $"{(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName)} is unavailable"));
+            .Select(s => $"{(string.IsNullOrWhiteSpace(s.FriendlyName) ? s.Name : s.FriendlyName)} is unavailable"
+                + platformCaused.GetValueOrDefault(s.Name) switch
+                {
+                    true => " — Azure platform event",
+                    false => " — app-side, Azure reports the platform healthy",
+                    null => "",
+                }));
         if (security > 0)
             attention.Add($"{security} security configuration finding(s)");
         if (cleanup > 0)
             attention.Add($"{cleanup} cleanup candidate(s)");
+        // High-impact Cost and Security only. Everything else ranks in the priority queue, but
+        // live, Advisor raised 62 "high impact" availability tips (zone redundancy, paid tiers)
+        // against a free-tier estate — counting those would mean the hero never once says
+        // "everything looks good".
+        var advisor = report.AdvisorRecommendations.Count(a => a.Impact == "High" && a.Category is "Cost" or "Security");
+        if (advisor > 0)
+            attention.Add($"{advisor} high-impact Azure Advisor cost/security recommendation(s)");
         var isStale = PortfolioFreshness.IsStale(report.GeneratedAt, DateTime.UtcNow);
         if (isStale)
             attention.Add("Azure data is stale and should be refreshed");
 
-        return new Result(attention, services, total, active, broken, security, cleanup, isStale);
+        return new Result(attention, services, total, active, broken, security, cleanup, isStale, advisor);
     }
 }

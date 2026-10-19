@@ -31,13 +31,15 @@ internal static partial class PortfolioEndpoints
 
     internal static async Task<IResult> GetPortfolio(
         IWebHostEnvironment env, IConfiguration config, AzureReportStore store, AppScreenshotService screenshots,
+        UptimeSampleStore uptimeSamples, TimeProvider clock,
         ReportRefreshRunner refreshRunner, ILogger<Program> logger, CancellationToken ct)
     {
         var inventoryTask = LoadInventoryAsync(env, store, logger, ct);
         var metadataTask = LoadMetadataAsync(env, logger, ct);
         var screenshotVersionsTask = screenshots.ListVersionsAsync(ct);
         var scoresTask = screenshots.LoadScoresAsync(ct);
-        await Task.WhenAll(inventoryTask, metadataTask, screenshotVersionsTask, scoresTask);
+        var uptimeTask = LoadUptimeAsync(store, uptimeSamples, clock, ct);
+        await Task.WhenAll(inventoryTask, metadataTask, screenshotVersionsTask, scoresTask, uptimeTask);
         var (report, services) = inventoryTask.Result;
         var metadata = metadataTask.Result;
         var screenshotVersions = screenshotVersionsTask.Result;
@@ -52,7 +54,11 @@ internal static partial class PortfolioEndpoints
             if (refreshRunner.TryStartAuto())
                 logger.LogInformation("Inventory is stale — background Azure rescan started");
         }
-        var apps = BuildApps(services, metadata, screenshotVersions, scoresTask.Result, screenshots.ScreenshotsEnabled);
+        // The streak chip: days since each card's last bad day on the /azure uptime grid —
+        // the same row, so the card can never claim a streak the grid contradicts.
+        var apps = BuildApps(services, metadata, screenshotVersions, scoresTask.Result, screenshots.ScreenshotsEnabled)
+            .Select(a => a with { CleanDays = RowFor(uptimeTask.Result, a)?.CleanDays })
+            .ToList();
 
         // Any app whose screenshot is missing or over a week old: serve what is stored now
         // and capture just those in the background for the next visitor. Scan-derived
@@ -153,19 +159,13 @@ internal static partial class PortfolioEndpoints
         if (app is null)
             return Results.NotFound();
 
-        var now = clock.GetUtcNow();
-        var history = await store.LoadHistorySummariesAsync(maxEntries: 30, ct);
-        var samples = await uptimeSamples.LoadRecentAsync(DashboardInsightsBuilder.UptimeWindowDays, now, ct);
-        var row = DashboardInsightsBuilder.BuildUptime(
-                history.IsSuccess ? history.Value ?? [] : [], now.UtcDateTime, PortfolioIdentity.IsSelf,
-                DashboardInsightsBuilder.UptimeWindowDays, samples)
-            .Rows.FirstOrDefault(r => PortfolioIdentity.NormalizeName(r.Name) == PortfolioIdentity.NormalizeName(app.Name));
+        var row = RowFor(await LoadUptimeAsync(store, uptimeSamples, clock, ct), app);
 
         // Fills measured against white text: 5.1:1, 5.9:1, 5.6:1, 6.2:1 — the badge is text.
         var (message, color) = app.Status switch
         {
             "healthy" when row is { ScansObserved: > 0 } =>
-                ($"up · {row.UptimePercent}% 30d", row.UptimePercent >= 99 ? "#2e7d32" : "#8a5300"),
+                ($"up{Streak(row)} · {row.UptimePercent}% 30d", row.UptimePercent >= 99 ? "#2e7d32" : "#8a5300"),
             "healthy" => ("up", "#2e7d32"),
             "unavailable" => ("down", "#c62828"),
             _ => ("not monitored", "#616161"),
@@ -176,6 +176,29 @@ internal static partial class PortfolioEndpoints
         http.Response.Headers.CacheControl = "public, max-age=300";
         return Results.Text(StatusBadge.Render(app.Name, message, color), "image/svg+xml", System.Text.Encoding.UTF8);
     }
+
+    /// <summary>" 12d" — the clean streak, "30d+" when the whole window was clean; empty when there is none.</summary>
+    private static string Streak(UptimeRow row) => row.CleanDays switch
+    {
+        null or 0 => "",
+        var d when d >= DashboardInsightsBuilder.UptimeWindowDays => $" {d}d+",
+        var d => $" {d}d",
+    };
+
+    /// <summary>The /azure uptime grid, built from the same three sources the dashboard reads.</summary>
+    private static async Task<UptimeHeatmap> LoadUptimeAsync(
+        AzureReportStore store, UptimeSampleStore uptimeSamples, TimeProvider clock, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow();
+        var history = await store.LoadHistorySummariesAsync(maxEntries: 30, ct);
+        var samples = await uptimeSamples.LoadRecentAsync(DashboardInsightsBuilder.UptimeWindowDays, now, ct);
+        return DashboardInsightsBuilder.BuildUptime(
+            history.IsSuccess ? history.Value ?? [] : [], now.UtcDateTime, PortfolioIdentity.IsSelf,
+            DashboardInsightsBuilder.UptimeWindowDays, samples);
+    }
+
+    private static UptimeRow? RowFor(UptimeHeatmap uptime, PortfolioApp app) =>
+        uptime.Rows.FirstOrDefault(r => PortfolioIdentity.NormalizeName(r.Name) == PortfolioIdentity.NormalizeName(app.Name));
 
     private static readonly IReadOnlyDictionary<string, long> EmptyVersions = new Dictionary<string, long>();
     private static readonly IReadOnlyDictionary<string, LighthouseScores> EmptyScores = new Dictionary<string, LighthouseScores>();

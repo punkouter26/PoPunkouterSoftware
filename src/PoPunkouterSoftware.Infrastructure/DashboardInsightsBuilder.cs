@@ -348,7 +348,8 @@ public static class DashboardInsightsBuilder
         DateTime today,
         Func<string?[], bool> isExcluded,
         int windowDays = UptimeWindowDays,
-        IReadOnlyCollection<UptimeDaySample>? pingSamples = null)
+        IReadOnlyCollection<UptimeDaySample>? pingSamples = null,
+        AzureReport? latest = null)
     {
         var lastDay = today.Date;
         var firstDay = lastDay.AddDays(-(windowDays - 1));
@@ -454,6 +455,7 @@ public static class DashboardInsightsBuilder
             .Select(kvp =>
             {
                 var seen = observations.GetValueOrDefault(kvp.Key);
+                var lastBad = Array.FindLastIndex(kvp.Value, c => c is UptimeState.Broken or UptimeState.Degraded);
                 return new UptimeRow
                 {
                     Name = kvp.Key,
@@ -462,6 +464,7 @@ public static class DashboardInsightsBuilder
                     ScansObserved = seen.Total,
                     UptimePercent = seen.Total == 0 ? 100 : (int)Math.Round(seen.Healthy * 100d / seen.Total),
                     DeployDays = deployDays.TryGetValue(kvp.Key, out var d) ? d.ToList() : new List<int>(),
+                    CleanDays = seen.Total == 0 ? null : lastBad < 0 ? windowDays : windowDays - 1 - lastBad,
                 };
             })
             // Worst uptime first: the grid exists to surface problems, not to be alphabetical.
@@ -472,11 +475,40 @@ public static class DashboardInsightsBuilder
         return new UptimeHeatmap
         {
             Days = days,
-            Rows = rows,
+            Rows = rows.Select(r => Annotate(r, latest)).ToList(),
             // Both sources counted: reporting only full scans would tell the reader the grid
             // rests on 3 observations when it actually rests on thousands of probes.
             ScanCount = inWindow.Count,
             PingCount = pingCount,
+        };
+    }
+
+    /// <summary>
+    /// Puts the latest scan's per-app facts on a row: exceptions from Application Insights and
+    /// open Dependabot alerts. Rows are history-keyed by <see cref="NameMatching.ServiceIdentity"/>,
+    /// the same key the report's services carry, so that join is exact. App Insights reports its
+    /// own cloud_RoleName, which is matched on normalized name, exact first, then containment.
+    /// </summary>
+    private static UptimeRow Annotate(UptimeRow row, AzureReport? latest)
+    {
+        if (latest is null)
+            return row;
+
+        var key = NameMatching.Normalize(row.Name);
+        var service = (latest.WebServices?.Services ?? [])
+            .FirstOrDefault(s => NameMatching.Normalize(NameMatching.ServiceIdentity(s.FriendlyName, s.Name)) == key);
+        var errors = latest.AppErrors.FirstOrDefault(e => NameMatching.Normalize(e.App) == key)
+            ?? (key.Length == 0 ? null
+                : latest.AppErrors.FirstOrDefault(e => NameMatching.Normalize(e.App) is { Length: > 0 } app
+                    && NameMatching.FuzzyContains(app, key)));
+
+        return row with
+        {
+            // Never a manufactured zero: an app that does not export to the shared component
+            // logs nothing there either, and "0 errors" would claim a health it never reported.
+            Errors24h = errors?.Count24h,
+            TopError = errors?.TopType,
+            SecurityAlerts = service?.OpenSecurityAlerts,
         };
     }
 }

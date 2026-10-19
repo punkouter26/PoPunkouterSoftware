@@ -214,6 +214,24 @@ public partial class AzureDashboard
         }
     }
 
+    private async Task RestartSiteAsync(PriorityQueueItem item)
+    {
+        try
+        {
+            var resp = await Http.PostAsync($"/api/diag/restart/{Uri.EscapeDataString(item.Item)}", null);
+            if (resp.IsSuccessStatusCode)
+                NotificationService.Notify(NotificationSeverity.Success, "Restart sent",
+                    $"{item.Item} is restarting. Rescan in a minute to see whether it came back.");
+            else
+                NotificationService.Notify(NotificationSeverity.Error, "Restart failed",
+                    await ReadProblemDetailAsync(resp) ?? $"The server rejected the restart ({(int)resp.StatusCode}).");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Restart failed", ex.Message);
+        }
+    }
+
     private Task SnoozePriorityItemAsync(PriorityQueueItem item) =>
         SnoozeAsync($"{item.Source}|{item.Item}");
 

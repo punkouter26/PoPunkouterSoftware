@@ -1,3 +1,4 @@
+using Deque.AxeCore.Playwright;
 using Microsoft.Playwright;
 
 namespace PoPunkouterSoftware.E2EUI;
@@ -166,12 +167,15 @@ public class PortfolioUiTests : IAsyncLifetime
         audio[0].Should().BeFalse("sound must default to off");
         audio[1].Should().BeFalse("no AudioContext may be constructed before the visitor asks for one");
 
-        // The toggle click is itself the user gesture the autoplay policy requires, so one
-        // press must both flip the preference and bring a live context into existence.
-        await page.Locator("[data-sound-toggle]").First.ClickAsync();
-        await Assertions.Expect(page.Locator("[data-sound-toggle]").First).ToHaveAttributeAsync("aria-pressed", "true");
-        (await page.EvaluateAsync<bool>("() => window.audioKit.stats().contextCreated"))
-            .Should().BeTrue($"turning sound on must construct the context at {label}");
+        // The header [data-sound-toggle] went on 2026-10-05; the command palette is the
+        // surviving entry point. Choosing the command is itself the user gesture the autoplay
+        // policy requires, so one Enter must both flip the preference and bring a live context
+        // into existence.
+        await page.Keyboard.PressAsync("Control+k");
+        await page.Locator(".app-palette-input").FillAsync("toggle audio");
+        await page.Keyboard.PressAsync("Enter");
+        (await page.EvaluateAsync<bool[]>("() => [window.audioKit.enabled, window.audioKit.stats().contextCreated]"))
+            .Should().Equal([true, true], $"turning sound on must enable it and construct the context at {label}");
     }
 
     /// <summary>
@@ -498,35 +502,58 @@ public class PortfolioUiTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// "Skip to content" must land somewhere on EVERY route.
+    /// axe-core's WCAG 2.1 A/AA rules over all three pages, failing on serious or critical
+    /// violations only.
     ///
-    /// <para>MainLayout renders the link on every page pointing at <c>#main-content</c>, and
-    /// <c>/azure</c> had no <c>&lt;main&gt;</c> at all — its page root was a bare div — so the
-    /// first focusable element on the ops dashboard was a link to nothing, while the identical
-    /// link on "/" worked. A missing landmark is invisible to everything except a keyboard or
-    /// a screen reader, which is exactly who the link is for.</para>
+    /// <para>Every accessibility defect this repo has fixed was found by hand — Radzen icon
+    /// names leaking into button labels, a literal <c>aria-disabled</c> expression, badges at
+    /// 1.64:1 contrast — and each needed its own bespoke test afterwards. axe catches that whole
+    /// class in one pass, so the next one is found by a red test rather than a person. Minor
+    /// and moderate findings are left out of the gate on purpose: axe reports them liberally
+    /// and a gate that is always red is a gate nobody reads.</para>
+    ///
+    /// <para>It also holds the two landmark checks that used to be a test of their own, on the
+    /// same three page loads: exactly one <c>&lt;main&gt;</c>, and a skip link that resolves.
+    /// <c>/azure</c> once had no <c>&lt;main&gt;</c> — its root was a bare div — so "Skip to
+    /// content" was a link to nothing there while the identical link on "/" worked.</para>
     /// </summary>
     [Theory]
     [MemberData(nameof(Viewports))]
-    public async Task CoreRoutes_HaveOneMainLandmark_AndAWorkingSkipLink(
+    public async Task CoreRoutes_HaveOneMainLandmark_AWorkingSkipLink_AndNoSeriousAxeViolations(
         string label, int width, int height, bool isMobile)
     {
         var page = await NewPageAsync(width, height, isMobile);
+        var found = new List<string>();
 
-        foreach (var route in new[] { "/", "/azure" })
+        foreach (var (route, ready) in new[] { ("/", ".app-portfolio-card"), ("/azure", ".azure-uptime"), ("/users", "main h1") })
         {
             await page.GotoAsync($"{BaseUrl}{route}", new() { WaitUntil = WaitUntilState.NetworkIdle });
-            await page.WaitForSelectorAsync("main", new() { Timeout = 40_000 });
+            await page.WaitForSelectorAsync(ready, new() { Timeout = 40_000 });
+            // appRepairRadzenA11y hides each Radzen icon ligature from the accessibility tree via
+            // a MutationObserver; auditing before it has run reports "syncSync"-style names
+            // (label-content-name-mismatch) that no visitor ever meets.
+            await page.WaitForFunctionAsync("() => !document.querySelector('.rzi:not([aria-hidden])')");
 
-            (await page.Locator("main").CountAsync()).Should().Be(
-                1, $"{route} needs exactly one main landmark at {label}");
-
-            var resolved = await page.EvaluateAsync<bool>(@"() => {
+            (await page.Locator("main").CountAsync()).Should().Be(1, $"{route} needs exactly one main landmark at {label}");
+            (await page.EvaluateAsync<bool>(@"() => {
                 const link = document.querySelector('.app-skip-link');
                 return !!(link && document.querySelector(link.getAttribute('href')));
-            }");
-            resolved.Should().BeTrue($"the skip link must resolve on {route} at {label}");
+            }")).Should().BeTrue($"the skip link must resolve on {route} at {label}");
+
+            var result = await page.RunAxe(new Deque.AxeCore.Commons.AxeRunOptions
+            {
+                RunOnly = new Deque.AxeCore.Commons.RunOnlyOptions
+                {
+                    Type = "tag",
+                    Values = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+                },
+            });
+            found.AddRange(result.Violations
+                .Where(v => v.Impact is "serious" or "critical")
+                .Select(v => $"{route} [{v.Impact}] {v.Id}: {v.Nodes.Length} node(s), e.g. {v.Nodes[0].Html[..Math.Min(200, v.Nodes[0].Html.Length)]}"));
         }
+
+        found.Should().BeEmpty($"axe found serious/critical WCAG violations at {label}");
     }
 
     /// <summary>

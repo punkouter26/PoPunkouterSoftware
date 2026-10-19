@@ -165,6 +165,10 @@ public partial class AzureReportService(
 
         Report("Fetching App Insights metrics…", 86);
         var appInsights = await RunTimedStepAsync("Fetching App Insights metrics", () => GetAppInsightsMetricsAsync(allResources, cred, ct));
+        var appErrors = await RunTimedStepAsync("Counting app exceptions (24h)", () => GetAppErrorsAsync(ct));
+
+        Report("Reading Azure Advisor…", 87);
+        var advisor = await RunTimedStepAsync("Reading Azure Advisor", () => GetAdvisorRecommendationsAsync(subscriptionId, armToken, ct));
 
         var brokenAppServices = connectedSvcs
             .Where(s => s.HttpStatus != "active"
@@ -201,14 +205,22 @@ public partial class AzureReportService(
             ? await RunTimedStepAsync("Diagnosing downtime", () => _downtimeDiagnosis.DiagnoseAsync(brokenAppServices, subscriptionId, armToken, appInsights, gitHubRuns, ct))
             : new List<ServiceDowntimeDiagnosis>();
 
-        var servicesList = connectedSvcs.Select(s =>
+        var repos = connectedSvcs.Select(s => MatchServiceToInfraReview(s, infraReviews)).ToList();
+        var securityAlerts = infraReviews.Count == 0
+            ? new Dictionary<string, int>()
+            : await RunTimedStepAsync("Counting Dependabot alerts",
+                () => FetchSecurityAlertCountsAsync(repos.Where(r => r is not null).Select(r => r!.FullName), ct));
+
+        var servicesList = connectedSvcs.Select((s, i) =>
         {
             metricsMap.TryGetValue(s.ResourceId ?? "", out var m);
+            var repo = repos[i];
             return s with
             {
                 Metrics7Days = s.ResourceId is not null ? m : null,
                 FreeTierCheck = CheckFreeTierForService(s.ResourceTypeRaw, s.Sku),
-                LastDeploy = ToDeployInfo(MatchServiceToInfraReview(s, infraReviews)),
+                LastDeploy = ToDeployInfo(repo),
+                OpenSecurityAlerts = repo is not null && securityAlerts.TryGetValue(repo.FullName, out var alerts) ? alerts : null,
             };
         }).ToList();
 
@@ -272,6 +284,8 @@ public partial class AzureReportService(
             StepTimings = stepTimings.OrderByDescending(x => x.ElapsedMs).ToList(),
             AppServicePlanInventory = appServicePlanInventory,
             DowntimeDiagnoses = downtimeDiags,
+            AdvisorRecommendations = advisor,
+            AppErrors = appErrors,
         };
 
         var delta = ComputeDelta(report, previousReport);

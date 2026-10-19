@@ -83,6 +83,15 @@ public class DashboardDerivationsTests
                 new SslEntry { Name = "shared-cert", DaysLeft = 40 },   // Fix Soon, impact 65
                 new SslEntry { Name = "shared-cert", DaysLeft = 3 },    // Fix Now,  impact 90
             ],
+            // Advisor ranks into the same queue, one row per recommendation: High Cost/Security
+            // is Fix Soon, everything else Watch, Low dropped.
+            AdvisorRecommendations =
+            [
+                new AdvisorRecommendation { Category = "Cost", Impact = "High", Problem = "Right-size", ImpactedName = "plan-a", MonthlySavings = 12.5 },
+                new AdvisorRecommendation { Category = "HighAvailability", Impact = "High", Problem = "Add zones", ImpactedName = "app-1" },
+                new AdvisorRecommendation { Category = "HighAvailability", Impact = "High", Problem = "Add zones", ImpactedName = "app-2" },
+                new AdvisorRecommendation { Category = "Security", Impact = "Low", Problem = "Nice to have", ImpactedName = "low-one" },
+            ],
         };
 
         var consolidated = DashboardDerivations.BuildConsolidatedServices(report);
@@ -96,6 +105,12 @@ public class DashboardDerivationsTests
         // Same source, same item — one row survives, and it is the worse of the two.
         queue.Where(i => i.Item == "shared-cert").Should().ContainSingle()
             .Which.ImpactScore.Should().Be(90);
+
+        queue.Should().ContainSingle(i => i.Source == "Advisor · Cost")
+            .Which.Should().Match<PriorityQueueItem>(i => i.Actionability == "Fix Soon" && i.Reason.Contains("$12.50/mo"));
+        queue.Should().ContainSingle(i => i.Source == "Advisor · HighAvailability")
+            .Which.Should().Match<PriorityQueueItem>(i => i.Actionability == "Watch" && i.Reason.StartsWith("2 resource(s): app-1, app-2"));
+        queue.Should().NotContain(i => i.Item == "Nice to have");
     }
 
     [Fact]

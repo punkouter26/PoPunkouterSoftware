@@ -14,6 +14,8 @@ namespace PoPunkouterSoftware.Shared;
 public record InfraReview
 {
     public string RepoName { get; init; } = "";
+    /// <summary>owner/name, as the GitHub API addresses the repo.</summary>
+    public string FullName { get; init; } = "";
     public string? DefaultBranch { get; init; }
     public string? RepoUrl { get; init; }
     /// <summary>Status of the most recent GitHub Actions workflow run (completed, in_progress, etc.).</summary>

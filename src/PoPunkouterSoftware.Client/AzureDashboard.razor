@@ -242,7 +242,9 @@ else if (_summary is not null)
             <AzurePriorityQueue Items="@PriorityQueue"
                                 BadgeFor="@ActionabilityBadge"
                                 OnCopyCommand="@CopyText"
-                                OnSnooze="@SnoozePriorityItemAsync" />
+                                OnSnooze="@SnoozePriorityItemAsync"
+                                CanRestart="@_managementActionsEnabled"
+                                OnRestart="@RestartSiteAsync" />
             <AzureSnoozedItems Items="@_activeSnoozes" OnUnsnooze="@UnsnoozeEntryAsync" />
         }
         else if (summary.AttentionItems.Count == 0)

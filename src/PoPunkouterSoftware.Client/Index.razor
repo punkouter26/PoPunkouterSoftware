@@ -74,7 +74,10 @@
                     <RadzenButton Icon="sync" Text="@(_syncing ? "Syncing…" : "Sync")" Size="ButtonSize.Small"
                                   ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined"
                                   Disabled="_syncing" Click="SyncAsync" class="portfolio-sync"
-                                  aria-label="Rescan Azure and refresh app statuses" />
+                                  aria-label="@($"{(_syncing ? "Syncing…" : "Sync")}: rescan Azure and refresh app statuses")" />
+                    @* The name STARTS with the visible word (WCAG 2.5.3, label in name): a voice
+                       user says "click Sync", and a name that never contains "Sync" ignores them.
+                       axe caught it — CoreRoutes_HaveNoSeriousAxeViolations. *@
                 }
             </div>
         </div>

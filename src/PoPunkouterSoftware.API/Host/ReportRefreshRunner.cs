@@ -153,6 +153,7 @@ internal sealed class ReportRefreshRunner(
 
                     await store.SaveAsync(report, ct);
                     await NotifyNewCostSpikesAsync(report, previousReport);
+                    await NotifyCrossingsAsync(report, previousReport);
 
                     var json = JsonSerializer.Serialize(report, FileCacheJsonOptions);
                     var filePath = ReportFileCache.EnsureReportPath(env);
@@ -219,6 +220,29 @@ internal sealed class ReportRefreshRunner(
         });
 
         return true;
+    }
+
+    /// <summary>
+    /// Certificate expiry and budget overrun, each sent once when it is crossed — see
+    /// <see cref="AlertTriggers"/> for why a crossing and not a state.
+    /// </summary>
+    private async Task NotifyCrossingsAsync(AzureReport report, AzureReport? previous)
+    {
+        foreach (var ssl in AlertTriggers.NewSslExpiries(report, previous))
+        {
+            await alerts.SendAsync(
+                $"Certificate for {ssl.Name} expires in {ssl.DaysLeft} day(s)",
+                $"{ssl.Url ?? ssl.Name} — expiry {ssl.Expiry ?? "unknown"}",
+                priority: ssl.DaysLeft <= 3 ? 5 : 4, clickPath: "/azure", tags: ["lock"], ct: CancellationToken.None);
+        }
+
+        if (AlertTriggers.BudgetCrossed(report, previous, config.GetValue<double?>("Budget:MonthlyUsd")) is { } forecast)
+        {
+            await alerts.SendAsync(
+                "Azure spend is on pace to exceed budget",
+                $"Projected ${forecast.ProjectedMonthTotal:F2} against a ${forecast.BudgetUsd:F2} budget ({forecast.PercentOfBudget}%)",
+                priority: 4, clickPath: "/azure", tags: ["money_with_wings"], ct: CancellationToken.None);
+        }
     }
 
     /// <summary>
