@@ -58,10 +58,55 @@
         }).catch(function () { /* offline or API down: the static commands still work */ });
     }
 
-    // Enhanced navigation when Blazor is up, like any other in-app link.
+    /** Tell the visual layers (gpu-backdrop.js, starfield-backdrop.js) what the palette did. */
+    function fx(phase) {
+        var r = overlay && overlay.firstChild ? overlay.firstChild.getBoundingClientRect() : null;
+        var u = r && r.width ? (r.left + r.width / 2) / window.innerWidth : 0.5;
+        var v = r && r.width ? (r.top + r.height / 2) / window.innerHeight : 0.35;
+        try { document.dispatchEvent(new CustomEvent('app:palette', { detail: { phase: phase, u: u, v: v } })); }
+        catch (e) { /* visuals only */ }
+    }
+
+    /**
+     * Enhanced navigation when Blazor is up, like any other in-app link — wrapped in a View
+     * Transition so the matching header link morphs into the new page's h1. The old snapshot
+     * names the link, the new one names the heading; the browser animates between the two
+     * boxes. Skipped under reduced motion or without the API: a plain navigation, same URL.
+     */
     function navigate(url) {
-        if (window.Blazor && window.Blazor.navigateTo) window.Blazor.navigateTo(url);
-        else window.location.href = url;
+        fx('jump');
+        // For the jump's ~second the backdrop canvas screens over the page, so the streaks
+        // are seen across the content and not only in the gutters between cards.
+        var root = document.documentElement;
+        root.classList.add('is-palette-jump');
+        setTimeout(function () { root.classList.remove('is-palette-jump'); }, 900);
+        if (!window.Blazor || !window.Blazor.navigateTo) { window.location.href = url; return; }
+        var go = function () { window.Blazor.navigateTo(url); };
+        if (!document.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { go(); return; }
+
+        var path = url.split('?')[0];
+        var link = document.querySelector('.app-topbar-link[href="' + path + '"]');
+        if (link) link.style.viewTransitionName = 'app-jump';
+        var heading = null;
+        var vt = document.startViewTransition(function () {
+            return new Promise(function (resolve) {
+                var done = function () {
+                    if (!resolve) return;
+                    window.Blazor.removeEventListener && window.Blazor.removeEventListener('enhancedload', done);
+                    if (link) link.style.viewTransitionName = '';
+                    heading = document.querySelector('main h1, h1');
+                    if (heading) heading.style.viewTransitionName = 'app-jump';
+                    var r = resolve; resolve = null; r();
+                };
+                if (window.Blazor.addEventListener) window.Blazor.addEventListener('enhancedload', done);
+                go();
+                setTimeout(done, 1200);   // an in-app page change that never fires enhancedload
+            });
+        });
+        vt.finished.finally(function () {
+            if (heading) heading.style.viewTransitionName = '';
+            if (link) link.style.viewTransitionName = '';
+        });
     }
 
     function createPalette() {
@@ -242,6 +287,7 @@
         renderList();
         setTimeout(function () { input.focus(); }, 50);
         if (window.audioKit) window.audioKit.play('open');
+        fx('open');
     }
 
     function close() {
@@ -249,6 +295,7 @@
         isOpen = false;
         if (overlay) overlay.classList.remove('is-open');
         if (window.audioKit) window.audioKit.play('close');
+        fx('close');
     }
 
     document.addEventListener('keydown', function (e) {

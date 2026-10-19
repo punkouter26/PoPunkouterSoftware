@@ -191,6 +191,33 @@
         limiter.connect(analyser);
         analyser.connect(ctx.destination);
 
+        // One room for every sound: a convolution reverb on a send from master, with an
+        // impulse response SYNTHESISED here — stereo noise under an exponential decay that
+        // also darkens as it decays (a one-pole lowpass whose coefficient falls with time),
+        // which is what makes a tail read as a space rather than as hiss. 1.8s, no asset.
+        if (ctx.createConvolver) {
+            var len = Math.round(ctx.sampleRate * 1.8);
+            var ir = ctx.createBuffer(2, len, ctx.sampleRate);
+            for (var ch = 0; ch < 2; ch++) {
+                var d = ir.getChannelData(ch), lp = 0;
+                for (var j = 0; j < len; j++) {
+                    var tt = j / ctx.sampleRate;
+                    var a = 0.08 + 0.9 * Math.exp(-tt * 2.2);
+                    lp += ((Math.random() * 2 - 1) - lp) * a;
+                    d[j] = lp * Math.exp(-tt * 3.1) * (tt < 0.012 ? tt / 0.012 : 1);
+                }
+            }
+            var verb = ctx.createConvolver();
+            verb.buffer = ir;
+            var wet = ctx.createGain();
+            wet.gain.value = 0.28;
+            master.connect(verb);
+            verb.connect(wet);
+            wet.connect(limiter);
+        }
+
+        if (fleetWanted.length) applyFleet();
+
         // One second of white noise, generated once and replayed at varying rates. Noise is
         // what makes a "tick" read as a tick rather than a tone; regenerating the buffer per
         // hit would allocate 44100 floats on every keystroke-sized interaction.
@@ -434,6 +461,22 @@
         if (silent) return;
     }
 
+    // Three-note signatures for the end of a scan, played after the cadence. A rising major
+    // triad, an octave-resolving rise, a falling minor line: distinguishable with the tab in
+    // the background, which is the point of sounding a scan at all.
+    var MOTIF = {
+        success: [523.25, 659.25, 783.99],
+        recovered: [659.25, 783.99, 1046.5],
+        failure: [329.63, 311.13, 246.94],
+        timeout: [440, 415.3, 440]
+    };
+
+    /** The shockwave's sound: a sub drop plus a low thump, so the ring on screen lands. */
+    function boom() {
+        voice({ freq: 72, toFreq: 31, type: 'sine', duration: 0.9, gain: 0.32, attack: 0.004 });
+        noise({ freq: 160, filter: 'lowpass', duration: 0.22, gain: 0.18, q: 0.7 });
+    }
+
     /** outcome: 'success' | 'recovered' | 'failure' | 'cancelled' | 'timeout' */
     function refreshEnd(outcome) {
         refreshStop(true);
@@ -441,6 +484,86 @@
         if (outcome === 'success' || outcome === 'recovered' || outcome === 'cancelled') fire(outcome === 'cancelled' ? 'cancel' : outcome);
         else if (outcome === 'timeout') fire('warn');
         else fire('failure');
+        var motif = MOTIF[outcome];
+        if (!motif) return;
+        boom();
+        for (var i = 0; i < motif.length; i++) {
+            voice({ freq: motif[i], type: 'triangle', duration: 0.3, gain: 0.08, delay: 0.42 + i * 0.13,
+                    cutoff: 3600, pan: -0.4 + i * 0.4 });
+        }
+    }
+
+    // ── The fleet in 3D (catalog page) ──────────────────────────────────────────────────
+    // One quiet hum per app, placed by an HRTF panner at its orbit body's position in the
+    // starfield, so the constellation is audible in space. Healthy hums are steady; a
+    // degraded one wavers; a down one keeps humming but its body drifts out, and the
+    // panner's inverse-distance rolloff fades it as it falls away — no special case.
+    // Unknown (unmonitored) apps are silent: nothing observed, nothing to say.
+    var fleetWanted = [];
+    var hums = [];
+    var PENTA = [1, 9 / 8, 5 / 4, 3 / 2, 5 / 3];
+
+    function stopHum(h) {
+        var t = now();
+        try {
+            h.gain.gain.cancelScheduledValues(t);
+            h.gain.gain.setTargetAtTime(0.0001, t, 0.3);
+            h.osc.stop(t + 1.5); h.lfo.stop(t + 1.5);
+        } catch (e) { /* already stopped */ }
+    }
+
+    function applyFleet() {
+        if (!ctx || !enabled) return;
+        for (var i = 0; i < Math.max(hums.length, fleetWanted.length); i++) {
+            var want = fleetWanted[i], h = hums[i];
+            if (h && h.state === want) continue;
+            if (h) { stopHum(h); hums[i] = null; }
+            if (!want || want === 'unknown') continue;
+            var t = now();
+            var osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = 110 * PENTA[i % 5] * (i >= 5 ? 2 : 1) * (want === 'down' ? 0.94 : 1);
+            var lfo = ctx.createOscillator(), depth = ctx.createGain();
+            lfo.frequency.value = want === 'warn' ? 0.45 + i * 0.03 : 0.11;
+            depth.gain.value = want === 'warn' ? 22 : 3;          // cents of vibrato
+            lfo.connect(depth); depth.connect(osc.detune);
+            var g = ctx.createGain();
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.setTargetAtTime(document.hidden ? 0.0001 : 0.022, t, 0.6);
+            var panner = ctx.createPanner();
+            panner.panningModel = 'HRTF';
+            panner.distanceModel = 'inverse';
+            panner.refDistance = 4;
+            panner.rolloffFactor = 1.2;
+            osc.connect(g); g.connect(panner); panner.connect(master);
+            osc.start(t); lfo.start(t);
+            hums[i] = { state: want, osc: osc, lfo: lfo, gain: g, panner: panner };
+        }
+        hums.length = fleetWanted.length;
+    }
+
+    /** A background tab must not hum. */
+    document.addEventListener('visibilitychange', function () {
+        if (!ctx) return;
+        for (var i = 0; i < hums.length; i++) {
+            if (hums[i]) hums[i].gain.gain.setTargetAtTime(document.hidden ? 0.0001 : 0.022, now(), 0.3);
+        }
+    });
+
+    /** One note per app as fresh statuses land (Sync): up rises, degraded bends, down sinks. */
+    function fleetArpeggio(states) {
+        if (!ensureContext()) return;
+        for (var i = 0; i < states.length && i < 16; i++) {
+            var s = states[i];
+            if (s === 'unknown') continue;
+            var f = 440 * PENTA[i % 5] * (i >= 5 ? 2 : 1);
+            voice({
+                freq: s === 'down' ? f / 2 : f, toFreq: s === 'warn' ? f * 0.97 : null,
+                type: s === 'down' ? 'sawtooth' : 'triangle', duration: s === 'down' ? 0.45 : 0.28,
+                gain: s === 'down' ? 0.05 : 0.07, delay: i * 0.09, cutoff: s === 'down' ? 900 : 3800,
+                pan: states.length > 1 ? -0.8 + 1.6 * i / (states.length - 1) : 0
+            });
+        }
     }
 
     // ── Sonification of the fleet (#2) ──────────────────────────────────────────────────
@@ -623,9 +746,12 @@
 
         if (!on) {
             refreshStop(true);
+            for (var i = 0; i < hums.length; i++) if (hums[i]) stopHum(hums[i]);
+            hums = [];
             if (ctx) ctx.suspend().catch(function () { });
         } else if (ensureContext()) {
             SFX.copy();     // confirmation: you turned it on, and here is what "on" sounds like
+            applyFleet();
         }
     }
 
@@ -682,6 +808,25 @@
 
         energy: energy,
         spectrum: spectrum,
+
+        /** Catalog fleet hums. states: 'up'|'warn'|'down'|'unknown' per orbit body; [] stops. */
+        fleet: function (states) { fleetWanted = (states || []).slice(); applyFleet(); },
+
+        /** Place hum i at a starfield position, already relative to the listener (camera). */
+        fleetPlace: function (i, x, y, z) {
+            var h = hums[i];
+            if (!h || !ctx) return;
+            var p = h.panner, t = now();
+            if (p.positionX) {
+                p.positionX.setTargetAtTime(x, t, 0.05);
+                p.positionY.setTargetAtTime(y, t, 0.05);
+                p.positionZ.setTargetAtTime(z, t, 0.05);
+            } else if (p.setPosition) p.setPosition(x, y, z);
+        },
+
+        get fleetLive() { return hums.length > 0 && !!ctx && ctx.state === 'running'; },
+
+        fleetArpeggio: function (states) { if (enabled) fleetArpeggio(states); },
 
         /** Diagnostics, and the hook the E2E silence assertion reads. */
         stats: function () {

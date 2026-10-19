@@ -322,16 +322,17 @@ no scroller at all.
 
 ## Graphics and audio
 
-Ten files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
+Eleven files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
 comment in each before changing it; they document the reasoning, this is the map.
 
 | File | Role |
 |---|---|
 | `motion-kit.js` | **The frame governor.** ONE `requestAnimationFrame` loop for the whole app, one gate (reduced-motion / hidden / blur / no runnable subscriber), and an adaptive quality controller. Must load first. |
-| `audio-kit.js` | Programmatic Web Audio — synthesis only, **zero audio assets**. UI SFX, the refresh drone, the `/azure` sonification, and the analyser tap the shaders read. |
-| `gpu-backdrop.js` | Orchestrator for `#app-gpu-backdrop`: tier selection, colour tokens, glass rects, audio energy. Owns no pixels. |
-| `gfx-webgl.js` | WebGL2 renderer (curl-noise field, transform-feedback particles, dual-Kawase blur, glass composite) with a WebGL1 field-only fallback. **The top of the ladder.** |
-| `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. |
+| `audio-kit.js` | Programmatic Web Audio — synthesis only, **zero audio assets**. UI SFX, the refresh drone (plus a sub "boom" and a three-note outcome motif at its end), the `/azure` sonification, the catalog's 3D fleet hums, and the analyser tap the shaders read. Everything runs through one synthesised-impulse convolution reverb send. |
+| `gpu-backdrop.js` | Orchestrator for `#app-gpu-backdrop`: tier selection, colour tokens, glass rects, audio energy, and the DOM reads that feed the simulations (pointer stir, `[data-fx-flock]` homes, uptime-scar seeds, palette lens/jump, the hero orb canvas). Owns no pixels. |
+| `gfx-webgl.js` | WebGL2 renderer (curl-noise field, stable-fluids sim, transform-feedback particles with per-service flocks, dual-Kawase blur + bloom, Gray-Scott scars, glass composite with prism edges) with a WebGL1 field-only fallback. **The top of the ladder.** Also `createOrb()`, the hero's metaball health orb on its own small canvas. |
+| `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. Places each body's fleet hum in 3D and reacts to the command palette (FOV lean / punch). |
+| `ui-physics.js` | Physics on the DOM, not a canvas: `[data-fx-shatter]` breaks its card into Voronoi shards (real cloned pixels, WAAPI keyframes integrated up front), KPI values count up on a spring, catalogue cards tilt toward the mouse on an underdamped spring. Per-frame work is motionKit subscribers that unsubscribe when settled. |
 | `helpers.js` | Topbar, snap pager, clipboard, download, `appRevealFocus` (the `/azure?focus=` scroll) — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
 | `theme-kit.js` | The visitor's light/dark choice, and the toggle that sets it (`themeKit.toggle()`, called from the command palette and `/settings` — the header button was removed 2026-10-05). Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
 | `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
@@ -339,7 +340,7 @@ comment in each before changing it; they document the reasoning, this is the map
 | `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation (including `/settings`, which has no other entry point), theme and sound toggles, and a launcher — open / copy link / show uptime for every app (from `/api/portfolio`, fetched on first open) plus "Rescan Azure" when management actions are on. Fuzzy matching is hand-written: the CSP's `script-src 'self'` rules out a CDN library. |
 
 `app-boot.js` also registers **`wwwroot/service-worker.js`**. That worker precaches the pages
-and JS/CSS listed in it under a fixed cache name (`pops-pwa-v3`) and serves them cache-first.
+and JS/CSS listed in it under a fixed cache name (`pops-pwa-v4`) and serves them cache-first.
 Change that list whenever you add or rename a page or script, and bump `CACHE_NAME` whenever
 you change any precached file. A visitor who already has the worker installed keeps getting
 the cached copy until the cache name changes.
@@ -360,10 +361,14 @@ page load is a suspended context that silently swallows sound plus an unrequeste
 claim. Sound is switched on from the command palette, `/settings` or `/azure`'s Listen
 button; the header toggle and its `[data-sound-toggle]` wiring went on 2026-10-05.
 `[data-sfx]` / `[data-sfx-hover]` are wired by **delegation on `document`** (enhanced
-navigation re-inserts the header, so a direct listener would be lost or double-bound). Sound carries information in exactly two places — the
-refresh lifecycle (a ~30s scan is exactly how long it takes someone to switch tabs) and the
-`/azure` sonification, which is a second *modality* on facts already on the page, not a
-second copy of them. Only primitives cross the interop boundary.
+navigation re-inserts the header, so a direct listener would be lost or double-bound). Sound carries information in three places — the
+refresh lifecycle (a ~30s scan is exactly how long it takes someone to switch tabs; its end
+is a boom plus a motif that differs for success, recovery, failure and timeout), the
+`/azure` sonification, and the catalog's fleet hums (one quiet HRTF-placed hum per orbit
+body: steady when up, wavering when degraded, fading by distance as a down body drifts out;
+an arpeggio when Sync lands changed statuses). Each is a second *modality* on facts already
+on the page, not a second copy of them. Hums stop when the tab is hidden. Only primitives
+cross the interop boundary.
 
 **The backdrop is a capability ladder**: WebGL2 → WebGL1 → the CSS grid in
 `modern-ui.css`. Every rung degrades silently to the next and records the outcome in
@@ -378,7 +383,7 @@ offered to WebGPU can never yield a WebGL context, and `build()` had to clone an
 the node mid-init (reassigning `canvas` *before* `status()` ran, or the diagnostic landed
 on a detached node). `build()` is synchronous now.
 
-**Workflow moments drive five event effects, all uniforms on passes that already run.**
+**Workflow moments drive the event effects, most of them uniforms on passes that already run.**
 `gpu-backdrop.js` maps moments to renderer calls: the rescan's progress is a radar sweep;
 its end is a shockwave from `[data-fx-origin="refresh"]` (red plus a colour-split tear on
 failure); a scan that takes the fleet from broken to all-green (`refreshEnd('recovered')`,
@@ -391,12 +396,37 @@ gate, so the dashboard's existing `audioKit.refresh*` calls drive both layers an
 references the other. Deferred effects run on a frame-advanced clock, not wall time, so a
 scan that ends in a background tab plays its shockwave on return.
 
+Added 2026-10-19, each documented in its shader's comment:
+- **Fluid.** A ~128-cell stable-fluids step (splat → advect → divergence → 12 Jacobi →
+  gradient) displaces the field and carries the particles. The pointer stirs it; the
+  shockwave, bursts and the palette jump splat into it; glass rects add drag so flow bends
+  around cards. Needs `EXT_color_buffer_float`; without it the sims are simply off.
+- **Flocks.** `[data-fx-flock="up|warn|down"]` (uptime row labels, ≤8) gives each service a
+  slice of 35% of the particles, coloured by health, circling a point beside its row (or
+  a slow Lissajous path when the row is off screen). Separation comes from a splatted
+  density field — its gradient is CAPPED, because uncapped it smeared every flock into a band.
+- **Scars.** Gray-Scott coral grows out of the uptime card's edges beside each row with bad
+  days, radius scaled by them. It runs on **RGBA32F**: on half float the per-step increments
+  near 1.0 round away and the pattern silently stays a dot. It is stamped once, noisily — a
+  constant point source grows concentric target rings, not coral.
+- **Bloom and prism edges** in the composite: bloom reuses the Kawase pyramid plus one
+  quarter-res step; glass edges split R/B along the edge normal, strongest near the pointer.
+- **Hero orb** (`canvas[data-fx-orb]`, its own context: the hero is 88% opaque glass, so the
+  backdrop would show through at 12%). Wyvill-kernel metaballs, one bead per service; the
+  1/d² kernel's singularities cratered the shading. Hidden by CSS until it is drawing.
+- **Palette** (`app:palette` events from `command-palette.js`): a lens toward the open
+  palette; navigating plays a hyperspace jump (particles + fluid rush out, radial streaks),
+  the target header link morphs into the new h1 through a View Transition, and in **dark
+  theme only** the canvas is screened over the page for ~0.9s (on a light page it whited out).
+
 **Sound and touch follow the visitor's one opt-in.** `[data-sfx]` clicks are panned to the
 element's screen position; the sonification's stereo width *is* fleet health and its ticks
 walk left→right. `navigator.vibrate` mirrors the outcome sounds and sits behind the same
 `enabled` flag — no buzz for a visitor who never turned feedback on.
 
-**Three pieces of polish are plain CSS/platform.** The theme toggle is a circular View
+**Four pieces of polish are plain CSS/platform.** MetricBars spring in on `--app-ease-bounce`
+(a damped spring sampled into `linear()`), drawn on the fill's `::before` so the fill's own
+box — what `Azure_GlancePanels_DrawTheirMetrics` measures — is final from the first frame. The theme toggle is a circular View
 Transition reveal from the button (`theme-kit.js` + `.is-theme-reveal` in `modern-ui.css`;
 instant under reduced motion or without support). Cards and panes rise in on a scroll
 timeline (`animation-timeline: view()`, entry range, backwards fill, **opacity + translate

@@ -127,6 +127,10 @@
     --app-dur-slow: 380ms;
     --app-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --app-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* A real damped spring (zeta 0.38), sampled into linear(): it overshoots, swings back
+       under, and settles — a cubic-bezier can only overshoot once. Unsupported browsers
+       drop the declaration that uses it and get no animation, never a broken one. */
+    --app-ease-bounce: linear(0, 0.083, 0.287, 0.546, 0.804, 1.021, 1.173, 1.255, 1.274, 1.245, 1.185, 1.113, 1.043, 0.986, 0.947, 0.928, 0.925, 0.935, 0.952, 0.972, 0.991, 1.006, 1.016, 1.02, 1.02, 1.017, 1.012, 1.007, 1.002, 0.998, 1);
     --app-ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
 
     /* ── Layering ───────────────────────────────────────────────────────────── */
@@ -1511,6 +1515,37 @@ html.is-theme-reveal::view-transition-new(root) {
 
 .app-palette-backdrop.is-open {
     display: flex;
+}
+
+/* Over a live GPU backdrop the dim is lighter and barely blurred, so the lens that
+   gpu-backdrop.js draws toward the open palette reads through it. */
+html[data-gpu-backdrop] .app-palette-backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/* Hyperspace jump (js/command-palette.js): for ~0.9s the backdrop canvas is lifted over
+   the page and screened onto it, so the streaks cross the content, not only the gutters.
+   Dark theme only: screen only ever brightens, which on a dark page is light streaking
+   across it, and on a light page was a white-out flash. Both theme selectors, for the same
+   reason the light palette is written twice (system choice vs explicit toggle). */
+@media (prefers-color-scheme: dark) {
+    html:not([data-app-theme="light"]).is-palette-jump #app-gpu-backdrop {
+        z-index: 2;
+        mix-blend-mode: screen;
+    }
+}
+
+html[data-app-theme="dark"].is-palette-jump #app-gpu-backdrop {
+    z-index: 2;
+    mix-blend-mode: screen;
+}
+
+/* The header link the palette navigated to morphs into the new page's h1. */
+::view-transition-group(app-jump) {
+    animation-duration: 560ms;
+    animation-timing-function: var(--app-ease-bounce, ease-out);
 }
 
 .app-palette-modal {

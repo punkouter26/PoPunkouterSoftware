@@ -36,6 +36,16 @@
     will-change: transform;
 }
 
+/* js/ui-physics.js springs the card toward a mouse pointer and writes --tilt-x/-y every
+   frame. The transform transition is dropped while it does: a CSS transition smoothing a
+   value that is already being integrated would lag the spring and flatten its wobble. */
+.app-portfolio-card.is-tilting {
+    transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-2px);
+    transition: border-color var(--app-dur-base) var(--app-ease-smooth),
+                box-shadow var(--app-dur-base) var(--app-ease-smooth);
+    will-change: transform;
+}
+
 .app-screenshot-thumb {
     display: block;
     aspect-ratio: 16 / 10;

@@ -40,19 +40,39 @@
 }
 
 .metric-bar__fill {
+    --bar-color: var(--app-accent);
     display: block;
     height: 100%;
     border-radius: var(--app-radius-pill);
-    background: var(--app-accent);
     transition: width var(--app-dur-slow) var(--app-ease-out);
 }
 
+/* The visible bar is the pseudo-element, so it can spring in (scaleX on a damped-spring
+   curve) while the fill's own box — what Azure_GlancePanels_DrawTheirMetrics measures —
+   is at its final width from the first frame. A transform on the fill itself would read
+   as a 0px bar to getBoundingClientRect mid-animation. */
+.metric-bar__fill::before {
+    content: "";
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--bar-color);
+    transform-origin: left center;
+    animation: metric-grow 1100ms var(--app-ease-bounce) backwards;
+}
+
+@keyframes metric-grow {
+    from {
+        transform: scaleX(0);
+    }
+}
+
 .metric-bar__fill.is-warm {
-    background: var(--app-accent-warm);
+    --bar-color: var(--app-accent-warm);
 }
 
 .metric-bar__fill.is-bad {
-    background: var(--app-danger-soft);
+    --bar-color: var(--app-danger-soft);
 }
 
 .metric-bar__value {
@@ -66,6 +86,10 @@
 @media (prefers-reduced-motion: reduce) {
     .metric-bar__fill {
         transition: none;
+    }
+
+    .metric-bar__fill::before {
+        animation: none;
     }
 }
 

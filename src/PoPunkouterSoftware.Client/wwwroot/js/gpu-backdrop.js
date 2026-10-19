@@ -109,9 +109,13 @@
             readColor('--app-accent-warm', [0.945, 0.714, 0.388], p3),
             // The third band reuses the plain `--app-accent` token rather than requiring a
             // new CSS variable — it already exists in both themes, so no theme can forget it.
-            readColor('--app-accent', [0.576, 0.706, 0.961], p3)
+            readColor('--app-accent', [0.576, 0.706, 0.961], p3),
+            // Down flocks and scars.
+            readColor('--app-danger-soft', [0.949, 0.533, 0.533], p3)
         ];
     }
+
+    var FLOCK_STATE = { up: 0, warn: 1, down: 2 };
 
     /** Viewport-uv centre of the first element matching `selector`, or null. */
     function centreOf(selector) {
@@ -202,6 +206,98 @@
                 n++;
             }
             renderer.setAttractors(attractBuf, n);
+            collectFleet(vw, vh);
+            collectScars(vw, vh);
+        }
+
+        // ── Fleet: one flock per [data-fx-flock] service, and the orb's beads ───────────
+        // The uptime grid's row labels carry data-fx-flock="up|warn|down". A flock whose row
+        // is on screen circles a point just left of it; one whose row is not wanders its own
+        // slow Lissajous path, so the swarms are visible on every pane of the page.
+        var fleet = [];                     // { state, onScreen, u, v, hu, hv }
+        var orbStates = [];
+        function collectFleet(vw, vh) {
+            var nodes = document.querySelectorAll('[data-fx-flock]');
+            var n = 0;
+            orbStates.length = 0;
+            for (var i = 0; i < nodes.length; i++) {
+                var st = FLOCK_STATE[nodes[i].getAttribute('data-fx-flock')];
+                if (st === undefined) continue;
+                if (orbStates.length < 12) orbStates.push(st);
+                if (n >= 8) continue;
+                var f = fleet[n] || (fleet[n] = { hu: 0.5, hv: 0.5 });
+                var r = nodes[i].getBoundingClientRect();
+                f.state = st;
+                f.onScreen = r.bottom > 0 && r.top < vh && r.width > 0;
+                f.u = Math.max(0.02, (r.left - 36) / vw);
+                f.v = (r.top + r.height / 2) / vh;
+                n++;
+            }
+            fleet.length = n;
+        }
+
+        var flockBuf = new Float32Array(24);
+        function tickFleet(dt) {
+            for (var i = 0; i < fleet.length; i++) {
+                var f = fleet[i];
+                var gu = f.onScreen ? f.u : 0.5 + 0.42 * Math.sin(fxClock * 0.07 * (1 + i * 0.13) + i * 1.7);
+                var gv = f.onScreen ? f.v : 0.5 + 0.40 * Math.sin(fxClock * 0.05 * (1 + i * 0.11) + i * 2.3);
+                f.hu = ease(f.hu, gu, 2, dt); f.hv = ease(f.hv, gv, 2, dt);
+                flockBuf[i * 3] = f.hu; flockBuf[i * 3 + 1] = f.hv; flockBuf[i * 3 + 2] = f.state;
+            }
+            renderer.setFlocks(flockBuf, fleet.length);
+        }
+
+        // ── Scars: reaction-diffusion growing out of the uptime card beside each bad row ─
+        // Seeded on the card's left and right edges at the row's height, because the card is
+        // opaque: what grows inside it is never seen, what grows into the gutter is. The
+        // radius scales with the row's bad days (down = 1, degraded = 0.5 each).
+        var scarRect = [0, 0, 1, 1], scarSeeds = new Float32Array(96);
+        function collectScars(vw, vh) {
+            var card = document.querySelector('.azure-uptime');
+            var grid = card && card.querySelector('.azure-uptime__grid');
+            var cr = card && card.getBoundingClientRect();
+            if (!grid || cr.bottom < -120 || cr.top > vh + 120 || cr.width < 2) { renderer.setScars(null); return; }
+            var padX = 170, padY = 70;
+            scarRect[0] = cr.left - padX; scarRect[1] = cr.top - padY;
+            scarRect[2] = cr.width + padX * 2; scarRect[3] = cr.height + padY * 2;
+            var n = 0, label = null, bad = 0;
+            var kids = grid.children;
+            function flush() {
+                if (!label || bad <= 0 || n >= 24) return;
+                var lr = label.getBoundingClientRect();
+                var y = lr.top + lr.height / 2 - scarRect[1];
+                var radius = Math.min(220, 60 + bad * 28);
+                var w = Math.min(1, 0.55 + bad * 0.15);
+                scarSeeds.set([padX, y, radius, w], n++ * 4);
+                if (n < 24) scarSeeds.set([padX + cr.width, y, radius, w], n++ * 4);
+            }
+            for (var i = 0; i < kids.length; i++) {
+                var cl = kids[i].classList;
+                if (cl.contains('azure-uptime__label')) { flush(); label = kids[i]; bad = 0; }
+                else if (cl.contains('is-broken')) bad += 1;
+                else if (cl.contains('is-degraded')) bad += 0.5;
+            }
+            flush();
+            renderer.setScars(n ? scarRect : null, scarSeeds, n, vw, vh);
+        }
+
+        // ── Orb: the hero's liquid-metal health blob, on its own canvas ─────────────────
+        var orb = null, orbCanvas = null;
+        function tickOrb(dt) {
+            var c = document.querySelector('canvas[data-fx-orb]');
+            if (c !== orbCanvas) {
+                if (orb) { try { orb.dispose(); } catch (e) { } }
+                orb = null; orbCanvas = c;
+                if (c && window.gfxWebgl.createOrb) orb = window.gfxWebgl.createOrb(c);
+                if (c) c.dataset.gpu = orb ? 'webgl2' : 'no-gpu';
+            }
+            if (!orb || !orbStates.length || !orbCanvas.clientWidth) return;
+            var r = orbCanvas.getBoundingClientRect();
+            var lx = light.level > 0.05 ? (light.at[0] * window.innerWidth - (r.left + r.width / 2)) / (r.width * 2) : -0.5;
+            var ly = light.level > 0.05 ? -(light.at[1] * window.innerHeight - (r.top + r.height / 2)) / (r.height * 2) : 0.6;
+            var p = colorsNow;
+            orb.frame(dt, orbStates, Math.max(-1, Math.min(1, lx)), Math.max(-1, Math.min(1, ly)), [p[2], p[1], p[3]]);
         }
 
         // ── Event effects ───────────────────────────────────────────────────────────────
@@ -209,6 +305,15 @@
         var queue = [];                    // { at, fn } — fired from the frame, never a timer
         var scan = { active: false, target: 0, shown: 0, strength: 0, indeterminate: false };
         var light = { at: [0.5, 0.3], goal: [0.5, 0.3], level: 0, want: 0 };
+        var stir = { u: 0.5, v: 0.5, du: 0, dv: 0, lastX: -1, lastY: -1 };
+        var lens = { at: [0.5, 0.4], level: 0, want: 0 };
+        var colorsNow = palette(false);
+
+        function applyColors() {
+            if (!renderer) return;
+            colorsNow = palette(renderer.p3);
+            renderer.setColors(colorsNow);
+        }
 
         function later(delay, fn) { queue.push({ at: fxClock + delay, fn: fn }); }
 
@@ -233,6 +338,20 @@
             light.at[1] = ease(light.at[1], light.goal[1], 6, dt);
             light.level = ease(light.level, light.want, 3, dt);
             renderer.setLight(light.at[0], light.at[1], light.level);
+
+            // Pointer motion accumulated since the last frame becomes one fluid impulse.
+            if (dt > 0 && (stir.du || stir.dv)) {
+                var cap = 6;  // uv/s — a flick across the screen, not a teleport
+                renderer.stir(stir.u, stir.v,
+                    Math.max(-cap, Math.min(cap, stir.du / dt)), Math.max(-cap, Math.min(cap, stir.dv / dt)));
+                stir.du = stir.dv = 0;
+            }
+
+            lens.level = ease(lens.level, lens.want, 5, dt);
+            renderer.setWarp(lens.at[0], lens.at[1], lens.level, 0);
+
+            tickFleet(dt);
+            tickOrb(dt);
         }
 
         function finishScan(outcome) {
@@ -292,9 +411,24 @@
         // instead. iOS gates deviceorientation behind a permission prompt, and a decorative
         // highlight is not worth asking for one, so there it simply never fires.
         window.addEventListener('pointermove', function (e) {
-            light.goal = [e.clientX / window.innerWidth, e.clientY / window.innerHeight];
+            var u = e.clientX / window.innerWidth, v = e.clientY / window.innerHeight;
+            light.goal = [u, v];
             light.want = 1;
+            if (stir.lastX >= 0) { stir.du += u - stir.lastX; stir.dv += v - stir.lastY; }
+            stir.lastX = stir.u = u; stir.lastY = stir.v = v;
         }, { passive: true });
+
+        // Command palette: a lens toward it while open; a hyperspace jump when it navigates.
+        document.addEventListener('app:palette', function (e) {
+            var d = e.detail || {};
+            if (d.phase === 'open') { lens.at = [d.u, d.v]; lens.want = 0.6; }
+            else if (d.phase === 'close') lens.want = 0;
+            else if (d.phase === 'jump' && renderer) {
+                lens.want = 0;
+                renderer.setWarp(d.u, d.v, lens.level, 0);
+                renderer.jump(d.u, d.v);
+            }
+        });
         document.documentElement.addEventListener('mouseleave', function () { light.want = 0; });
         if (window.matchMedia('(pointer: coarse)').matches) {
             window.addEventListener('deviceorientation', function (e) {
@@ -318,7 +452,7 @@
         // ── Build / teardown ────────────────────────────────────────────────────────────
         function attach(r) {
             renderer = r;
-            renderer.setColors(palette(renderer.p3));
+            applyColors();
             if (window.motionKit) {
                 renderer.setQuality(window.motionKit.quality);
                 qualitySub = window.motionKit.onQuality(function (q) {
@@ -354,6 +488,7 @@
             if (qualitySub) { window.motionKit.offQuality(qualitySub); qualitySub = 0; }
             canvas.removeEventListener('webglcontextlost', onContextLost);
             if (renderer) { try { renderer.dispose(); } catch (err) { } renderer = null; }
+            if (orb) { try { orb.dispose(); } catch (err) { } orb = null; orbCanvas = null; }
             canvas.classList.remove('is-ready');
             document.documentElement.removeAttribute('data-gpu-backdrop');
         }
@@ -394,11 +529,11 @@
 
         var scheme = window.matchMedia('(prefers-color-scheme: dark)');
         if (scheme.addEventListener) {
-            scheme.addEventListener('change', function () { if (renderer) renderer.setColors(palette(renderer.p3)); });
+            scheme.addEventListener('change', function () { if (renderer) applyColors(); });
         }
         // An explicit header toggle changes the tokens without any media query changing, so
         // it needs its own signal — before this the backdrop kept the old theme's accents.
-        document.addEventListener('app:theme', function () { if (renderer) renderer.setColors(palette(renderer.p3)); });
+        document.addEventListener('app:theme', function () { if (renderer) applyColors(); });
 
         // Registered whether or not the query matches at load — the previous version
         // returned early before reaching this line, so a visitor who arrived with
@@ -417,7 +552,10 @@
             get tier() { return renderer ? renderer.tier : null; },
             get status() { return canvas.dataset.gpu || null; },
             get glassRects() { return glassSig ? glassSig.split(';').length - 1 : 0; },
-            get sweep() { return Math.round(scan.strength * 100) / 100; }
+            get sweep() { return Math.round(scan.strength * 100) / 100; },
+            get fx() {
+                return renderer && renderer.fx ? Object.assign({ flocks: fleet.length, orb: !!orb }, renderer.fx()) : null;
+            }
         };
     }
 

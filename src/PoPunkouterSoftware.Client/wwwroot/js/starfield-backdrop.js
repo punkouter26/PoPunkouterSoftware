@@ -126,6 +126,7 @@
      * analyzer to reflect over.
      */
     var STATES = { up: STATE_UP, warn: STATE_WARN, down: STATE_DOWN, unknown: STATE_UNKNOWN };
+    var STATE_NAMES = ['up', 'warn', 'down', 'unknown'];
 
     function parseTelemetry(spec) {
         var out = [];
@@ -298,8 +299,17 @@
          * reshuffle the constellation — the visitor sees a body change behaviour, not the
          * whole field re-deal itself.
          */
+        var heard = '';
         function setTelemetry(spec) {
             var apps = parseTelemetry(spec);
+            var states = apps.map(function (a) { return STATE_NAMES[a.state]; });
+            // Each orbit body hums at its own position (audio-kit.js; silent unless sound is on).
+            if (window.audioKit) window.audioKit.fleet(states);
+            // Fresh statuses after the first push (Sync, or the auto-refresh) are played as an
+            // arpeggio — only when something changed, so a quiet refresh stays quiet.
+            var key = states.join(',');
+            if (heard && key !== heard && window.audioKit) window.audioKit.fleetArpeggio(states);
+            heard = key;
             if (!apps.length) { built.orbits.visible = false; bodies = []; return; }
 
             var n = apps.length;
@@ -345,6 +355,7 @@
 
         function integrate(dt, t, energy) {
             if (!bodies.length || !orbitPos) return;
+            var hearing = window.audioKit && window.audioKit.fleetLive;
 
             for (var i = 0; i < bodies.length; i++) {
                 var b = bodies[i];
@@ -387,6 +398,9 @@
 
                 var o = i * 3;
                 orbitPos[o] = b.px; orbitPos[o + 1] = b.py; orbitPos[o + 2] = b.pz;
+                // Relative to the listener at the camera. The globe's rotation is not applied:
+                // the bodies are not children of it, so world space is already right.
+                if (hearing) window.audioKit.fleetPlace(i, b.px, b.py, b.pz - built.camera.position.z);
 
                 // Audio brightens the healthy bodies only — a louder page must never make an
                 // outage, or an app nobody is watching, look better than it is.
@@ -420,8 +434,27 @@
         // comments in gpu-backdrop.js rule out.
         window.motionKit.suppress('app-gpu-backdrop');
 
+        // Command palette: the camera leans in while it is open and punches forward on a
+        // jump — a FOV kick plus a dolly, so the stars rush past. Eased, never snapped.
+        var cam = { fov: 55, goal: 55, punch: 0 };
+        var onPalette = function (e) {
+            var phase = e.detail && e.detail.phase;
+            if (phase === 'open') cam.goal = 47;
+            else if (phase === 'close') cam.goal = 55;
+            else if (phase === 'jump') { cam.goal = 55; cam.punch = 1; }
+        };
+        document.addEventListener('app:palette', onPalette);
+
         sub = window.motionKit.subscribe('catalog-starfield', function (dt, elapsed) {
             var energy = window.audioKit ? window.audioKit.energy() : 0;
+            cam.punch *= Math.exp(-dt * 3);
+            cam.fov += (cam.goal - cam.fov) * Math.min(1, dt * 5);
+            var fov = cam.fov + cam.punch * 40;
+            if (Math.abs(built.camera.fov - fov) > 0.01) {
+                built.camera.fov = fov;
+                built.camera.position.z = 7 - cam.punch * 3.2;
+                built.camera.updateProjectionMatrix();
+            }
             built.globe.rotation.y += dt * 0.12;
             built.globe.rotation.x += dt * 0.03;
             built.stars.rotation.y += dt * 0.008;
@@ -460,6 +493,8 @@
             if (qualitySub) { window.motionKit.offQuality(qualitySub); qualitySub = 0; }
             window.motionKit.release('app-gpu-backdrop');
             window.removeEventListener('resize', onResize);
+            document.removeEventListener('app:palette', onPalette);
+            if (window.audioKit) window.audioKit.fleet([]);
             if (scheme.removeEventListener) scheme.removeEventListener('change', onScheme);
             if (built) {
                 built.stars.geometry.dispose();
