@@ -139,8 +139,8 @@ else if (_summary is not null)
                new is reported here, the same summary is played instead of read.
 
                Outside the management gate on purpose: it costs nothing, calls no endpoint
-               and mutates nothing, so it belongs with /api/diag/ai and the snooze endpoints
-               on the unprivileged side. Clicking it while sound is off turns sound on — the
+               and mutates nothing, so it belongs with /api/diag/ai on the unprivileged
+               side. Clicking it while sound is off turns sound on — the
                click is itself the user gesture the autoplay policy requires, so this is the
                one place where opting in and hearing the result can happen in one action. *@
             <RadzenButton Text="Listen" Icon="graphic_eq" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
@@ -169,7 +169,7 @@ else if (_summary is not null)
 
        First paint shows the server's plain attention sentences; once Advanced diagnostics
        has loaded the full report, the same section shows the ranked queue (commands, impact,
-       snooze) instead. They used to be two lists on one page — this one plus a "Full priority
+       restart) instead. They used to be two lists on one page — this one plus a "Full priority
        queue" further down — and the security/cleanup count badges that sat in this heading
        repeated two of the sentences directly beneath them.
 
@@ -193,10 +193,8 @@ else if (_summary is not null)
             <AzurePriorityQueue Items="@PriorityQueue"
                                 BadgeFor="@ActionabilityBadge"
                                 OnCopyCommand="@CopyText"
-                                OnSnooze="@SnoozePriorityItemAsync"
                                 CanRestart="@_managementActionsEnabled"
                                 OnRestart="@RestartSiteAsync" />
-            <AzureSnoozedItems Items="@_activeSnoozes" OnUnsnooze="@UnsnoozeEntryAsync" />
         }
         else if (summary.AttentionItems.Count == 0)
         {
@@ -302,8 +300,6 @@ else if (_summary is not null)
                        a popup that escapes the dialog cannot be clicked. *@
                     <RadzenButton Text="Report JSON" Icon="download" Size="ButtonSize.Small"
                                   ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="DownloadReportAsync" />
-                    <RadzenButton Text="Audit script" Icon="terminal" Size="ButtonSize.Small"
-                                  ButtonStyle="ButtonStyle.Base" Variant="Variant.Outlined" Click="DownloadAutomationScript" />
                 </HeadingActions>
             </AzureResourceExplorer>
 

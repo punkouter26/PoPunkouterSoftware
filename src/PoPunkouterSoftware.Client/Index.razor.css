@@ -1,33 +1,5 @@
-/* Catalog-page 3D backdrop canvas (js/starfield-backdrop.js). Scoped CSS is safe here
-   without ::deep — the canvas is Index.razor's own markup, not a child component's, so
-   Blazor stamps the scope attribute directly on it (see CLAUDE.md's note on scoped CSS
-   not crossing component boundaries).
-
-   Fixed + a negative z-index puts it in the same stacking tier as the shared
-   #app-gpu-backdrop layer (modern-ui.base.css) — the two never render at once (see
-   js/starfield-backdrop.js), but sharing the tier keeps a future stacking change from
-   silently reintroducing a fight between them. */
-.catalog-starfield {
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    display: block;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity var(--app-dur-slow) var(--app-ease-out);
-}
-
-.catalog-starfield.is-ready {
-    opacity: 1;
-}
-
 /* ── Page + header ────────────────────────────────────────────────────────────
-   Everything below styles markup Index.razor still emits. The whole block was
-   dropped in 9a2c7e7 when the starfield rules landed, leaving nine dangling
-   class names — the summary row lost `display: flex` and its gap, so the
-   "Refresh list" button collapsed onto the freshness text. Adding a class to
+   Adding a class to
    Index.razor means adding its rule here; a `grep` for the class name is the
    check that it is not dangling. */
 .portfolio-page {
@@ -111,7 +83,7 @@
 }
 
 .portfolio-build-banner__copy span {
-    font-size: 0.78rem;
+    font-size: var(--app-step--1);
 }
 
 .portfolio-build-banner__action {
@@ -121,7 +93,7 @@
     background: transparent;
     color: var(--app-accent);
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: var(--app-step--1);
     font-weight: 600;
     transition: background-color var(--app-dur-fast) var(--app-ease-smooth);
 }
@@ -174,12 +146,6 @@
     }
 
     .portfolio-build-banner__copy span {
-        display: none;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .catalog-starfield {
         display: none;
     }
 }

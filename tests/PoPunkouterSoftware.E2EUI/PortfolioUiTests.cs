@@ -503,7 +503,7 @@ public class PortfolioUiTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// axe-core's WCAG 2.1 A/AA rules over all three pages, failing on serious or critical
+    /// axe-core's WCAG 2.1 A/AA rules over all four pages, failing on serious or critical
     /// violations only.
     ///
     /// <para>Every accessibility defect this repo has fixed was found by hand — Radzen icon
@@ -514,7 +514,7 @@ public class PortfolioUiTests : IAsyncLifetime
     /// and a gate that is always red is a gate nobody reads.</para>
     ///
     /// <para>It also holds the two landmark checks that used to be a test of their own, on the
-    /// same three page loads: exactly one <c>&lt;main&gt;</c>, and a skip link that resolves.
+    /// same four page loads: exactly one <c>&lt;main&gt;</c>, and a skip link that resolves.
     /// <c>/azure</c> once had no <c>&lt;main&gt;</c> — its root was a bare div — so "Skip to
     /// content" was a link to nothing there while the identical link on "/" worked.</para>
     /// </summary>
@@ -526,7 +526,7 @@ public class PortfolioUiTests : IAsyncLifetime
         var page = await NewPageAsync(width, height, isMobile);
         var found = new List<string>();
 
-        foreach (var (route, ready) in new[] { ("/", ".app-portfolio-card"), ("/azure", ".azure-uptime"), ("/users", "main h1") })
+        foreach (var (route, ready) in new[] { ("/", ".app-portfolio-card"), ("/azure", ".azure-uptime"), ("/users", "main h1"), ("/settings", ".settings-row button:not([disabled])") })
         {
             await page.GotoAsync($"{BaseUrl}{route}", new() { WaitUntil = WaitUntilState.NetworkIdle });
             await page.WaitForSelectorAsync(ready, new() { Timeout = 40_000 });

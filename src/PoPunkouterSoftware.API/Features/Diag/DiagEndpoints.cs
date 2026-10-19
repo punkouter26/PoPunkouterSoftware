@@ -25,26 +25,6 @@ internal static class DiagEndpoints
         // cover everything it was actually used for.
         var diag = app.MapGroup("/api/diag").WithTags("Diag");
 
-        diag.MapGet("/automation-script", (IWebHostEnvironment env) =>
-        {
-            // The script ships with the API project (CopyToOutputDirectory=PreserveNewest),
-            // so in both `dotnet run` and a published deployment it lives at
-            // ContentRootPath/Automation/New-AzureEfficiencyReport.ps1. The previous
-            // "../..//SCRIPTS/..." fallback existed only because the file lived outside the
-            // project tree — that is no longer true.
-            var scriptPath = Path.Combine(env.ContentRootPath, "Automation", "New-AzureEfficiencyReport.ps1");
-
-            return File.Exists(scriptPath)
-                ? Results.File(
-                    scriptPath,
-                    contentType: "text/plain; charset=utf-8",
-                    fileDownloadName: "New-AzureEfficiencyReport.ps1")
-                : Results.Problem(
-                    detail: "The Azure efficiency automation script is not available in this deployment.",
-                    statusCode: StatusCodes.Status404NotFound);
-        })
-        .WithName("DownloadAzureEfficiencyAutomationScript");
-
         // Anonymous by necessity — the Advanced diagnostics panel is WASM with no credential —
         // so the subscription id is masked out of every resource id on the way out. See
         // SecretMasking.MaskSubscriptionIds for why that field and not the rest.
@@ -177,52 +157,6 @@ internal static class DiagEndpoints
         .Produces<AiTriageResult>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status429TooManyRequests);
 
-        // ── Snooze / dismiss a finding ───────────────────────────────────────
-        // Findings have no server-side identity — the client synthesizes its own opaque
-        // key per finding (e.g. "Reliability|my-app-name") and the server only persists,
-        // lists, and expires it. Unprivileged (no .RequireManagementActions()): this is a
-        // personal-preference toggle with zero Azure API calls, same tier as POST /api/diag/ai.
-        const int MaxSnoozeDurationDays = 90;
-        diag.MapPost("/snooze", async (SnoozeRequest req, SnoozeStore store, CancellationToken ct) =>
-        {
-            if (req.DurationDays <= 0 || req.DurationDays > MaxSnoozeDurationDays)
-                return Results.Problem(
-                    detail: $"DurationDays must be between 1 and {MaxSnoozeDurationDays}.",
-                    statusCode: StatusCodes.Status400BadRequest);
-            if (string.IsNullOrWhiteSpace(req.Key))
-                return Results.Problem(detail: "Key is required.", statusCode: StatusCodes.Status400BadRequest);
-
-            var expiresAtUtc = DateTimeOffset.UtcNow.AddDays(req.DurationDays);
-            var result = await store.UpsertAsync(req.Key, expiresAtUtc, req.Reason, ct);
-            if (!result.IsSuccess)
-                return Results.Problem(detail: result.Error ?? "Failed to save snooze.", statusCode: StatusCodes.Status503ServiceUnavailable);
-
-            return Results.Json(result.Value);
-        })
-        .WithName("SnoozeFinding")
-        .Produces<SnoozeEntry>(StatusCodes.Status200OK)
-        .ProducesProblem(StatusCodes.Status400BadRequest)
-        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
-
-        diag.MapPost("/snooze/remove", async (SnoozeRemoveRequest req, SnoozeStore store, CancellationToken ct) =>
-        {
-            // Idempotent by design: un-snoozing an already-gone (or never-snoozed) key is
-            // not an error, so the client can call this freely without checking state first.
-            await store.RemoveAsync(req.Key, ct);
-            return Results.Json(new { removed = true });
-        })
-        .WithName("RemoveSnooze");
-
-        diag.MapGet("/snoozes", async (SnoozeStore store, CancellationToken ct) =>
-        {
-            var result = await store.GetActiveAsync(ct);
-            if (!result.IsSuccess)
-                return Results.Problem(detail: result.Error ?? "Failed to load snoozes.", statusCode: StatusCodes.Status503ServiceUnavailable);
-
-            return Results.Json(result.Value ?? new List<SnoozeEntry>());
-        })
-        .WithName("GetActiveSnoozes")
-        .Produces<List<SnoozeEntry>>(StatusCodes.Status200OK);
 
         return app;
     }

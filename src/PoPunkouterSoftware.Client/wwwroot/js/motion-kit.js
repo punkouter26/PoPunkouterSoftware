@@ -43,13 +43,6 @@
  * frames is more likely to drop them again than to have gotten faster, and an oscillating
  * render scale is more distracting than a permanently lower one.
  *
- * ── Suppression ─────────────────────────────────────────────────────────────────────────
- * `suppress(name)` / `release(name)` replace the old dataset-attribute + MutationObserver
- * contract between the two backdrops. The catalog's Three.js layer claims exclusivity over
- * the shared gradient layer directly, by name, and the governor simply stops dispatching to
- * the suppressed subscriber. Claims are counted, so two independent claimants releasing in
- * either order cannot resurrect a layer the other still wants suppressed.
- *
  * This file must load BEFORE any layer that subscribes to it, and it has no dependencies.
  */
 (function () {
@@ -101,9 +94,9 @@
      * Three signals, each of which is a statement by the device or the visitor rather than a
      * guess about them:
      *
-     *   · Save-Data. The visitor has explicitly asked every site to spend less. Fetching
-     *     ~600KB of Three.js for a decorative starfield straight past that request is not
-     *     defensible, whatever the GPU can manage.
+     *   · Save-Data. The visitor has explicitly asked every site to spend less. Running a
+     *     decorative GPU layer straight past that request is not defensible, whatever the
+     *     GPU can manage.
      *   · deviceMemory <= 2 / hardwareConcurrency <= 2. Below the ladder's floor, where a
      *     backdrop competes with the WASM runtime for the only thread that matters.
      *   · A 2G/slow-2G effective connection, for the same reason as Save-Data.
@@ -128,7 +121,6 @@
     var subs = [];
     var nextId = 1;
     var qualityListeners = [];
-    var suppressed = Object.create(null);   // name -> claim count
 
     var tier = initialTier();
     var costEma = 0;
@@ -146,7 +138,7 @@
     function quality() { return TIERS[tier]; }
 
     function isRunnable(s) {
-        return !s.paused && !suppressed[s.name];
+        return !s.paused;
     }
 
     function anyRunnable() {
@@ -255,7 +247,7 @@
     window.motionKit = {
         /**
          * Register a per-frame callback.
-         * @param {string} name    stable identity, also the handle for suppress()/release()
+         * @param {string} name    stable identity, shown in stats()
          * @param {function} fn    fn(dtSeconds, elapsedSeconds, quality)
          * @param {object} [opts]  { fps: 30 }
          * @returns {number} subscription id for unsubscribe()
@@ -278,20 +270,6 @@
             }
             sync();
         },
-
-        /** Stop dispatching to `name` until a matching release(). Reference-counted. */
-        suppress: function (name) {
-            suppressed[name] = (suppressed[name] || 0) + 1;
-            sync();
-        },
-
-        release: function (name) {
-            if (!suppressed[name]) return;
-            if (--suppressed[name] <= 0) delete suppressed[name];
-            sync();
-        },
-
-        isSuppressed: function (name) { return !!suppressed[name]; },
 
         /** Current tier descriptor: { name, scale, particles, effects }. */
         get quality() { return quality(); },
@@ -338,7 +316,7 @@
                 costMs: Math.round(costEma * 100) / 100,
                 fps: Math.round(fpsEma),
                 subscribers: subs.map(function (s) {
-                    return { name: s.name, suppressed: !!suppressed[s.name] };
+                    return { name: s.name };
                 })
             };
         }

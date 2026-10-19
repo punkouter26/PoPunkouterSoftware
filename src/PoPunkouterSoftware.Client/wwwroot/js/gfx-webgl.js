@@ -889,6 +889,7 @@
         // Simulation inputs. Fluid, flocks, scars and warp — see the shader comments.
         var pointer = new Float32Array(4);            // uv (y up), impulse texels/s — consumed per frame
         var flock = new Float32Array(32), flockCount = 0;
+        var fluidOn = true;                // off unless the visitor picked full effects (gpu-backdrop.js)
         var jumpAt = -1e3, jumpAt2 = [0, 0];
         var warp = [0.5, 0.5, 0, 0];                  // uv (y down), lens, streak
         var scar = { on: false, rect: [0, 0, 1, 1], seeds: new Float32Array(96), n: 0, w: 0, h: 0, stamp: 0, key: '' };
@@ -1045,7 +1046,7 @@
         function frame(dt, elapsed, level) {
             energy = level || 0;
             clock += dt;
-            var sim = g2 && g2.sim && g2.sim.vel ? g2.sim : null;
+            var sim = fluidOn && g2 && g2.sim && g2.sim.vel ? g2.sim : null;
             var aspect = W / Math.max(1, H);
             var jumpAge = clock - jumpAt;
             var jump = jumpAge < 1.4 ? Math.exp(-jumpAge * 2.6) : 0;
@@ -1393,6 +1394,9 @@
 
             setColors: function (c) { colors = c; },
 
+            /** The fluid sim, and the scars that grow on it. Off: neither is stepped. */
+            setFluid: function (on) { fluidOn = !!on; },
+
             setQuality: function (q) {
                 quality = q;
                 if (g2) allocParticles(Math.round(BASE_PARTICLES * q.particles));
@@ -1506,7 +1510,7 @@
 
             /** Diagnostics: which simulations are live. */
             fx: function () {
-                return { fluid: !!(g2 && g2.sim && g2.sim.vel), scars: scar.on ? scar.n : 0 };
+                return { fluid: !!(fluidOn && g2 && g2.sim && g2.sim.vel), scars: scar.on ? scar.n : 0 };
             },
 
             /** Hyperspace: particles and fluid rush outward from (u, v), streaks flare. */

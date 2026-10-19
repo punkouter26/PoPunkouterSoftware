@@ -15,12 +15,9 @@
         { id: 'nav-apps', title: 'Go to Apps Portfolio', icon: 'home', category: 'Navigation', action: function () { navigate('/'); } },
         { id: 'nav-azure', title: 'Go to Azure Ops Dashboard', icon: 'monitor_heart', category: 'Navigation', action: function () { navigate('/azure'); } },
         { id: 'nav-users', title: 'Go to User Sign-Ins', icon: 'group', category: 'Navigation', action: function () { navigate('/users'); } },
-        { id: 'act-theme', title: 'Toggle Light / Dark Theme', icon: 'dark_mode', category: 'Actions', action: function () { if (window.themeKit) window.themeKit.toggle(); } },
-        // Was a switch on the /settings page, deleted 2026-10-19 — the palette was already the
-        // only way to reach that page, so the preference now lives where the visitor already was.
-        { id: 'act-density', title: 'Toggle Compact Density', icon: 'tune', category: 'Actions', action: function () { if (window.themeKit) window.themeKit.toggleDensity(); } },
-        { id: 'act-sound', title: 'Toggle Audio SFX & Sonification', icon: 'volume_up', category: 'Actions', action: function () { if (window.audioKit) window.audioKit.toggle(); } },
-        { id: 'act-sonify', title: 'Play Fleet Sonification Audio', icon: 'graphic_eq', category: 'Actions', action: function () { if (window.audioKit) window.audioKit.play('success'); } },
+        // Theme, density, sound and effects live on /settings and nowhere else: a control that
+        // exists twice is two places to keep in step, and the deleted 2026-10 page proved it.
+        { id: 'nav-settings', title: 'Go to Settings (theme, density, sound, effects)', icon: 'settings', category: 'Navigation', action: function () { navigate('/settings'); } },
         { id: 'act-reload', title: 'Hard Reload Application', icon: 'refresh', category: 'System', action: function () { window.location.reload(); } }
     ];
 
@@ -60,7 +57,7 @@
         }).catch(function () { /* offline or API down: the static commands still work */ });
     }
 
-    /** Tell the visual layers (gpu-backdrop.js, starfield-backdrop.js) what the palette did. */
+    /** Tell the visual layers (gpu-backdrop.js) what the palette did. */
     function fx(phase) {
         var r = overlay && overlay.firstChild ? overlay.firstChild.getBoundingClientRect() : null;
         var u = r && r.width ? (r.left + r.width / 2) / window.innerWidth : 0.5;
@@ -78,10 +75,13 @@
     function navigate(url) {
         fx('jump');
         // For the jump's ~second the backdrop canvas screens over the page, so the streaks
-        // are seen across the content and not only in the gutters between cards.
+        // are seen across the content and not only in the gutters between cards. Full
+        // effects only (/settings): without the jump there are no streaks to screen.
         var root = document.documentElement;
-        root.classList.add('is-palette-jump');
-        setTimeout(function () { root.classList.remove('is-palette-jump'); }, 900);
+        if (window.appFx && window.appFx.full) {
+            root.classList.add('is-palette-jump');
+            setTimeout(function () { root.classList.remove('is-palette-jump'); }, 900);
+        }
         if (!window.Blazor || !window.Blazor.navigateTo) { window.location.href = url; return; }
         var go = function () { window.Blazor.navigateTo(url); };
         if (!document.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { go(); return; }

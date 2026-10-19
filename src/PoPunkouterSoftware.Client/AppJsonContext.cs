@@ -50,8 +50,4 @@ internal sealed record AiTriageAdHocRequest(
 [JsonSerializable(typeof(ConfigResponse))]
 [JsonSerializable(typeof(ProblemResponse))]
 [JsonSerializable(typeof(AiTriageAdHocRequest))]
-[JsonSerializable(typeof(SnoozeRequest))]
-[JsonSerializable(typeof(SnoozeRemoveRequest))]
-[JsonSerializable(typeof(SnoozeEntry))]
-[JsonSerializable(typeof(List<SnoozeEntry>))]
 internal partial class AppJsonContext : JsonSerializerContext;

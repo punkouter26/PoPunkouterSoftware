@@ -105,7 +105,7 @@
 
 .azure-ops-page ::deep .azure-command-meta {
     margin-top: var(--app-space-xs);
-    font-size: .82rem;
+    font-size: var(--app-step--1);
     color: var(--app-text-soft);
 }
 
@@ -140,7 +140,7 @@
     gap: var(--app-space-2xs);
     align-items: center;
     color: var(--app-text-muted);
-    font-size: .82rem;
+    font-size: var(--app-step--1);
 }
 
 /* Shimmer sweep over the whole refresh card. This section only renders while a scan is
@@ -219,7 +219,7 @@
     min-width: 0;
     overflow: hidden;
     color: var(--app-text-muted);
-    font-size: .82rem;
+    font-size: var(--app-step--1);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -284,9 +284,9 @@
     text-overflow: ellipsis;
 }
 
-/* Snooze button — same footprint family as .azure-copy-command (border/radius/background)
-   but content-sized rather than full-width, since it never carries a long CLI command. */
-.azure-ops-page ::deep .azure-snooze-button {
+/* Row action button (Restart) — same footprint family as .azure-copy-command but
+   content-sized rather than full-width, since it never carries a long CLI command. */
+.azure-ops-page ::deep .azure-action-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -296,27 +296,14 @@
     border-radius: var(--app-radius-md);
     color: var(--app-text-muted);
     background: var(--app-sunken);
-    font-size: .78rem;
+    font-size: var(--app-step--1);
     white-space: nowrap;
     cursor: pointer;
 }
 
-.azure-ops-page ::deep .azure-snooze-button:hover {
+.azure-ops-page ::deep .azure-action-button:hover {
     color: var(--app-text);
     border-color: var(--app-border-strong);
-}
-
-.azure-ops-page ::deep .azure-finding-name {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    min-width: 0;
-}
-
-.azure-ops-page ::deep .azure-finding-name strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .azure-ops-page ::deep .azure-resource-heading {
@@ -325,7 +312,7 @@
 
 .azure-ops-page ::deep .azure-result-count {
     color: var(--app-text-soft);
-    font-size: .8rem;
+    font-size: var(--app-step--1);
     white-space: nowrap;
 }
 
@@ -390,15 +377,13 @@
 }
 
 .azure-ops-page ::deep .azure-risk-label {
-    font-size: .76rem;
+    font-size: var(--app-step--2);
     font-weight: 700;
 }
 
 .azure-ops-page ::deep .azure-risk-label.danger { color: var(--app-danger-soft); }
 .azure-ops-page ::deep .azure-risk-label.warning { color: var(--app-accent-warm); }
 .azure-ops-page ::deep .azure-risk-label.muted { color: var(--app-text-soft); }
-
-.azure-ops-page ::deep .azure-chart-note { margin: .4rem 0 0; color: var(--app-text-muted); font-size: var(--app-step--2); }
 
 /* Contrast: this renders both nested inside an already-opaque panel (.app-card,
    .app-disclosure, .azure-attention-summary — all var(--app-surface)) AND, in
@@ -442,7 +427,7 @@
 .azure-ops-page ::deep .azure-finding p {
     margin: 0;
     color: var(--app-text-muted);
-    font-size: .82rem;
+    font-size: var(--app-step--1);
 }
 
 .azure-ops-page ::deep .azure-timing-row {
@@ -452,7 +437,7 @@
     padding: .55rem .7rem;
     border-bottom: 1px solid var(--app-border);
     color: var(--app-text-muted);
-    font-size: .82rem;
+    font-size: var(--app-step--1);
 }
 
 /* The "30-day cost" chart's category labels (e.g. "Azure App Service
@@ -844,14 +829,14 @@ html[data-app-theme="dark"] .azure-ops-page {
 
 .azure-ops-page ::deep .azure-forecast__facts dd {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: var(--app-step-1);
     color: var(--app-text);
     font-variant-numeric: tabular-nums;
 }
 
 .azure-ops-page ::deep .azure-forecast__delta {
     margin-left: .35rem;
-    font-size: .78rem;
+    font-size: var(--app-step--1);
     font-variant-numeric: tabular-nums;
 }
 

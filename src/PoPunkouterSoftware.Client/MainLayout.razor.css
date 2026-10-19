@@ -87,7 +87,7 @@
     /* Full-width tap targets when the drawer is open. */
     body.topbar-open .app-topbar-nav .app-topbar-link {
         padding: var(--app-space-sm) var(--app-space-sm);
-        font-size: 0.95rem;
+        font-size: var(--app-step-0);
     }
 }
 

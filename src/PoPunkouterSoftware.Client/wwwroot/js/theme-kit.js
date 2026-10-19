@@ -1,7 +1,8 @@
 /*
- * Theme preference — the visitor's explicit light/dark choice, plus the compact-density
- * flag. Both are set from the command palette (the header toggle went 2026-10-05, the
- * /settings page 2026-10-19).
+ * Visitor preferences — the explicit light/dark choice and the compact-density flag, plus
+ * `window.appSettings`, the one facade the /settings page reads and writes all four
+ * preferences through (theme and density here, sound in audio-kit.js, effects in
+ * gpu-backdrop.js — each stays owned by the kit that applies it).
  *
  * WHY THIS IS A FILE AND NOT A RADZEN COMPONENT
  * `RadzenTheme` + `RadzenAppearanceToggle` exist, but the app does not use them, and
@@ -113,14 +114,13 @@
     }
 
     /**
-     * Flip the theme. With an `origin` (the toggle that was pressed) and View Transitions
-     * support, the new palette wipes out from that point as a growing circle: the browser
-     * snapshots the old page, set() runs, and modern-ui.css clips the new snapshot with a
-     * circle keyed off the three --theme-reveal-* properties below. Without support, or
-     * under reduced motion, it is the same instant flip as before — nothing else differs.
+     * Choose a theme (null = follow the OS). With an `origin` (the button that was pressed)
+     * and View Transitions support, the new palette wipes out from that point as a growing
+     * circle: the browser snapshots the old page, set() runs, and modern-ui.css clips the new
+     * snapshot with a circle keyed off the three --theme-reveal-* properties below. Without
+     * support, or under reduced motion, it is an instant switch — nothing else differs.
      */
-    function toggle(origin) {
-        var next = effective() === 'dark' ? 'light' : 'dark';
+    function choose(next, origin) {
         var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (!origin || reduce || !document.startViewTransition) { set(next); return; }
 
@@ -147,9 +147,25 @@
     window.themeKit = {
         get preference() { return read(); },
         get effective() { return effective(); },
-        setDensity: setDensity,
-        toggleDensity: function () { setDensity(!readDensity()); },
-        set: set,
-        toggle: toggle
+        set: set
+    };
+
+    // Only primitives cross the Blazor interop boundary, so read() is one delimited string
+    // in a fixed order: theme|density|sound|fx. Every default is the simplest choice.
+    window.appSettings = {
+        read: function () {
+            return [
+                read() || 'system',
+                readDensity() ? 'compact' : 'comfortable',
+                window.audioKit && window.audioKit.enabled ? 'on' : 'off',
+                window.appFx && window.appFx.full ? 'full' : 'simple'
+            ].join('|');
+        },
+        set: function (key, value, x, y) {
+            if (key === 'theme') choose(value === 'system' ? null : value, x || y ? { x: x, y: y } : null);
+            else if (key === 'density') setDensity(value === 'compact');
+            else if (key === 'sound' && window.audioKit) window.audioKit.setEnabled(value === 'on');
+            else if (key === 'fx' && window.appFx) window.appFx.setFull(value === 'full');
+        }
     };
 })();

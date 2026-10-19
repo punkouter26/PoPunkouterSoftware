@@ -557,9 +557,8 @@ a {
 }
 
 /* Renders directly inside .app-page on Index.razor with no opaque wrapper (.app-card etc.) —
-   i.e. straight over both backdrop layers (gpu-backdrop.js and, on the catalog page,
-   starfield-backdrop.js). --app-surface-soft is a ~3.5-4% wash meant for nesting inside an
-   already-opaque card; used bare, the moving glow/stars could lighten the background enough
+   i.e. straight over the backdrop layer (gpu-backdrop.js). --app-surface-soft is a ~3.5-4% wash meant for nesting inside an
+   already-opaque card; used bare, the moving glow could lighten the background enough
    to drop the muted text below AA's 4.5:1 floor at their brightest point. --app-surface (92%+
    opaque in both themes) is the same token every standalone panel in the app already uses. */
 .app-empty-state {
@@ -855,6 +854,43 @@ a {
 /* A table's ONE permitted sideways scroll. The rule the app holds to is that the page BODY
    never scrolls horizontally; a per-table container is the escape hatch it allows. The
    element carries tabindex="0" + role="group" so a keyboard can reach what is off-screen. */
+/* Segmented choice: a row of pill buttons, one `is-active`, each with aria-pressed. The /users
+   window picker and every /settings row. */
+.app-segmented {
+    display: flex;
+    gap: var(--app-space-3xs);
+    flex-wrap: wrap;
+}
+
+.app-segmented__btn {
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-soft);
+    color: var(--app-text-muted);
+    border-radius: var(--app-radius-pill);
+    padding: .3rem .8rem;
+    font: inherit;
+    font-size: var(--app-step--1);
+    cursor: pointer;
+    transition: background var(--app-dur-fast) var(--app-ease-out),
+                color var(--app-dur-fast) var(--app-ease-out);
+}
+
+.app-segmented__btn:hover:not(:disabled) {
+    background: var(--app-hover-wash);
+    color: var(--app-text);
+}
+
+.app-segmented__btn.is-active {
+    background: var(--app-accent-wash-strong);
+    border-color: var(--app-accent-edge);
+    color: var(--app-text);
+}
+
+.app-segmented__btn:disabled {
+    opacity: .55;
+    cursor: default;
+}
+
 .app-table-scroll {
     min-width: 0;
     overflow-x: auto;
@@ -1246,7 +1282,7 @@ html[data-app-theme="dark"] body::before {
    not hand-tune: a brighter-looking pick silently re-opens the contrast audit.
    Same four-selector shape as the palettes above (see the "change one, change both"
    note): OS-dark default, explicit dark, OS-light without a dark choice, explicit
-   light. js/gpu-backdrop.js and js/starfield-backdrop.js parse `color(display-p3 …)`. */
+   light. js/gpu-backdrop.js parses `color(display-p3 …)`. */
 @media (color-gamut: p3) {
     :root,
     :root[data-app-theme="dark"] {
@@ -1724,14 +1760,14 @@ html[data-app-theme="dark"].is-palette-jump #app-gpu-backdrop {
     }
 }
 
-.signins-range__btn,
+.app-segmented__btn,
 .rz-button {
     min-height: 38px;
     touch-action: manipulation;
 }
 
 @media (max-width: 640px) {
-    .signins-range__btn {
+    .app-segmented__btn {
         min-height: 44px;
         min-width: 44px;
     }

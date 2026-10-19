@@ -59,16 +59,11 @@
                             {
                                 @* One tap from "it is down" to "try turning it off and on again" —
                                    the server picks Start for a stopped site, Restart otherwise. *@
-                                <button class="azure-snooze-button" @onclick="@(() => OnRestart.InvokeAsync(item))"
+                                <button class="azure-action-button" @onclick="@(() => OnRestart.InvokeAsync(item))"
                                         title="Restart this App Service (starts it if it is stopped)">
                                     <RadzenIcon Icon="restart_alt" /><span>Restart</span>
                                 </button>
                             }
-                            @* data-fx-shatter: the card breaks into falling shards (js/ui-physics.js). *@
-                            <button class="azure-snooze-button" @onclick="@(() => OnSnooze.InvokeAsync(item))"
-                                    title="Hide this item from the queue for a few days" data-fx-shatter>
-                                <RadzenIcon Icon="snooze" /><span>Snooze</span>
-                            </button>
                         </div>
                     </div>
                 </article>
@@ -85,11 +80,6 @@
     [Parameter, EditorRequired] public Func<string?, BadgeStyle> BadgeFor { get; set; } = default!;
 
     [Parameter] public EventCallback<string> OnCopyCommand { get; set; }
-
-    /// <summary>Snoozes this item for a few days — the page computes its dedup key
-    /// (<c>{Source}|{Item}</c>, matching BuildPriorityQueue's grouping key) and
-    /// posts it to <c>/api/diag/snooze</c>.</summary>
-    [Parameter] public EventCallback<PriorityQueueItem> OnSnooze { get; set; }
 
     /// <summary>
     /// True when management actions are on (see <c>/api/config</c>). Restart is the same

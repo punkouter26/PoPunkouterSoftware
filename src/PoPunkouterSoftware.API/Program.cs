@@ -260,7 +260,6 @@ try
         new ArmClient(sp.GetRequiredService<TokenCredential>()));
 
     builder.Services.AddSingleton<AzureReportStore>();
-    builder.Services.AddSingleton<SnoozeStore>();
     builder.Services.AddSingleton<UptimeSampleStore>();
     builder.Services.AddSingleton<AppScreenshotService>();
     builder.Services.AddTransient<AzureReportService>();

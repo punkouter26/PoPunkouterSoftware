@@ -14,7 +14,6 @@ public partial class AzureDashboard
 {
     private AzureReport? report;
     private OpsSummary? _summary;
-    private List<WebService> services = new();
     private List<SafeToRemoveItem> safeToRemove = new();
     private bool _loading = true;
     private string? _loadError;
@@ -58,25 +57,10 @@ public partial class AzureDashboard
     private static readonly string[] ResourceViews = ["All", "Unhealthy", "Waste", "Security", "Drift"];
     private string _resourceView = "All";
 
-    // ── Snoozes ─────────────────────────────────────────────────────────────────
-    // Findings have no server identity (see SnoozeStore / CLAUDE.md "Snoozes"), so the
-    // priority queue is filtered client-side against each item's own dedup key — the
-    // {Source}|{Item} format BuildPriorityQueue already groups on — so a re-scan naturally
-    // re-matches a snooze to the same finding without the server ever knowing what a
-    // "finding" is. (The separate cleanup list and its {Type}|{ResourceGroup}|{Name} key went
-    // with the "Cleanup evidence" disclosure: every one of its rows was already in the queue.)
-    private const int DefaultSnoozeDurationDays = 7;
-    private List<SnoozeEntry> _activeSnoozes = new();
-    private HashSet<string> _snoozedKeys = new(StringComparer.OrdinalIgnoreCase);
-
     private void RebuildDerivedState()
     {
         _consolidatedServices = DashboardDerivations.BuildConsolidatedServices(report);
-        // Post-filter rather than threading _snoozedKeys through the pure builder —
-        // DashboardDerivations stays a pure function of the report, and this is the smaller change.
-        _priorityQueue = DashboardDerivations.BuildPriorityQueue(report, _consolidatedServices, safeToRemove)
-            .Where(i => !_snoozedKeys.Contains($"{i.Source}|{i.Item}"))
-            .ToList();
+        _priorityQueue = DashboardDerivations.BuildPriorityQueue(report, _consolidatedServices, safeToRemove);
         _resourceExplorerItems = DashboardDerivations.BuildResourceExplorerItems(report, _consolidatedServices, safeToRemove);
         ApplyResourceFilter();
     }
@@ -110,14 +94,6 @@ public partial class AzureDashboard
     private bool _refreshFailed;
     private string? _refreshFailureMessage;
     private bool _userCancelled;
-    // Captured at the start of RefreshAsync. The wait polls /api/diag/summary on the
-    // HTTP fallback path; if the polling detects a newer report between the user's click
-    // on Cancel and the next yield, the wait exits cleanly (no OperationCanceledException)
-    // and the post-wait LoadSummaryAsync was free to overwrite `_summary` with the report
-    // the user just said "don't bother me with". Tracking the baseline lets the post-wait
-    // branch refuse that overwrite — a cancelled refresh leaves the page on the data the
-    // user had before clicking, and the next scheduled or manual scan picks up the new one.
-    private DateTime? _refreshBaselineGeneratedAt;
     private CancellationTokenSource? _refreshCts;
     private const int RefreshTimeoutSeconds = 120;
 
@@ -140,9 +116,6 @@ public partial class AzureDashboard
         await JS.InvokeVoidAsync("downloadTextFile", filename, json, "application/json");
     }
 
-    private void DownloadAutomationScript() =>
-        NavManager.NavigateTo("/api/diag/automation-script", forceLoad: true);
-
     private async Task CopyText(string text)
     {
         bool copied;
@@ -159,56 +132,6 @@ public partial class AzureDashboard
             NotificationService.Notify(NotificationSeverity.Success, "Copied", "Azure CLI command copied to the clipboard.");
         else
             NotificationService.Notify(NotificationSeverity.Error, "Copy failed", "The clipboard is unavailable — copy the command manually.");
-    }
-
-    // ── Snooze / un-snooze ────────────────────────────────────────────────────
-    private async Task LoadSnoozesAsync()
-    {
-        try
-        {
-            var snoozes = await Http.GetFromJsonAsync("/api/diag/snoozes", AppJsonContext.Default.ListSnoozeEntry);
-            _activeSnoozes = snoozes ?? new List<SnoozeEntry>();
-        }
-        catch
-        {
-            // Non-fatal: an empty/stale snooze list just means nothing is hidden — the
-            // priority queue and cleanup list simply show everything, never a 500.
-            _activeSnoozes = new List<SnoozeEntry>();
-        }
-        _snoozedKeys = _activeSnoozes.Select(s => s.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private async Task SnoozeAsync(string key)
-    {
-        try
-        {
-            var payload = JsonSerializer.Serialize(
-                new SnoozeRequest(key, DefaultSnoozeDurationDays, null), AppJsonContext.Default.SnoozeRequest);
-            using var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
-            var resp = await Http.PostAsync("/api/diag/snooze", content);
-            if (!resp.IsSuccessStatusCode)
-            {
-                var detail = await ReadProblemDetailAsync(resp);
-                NotificationService.Notify(NotificationSeverity.Error, "Snooze failed",
-                    detail ?? $"Could not snooze this item ({(int)resp.StatusCode}).");
-                return;
-            }
-
-            await LoadSnoozesAsync();
-            RebuildDerivedState();
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Success,
-                Summary = "Snoozed",
-                Detail = $"Hidden for {DefaultSnoozeDurationDays} days — click to undo.",
-                Duration = 6000,
-                Click = msg => { _ = UnsnoozeAsync(key); },
-            });
-        }
-        catch (Exception ex)
-        {
-            NotificationService.Notify(NotificationSeverity.Error, "Snooze failed", ex.Message);
-        }
     }
 
     private async Task RestartSiteAsync(PriorityQueueItem item)
@@ -228,30 +151,6 @@ public partial class AzureDashboard
             NotificationService.Notify(NotificationSeverity.Error, "Restart failed", ex.Message);
         }
     }
-
-    private Task SnoozePriorityItemAsync(PriorityQueueItem item) =>
-        SnoozeAsync($"{item.Source}|{item.Item}");
-
-
-    private async Task UnsnoozeAsync(string key)
-    {
-        try
-        {
-            var payload = JsonSerializer.Serialize(new SnoozeRemoveRequest(key), AppJsonContext.Default.SnoozeRemoveRequest);
-            using var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
-            await Http.PostAsync("/api/diag/snooze/remove", content);
-            await LoadSnoozesAsync();
-            RebuildDerivedState();
-            await InvokeAsync(StateHasChanged);
-            NotificationService.Notify(NotificationSeverity.Success, "Un-snoozed", "The item is back in view.");
-        }
-        catch (Exception ex)
-        {
-            NotificationService.Notify(NotificationSeverity.Error, "Un-snooze failed", ex.Message);
-        }
-    }
-
-    private Task UnsnoozeEntryAsync(SnoozeEntry entry) => UnsnoozeAsync(entry.Key);
 
     // ── Deep link: /azure?focus=<service> ──────────────────────────────────────
     // What an outage notification links to (ServicePingerService.NotifyTransitionsAsync): the
@@ -369,11 +268,7 @@ public partial class AzureDashboard
                 ?? throw new InvalidOperationException("The Azure report endpoint returned no data.");
             report = loaded;
 
-            services = loaded.WebServices?.Services ?? new List<WebService>();
             safeToRemove = DashboardDerivations.BuildSafeToRemove(loaded);
-            // Snoozes can expire between visits, so this is refreshed on every report
-            // load/refresh, not just once at startup.
-            await LoadSnoozesAsync();
             RebuildDerivedState();
         }
         catch (Exception ex)
@@ -400,10 +295,6 @@ public partial class AzureDashboard
         _userCancelled = false;
         _progressPercent = 0;
         _progressStep = "Starting…";
-        // Capture the timestamp the page is currently showing so the post-wait branch can
-        // refuse an overwrite when the user cancelled — a new GeneratedAt after a Cancel
-        // would be the report the scan wrote AFTER the user said "stop, don't bother me".
-        _refreshBaselineGeneratedAt = _summary?.GeneratedAt ?? report?.GeneratedAt;
         // Keep the previous report in view during the scan — do not null it here.
         // The report will be replaced once the scan completes and LoadReportAsync is called again.
         _refreshCts = new CancellationTokenSource(TimeSpan.FromSeconds(RefreshTimeoutSeconds));

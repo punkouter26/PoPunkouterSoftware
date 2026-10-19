@@ -48,41 +48,6 @@
     letter-spacing: -.02em;
 }
 
-.signins-page ::deep .signins-range {
-    display: flex;
-    gap: var(--app-space-3xs);
-    flex-wrap: wrap;
-}
-
-.signins-page ::deep .signins-range__btn {
-    border: 1px solid var(--app-border);
-    background: var(--app-surface-soft);
-    color: var(--app-text-muted);
-    border-radius: var(--app-radius-pill);
-    padding: .3rem .8rem;
-    font: inherit;
-    font-size: var(--app-step--1);
-    cursor: pointer;
-    transition: background var(--app-dur-fast) var(--app-ease-out),
-                color var(--app-dur-fast) var(--app-ease-out);
-}
-
-.signins-page ::deep .signins-range__btn:hover:not(:disabled) {
-    background: var(--app-hover-wash);
-    color: var(--app-text);
-}
-
-.signins-page ::deep .signins-range__btn.is-active {
-    background: var(--app-accent-wash-strong);
-    border-color: var(--app-accent-edge);
-    color: var(--app-text);
-}
-
-.signins-page ::deep .signins-range__btn:disabled {
-    opacity: .55;
-    cursor: default;
-}
-
 /* ── Totals: one line in the header ───────────────────────────────────────── */
 
 /* Ordered after the title and before the window picker in the DOM; `order` puts the picker
@@ -184,7 +149,7 @@
     border: 0;
     outline: none;
     color: var(--app-text);
-    font-size: 0.82rem;
+    font-size: var(--app-step--1);
     min-width: 140px;
 }
 
@@ -203,11 +168,6 @@
     font-size: var(--app-step-1);
     font-family: var(--app-headline-font);
     letter-spacing: -.02em;
-}
-
-.signins-page ::deep .signins-panel__title--sub {
-    margin-top: var(--app-space-sm);
-    font-size: var(--app-step-0);
 }
 
 .signins-page ::deep .signins-panel__subtitle {

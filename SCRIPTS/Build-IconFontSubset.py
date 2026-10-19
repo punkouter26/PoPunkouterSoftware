@@ -46,14 +46,12 @@ from fontTools.subset import Subsetter, Options
 # Names this repository asks for by name.
 APP_ICONS = [
     # MainLayout header (bare <span class="material-symbols-outlined">) and js/helpers.js,
-    # js/audio-kit.js, which swap textContent at runtime.
-    "home", "menu", "close", "monitor_heart", "group", "volume_off", "volume_up",
-    # MainLayout theme toggle, swapped at runtime by js/theme-kit.js.
-    "dark_mode", "light_mode",
+    # which swaps textContent at runtime.
+    "home", "menu", "close", "monitor_heart", "group",
     # RadzenIcon / RadzenButton Icon="..." across the client.
-    "alarm_off", "auto_awesome", "check_circle", "cloud_sync", "content_copy",
+    "auto_awesome", "check_circle", "cloud_sync", "content_copy",
     "data_object", "delete_sweep", "download", "graphic_eq", "open_in_new",
-    "history", "refresh", "security", "snooze", "speed", "sync", "terminal",
+    "history", "refresh", "security", "speed", "sync",
     "timeline", "troubleshoot",
     # PortfolioAppCard's "Preview pending" placeholder.
     "image",
@@ -62,7 +60,7 @@ APP_ICONS = [
     # Dynamic: AzureWhatChanged.IconFor.
     "cloud_off", "cloud_done", "trending_up", "trending_down", "shield", "sync_alt",
     # js/command-palette.js (set as textContent at runtime): its search glyph, the settings
-    # entry, and the per-app launcher rows.
+    # entry, and the per-app launcher rows. "settings" is also the MainLayout header link.
     "search", "settings", "my_location", "link",
     # AzurePriorityQueue restart/start, AzureUptimeHeatmap error and alert chips,
     # PortfolioAppCard streak chip.

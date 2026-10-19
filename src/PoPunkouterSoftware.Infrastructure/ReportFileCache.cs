@@ -39,8 +39,10 @@ public static class ReportFileCache
 
     /// <summary>
     /// Local screenshots directory fallback when blob storage is unavailable or offline.
+    /// Under <c>App_Data</c>, not the web root: it was committed under <c>wwwroot</c>, churned
+    /// the tree on every local capture and was served statically beside the endpoint.
     /// </summary>
-    public static string GetScreenshotsDir(IWebHostEnvironment env) => Path.Combine(GetWebRoot(env), "screenshots");
+    public static string GetScreenshotsDir(IWebHostEnvironment env) => Path.Combine(GetCacheDir(env), "screenshots");
 
     private static string GetWebRoot(IWebHostEnvironment env) =>
         env.WebRootPath

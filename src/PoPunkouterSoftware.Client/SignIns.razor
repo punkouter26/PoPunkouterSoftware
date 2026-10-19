@@ -41,10 +41,10 @@
 
         @* Three fixed windows rather than a date picker: 90 is the component's retention
            ceiling, so a free range could only ever ask for less than it implies. *@
-        <div class="signins-range" role="group" aria-label="History window">
+        <div class="app-segmented" role="group" aria-label="History window">
             @foreach (var days in WindowChoices)
             {
-                <button type="button" class="signins-range__btn @(days == _windowDays ? "is-active" : "")"
+                <button type="button" class="app-segmented__btn @(days == _windowDays ? "is-active" : "")"
                         aria-pressed="@(days == _windowDays)" disabled="@_loading"
                         @onclick="() => SetWindowAsync(days)">
                     @days days

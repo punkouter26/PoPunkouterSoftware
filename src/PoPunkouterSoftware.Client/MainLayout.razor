@@ -8,9 +8,8 @@
    one, the outlet rendered as inert server-side markup: the `.rz-notification` container was
    in the DOM but could never gain a child, and the page's NotificationService — resolved from
    the WASM DI container, a different one from the server's — was pushing into an outlet that
-   was not listening. Every toast in the app was silently swallowed: "Copied", "Snoozed",
-   "Refresh rejected", "Refresh failed", "Timeout", "Snooze failed". A 500 from
-   POST /api/diag/snooze produced no DOM change and no message at all.
+   was not listening. Every toast in the app was silently swallowed: "Copied",
+   "Refresh rejected", "Refresh failed", "Timeout", every error path included.
 
    An explicit @rendermode makes this an interactive WASM island inside the static layout.
    Islands on a page share ONE WebAssembly host and therefore one DI container — in WASM a
@@ -56,6 +55,9 @@
                 </a>
                 <a href="/users" class="app-topbar-link @NavClass("/users")">
                     <span class="material-symbols-outlined" aria-hidden="true">group</span>Users
+                </a>
+                <a href="/settings" class="app-topbar-link @NavClass("/settings")">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>Settings
                 </a>
             </div>
 

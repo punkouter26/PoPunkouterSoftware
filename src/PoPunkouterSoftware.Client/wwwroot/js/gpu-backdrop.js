@@ -43,6 +43,12 @@
  *       [data-fx-attract=w]  → the particle field orbits each visible one (weight w, max 4)
  *       appFx.comets(n)      → n comet trails, one per recent sign-in on /users
  *       pointer / tilt       → specular light on the glass edges
+ *
+ * ── Full effects are opt-in (/settings) ────────────────────────────────────────────────
+ * The fluid sim, the scars that grow on it, the per-service flocks, the hero orb and the
+ * palette's hyperspace jump run only when the visitor picks "Full" (`pops:fx` = 'full').
+ * The default is the simple set: the field, particles, glass, bloom and the scan effects.
+ * The simple set is the one most visitors see, so it is the one that has to look finished.
  *     The scan lifecycle arrives as an `app:refresh` event that js/audio-kit.js dispatches
  *     from the calls the dashboard already makes, BEFORE its own sound-enabled gate: the
  *     visuals must follow a scan whether or not the visitor turned sound on, and neither
@@ -51,10 +57,8 @@
  *     ends in a background tab plays its shockwave when the visitor returns.
  *
  * ── What this file no longer owns ───────────────────────────────────────────────────────
- * The rAF loop, the frame cap, the hidden/blur/reduced-motion pauses and the suppression
- * handshake with the catalog starfield all moved to js/motion-kit.js. This layer is now
- * just a named subscriber; the catalog page suppresses it by name rather than by setting a
- * dataset attribute that this file watched with a MutationObserver.
+ * The rAF loop, the frame cap and the hidden/blur/reduced-motion pauses all moved to
+ * js/motion-kit.js. This layer is just a named subscriber.
  */
 (function () {
     'use strict';
@@ -116,6 +120,14 @@
     }
 
     var FLOCK_STATE = { up: 0, warn: 1, down: 2 };
+    var FX_KEY = 'pops:fx';
+
+    function readFull() {
+        try { return localStorage.getItem(FX_KEY) === 'full'; } catch (e) { return false; }
+    }
+
+    var full = readFull();
+    var onFull = null;                  // set by start() once there is a renderer to tell
 
     /** Viewport-uv centre of the first element matching `selector`, or null. */
     function centreOf(selector) {
@@ -245,7 +257,7 @@
                 f.hu = ease(f.hu, gu, 2, dt); f.hv = ease(f.hv, gv, 2, dt);
                 flockBuf[i * 3] = f.hu; flockBuf[i * 3 + 1] = f.hv; flockBuf[i * 3 + 2] = f.state;
             }
-            renderer.setFlocks(flockBuf, fleet.length);
+            renderer.setFlocks(flockBuf, full ? fleet.length : 0);
         }
 
         // ── Scars: reaction-diffusion growing out of the uptime card beside each bad row ─
@@ -257,7 +269,7 @@
             var card = document.querySelector('.azure-uptime');
             var grid = card && card.querySelector('.azure-uptime__grid');
             var cr = card && card.getBoundingClientRect();
-            if (!grid || cr.bottom < -120 || cr.top > vh + 120 || cr.width < 2) { renderer.setScars(null); return; }
+            if (!full || !grid || cr.bottom < -120 || cr.top > vh + 120 || cr.width < 2) { renderer.setScars(null); return; }
             var padX = 170, padY = 70;
             scarRect[0] = cr.left - padX; scarRect[1] = cr.top - padY;
             scarRect[2] = cr.width + padX * 2; scarRect[3] = cr.height + padY * 2;
@@ -285,9 +297,10 @@
         // ── Orb: the hero's liquid-metal health blob, on its own canvas ─────────────────
         var orb = null, orbCanvas = null;
         function tickOrb(dt) {
-            var c = document.querySelector('canvas[data-fx-orb]');
+            var c = full ? document.querySelector('canvas[data-fx-orb]') : null;
             if (c !== orbCanvas) {
                 if (orb) { try { orb.dispose(); } catch (e) { } }
+                if (orbCanvas) orbCanvas.dataset.gpu = 'off';     // CSS hides a non-webgl2 orb
                 orb = null; orbCanvas = c;
                 if (c && window.gfxWebgl.createOrb) orb = window.gfxWebgl.createOrb(c);
                 if (c) c.dataset.gpu = orb ? 'webgl2' : 'no-gpu';
@@ -340,7 +353,7 @@
             renderer.setLight(light.at[0], light.at[1], light.level);
 
             // Pointer motion accumulated since the last frame becomes one fluid impulse.
-            if (dt > 0 && (stir.du || stir.dv)) {
+            if (full && dt > 0 && (stir.du || stir.dv)) {
                 var cap = 6;  // uv/s — a flick across the screen, not a teleport
                 renderer.stir(stir.u, stir.v,
                     Math.max(-cap, Math.min(cap, stir.du / dt)), Math.max(-cap, Math.min(cap, stir.dv / dt)));
@@ -401,6 +414,8 @@
             }
         }
 
+        onFull = function () { if (renderer) renderer.setFluid(full); };
+
         window.appFx.comets = function (n) {
             n = Math.min(6, Math.max(0, n | 0));
             if (!renderer) { fallbackComets(n); return; }
@@ -423,7 +438,7 @@
             var d = e.detail || {};
             if (d.phase === 'open') { lens.at = [d.u, d.v]; lens.want = 0.6; }
             else if (d.phase === 'close') lens.want = 0;
-            else if (d.phase === 'jump' && renderer) {
+            else if (d.phase === 'jump' && renderer && full) {
                 lens.want = 0;
                 renderer.setWarp(d.u, d.v, lens.level, 0);
                 renderer.jump(d.u, d.v);
@@ -452,6 +467,7 @@
         // ── Build / teardown ────────────────────────────────────────────────────────────
         function attach(r) {
             renderer = r;
+            renderer.setFluid(full);
             applyColors();
             if (window.motionKit) {
                 renderer.setQuality(window.motionKit.quality);
@@ -554,7 +570,7 @@
             get glassRects() { return glassSig ? glassSig.split(';').length - 1 : 0; },
             get sweep() { return Math.round(scan.strength * 100) / 100; },
             get fx() {
-                return renderer && renderer.fx ? Object.assign({ flocks: fleet.length, orb: !!orb }, renderer.fx()) : null;
+                return renderer && renderer.fx ? Object.assign({ flocks: full ? fleet.length : 0, orb: !!orb }, renderer.fx()) : null;
             }
         };
     }
@@ -566,7 +582,15 @@
 
     // Defined before start() so a page can call it whatever the layer ends up doing;
     // start() swaps in the real one once a renderer exists.
-    window.appFx = { comets: fallbackComets };
+    window.appFx = {
+        comets: fallbackComets,
+        get full() { return full; },
+        setFull: function (on) {
+            full = !!on;
+            try { if (full) localStorage.setItem(FX_KEY, 'full'); else localStorage.removeItem(FX_KEY); } catch (e) { }
+            if (onFull) onFull();
+        }
+    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start, { once: true });

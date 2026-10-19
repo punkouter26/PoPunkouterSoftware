@@ -9,21 +9,26 @@ App Service health, cost, SSL expiry, zombie-app detection and downtime diagnosi
 minimal-API **BFF** that reads an Azure inventory report out of Azure Table Storage (with a local
 JSON fallback).
 
-There are exactly **three pages**: `/` (the app catalog), `/azure` (the ops dashboard) and
-`/users` (who has signed in, across every Po app). Everything else is an endpoint.
+There are exactly **four pages**: `/` (the app catalog), `/azure` (the ops dashboard),
+`/users` (who has signed in, across every Po app) and `/settings` (visitor preferences).
+Everything else is an endpoint.
 
 For years this said *two* pages, and that was load-bearing — the count is a budget, not a
 tally. `/users` was added 2026-09-12 because the answer it gives lives nowhere else in the
 estate: an Azure Monitor workbook nobody opens. Adding a fourth needs the same standard —
 a question the existing pages cannot answer without becoming two pages in a trench coat.
 
-**A fourth page, `/settings`, existed from 2026-10-04 to 2026-10-19 and was deleted.** It was
-added without meeting that standard, was reachable only from the Ctrl+K palette, and of its four
-controls one (auto-refresh) was saved and read by nothing, two (theme, sound) were already
-palette commands, and its own heading icon rendered as the word "PALETTE" because the glyph
-was never in the icon subset. Compact density became a palette command
-(`themeKit.toggleDensity()`); the default sign-in window became `/users` remembering the last
-window picked (`localStorage` `pops:signin-days`). Do not cite it as a precedent for a page.
+**`/settings` is the fourth page by the owner's explicit call (2026-10-19), not by that standard.**
+A first `/settings` (2026-10-04 to 2026-10-19) was deleted: reachable only from Ctrl+K, one of
+its four controls saved and read by nothing, two duplicating palette commands, and its heading
+icon rendering as the word "PALETTE". The owner then asked for a settings page that puts
+optional features behind toggles defaulting to the simplest set, and the rebuild keeps the
+rules the first one broke: it is the **only** home of theme, density, sound and effects (the
+palette's toggles were removed, it has one "Go to Settings" row), it has a header link, every
+control is read by something, and every default is the simplest choice. All four go through
+`window.appSettings` in `theme-kit.js`; each value stays owned by the kit that applies it. The
+default sign-in window is still `/users` remembering the last window picked (`pops:signin-days`).
+Do not cite either page as a precedent for a fifth — that still needs the standard above.
 
 `AGENT.MD` used to hold this context and no longer exists — this file is the single context map.
 [AGENTS.md](AGENTS.md) exists only to point non-Claude agents here; never put rules in it.
@@ -134,7 +139,7 @@ the profile it binds :5000 instead of :8000.
 
 | Project | Role |
 |---|---|
-| [src/PoPunkouterSoftware.API/](src/PoPunkouterSoftware.API/) | ASP.NET Core host + BFF, and the Blazor WASM host. Slices are `Features/<Area>/<Area>Endpoints.cs` (**Config, Diag, Portfolio, SignIns**), each exposing `Map<Area>Endpoints(this WebApplication)` called from [Program.cs](src/PoPunkouterSoftware.API/Program.cs). Host-level plumbing belonging to no slice lives in `Host/`. **The namespace is flat** — every file is `PoPunkouterSoftware.API` regardless of folder — with one exception: `Platform/PoPlatform.cs` (namespace `.Platform`) is **generated** from `po-shared/src/PoPlatform.cs.tmpl` in a separate repo and shared by every Po app. Never edit this copy; change the template and run `python po-shared/sync.py`. `Automation/` holds a PowerShell report script, not app code. |
+| [src/PoPunkouterSoftware.API/](src/PoPunkouterSoftware.API/) | ASP.NET Core host + BFF, and the Blazor WASM host. Slices are `Features/<Area>/<Area>Endpoints.cs` (**Config, Diag, Portfolio, SignIns**), each exposing `Map<Area>Endpoints(this WebApplication)` called from [Program.cs](src/PoPunkouterSoftware.API/Program.cs). Host-level plumbing belonging to no slice lives in `Host/`. **The namespace is flat** — every file is `PoPunkouterSoftware.API` regardless of folder — with one exception: `Platform/PoPlatform.cs` (namespace `.Platform`) is **generated** from `po-shared/src/PoPlatform.cs.tmpl` in a separate repo and shared by every Po app. Never edit this copy; change the template and run `python po-shared/sync.py`. |
 | [src/PoPunkouterSoftware.Client/](src/PoPunkouterSoftware.Client/) | Blazor WASM (Radzen, mobile-first). `wwwroot` lives **only** here. The layout is **flat** — every component sits in the project root, named for what it is; there is no `Components/` tree. `wwwroot/js` holds the graphics and audio layers — see [Graphics and audio](#graphics-and-audio) below. |
 | [src/PoPunkouterSoftware.Shared/](src/PoPunkouterSoftware.Shared/) | DTOs + `DomainVocabulary.cs` only. **No PackageReferences at all**, no server- or browser-only deps — it ships in the WASM bundle (`IsTrimmable`). |
 | [src/PoPunkouterSoftware.Infrastructure/](src/PoPunkouterSoftware.Infrastructure/) | Azure adapters (Table Storage, ARM, pinger, incident, AI triage, telemetry) plus cross-slice helpers (`ReportFileCache`, `AttentionItemsBuilder`, `SecretMasking`). **Slices must not reference each other** — shared logic goes here. |
@@ -206,6 +211,9 @@ every resource id, cost figures and SSL state, and it was committed to the repo 
 never had a browser consumer. Do not put it back under any served directory, and do not "fix" a
 future leak with a static-file exclusion when the file simply does not belong there.
 `App_Data/` is gitignored; the Integration fixture seeds its own copy (see below).
+Local screenshot captures live there too (`App_Data/screenshots`, `GetScreenshotsDir`): they sat
+in the Client's `wwwroot/screenshots`, were committed, churned the tree on every local capture,
+and were served statically beside `/api/portfolio/screenshots/{host}`. Production reads blobs.
 
 **Each fact appears once on `/azure`.** The page carries one `.azure-glance-grid` of three cards
 (forecast, cost-by-resource-group, response times) with the uptime heatmap below it.
@@ -326,30 +334,29 @@ no scroller at all.
   `DashboardDerivationsTests`. Markup blocks are
   sibling components in the client root (`AzureStatusNarrative`, `AzureWhatChanged`,
   `AzureCostForecast`, `AzureUptimeHeatmap`, `Sparkline`, `AzurePriorityQueue`,
-  `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureSnoozedItems`, `AzureAppDetail`),
+  `AzureResourceExplorer`, `AzureEvidenceDisclosures`, `AzureAppDetail`),
   plus the shared `AppDrawer`.
 
 ## Graphics and audio
 
-Eleven files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
+Ten files in [wwwroot/js/](src/PoPunkouterSoftware.Client/wwwroot/js/). Read the header
 comment in each before changing it; they document the reasoning, this is the map.
 
 | File | Role |
 |---|---|
 | `motion-kit.js` | **The frame governor.** ONE `requestAnimationFrame` loop for the whole app, one gate (reduced-motion / hidden / blur / no runnable subscriber), and an adaptive quality controller. Must load first. |
-| `audio-kit.js` | Programmatic Web Audio — synthesis only, **zero audio assets**. UI SFX, the refresh drone (plus a sub "boom" and a three-note outcome motif at its end), the `/azure` sonification, the catalog's 3D fleet hums, and the analyser tap the shaders read. Everything runs through one synthesised-impulse convolution reverb send. |
+| `audio-kit.js` | Programmatic Web Audio — synthesis only, **zero audio assets**. UI SFX, the refresh drone (plus a sub "boom" and a three-note outcome motif at its end), the `/azure` sonification, and the analyser tap the shaders read. Everything runs through one synthesised-impulse convolution reverb send. |
 | `gpu-backdrop.js` | Orchestrator for `#app-gpu-backdrop`: tier selection, colour tokens, glass rects, audio energy, and the DOM reads that feed the simulations (pointer stir, `[data-fx-flock]` homes, uptime-scar seeds, palette lens/jump, the hero orb canvas). Owns no pixels. |
 | `gfx-webgl.js` | WebGL2 renderer (curl-noise field, stable-fluids sim, transform-feedback particles with per-service flocks, dual-Kawase blur + bloom, Gray-Scott scars, glass composite with prism edges) with a WebGL1 field-only fallback. **The top of the ladder.** Also `createOrb()`, the hero's metaball health orb on its own small canvas. |
-| `starfield-backdrop.js` | Catalog-page Three.js layer: starfield, globe, and the telemetry-driven orbit field. Lazily fetches Three.js. Places each body's fleet hum in 3D and reacts to the command palette (FOV lean / punch). |
-| `ui-physics.js` | Physics on the DOM, not a canvas: `[data-fx-shatter]` breaks its card into Voronoi shards (real cloned pixels, WAAPI keyframes integrated up front), KPI values count up on a spring, catalogue cards tilt toward the mouse on an underdamped spring. Per-frame work is motionKit subscribers that unsubscribe when settled. |
+| `ui-physics.js` | Physics on the DOM, not a canvas: KPI values count up on a spring, catalogue cards tilt toward the mouse on an underdamped spring. Per-frame work is motionKit subscribers that unsubscribe when settled. |
 | `helpers.js` | Topbar, snap pager, clipboard, download, `appRevealFocus` (the `/azure?focus=` scroll), `appShowDialog` (opens an `AppDrawer`) — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
-| `theme-kit.js` | The visitor's light/dark choice, and the toggle that sets it (`themeKit.toggle()`, called from the command palette — the header button went 2026-10-05, `/settings` 2026-10-19), plus the compact-density flag (`toggleDensity()`, also a palette command). Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
+| `theme-kit.js` | The visitor's light/dark choice and the compact-density flag, plus `window.appSettings` — the one facade `/settings` reads (`read()` → `theme|density|sound|fx`) and writes all four preferences through. Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
 | `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
 | `blazor-hooks.js` | Registers the enhanced-navigation callbacks. Must load **after** `blazor.web.js`, which defines `Blazor`. Also ex-inline. |
-| `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation, theme, density and sound toggles, and a launcher — open / copy link / show uptime for every app (from `/api/portfolio`, fetched on first open) plus "Rescan Azure" when management actions are on. Fuzzy matching is hand-written: the CSP's `script-src 'self'` rules out a CDN library. |
+| `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation (Settings included — it holds no setting toggles of its own), and a launcher — open / copy link / show uptime for every app (from `/api/portfolio`, fetched on first open) plus "Rescan Azure" when management actions are on. Fuzzy matching is hand-written: the CSP's `script-src 'self'` rules out a CDN library. |
 
 `app-boot.js` also registers **`wwwroot/service-worker.js`**. That worker precaches the pages
-and JS/CSS listed in it under a fixed cache name (`pops-pwa-v5`) and serves them cache-first.
+and JS/CSS listed in it under a fixed cache name (`pops-pwa-v6`) and serves them cache-first.
 Change that list whenever you add or rename a page or script, and bump `CACHE_NAME` whenever
 you change any precached file. A visitor who already has the worker installed keeps getting
 the cached copy until the cache name changes.
@@ -360,24 +367,25 @@ is the *only* pause path and it truly cancels the callback — a layer that fade
 `opacity: 0` while still being scheduled still burns a phone's battery, so
 `motionKit.stats().running` is what the E2E test asserts. It also measures its own dispatch
 cost and steps render scale and particle count down when the device cannot afford them
-(budget 6ms; both GPU tiers measure ~3ms on a desktop). The catalog starfield claims
-exclusivity over the shared backdrop with `motionKit.suppress('app-gpu-backdrop')` — that
-replaced a `data-suppress-gpu-backdrop` attribute plus a MutationObserver.
+(budget 6ms; both GPU tiers measure ~3ms on a desktop).
+
+**The catalog starfield is gone (2026-10-19).** `starfield-backdrop.js` (593 lines) and a
+vendored 608KB `three.min.js` drew a globe and an orbit field on `/` only, with the catalog's
+HRTF fleet hums and the Sync arpeggio riding on it, plus a `motionKit.suppress()` API that
+existed for its exclusivity claim. All of it went together; `/` now draws the same shared
+backdrop as every other page.
 
 **Silence is the default and it is an accessibility floor.** `audioKit.enabled` starts false;
 the `AudioContext` is not even *constructed* until a user gesture, because one built during
 page load is a suspended context that silently swallows sound plus an unrequested hardware
-claim. Sound is switched on from the command palette or `/azure`'s Listen
+claim. Sound is switched on from `/settings` or `/azure`'s Listen
 button; the header toggle and its `[data-sound-toggle]` wiring went on 2026-10-05.
 `[data-sfx]` / `[data-sfx-hover]` are wired by **delegation on `document`** (enhanced
-navigation re-inserts the header, so a direct listener would be lost or double-bound). Sound carries information in three places — the
+navigation re-inserts the header, so a direct listener would be lost or double-bound). Sound carries information in two places — the
 refresh lifecycle (a ~30s scan is exactly how long it takes someone to switch tabs; its end
-is a boom plus a motif that differs for success, recovery, failure and timeout), the
-`/azure` sonification, and the catalog's fleet hums (one quiet HRTF-placed hum per orbit
-body: steady when up, wavering when degraded, fading by distance as a down body drifts out;
-an arpeggio when Sync lands changed statuses). Each is a second *modality* on facts already
-on the page, not a second copy of them. Hums stop when the tab is hidden. Only primitives
-cross the interop boundary.
+is a boom plus a motif that differs for success, recovery, failure and timeout) and the
+`/azure` sonification. Each is a second *modality* on facts already on the page, not a
+second copy of them. Only primitives cross the interop boundary.
 
 **The backdrop is a capability ladder**: WebGL2 → WebGL1 → the CSS grid in
 `modern-ui.css`. Every rung degrades silently to the next and records the outcome in
@@ -405,7 +413,10 @@ gate, so the dashboard's existing `audioKit.refresh*` calls drive both layers an
 references the other. Deferred effects run on a frame-advanced clock, not wall time, so a
 scan that ends in a background tab plays its shockwave on return.
 
-Added 2026-10-19, each documented in its shader's comment:
+Added 2026-10-19, each documented in its shader's comment. **Fluid (and the scars that need
+it), flocks, the orb and the palette jump are opt-in** — `/settings` → Effects → Full
+(`localStorage` `pops:fx`, `appFx.setFull`). The default "Simple" set is the field,
+particles, glass, bloom and the scan effects, so it is the one that has to look finished:
 - **Fluid.** A ~128-cell stable-fluids step (splat → advect → divergence → 12 Jacobi →
   gradient) displaces the field and carries the particles. The pointer stirs it; the
   shockwave, bursts and the palette jump splat into it; glass rects add drag so flow bends
@@ -503,10 +514,18 @@ proves a context and program were created, not that anything reached the screen.
   the whole cost being removed. The page still renders on the transition that ends the scan.
 - **Decorative layers ask the device first.** `motionKit.minimal` (Save-Data, `deviceMemory <= 2`,
   `hardwareConcurrency <= 2`, 2G) is a separate question from the quality tier: the tier says *how
-  well* to draw, `minimal` says *whether to*. Under it the starfield skips its ~600KB Three.js
-  fetch entirely and the GPU backdrop never sets `data-gpu-backdrop`, so the CSS fallback stays.
+  well* to draw, `minimal` says *whether to*. Under it the GPU backdrop never sets
+  `data-gpu-backdrop`, so the CSS fallback stays.
   Both hint APIs are Chromium-only — every check is written so a missing hint reads as "no
   objection". The default is to draw.
+- **Snoozing was removed (2026-10-19)** — `SnoozeStore`, three `/api/diag/snooze*` endpoints,
+  `AzureSnoozedItems` and the shatter effect its button triggered. On a one-person dashboard
+  with a ranked queue it mostly hid things that wanted fixing. So did the "Audit script"
+  download (`/api/diag/automation-script`, an 805-line PowerShell report generator that
+  duplicated the scan). The `snoozes` partition already in Azure is untouched.
+- **Dead private code fails the build.** `.editorconfig` raises IDE0051 (unused private member)
+  and IDE0052 (written, never read) to error, and `EnforceCodeStyleInBuild` in
+  `Directory.Build.props` runs them at build time. Turning it on found two dead fields at once.
 - **Every endpoint needs a consumer.** An endpoint whose only caller is its own test is dead code
   with a green check mark. Three whole slices (GitHub, Infra, Pinger) were deleted in 2026-07 for
   exactly that — all tested, none reachable from the UI. Before adding a route, know what calls it.
@@ -531,8 +550,7 @@ proves a context and program were created, not that anything reached the screen.
   never gain a child, and the page's `NotificationService` — resolved from the WASM container, a
   different one from the server's — pushes into an outlet that is not listening. Every toast in
   the app was silently swallowed, *every error path included*: "Refresh rejected", "Refresh
-  failed", "Timeout", "Snooze failed", "Copy failed". A 500 from `POST /api/diag/snooze` produced
-  no DOM change and no message at all. Interactive WASM islands on one page share a single
+  failed", "Timeout", "Copy failed". Interactive WASM islands on one page share a single
   WebAssembly host and therefore one DI container (a scoped service is a per-host singleton there),
   which is why the island and the page resolve the same instance. Do not remove the attribute.
 - **Push alerts go through ntfy, and every sender fires on a crossing, never a state.** `AlertNotifier` POSTs JSON to
@@ -595,7 +613,7 @@ proves a context and program were created, not that anything reached the screen.
   `/api/diag/restart/{name}` — the Restart button on Reliability rows of the priority queue)
   carry `.RequireManagementActions()`, which enforces `FeatureFlags:EnableManagementActions` (on in
   Development/Testing, otherwise opt-in) plus an optional `Security:ManagementApiKey` via the
-  `X-Management-Key` header. `/api/diag/ai` and the snooze endpoints are deliberately unprivileged.
+  `X-Management-Key` header. `/api/diag/ai` is deliberately unprivileged.
   Restart resolves the site from the STORED report, never from the caller, so it can only touch
   a site the scan found; it starts a stopped site and restarts a running one. In Azure it also
   needs Website Contributor, which infra deliberately does not grant — it 403s cleanly there.
@@ -615,8 +633,8 @@ proves a context and program were created, not that anything reached the screen.
   to an app that was renamed, must land on the app's own chrome: shell, header, skip link, a way
   back, and a **real 404 status**. That is `NotFoundPage.razor`, rendered by
   `UseStatusCodePagesWithReExecute("/not-found", "?statusCode={0}")`. It is not a page in the
-  three-page budget — nobody navigates to it — but it is a route, so the count of routes is now
-  four.
+  page budget — nobody navigates to it — but it is a route, so the count of routes is now
+  five.
   **Two ways to get this wrong, both tried here, both caught by tests and not by looking:**
   a plain `MapFallback` returns the right status with no page (it swallowed every unmatched path,
   so `<NotFound>` in `Routes.razor` was dead code for a browser navigation); a **catch-all route**
@@ -684,8 +702,8 @@ proves a context and program were created, not that anything reached the screen.
   instance from `CreateClient(name)` — handler chains are pooled, so a per-call mutation leaks that
   header, credentials included, to every other consumer. The `github` PAT is bound once in
   `Program.cs`. Pass per-call values on the `HttpRequestMessage`.
-- **The theme is a choice, not only a media query.** `theme-kit.js` owns it: the toggle
-  (the command palette; the `MainLayout` header button went on 2026-10-05, `/settings` on 2026-10-19) writes
+- **The theme is a choice, not only a media query.** `theme-kit.js` owns it: the `/settings`
+  Theme row (System / Light / Dark, via `appSettings.set`) writes
   `localStorage` `pops:theme` and sets `data-app-theme` on `<html>`. Rejected alternatives, so they
   are not re-litigated: Radzen's `RadzenTheme`/`RadzenAppearanceToggle` would make a second theme
   authority alongside this app's own token block, which is the same class of bug as the Radzen token
@@ -855,10 +873,6 @@ served until the facts happen to change. It produces the
   `DashboardInsightsBuilder.BuildDelta` already provides that from history. Removed 2026-09-04
   along with `IncidentEntry`, `IncidentTypes`, the `incidents` partition and the never-configured
   `Incidents:WebhookUrl`. The `incidents` table already in Azure is untouched; drop it by hand.
-- **Snoozes.** Findings have no server-side identity — the `SnoozeStore` RowKey is a SHA-256 hash of
-  the client's opaque key (Table Storage forbids `|` and friends), with the raw key kept as a
-  property so it round-trips. Expiry is filtered in `GetActiveAsync`, not by a TTL or cleanup job;
-  expired rows are excluded from reads, not deleted.
 - **Caching.** None beyond the framework's. `HybridCache` and the sized `IMemoryCache` were removed
   along with the slices that used them; add one back deliberately if a read-through cache is needed.
 - **No CORS.** Single-origin Blazor Web App — the WASM client is served from this same host.
@@ -950,7 +964,7 @@ served until the facts happen to change. It produces the
   without which `GetContainerAsync` returns null and stored images never appear —
   indistinguishable from never having captured any.
 
-## Tests — four projects, one per tier (budget 105/52/25/25, currently 101/54/21/25)
+## Tests — four projects, one per tier (budget 100/50/25/25, currently 99/45/21/25)
 
 **The budget is a ceiling, not a target.** All four tiers are at or under it. Adding a test means
 finding one to remove, so prefer widening an existing test's assertions to adding a new method — the
@@ -974,7 +988,7 @@ rule's worth of coverage.
   that environment's hosting pipeline.
 - **`PoPunkouterSoftware.E2EAPI`** / **`.E2EUI`** — pure HTTP and Playwright against a live instance
   via `BASE_URL`. On demand, not in CI. E2EUI runs **axe-core** (`Deque.AxeCore.Playwright`,
-  WCAG 2.1 A/AA) over all three pages at both viewports and fails on serious/critical only. Its
+  WCAG 2.1 A/AA) over all four pages at both viewports and fails on serious/critical only. Its
   first run found three real defects: the active nav link at 4.37:1, the Sync button's
   aria-label not containing "Sync" (WCAG 2.5.3), and `aria-label` on the role-less loading
   skeleton. It waits for `appRepairRadzenA11y` first, or it reports icon ligatures in names.

@@ -1,0 +1,35 @@
+/* All markup here is Settings.razor's own, so bare scoped selectors reach it — no ::deep. */
+.settings-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-space-md);
+    align-content: start;
+    max-width: 48rem;
+}
+
+.settings-list {
+    display: grid;
+}
+
+.settings-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--app-space-xs) var(--app-space-md);
+    padding: var(--app-space-sm) 0;
+}
+
+.settings-row + .settings-row {
+    border-top: 1px solid var(--app-border);
+}
+
+.settings-row__copy {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+.settings-row__copy h2,
+.settings-row__copy p {
+    margin: 0;
+}

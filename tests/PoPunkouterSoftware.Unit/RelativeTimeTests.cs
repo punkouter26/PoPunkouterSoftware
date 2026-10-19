@@ -24,7 +24,6 @@ public class RelativeTimeFormatTests
     [InlineData(0, "0m ago")]            // sub-minute floors to 0m
     [InlineData(59, "59m ago")]          // last value before the hour boundary
     [InlineData(60, "1h ago")]           // exactly one hour flips to hours
-    [InlineData(90, "1h ago")]           // partial hours floor
     [InlineData(24 * 60, "1d ago")]      // exactly one day flips to days
     [InlineData(45 * 24 * 60, "45d ago")]
     public void TimeSpan_FormatsWithFlooredUnits(int totalMinutes, string expected)

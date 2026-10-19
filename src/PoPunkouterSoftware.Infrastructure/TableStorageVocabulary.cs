@@ -11,7 +11,6 @@ public static class TablePartitions
     public const string Report = "report";
     public const string History = "history";
     public const string HistorySummary = "history-summary";
-    public const string Snoozes = "snoozes";
 
     /// <summary>
     /// Per-service, per-day reachability tallies written by <c>ServicePingerService</c>.

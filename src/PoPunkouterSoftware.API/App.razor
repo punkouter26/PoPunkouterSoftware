@@ -63,8 +63,8 @@
     <script src="js/theme-kit.js"></script>
     @* Load order is load-bearing. motion-kit.js defines window.motionKit, the single rAF
        governor every animated layer subscribes to, so it must come first. audio-kit.js is
-       next because gpu-backdrop.js and starfield-backdrop.js both PULL window.audioKit.energy()
-       inside their frame callbacks (they null-check it, so the order is defensive rather
+       next because gpu-backdrop.js PULLS window.audioKit.energy()
+       inside its frame callback (it null-checks it, so the order is defensive rather
        than strictly required — but a first frame without audio coupling is a visible pop). *@
     <script src="js/motion-kit.js"></script>
     <script src="js/audio-kit.js"></script>
@@ -76,12 +76,6 @@
        for why a second full renderer of the same decoration was not worth keeping. *@
     <script src="js/gfx-webgl.js"></script>
     <script src="js/gpu-backdrop.js"></script>
-    @* Small wrapper only (no THREE dependency at parse time) — it lazily fetches
-       lib/three/three.min.js itself, and only when starfieldBackdrop.init() is called
-       from Index.razor. Loading it here costs every route a few KB; the actual ~600KB
-       Three.js payload only ever downloads for a visit to "/". See the file header in
-       js/starfield-backdrop.js for the full cost-scoping rationale. *@
-    <script src="js/starfield-backdrop.js"></script>
     <script src="_framework/blazor.web.js"></script>
     @* Enhanced-navigation hooks. Must come after blazor.web.js, which defines `Blazor`.
        External for the CSP reason above — see js/blazor-hooks.js for the full rationale. *@

@@ -8,15 +8,6 @@
 
 <PageTitle>PoPunkouterSoftware — Web apps</PageTitle>
 
-@* 3D starfield/globe backdrop — Three.js, catalog page only. Positioned behind <main>
-   via Index.razor.css (fixed, negative z-index — same stacking tier as the shared
-   #app-gpu-backdrop layer, which js/starfield-backdrop.js suppresses for as long as
-   this canvas is alive so the two WebGL layers never both animate at once). Wired up
-   from OnAfterRenderAsync/DisposeAsync below; see js/starfield-backdrop.js for the
-   cost controls (lazy-loaded Three.js, capped frame rate, full pause on
-   hidden/blur/reduced-motion, graceful no-WebGL degradation). *@
-<canvas id="catalog-starfield" class="catalog-starfield" aria-hidden="true"></canvas>
-
 <main id="main-content" class="app-page portfolio-page" tabindex="-1">
     <header class="portfolio-header">
         @* No "PoPunkouterSoftware" eyebrow: the topbar wordmark directly above says it. *@
@@ -136,84 +127,10 @@
             _ => _ = InvokeAsync(LoadAppsAsync), null, AutoRefreshEvery, AutoRefreshEvery);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-            return;
-
-        // Best-effort: a WebGL/Three.js failure must never break page load. All real
-        // failure handling (no-WebGL, script-load errors, reduced-motion) lives inside
-        // starfieldBackdrop.init() itself and resolves normally either way — this only
-        // guards against the JS interop call itself failing (e.g. the module script
-        // did not load).
-        try
-        {
-            await JS.InvokeVoidAsync("starfieldBackdrop.init");
-            await PushTelemetryAsync();
-        }
-        catch (JSException)
-        {
-            // Decorative layer only — the catalog is fully usable without it.
-        }
-    }
-
-    /// <summary>
-    /// Push the catalog's live health into the starfield's orbit field: healthy apps hold a
-    /// tight orbit, unavailable ones drift outward, unmonitored ones sit calm but dim.
-    ///
-    /// <para>Strictly decorative. <c>apps.json</c> remains authoritative for the cards, and
-    /// nothing here can remove, dim or reorder one — a probe failure produces a body that
-    /// drifts, never a card that disappears. Same rule the catalog already follows for live
-    /// Azure inventory, extended to the one part of the page that moves.</para>
-    ///
-    /// <para>A single delimited string, not a DTO: only primitives cross the interop
-    /// boundary (the discipline every interop call here follows), so nothing new needs a
-    /// <c>[JsonSerializable]</c> entry and the WASM trim analyzer stays clean.</para>
-    /// </summary>
-    private async Task PushTelemetryAsync()
-    {
-        if (data is null)
-            return;
-
-        // Separator-stripping is defensive, not theoretical: app names come from apps.json,
-        // which is hand-edited, and one stray '|' would silently shift every subsequent
-        // body's state by one field.
-        var spec = string.Join(';', data.Apps.Select(a =>
-            $"{a.Name.Replace('|', ' ').Replace(';', ' ')}|{OrbitState(a.Status)}"));
-
-        try
-        {
-            await JS.InvokeVoidAsync("starfieldBackdrop.setTelemetry", spec);
-        }
-        catch (JSException) { }
-        catch (InvalidOperationException) { }
-    }
-
-    /// <summary>
-    /// Portfolio status → orbit state. "not-monitored" maps to <c>unknown</c>, not to a
-    /// warning: no probe covers that app, and reporting a fault from an absence of data is
-    /// the same mistake as counting a cold-start timeout as downtime.
-    /// </summary>
-    private static string OrbitState(string status) => status switch
-    {
-        "healthy" => "up",
-        "unavailable" => "down",
-        "degraded" => "warn",
-        _ => "unknown",
-    };
-
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _autoRefreshTimer?.Dispose();
-
-        // Best-effort: the circuit may already be gone during teardown.
-        try
-        {
-            await JS.InvokeVoidAsync("starfieldBackdrop.dispose");
-        }
-        catch (JSException) { }
-        catch (InvalidOperationException) { }
-        catch (TaskCanceledException) { }
+        return ValueTask.CompletedTask;
     }
 
     private async Task LoadAppsAsync()
@@ -230,12 +147,6 @@
             data = await Http.GetFromJsonAsync("/api/portfolio", AppJsonContext.Default.PortfolioResponse, cts.Token);
             if (_buildIdAtLoad is null && data?.BuildId > 0)
                 _buildIdAtLoad = data.BuildId;
-
-            // Also on the weekly auto-reload, not just the first paint — an app that goes
-            // down while the tab is open should visibly leave its orbit. Safe to call before
-            // the canvas exists: starfieldBackdrop holds the latest spec and applies it when
-            // init() completes.
-            await PushTelemetryAsync();
         }
         catch (Exception ex)
         {

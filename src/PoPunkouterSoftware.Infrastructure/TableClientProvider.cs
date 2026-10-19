@@ -12,7 +12,7 @@ namespace PoPunkouterSoftware.Infrastructure;
 /// been deleted underneath a running app.
 ///
 /// <para>Extracted when a third store (<see cref="UptimeSampleStore"/>) needed the same
-/// ~80 lines <see cref="SnoozeStore"/> already carried. <see cref="AzureReportStore"/>
+/// ~80 lines the (since deleted) snooze store already carried. <see cref="AzureReportStore"/>
 /// deliberately keeps its own copy for now: it layers a local-file fallback and gzip
 /// handling on top, and rewiring the app's most load-bearing store was not worth the risk
 /// of this change.</para>
@@ -36,7 +36,7 @@ public sealed class TableClientProvider
     private DateTimeOffset _lastClientFailureAt = DateTimeOffset.MinValue;
     private static readonly TimeSpan ClientRetryCooldown = TimeSpan.FromSeconds(30);
 
-    /// <param name="owner">Names the caller in log messages ("snoozes", "uptime samples").</param>
+    /// <param name="owner">Names the caller in log messages ("uptime samples").</param>
     public TableClientProvider(IConfiguration config, ILogger logger, string owner)
     {
         _config = config;

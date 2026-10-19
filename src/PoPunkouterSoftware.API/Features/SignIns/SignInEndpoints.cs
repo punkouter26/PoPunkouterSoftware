@@ -14,8 +14,8 @@ namespace PoPunkouterSoftware.API;
 /// including people who are not the owner, and an unmasked one would publish third-party PII
 /// to any visitor.</para>
 /// <para>Unprivileged rather than behind <c>.RequireManagementActions()</c>: it mutates
-/// nothing and costs one Log Analytics query, which puts it alongside <c>/api/diag/ai</c> and
-/// the snooze endpoints. Being anonymous AND a live query is why it is rate-limited — see
+/// nothing and costs one Log Analytics query, which puts it alongside <c>/api/diag/ai</c>.
+/// Being anonymous AND a live query is why it is rate-limited — see
 /// <c>RateLimits</c>. A management gate would also make it unreachable from the page —
 /// the WASM client cannot present the <c>X-Management-Key</c> header — leaving an endpoint
 /// whose only caller is its own test, which is the exact shape CLAUDE.md forbids.</para>

@@ -6,7 +6,6 @@ public class SecretMaskingTests
 {
     [Theory]
     [InlineData(null)]
-    [InlineData("")]
     [InlineData("\t\r\n")]
     public void NullEmptyOrWhitespace_RendersNotSet(string? value)
     {

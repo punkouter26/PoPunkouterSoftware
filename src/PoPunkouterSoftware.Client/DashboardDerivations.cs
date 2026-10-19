@@ -149,7 +149,7 @@ public static class DashboardDerivations
 
         // Catalog drift: an apps.json entry whose underlying resource has either gone
         // (no Microsoft.Web/sites matches the name) or no longer serves traffic. Surfaced
-        // here so the existing dedup / priority-queue / snooze paths handle them, and the
+        // here so the existing dedup / priority-queue paths handle them, and the
         // human can copy the removal snippet into apps.json. We deliberately do not edit
         // the file — the catalog stays visible during outages, so the dashboard must
         // answer "remove it" with a finding the operator can act on, not a silent edit.
@@ -381,7 +381,7 @@ public static class DashboardDerivations
         // Azure Advisor, ranked into the same queue rather than shown as a list of its own —
         // one row per RECOMMENDATION, not per resource. Live, Advisor repeats the same five
         // availability tips across every free-tier app and storage account (75 rows); grouped,
-        // that is ~10, and snoozing a row silences that tip everywhere at once. Only Cost and
+        // that is ~10. Only Cost and
         // Security at High impact earn "Fix Soon": "add zone redundancy" to a hobby estate is
         // worth knowing, not worth fixing now. Low impact is left out entirely.
         IEnumerable<PriorityQueueItem> FromAdvisor() =>
