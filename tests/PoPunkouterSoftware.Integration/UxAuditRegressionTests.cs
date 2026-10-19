@@ -153,7 +153,7 @@ public class PortfolioExclusionRegressionTests
         foreach (var app in doc.RootElement.GetProperty("apps").EnumerateArray())
         {
             app.EnumerateObject().Select(p => p.Name).Should().BeSubsetOf(
-                new[] { "id", "name", "description", "url", "status", "screenshotUrl", "scores" });
+                new[] { "id", "name", "description", "url", "status", "screenshotUrl", "scores", "cleanDays" });
         }
     }
 }
