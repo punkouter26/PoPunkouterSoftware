@@ -85,14 +85,15 @@
     /// <summary>Null until the page's one /api/signins fetch completes.</summary>
     [Parameter] public SignInReport? SignIns { get; set; }
 
-    private string Latest => Row.Cells.Count > 0 ? Row.Cells[^1] : UptimeState.NoData;
+    // The latest probe, not today's worst-wins cell — the strip below already shows the day.
+    private string Latest => Row.Current ?? UptimeState.NoData;
 
     private string StatusLabel => Latest switch
     {
         UptimeState.Healthy => "Up",
         UptimeState.Degraded => "Degraded",
         UptimeState.Broken => "Down",
-        _ => "Not checked today",
+        _ => "Not in the latest scan",
     };
 
     private string? StreakLabel => Row.CleanDays switch

@@ -23,8 +23,8 @@ public record PortfolioApp
     /// <summary>Latest nightly PageSpeed Insights scores; null until one has been captured.</summary>
     public LighthouseScores? Scores { get; init; }
     /// <summary>
-    /// Days since this app's last down or degraded day on the 30-day uptime grid; 30 means the
-    /// whole window was clean. Null when the app was never observed — no streak to claim.
+    /// Observed days since this app's last down or degraded day on the 30-day uptime grid; 30
+    /// means every day of the window was seen and clean. Null when the app was never observed — no streak to claim.
     /// </summary>
     public int? CleanDays { get; init; }
 }

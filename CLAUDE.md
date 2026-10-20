@@ -190,9 +190,13 @@ integration test asserts `/api/diag/summary` does not contain `webServices`.
 
 **Refresh is asynchronous and pushed.** `POST /api/diag/refresh` returns 202 immediately;
 `ReportRefreshRunner` runs the scan on a background task and broadcasts progress over the
-`RefreshHub` SignalR hub (`/hubs/refresh`). The client also polls `/api/diag/summary` as a fallback
-and shows an *indeterminate* progress bar when the hub is down, because percent values arrive only
-over the hub. The home page's **Sync** button (owner's ask, 2026-10-19) starts the same scan and
+`RefreshHub` SignalR hub (`/hubs/refresh`). The client also polls `/api/diag/summary` until
+`refreshInProgress` clears, and shows an *indeterminate* progress bar when the hub is down, because
+percent values arrive only over the hub. **A scan already running is JOINED, never refused**:
+`OpsSummary.RefreshInProgress` makes a page that loads mid-scan (the visitor left and came back,
+the nightly workflow, another tab) show its progress and Cancel, and a Rescan that gets 409
+follows that scan. Before, the page showed an idle Rescan button that could only answer "Already
+running". The home page's **Sync** button (owner's ask, 2026-10-19) starts the same scan and
 simply polls `/api/portfolio` until `refreshInProgress` clears — it needs no progress UI. Both
 buttons render only when `/api/config` reports `managementActionsEnabled`, so in Production
 (where the endpoint also wants a management key the browser lacks) neither is shown.
@@ -250,8 +254,8 @@ endpoint (both charts were the hero sparklines' series). The resource explorer i
 a card per resource. Methodology and owner-facing config text (uptime method, budget key,
 management flag, cold starts) lives in an icon-only `AppHint`, not a paragraph.
 
-**One design system, three dials.** Everything visual resolves from the token block at the top of
-`modern-ui.css`, and three of those tokens are the only places a global visual decision is made:
+**One design system, two dials.** Everything visual resolves from the token block at the top of
+`modern-ui.css`, and two of those tokens are the only places a global visual decision is made:
 
 - **`--app-density`** scales the whole spacing ladder (`--app-space-*` are all
   `calc(<base> * var(--app-density))`). Compacting the UI for a viewport is one declaration —
@@ -264,45 +268,43 @@ management flag, cold starts) lives in an icon-only `AppHint`, not a paragraph.
   viewport and multiplying the two compounds into unreadable text. The bottom step is also the
   app's most-repeated size (`.app-kicker`, card subtitles, `.app-note`) and its floor is 0.76rem
   (12.16px at 390px) — it was 0.68rem/10.88px, below comfortable reading for a tracked all-caps
-  kicker. If a pane then stops fitting its viewport, fix the pane.
+  kicker.
   **A literal below that floor is now the app's smallest text**, which is why `AzureDashboard.razor.css`
   no longer carries a parallel scale in raw rems: eleven declarations between .68 and .75rem are now
   `var(--app-step--2)`. The same sweep has NOT been done everywhere — Index/PortfolioAppCard/SignIns
   still hold literals in the 0.78–0.85rem band, which sit *above* the floor and are left alone.
-- **`--app-viewport-fit`** is `100dvh` minus the fixed chrome and shell padding: what a
-  full-height pane sizes itself to.
+
+(A third, `--app-viewport-fit`, sized the phone pager's panes and went with it.)
 
 `--app-text-soft` is a **measured** value, not a taste call, in both themes: it is applied to the
 smallest type in the app, so re-measure it against `--app-surface` (the darker of the two grounds
 these sit on, and the one `[data-glass]` makes translucent), not against `--app-bg`.
 
-**`/azure` pages instead of scrolling at mobile portrait; `/` guarantees its first screen.** The
-two routes answer "fit the viewport" differently on purpose. `/azure` is pane-shaped — status
-(with what changed), actions, spend, uptime — so `[data-snap-pager]` makes it a one-viewport-tall
-scroll-snap container whose `.app-pane` children are a screen each; `js/helpers.js`
-(`appSnapPager`) injects the dot strip, driven off the **computed** `scroll-snap-type` so the CSS
-media query stays the single source of truth for when paging is on. `/` is an 11-item catalogue —
-a list, and paging a list fights the reader — so it keeps ordinary scrolling and instead
-guarantees the first screen is complete. **Neither route truncates.** The one body of content that
-cannot honestly be compressed to a screen (the ranked priority queue, once loaded) opts out with
-`.app-pane--tall` and scrolls internally; advanced diagnostics is not a pane at all but a drawer
-(see "Drawers are native dialogs" below). Both contracts are held by `PortfolioUiTests`
-(`Azure_MobilePortrait_PanesFitTheViewport`, `Home_FirstScreen_ShowsAWholeCard`) — a new section
-dropped into whichever pane is nearest will fail the first of those.
+**Every page scrolls ordinarily; `/` guarantees its first screen.** `/azure` PAGED on a phone
+until 2026-10-19 — a `[data-snap-pager]` scroll-snap container one viewport tall, a pane per
+screen, a JS dot strip — and that went (owner's call: "whatever is simpler"). Every pane had to
+fill a whole screen, so "Needs attention" was ~150px of content in a 756px box, the hero sat
+centred under 230px of nothing, and four screens of paging held what now fits in two of
+scrolling; it also needed a `--tall` opt-out, a specificity hack and its own E2E test to stay
+honest. Do not bring it back. `/` is a 10-item catalogue and guarantees its first screen is
+complete (`Home_FirstScreen_ShowsAWholeCard`). **No route truncates.** Advanced diagnostics is
+not a pane but a drawer (see "Drawers are native dialogs" below).
+`Azure_MobilePortrait_UptimeOpensOnToday_AndNothingOverflows` holds the phone layout.
 
 **At every width `/azure` is one column of four panes, in the order status, actions, spend,
 uptime** — what is going on, what to do about it, then the evidence. "Needs attention" is
 SECOND because it is the one list a visitor acts on; until 2026-10-19 it was last, below the fold
-at 1440×1000 (y=1106 in a 935px viewport) and page five of the phone pager. From 2026-09 to
+at 1440×1000 (y=1106 in a 935px viewport) and page five of the old phone pager. From 2026-09 to
 2026-10-19 a `@media (min-width: 1100px)` block made the page two-up, but its only half-width
 pair was uptime beside "what changed" — a 129px card next to a 342px one, a ~210px hole on every
 visit — and every other pane spanned both columns anyway. With "what changed" in the hero there
 is no pair left. The uptime grid's day columns are `minmax(var(--uptime-cell), 1fr)` (set inline
 in `AzureUptimeHeatmap.GridStyle`): at least a cell wide, so a phone still scrolls the grid inside
-its container, and stretched to the card on desktop, where `--uptime-cell` is 14px.
+its container, and stretched to the card on desktop, where `--uptime-cell` is 14px. The scroller
+is `direction: rtl` (the grid inside it `ltr`) so it STARTS at the right edge: a phone opens on
+today. It opened on the oldest day, so with a few days of history the card was all empty boxes.
 
-`/users` answers it the way `/` does, not the way `/azure` does: it is a roster of unknown
-length, so it scrolls ordinarily and carries no `[data-snap-pager]`. Its one concession is
+`/users` is a roster of unknown length and scrolls ordinarily. Its one concession is
 that the roster and the raw feed sit in `.signins-scroll` / the disclosure body, each its own
 `overflow-x: auto` container — five columns of real text cannot honestly reflow to 390px, and
 a per-table scroller is the escape hatch the "page body never scrolls sideways" rule allows.
@@ -314,7 +316,9 @@ the app-name chips were cut mid-word at the clip edge, and nothing indicated the
 scrolled at all. "First seen"/"Last seen" are the two columns a visitor can most easily do
 without side by side, and `.signin-person__dates` repeats them under the person's name —
 `display: none` at every viewport where the real columns exist, so exactly one copy is in the
-accessibility tree at any width. The scroller stays (with `tabindex="0"` + `role="group"`,
+accessibility tree at any width. Three columns STILL did not fit until a masked address could
+wrap: it has no break opportunity, so `SignInRoster.BreakAtSign` puts a `<wbr>` before the `@`
+(not `overflow-wrap: anywhere`, which split "potraffic.d/ev"). The scroller stays (with `tabindex="0"` + `role="group"`,
 the same treatment the uptime grid carries) because it is still needed at very narrow widths,
 and a scroll region that is unreachable on exactly the screen where it scrolls is worse than
 no scroller at all.
@@ -349,17 +353,18 @@ comment in each before changing it; they document the reasoning, this is the map
 | `gpu-backdrop.js` | Orchestrator for `#app-gpu-backdrop`: tier selection, colour tokens, glass rects, audio energy, and the DOM reads that feed the simulations (pointer stir, `[data-fx-flock]` homes, uptime-scar seeds, palette lens/jump, the hero orb canvas). Owns no pixels. |
 | `gfx-webgl.js` | WebGL2 renderer (curl-noise field, stable-fluids sim, transform-feedback particles with per-service flocks, dual-Kawase blur + bloom, Gray-Scott scars, glass composite with prism edges) with a WebGL1 field-only fallback. **The top of the ladder.** Also `createOrb()`, the hero's metaball health orb on its own small canvas. |
 | `ui-physics.js` | Physics on the DOM, not a canvas: KPI values count up on a spring, catalogue cards tilt toward the mouse on an underdamped spring. Per-frame work is motionKit subscribers that unsubscribe when settled. |
-| `helpers.js` | Topbar, snap pager, clipboard, download, `appRevealFocus` (the `/azure?focus=` scroll), `appShowDialog` (opens an `AppDrawer`) — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
+| `helpers.js` | Topbar, clipboard, download, `appRevealFocus` (the `/azure?focus=` scroll), `appShowDialog` (opens an `AppDrawer`) — plus the Radzen accessibility repairs (`appRepairRadzenA11y`). Unrelated to the animation layers. (The `appMedia` matchMedia bridge went with the resource explorer's data-grid branch — it had exactly one caller.) |
 | `theme-kit.js` | The visitor's light/dark choice and the compact-density flag, plus `window.appSettings` — the one facade `/settings` reads (`read()` → `theme|density|sound|fx`) and writes all four preferences through. Applies `data-app-theme` to `<html>` and rewrites the two Radzen theme sheets' `media` attributes. Must load before Blazor. |
 | `app-boot.js` | Host-page boot: dismisses the loading splash, drives the nav progress bar, filters hot-reload console noise. Not an animation layer — no rAF. Was inline in `App.razor` until the CSP banned inline script. |
 | `blazor-hooks.js` | Registers the enhanced-navigation callbacks. Must load **after** `blazor.web.js`, which defines `Blazor`. Also ex-inline. |
 | `command-palette.js` | Ctrl+K / Cmd+K overlay: navigation (Settings included — it holds no setting toggles of its own), and a launcher — open / copy link / show uptime for every app (from `/api/portfolio`, fetched on first open) plus "Rescan Azure" when management actions are on. Fuzzy matching is hand-written: the CSP's `script-src 'self'` rules out a CDN library. |
 
-`app-boot.js` also registers **`wwwroot/service-worker.js`**. That worker precaches the pages
-and JS/CSS listed in it under a fixed cache name (`pops-pwa-v6`) and serves them cache-first.
-Change that list whenever you add or rename a page or script, and bump `CACHE_NAME` whenever
-you change any precached file. A visitor who already has the worker installed keeps getting
-the cached copy until the cache name changes.
+**There is no service worker and no offline mode** (owner's call, 2026-10-19). One served every
+page and script cache-first under a hand-bumped cache name, so a returning visitor saw the
+PREVIOUS deploy until someone remembered to bump it — observed live: a header with no Settings
+link. `wwwroot/service-worker.js` survives only as a self-removing stub (deletes its caches,
+unregisters, has no fetch handler) because a browser that installed the old one keeps it until
+that URL serves a replacement. Nothing registers it. Delete the file once old installs have aged out.
 
 **One rAF loop, and reduced motion stops it.** Every animated layer is a named `motionKit`
 subscriber. Nothing else may call `requestAnimationFrame` for animation. The governor's gate
@@ -577,8 +582,9 @@ proves a context and program were created, not that anything reached the screen.
   the "every endpoint needs a consumer" rule is satisfied by a README, not by a component.
   Built from the same `BuildApps` list as the cards plus `BuildUptime`, with none of
   `GetPortfolio`'s side effects (no auto-rescan, no screenshot capture) — crawlers fetch it.
-  It carries the clean streak ("up 12d · 99% 30d"): `UptimeRow.CleanDays`, days since the
-  row's last down/degraded day, which `/api/portfolio` also puts on each card
+  It carries the clean streak ("up 12d · 99% 30d"): `UptimeRow.CleanDays`, OBSERVED days since
+  the row's last down/degraded day — an unobserved day is not a clean one (it used to count
+  them, so every card claimed "30d+" off one day of data) — which `/api/portfolio` also puts on each card
   (`PortfolioApp.CleanDays`, the flame chip on the card's host line — on that line, not a new
   one, because a taller card fails `Home_FirstScreen_ShowsAWholeCard`).
 - **Every scanned service carries its last deploy.** GitHub correlation now runs for all services,
@@ -823,11 +829,18 @@ served until the facts happen to change. It produces the
     probe missing a cold start is not evidence of downtime. `unreachable` and 5xx still count.
   - **Both writers must also agree on what "up" means.** They did not: the pinger counted anything
     under 500 as reachable while the scan's `ProbeUrlAsync` judged on `IsSuccessStatusCode` alone.
-    The probe sends HEAD with `AllowAutoRedirect = false`, so an app that redirects `/` to a
+    The probe runs with `AllowAutoRedirect = false`, so an app that redirects `/` to a
     sign-in page answers 302 — and PoRedoImage and PoRepoLineTracker were both reported
     "unavailable" on the home page while serving normally. The scan now counts any status under
     400 as reachable. Keep 4xx broken: a card is a link a visitor clicks, and PoSeeReview's flat
     403 is a real outage, not an auth handshake.
+  - **The scan probes with GET (headers only), the same request the pinger sends — never HEAD.**
+    An ASP.NET app with no HEAD route answers 405, so until 2026-10-19 this site's own production
+    instance was "broken" and ranked FIX NOW on its own dashboard while serving every GET with a 200.
+    The rule is the owner's: an app is up when it answers a plain request with OK.
+  - **The app drawer's status is the latest scan's probe (`UptimeRow.Current`), not today's
+    cell.** Cells are worst-wins, so one failed ping this morning made the drawer say "Down"
+    beside a home card saying healthy.
   - The pinger stops when the app does (F1 has no Always-On), which is why
     `.github/workflows/uptime-scan.yml` exists — see CI/CD below.
 - **A local scan uses YOUR `az login`, pinned to the personal tenant.** `launchSettings.json`
@@ -934,14 +947,10 @@ served until the facts happen to change. It produces the
 - **A global rule that must beat a page-root scoped rule needs (0,2,1), not (0,2,0).** A page root
   such as `.azure-ops-page` carries a scoped rule compiling to `.azure-ops-page[b-hash]` — (0,2,0)
   — and `App.razor` loads `PoPunkouterSoftware.Client.styles.css` **after** `modern-ui.css`, so a
-  global selector that merely ties loses the tie on document order. That is why every selector in
-  the `[data-snap-pager]` block is written `html .app-page[data-snap-pager]`. Without the leading
-  `html`, the scoped `display: grid` beat the pager's `display: block`, the six panes became six
-  grid rows sharing 756px at 126px each, and all six rendered on top of one another with their text
-  overlapping — on the phone layout, the only place the rule applies. It failed silently through
-  four E2E assertions because the panes still existed, still snapped, and still reported a
-  `scrollHeight` that fit inside the container; only their rendered height was wrong.
-  `Azure_MobilePortrait_PanesFitTheViewport` now measures the box, not just the content.
+  global selector that merely ties loses the tie on document order. Prefix it with `html`. The
+  removed phone pager learned this the hard way: its `display: block` lost to the scoped
+  `display: grid`, the panes became grid rows a sixth of a screen tall painting over one another,
+  and every E2E assertion that measured CONTENT still passed. Measure the rendered box.
 - **`Testing` is the hermetic switch.** It skips Key Vault entirely. Integration tests boot the real
   entry point via `WebApplicationFactory`, and collections run sequentially (`AssemblyInfo.cs`)
   because concurrent entry-point boots race.

@@ -61,8 +61,8 @@
                         @row.Name
                         @if (row.Errors24h is > 0)
                         {
-                            @* Up is not the same as working: an app answering HEAD while throwing
-                               on every real request shows green cells and this chip. *@
+                            @* Up is not the same as working: an app answering its home page while
+                               throwing on every real request shows green cells and this chip. *@
                             <span class="azure-uptime__chip is-error"><RadzenIcon Icon="bug_report" />@row.Errors24h</span>
                         }
                         @if (row.SecurityAlerts is > 0)

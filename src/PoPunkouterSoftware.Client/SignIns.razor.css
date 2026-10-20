@@ -153,6 +153,13 @@
     min-width: 140px;
 }
 
+/* Chromium and Safari draw their own clear button on type="search"; ours (which Firefox
+   needs) sat right beside it, two × in a row. */
+.signins-page ::deep .signins-search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    display: none;
+}
+
 .signins-page ::deep .signins-search-clear {
     background: transparent;
     border: 0;
@@ -259,8 +266,16 @@
     /* The person cell holds a name, a masked address and now two dates on one line each;
        letting it wrap is what keeps a long address from setting the column's min-content
        width and dragging the table wide again. */
+    /* A masked address wraps at its "@" (a <wbr> in SignInRoster), not anywhere: at 390px
+       "ma*******b@wsp.com" alone held the column wide enough to push the sign-in count past
+       the scroller's edge even after the date columns went. */
     .signins-page ::deep .app-table tbody th {
         white-space: normal;
+    }
+
+    .signins-page ::deep .app-table th,
+    .signins-page ::deep .app-table td {
+        padding-inline: var(--app-space-3xs);
     }
 }
 

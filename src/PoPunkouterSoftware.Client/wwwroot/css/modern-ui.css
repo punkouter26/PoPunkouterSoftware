@@ -149,10 +149,6 @@
     --app-content-width: 1280px;
     --app-header-height: 64px;
     --app-header-offset: 12px;
-    /* Vertical budget for a page that must fit the viewport: everything the fixed
-       chrome and the shell padding take before content gets a pixel. --app-viewport-fit
-       is what a full-height pane sizes itself to. */
-    --app-viewport-fit: calc(100dvh - var(--app-header-reserve) - var(--app-space-lg) - var(--app-space-xs));
     /* Header is position:fixed, so the body must reserve its footprint. */
     --app-header-reserve: calc(var(--app-header-height) + var(--app-header-offset) + 4px);
     --app-headline-font: "Aptos Display", "Segoe UI Variable Display", "Bahnschrift", "Trebuchet MS", sans-serif;
@@ -1371,18 +1367,12 @@ html.is-theme-reveal::view-transition-new(root) {
     }
 }
 
-/* ── Viewport-fit paging ─────────────────────────────────────────────────────────
-   Mobile-portrait only. A page marked [data-snap-pager] becomes a scroll-snap container
-   exactly one viewport tall, and each `.app-pane` child fills it: the visitor moves a
-   whole screen at a time instead of free-scrolling through an eight-section column, and
-   every pane is a self-contained answer.
-
-   This is PAGING, not truncation — nothing is hidden, and a pane whose content genuinely
-   exceeds one screen (the advanced diagnostics tree) opts out with `.app-pane--tall` and
-   scrolls internally rather than being cut.
-
-   Deliberately gated on `orientation: portrait` AND `hover: none`: a 700px-wide desktop
-   window is someone resizing a browser, and hijacking their scroll would be hostile. */
+/* ── Panes ───────────────────────────────────────────────────────────────────────
+   One question per section of /azure, stacked and scrolled ordinarily at every width. A
+   phone used to PAGE them — a scroll-snap container one viewport tall, a pane per screen,
+   injected dots — until 2026-10-19: each pane had to fill a whole screen, so "Needs
+   attention" was ~150px of content in a 756px box, the hero sat centred under 230px of
+   nothing, and four screens of paging held what fits in two of scrolling. */
 .app-pane {
     display: grid;
     align-content: start;
@@ -1400,142 +1390,6 @@ html.is-theme-reveal::view-transition-new(root) {
    card's min-content width and drag the whole pane past the viewport with it. */
 .app-pane > * {
     min-width: 0;
-}
-
-.app-pager-dots {
-    display: none;
-}
-
-/* Every selector in this block is written `html .app-page[data-snap-pager]`, never the bare
-   attribute, and BOTH extra parts are load-bearing.
-
-   The pager element is also a page root, and a page root carries a component-scoped rule -
-   `.azure-ops-page { display: grid }` in AzureDashboard.razor.css - which Blazor compiles to
-   `.azure-ops-page[b-hash]`, specificity (0,2,0). A bare `[data-snap-pager]` is (0,1,0) and
-   loses outright. `.app-page[data-snap-pager]` is (0,2,0), a TIE, which is decided by document
-   order - and App.razor loads PoPunkouterSoftware.Client.styles.css after this file, so the
-   scoped rule still wins. The leading `html` makes it (0,2,1), which wins on specificity and
-   therefore does not depend on link order at all.
-
-   Do NOT "simplify" these selectors. The page reverts to the collapsed-pane rendering
-   described below, and it reverts SILENTLY: the panes still exist, still snap, and still
-   report a scrollHeight that fits inside the container, so every assertion that measures
-   content keeps passing. They are simply a sixth of a screen tall each, painting on top of
-   one another. Azure_MobilePortrait_PanesFitTheViewport now measures the rendered box too. */
-@media (max-width: 720px) and (orientation: portrait) and (hover: none) {
-    html .app-page[data-snap-pager] {
-        /* `display: block`, overriding the page's own `display: grid`. This is load-bearing,
-           not tidiness: as a fixed-height grid the five panes become five implicit ROWS that
-           share the container's height between them, and each pane's `min-height: 100%`
-           then resolves against its own squeezed row rather than against the viewport — the
-           panes end up a fraction of a screen each and the snap positions are meaningless.
-           As blocks, the percentage resolves against the container's content height, which
-           is what "one pane, one screen" actually requires. */
-        display: block;
-        height: var(--app-viewport-fit);
-        overflow-y: auto;
-        /* The panes are constrained to the container width below, so nothing should reach
-           this. It is a guard against a single wide descendant turning a vertical pager into
-           a two-axis one, NOT a licence to clip: anything that hits it is a bug, and
-           Azure_MobilePortrait_PanesFitTheViewport measures scrollWidth to catch it. */
-        overflow-x: hidden;
-        scroll-snap-type: y mandatory;
-        overscroll-behavior-y: contain;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        gap: 0 !important;
-        padding-bottom: 0;
-    }
-
-    /* `width: 0`, not `display: none`: Chromium keeps reserving the classic scrollbar
-       gutter for a display:none scrollbar, which cost 15px of every pane's width. */
-    html .app-page[data-snap-pager]::-webkit-scrollbar {
-        width: 0;
-        height: 0;
-    }
-
-    html .app-page[data-snap-pager] > .app-pane {
-        /* Pin the pane to the container's width. Without this a wide descendant sets the
-           pane's min-content width and every pane inflates together, which reads as text
-           clipped at the right edge on every screen. */
-        width: 100%;
-        max-width: 100%;
-        min-width: 0;
-        scroll-snap-align: start;
-        scroll-snap-stop: always;
-        min-height: 100%;
-        /* `safe` is load-bearing: a pane whose content exceeds the viewport would otherwise
-           centre-overflow, clipping its TOP off the scroll container where it can never be
-           reached. With safe centring it falls back to start alignment and, because the pane
-           is min-height rather than height, simply grows and the container scrolls to it. A
-           pane can be too tall here; it can never be cut. */
-        align-content: safe center;
-        padding: var(--app-space-xs) 0 var(--app-space-lg);
-        box-sizing: border-box;
-    }
-
-    /* Content that cannot honestly be compressed into one screen. It still snaps to the
-       top of the viewport, then scrolls under its own steam — the alternative would be
-       to cut it, which the brief rules out. */
-    html .app-page[data-snap-pager] > .app-pane--tall {
-        min-height: 100%;
-        height: auto;
-        align-content: start;
-    }
-
-    /* Pagination dots, one per pane. Fixed to the right edge so they do not consume any
-       of the vertical budget the panes were given. Populated by initSnapPager()
-       in js/helpers.js, which only runs when the container actually snaps. */
-    .app-pager-dots {
-        display: flex;
-        position: fixed;
-        right: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        flex-direction: column;
-        /* No gap: each dot already carries 24px of hit area around a 7px mark, so a gap on
-           top of that would space the marks out like a ladder. */
-        gap: 0;
-        z-index: var(--app-z-header);
-    }
-
-    /* The DOT is 7px; the BUTTON is 24x24. They were the same element, which put six 7x7
-       touch targets down the edge of a phone screen — under a third of the WCAG 2.2 2.5.8
-       minimum, and hard to hit with a thumb whether or not a standard says so. The visible
-       dot is now a ::before inside a transparent 24px hit area, so the design is unchanged
-       and the target is not. */
-    .app-pager-dot {
-        display: grid;
-        place-items: center;
-        width: 24px;
-        height: 24px;
-        padding: 0;
-        border: 0;
-        background: none;
-        cursor: pointer;
-    }
-
-    .app-pager-dot::before {
-        content: "";
-        width: 7px;
-        height: 7px;
-        border: 1px solid var(--app-border-strong);
-        border-radius: 50%;
-        background: var(--app-surface-strong);
-        transition: background var(--app-dur-fast) var(--app-ease-smooth),
-                    transform var(--app-dur-fast) var(--app-ease-smooth);
-    }
-
-    .app-pager-dot.is-current::before {
-        background: var(--app-accent);
-        border-color: var(--app-accent);
-        transform: scale(1.35);
-    }
-
-    .app-pager-dot:focus-visible {
-        outline: 2px solid var(--app-accent);
-        outline-offset: 2px;
-    }
 }
 
 /* ── Motion ──────────────────────────────────────────────────────────────────
@@ -1568,10 +1422,10 @@ html.is-theme-reveal::view-transition-new(root) {
        measures, the first /azure pane;
      · nothing keeps a transform once it has arrived, so no permanent stacking context.
    Opacity and `translate` only — NO `scale`. Backwards fill applies the from-state to
-   every pane still below the fold, and `Azure_MobilePortrait_PanesFitTheViewport`
-   measures those off-screen panes' rendered height: a 0.97 scale failed it at exactly
-   733px of 756. `translate` moves a box without resizing it, and is a separate property
-   from `transform`, so it composes with a component's own hover transform.
+   every pane still below the fold, and a scale there changes those panes' measured size
+   (a 0.97 scale once failed a pane-geometry test at exactly 733px of 756). `translate`
+   moves a box without resizing it, and is a separate property from `transform`, so it
+   composes with a component's own hover transform.
    `animation-timeline` must come AFTER the `animation` shorthand, which resets it. */
 @keyframes app-rise {
     from {

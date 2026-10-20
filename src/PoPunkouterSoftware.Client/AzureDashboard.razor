@@ -10,25 +10,15 @@
 
 <PageTitle>PoPunkouterSoftware — Azure status</PageTitle>
 
-@* data-snap-pager: on mobile portrait ONLY (see the [data-snap-pager] block in
-   modern-ui.css), this container becomes exactly one viewport tall and each `.app-pane`
-   child fills it, so a phone visitor moves a whole screen at a time instead of free-
-   scrolling a long column. Nothing is hidden or cut - the panes are a grouping of
-   the same sections the desktop layout stacks, and the one body of content that genuinely
-   cannot be compressed into a screen (advanced diagnostics) opts out with
-   `.app-pane--tall` and scrolls under its own steam.
-
-   The panes are real elements at every viewport, not a mobile-only wrapper: on desktop
-   `.app-pane` is an ordinary grid section, which is also what gives the page its vertical
-   rhythm. Keep each pane to ONE question - that is what makes the paging legible, and
-   PortfolioUiTests.Azure_MobilePortrait_PanesFitTheViewport is what stops a new section
-   being dropped into whichever pane happens to be nearest. *@
+@* Four `.app-pane` sections, one question each — status, actions, spend, uptime — stacked
+   and scrolled ordinarily at every width. (A phone paged them one screen at a time until
+   2026-10-19; see the Panes block in modern-ui.css for why that went.) *@
 @* <main id="main-content">, not a bare <div>: the skip link in MainLayout targets
    `#main-content` on EVERY page, and this page did not have one — so "Skip to content"
    was a link to nothing here while working correctly on "/". It is also the page's only
    main landmark. `tabindex="-1"` makes it a programmatic focus target, matching
    Index.razor. *@
-<main id="main-content" class="app-page azure-ops-page" data-snap-pager tabindex="-1">
+<main id="main-content" class="app-page azure-ops-page" tabindex="-1">
 @* The error banner sits ALONGSIDE the dashboard, never instead of it — the rule
    Index.razor already follows for the catalog. A refresh whose summary reload fails is a
    STALE dashboard, not an empty one: `_summary` is left populated on failure (see
@@ -164,18 +154,15 @@ else if (_summary is not null)
     </section>
 
     @* ONE list of what needs doing, and it comes SECOND. It sat last, below the fold at
-       1440x1000 (y=1106 in a 935px viewport) and on the fifth page of the phone pager —
+       1440x1000 (y=1106 in a 935px viewport) and on the fifth page of the old phone pager —
        the only list on the page a visitor acts on, behind four that they only read.
 
        First paint shows the server's plain attention sentences; once Advanced diagnostics
        has loaded the full report, the same section shows the ranked queue (commands, impact,
        restart) instead. They used to be two lists on one page — this one plus a "Full priority
        queue" further down — and the security/cleanup count badges that sat in this heading
-       repeated two of the sentences directly beneath them.
-
-       --tall while the queue is showing: it is as long as the estate is broken, and it
-       scrolls rather than being cut. *@
-    <section class="app-pane azure-pane-actions @(showQueue ? "app-pane--tall" : null)">
+       repeated two of the sentences directly beneath them. *@
+    <section class="app-pane azure-pane-actions">
     <section class="azure-attention-summary">
         <div class="azure-section-heading">
             <h2>Needs attention</h2>
@@ -264,11 +251,9 @@ else if (_summary is not null)
     </section>
 
     @* The two drawers. Both are native <dialog>s INSIDE this page (see AppDrawer.razor for
-       why not Radzen's side dialog): closed they are display:none and take no pane, so the
-       snap pager and the desktop column never see them; open they sit in the top layer.
-
-       Advanced diagnostics used to expand inline as an `.app-pane--tall` pane that pushed
-       everything below it down and was the phone pager's one declared exception. *@
+       why not Radzen's side dialog): closed they are display:none and take no space; open
+       they sit in the top layer. Advanced diagnostics used to expand inline as a pane that
+       pushed everything below it down. *@
     <AppDrawer @ref="_diagnosticsDrawer" Title="Advanced diagnostics">
         @* Banner alongside, not instead of — see the note on the page-level banner above. *@
         @if (!string.IsNullOrWhiteSpace(_advancedError))

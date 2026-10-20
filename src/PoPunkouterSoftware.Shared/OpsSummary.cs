@@ -60,6 +60,12 @@ public record OpsSummary
     /// it without shipping the full report graph. Null before any scan has populated it.
     /// </summary>
     public AiSummaryResult? AiSummary { get; init; }
+
+    /// <summary>
+    /// True while a scan is running server-side, so a visitor who started one, left and came
+    /// back sees its progress (and can cancel it) instead of a Rescan button that answers 409.
+    /// </summary>
+    public bool RefreshInProgress { get; init; }
 }
 
 public record OpsMetricPoint(string Label, double Value);

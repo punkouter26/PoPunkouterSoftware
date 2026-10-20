@@ -68,10 +68,10 @@ public record UptimeRow
     public List<int> DeployDays { get; init; } = new();
 
     /// <summary>
-    /// Days since this row's most recent down or degraded day — the streak on the home-page
-    /// card and the README badge. Equal to the window length when the window holds no bad day
-    /// (the UI says "30+"), and null when the service was never observed, because an
-    /// unobserved service has no streak to claim.
+    /// OBSERVED days since this row's most recent down or degraded day — the streak on the
+    /// home-page card and the README badge. Unobserved days count for nothing, so it reaches the
+    /// window length (the UI says "30+") only when every day was seen and clean; null when the
+    /// service was never observed, because an unobserved service has no streak to claim.
     /// </summary>
     public int? CleanDays { get; init; }
 
@@ -83,6 +83,13 @@ public record UptimeRow
 
     /// <summary>Open Dependabot alerts on the app's repo at the latest scan. Null when unknown.</summary>
     public int? SecurityAlerts { get; init; }
+
+    /// <summary>
+    /// The latest scan's probe verdict as an <see cref="UptimeState"/> — the same fact the home
+    /// card's badge shows. Today's cell is worst-wins, so one failed ping this morning would
+    /// call an app that answers 200 right now "Down". Null when the latest scan did not see it.
+    /// </summary>
+    public string? Current { get; init; }
 }
 
 /// <summary>

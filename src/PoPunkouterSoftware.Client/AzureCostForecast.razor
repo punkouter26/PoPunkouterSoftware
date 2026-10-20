@@ -39,7 +39,9 @@
                 @if (Forecast.PercentOfBudget is int pct)
                 {
                     <div class="azure-forecast__pct">@pct%</div>
-                    <div class="azure-forecast__caption">of budget</div>
+                    @* "projected": it sits beside "Spent this month", and 18% of a $40 budget
+                       read as the $4.34 spent when it is the $7.08 projection. *@
+                    <div class="azure-forecast__caption">projected</div>
                 }
                 else
                 {

@@ -32,11 +32,11 @@
         {
             <tr @key="person.MaskedEmail + person.DisplayName">
                 <th scope="row">
-                    <span class="signin-person__name">@person.DisplayName</span>
+                    <span class="signin-person__name">@BreakAtSign(person.DisplayName)</span>
                     @* Same string twice when the provider sent no real name — see SignInFeed. *@
                     @if (person.MaskedEmail != person.DisplayName)
                     {
-                        <span class="signin-person__email">@person.MaskedEmail</span>
+                        <span class="signin-person__email">@BreakAtSign(person.MaskedEmail)</span>
                     }
                     @* Phone-only stand-in for the two columns hidden below 640px. The
                        sr-only prefixes are what stop these reading as two bare relative
@@ -79,6 +79,24 @@
     [Parameter, EditorRequired] public IReadOnlyList<SignInPerson> People { get; set; } = [];
 
     private IReadOnlyList<SignInPerson>? _rendered;
+
+    /// <summary>
+    /// A masked address has no break opportunity, so at 390px one held the person column wide
+    /// enough to push the sign-in count off the card. A &lt;wbr&gt; before the @ lets it wrap
+    /// there — "pu*******6" / "@gmail.com" — instead of mid-domain.
+    /// </summary>
+    private static RenderFragment BreakAtSign(string text) => builder =>
+    {
+        var at = text.IndexOf('@');
+        if (at <= 0)
+        {
+            builder.AddContent(0, text);
+            return;
+        }
+        builder.AddContent(1, text[..at]);
+        builder.AddMarkupContent(2, "<wbr>");
+        builder.AddContent(3, text[at..]);
+    };
 
     /// <summary>
     /// The roster is a pure projection of <see cref="People"/>, and the page REPLACES the

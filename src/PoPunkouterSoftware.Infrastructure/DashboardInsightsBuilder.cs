@@ -470,7 +470,9 @@ public static class DashboardInsightsBuilder
                     ScansObserved = seen.Total,
                     UptimePercent = seen.Total == 0 ? 100 : (int)Math.Round(seen.Healthy * 100d / seen.Total),
                     DeployDays = deployDays.TryGetValue(kvp.Key, out var d) ? d.ToList() : new List<int>(),
-                    CleanDays = seen.Total == 0 ? null : lastBad < 0 ? windowDays : windowDays - 1 - lastBad,
+                    // Observed days only: an unobserved day is not a clean one, so an app first
+                    // seen yesterday has a 1-day streak, not the whole window.
+                    CleanDays = seen.Total == 0 ? null : kvp.Value.Skip(lastBad + 1).Count(c => c != UptimeState.NoData),
                 };
             })
             // Worst uptime first: the grid exists to surface problems, not to be alphabetical.
@@ -515,6 +517,10 @@ public static class DashboardInsightsBuilder
             Errors24h = errors?.Count24h,
             TopError = errors?.TopType,
             SecurityAlerts = service?.OpenSecurityAlerts,
+            Current = service is null ? null
+                : ServiceHealth.IsHealthy(service.HttpStatus) ? UptimeState.Healthy
+                : ServiceHealth.IsBroken(service.HttpStatus) ? UptimeState.Broken
+                : UptimeState.Degraded,
         };
     }
 }

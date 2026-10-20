@@ -207,7 +207,10 @@ public partial class AzureReportService
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Head, url);
+            // GET, headers only — the same request ServicePingerService sends. This was HEAD, and
+            // an ASP.NET app with no HEAD route answers 405: this site's own production instance
+            // was ranked "FIX NOW" on its own dashboard while serving every GET with a 200.
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
             using var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             sw.Stop();
             var isAzureError = resp.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.BadGateway;

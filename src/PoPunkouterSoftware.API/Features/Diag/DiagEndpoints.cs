@@ -61,7 +61,8 @@ internal static class DiagEndpoints
 
         diag.MapGet("/summary",async (
             IWebHostEnvironment env, AzureReportStore store, UptimeSampleStore uptimeSamples,
-            IConfiguration config, TimeProvider clock, ILogger<Program> logger, CancellationToken ct) =>
+            ReportRefreshRunner runner, IConfiguration config, TimeProvider clock,
+            ILogger<Program> logger, CancellationToken ct) =>
         {
             var report = await LoadLatestReportAsync(env, store, logger, ct);
             if (report is null)
@@ -74,7 +75,8 @@ internal static class DiagEndpoints
             // never throws — an empty list just means the grid falls back to scans alone.
             var samples = await uptimeSamples.LoadRecentAsync(DashboardInsightsBuilder.UptimeWindowDays, now, ct);
             return Results.Json(BuildOpsSummary(
-                report, history, config.GetValue<double?>("Budget:MonthlyUsd"), now.UtcDateTime, samples));
+                report, history, config.GetValue<double?>("Budget:MonthlyUsd"), now.UtcDateTime, samples)
+                with { RefreshInProgress = runner.IsRunning });
         })
         .WithName("GetOpsSummary");
 

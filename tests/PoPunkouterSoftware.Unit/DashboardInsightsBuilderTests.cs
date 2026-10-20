@@ -259,7 +259,7 @@ public class UptimeHeatmapTests
         map.Rows.Should().ContainSingle().Which.Cells.Should().HaveCount(7);
         map.Rows[0].Cells.Count(c => c == UptimeState.NoData).Should().Be(6);
         map.Rows[0].DeployDays.Should().Equal(4);
-        map.Rows[0].CleanDays.Should().Be(7, "no bad day in the window is the whole window clean");
+        map.Rows[0].CleanDays.Should().Be(1, "only the one observed day counts — six blank days are not a clean streak");
         map.Rows[0].Should().Match<UptimeRow>(r =>
             r.Errors24h == 12 && r.TopError == "System.TimeoutException" && r.SecurityAlerts == 3);
     }

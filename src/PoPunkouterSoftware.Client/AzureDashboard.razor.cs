@@ -175,6 +175,11 @@ public partial class AzureDashboard
     {
         await LoadConfigAsync();
         await LoadSummaryAsync();
+
+        // A scan started before this visit (or before the visitor navigated away and back):
+        // show its progress and its Cancel button rather than a Rescan that can only 409.
+        if (_summary?.RefreshInProgress == true && _managementActionsEnabled)
+            await RunRefreshAsync(start: false);
     }
 
     private async Task LoadConfigAsync()
@@ -287,14 +292,17 @@ public partial class AzureDashboard
         }
     }
 
-    private async Task RefreshAsync()
+    private Task RefreshAsync() => RunRefreshAsync(start: true);
+
+    /// <param name="start">False joins a scan the server is already running.</param>
+    private async Task RunRefreshAsync(bool start)
     {
         _refreshing = true;
         _refreshFailed = false;
         _refreshFailureMessage = null;
         _userCancelled = false;
         _progressPercent = 0;
-        _progressStep = "Starting…";
+        _progressStep = start ? "Starting…" : "Scan already running…";
         // Keep the previous report in view during the scan — do not null it here.
         // The report will be replaced once the scan completes and LoadReportAsync is called again.
         _refreshCts = new CancellationTokenSource(TimeSpan.FromSeconds(RefreshTimeoutSeconds));
@@ -310,17 +318,10 @@ public partial class AzureDashboard
 
         try
         {
-            var resp = await Http.PostAsync("/api/diag/refresh", null);
-            if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
-            {
-                NotificationService.Notify(NotificationSeverity.Warning, "Already running", "A refresh is already in progress.");
-                await SfxAsync("audioKit.refreshEnd", "cancelled");
-                _refreshing = false;
-                StateHasChanged();
-                return;
-            }
-
-            if (!resp.IsSuccessStatusCode)
+            // 409 means a scan is already running (another tab, the nightly workflow, a
+            // visit-triggered auto-scan): follow that one rather than turn the visitor away.
+            using var resp = start ? await Http.PostAsync("/api/diag/refresh", null) : null;
+            if (resp is { IsSuccessStatusCode: false } && resp.StatusCode != System.Net.HttpStatusCode.Conflict)
             {
                 // 403 (management actions disabled), 401 (bad key), 5xx — previously only 409
                 // was handled, so these fell into the polling loop and were misreported as a
@@ -447,21 +448,20 @@ public partial class AzureDashboard
             if (!_refreshing)
                 break;
 
-            if (_hub is null || _hub.State != HubConnectionState.Connected)
+            // Polled even with the hub up: a page that JOINED a running scan may have connected
+            // after its final "done" message went out, and would otherwise wait for the timeout.
+            try
             {
-                try
+                var latest = await Http.GetFromJsonAsync("/api/diag/summary", AppJsonContext.Default.OpsSummary, ct);
+                if (latest is not null && (latest.GeneratedAt != initialGeneratedAt || !latest.RefreshInProgress))
                 {
-                    var latest = await Http.GetFromJsonAsync("/api/diag/summary", AppJsonContext.Default.OpsSummary, ct);
-                    if (latest is not null && latest.GeneratedAt != initialGeneratedAt)
-                    {
-                        _refreshing = false;
-                        break;
-                    }
+                    _refreshing = false;
+                    break;
                 }
-                catch
-                {
-                    // Non-fatal transient HTTP error during polling
-                }
+            }
+            catch
+            {
+                // Non-fatal transient HTTP error during polling
             }
         }
         ct.ThrowIfCancellationRequested();

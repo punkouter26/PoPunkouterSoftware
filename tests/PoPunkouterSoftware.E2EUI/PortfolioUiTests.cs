@@ -167,15 +167,17 @@ public class PortfolioUiTests : IAsyncLifetime
         audio[0].Should().BeFalse("sound must default to off");
         audio[1].Should().BeFalse("no AudioContext may be constructed before the visitor asks for one");
 
-        // The header [data-sound-toggle] went on 2026-10-05; the command palette is the
-        // surviving entry point. Choosing the command is itself the user gesture the autoplay
-        // policy requires, so one Enter must both flip the preference and bring a live context
-        // into existence.
-        await page.Keyboard.PressAsync("Control+k");
-        await page.Locator(".app-palette-input").FillAsync("toggle audio");
-        await page.Keyboard.PressAsync("Enter");
+        // /settings is the only home of the sound preference (the palette's toggle went on
+        // 2026-10-19). The click is itself the user gesture the autoplay policy requires, so
+        // one click must both flip the preference and bring a live context into existence.
+        // Turned back off afterwards: the choice persists in localStorage.
+        await page.GotoAsync($"{BaseUrl}/settings", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        var soundOn = page.GetByRole(AriaRole.Group, new() { Name = "Sound" }).GetByRole(AriaRole.Button, new() { Name = "On" });
+        await Assertions.Expect(soundOn).ToBeEnabledAsync();
+        await soundOn.ClickAsync();
         (await page.EvaluateAsync<bool[]>("() => [window.audioKit.enabled, window.audioKit.stats().contextCreated]"))
             .Should().Equal([true, true], $"turning sound on must enable it and construct the context at {label}");
+        await page.GetByRole(AriaRole.Group, new() { Name = "Sound" }).GetByRole(AriaRole.Button, new() { Name = "Off" }).ClickAsync();
     }
 
     /// <summary>
@@ -297,73 +299,39 @@ public class PortfolioUiTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// /azure pages instead of scrolling at mobile portrait.
+    /// /azure on a phone: an ordinary scrolling page (the one-pane-per-screen pager went on
+    /// 2026-10-19), whose uptime grid opens on TODAY.
     ///
-    /// <para>Three things have to hold together for that to be true rather than merely
-    /// configured: the container must actually be snapping (the CSS gate is
-    /// <c>portrait AND hover:none</c>, so a wrong gate silently yields a normal long page);
-    /// the dot strip must have one dot per pane, since a snap container with no affordance
-    /// reads as a page that has mysteriously stopped scrolling; and each ordinary pane must
-    /// genuinely FIT one screen. The last is the one that rots — it is what stops a new
-    /// section being dropped into whichever pane happens to be nearest.</para>
+    /// <para>The grid is 30 columns in a ~320px scroller. It used to open at its left edge —
+    /// the oldest day — so on an estate with a few days of history the card showed nothing but
+    /// empty boxes, with every cell that had data off-screen to the right. The last day column
+    /// of the first row must be inside the scroller's visible box on first paint.</para>
     ///
-    /// <para><c>.app-pane--tall</c> is excluded on purpose. The ranked priority queue cannot
-    /// honestly be compressed to a screen, so it scrolls internally instead of being cut;
-    /// that is a declared exception, not a failure. It is not loaded here anyway. (Advanced
-    /// diagnostics was the other exception until it moved into a drawer.)</para>
+    /// <para>Element bounds, not scrollWidth, for the overflow half, for the reason
+    /// <see cref="Users_RostersRender_AndNothingOverflowsTheBody"/> gives.</para>
     /// </summary>
     [Fact]
-    public async Task Azure_MobilePortrait_PanesFitTheViewport()
+    public async Task Azure_MobilePortrait_UptimeOpensOnToday_AndNothingOverflows()
     {
         var page = await NewPageAsync(390, 844, isMobile: true);
         await page.GotoAsync($"{BaseUrl}/azure", new() { WaitUntil = WaitUntilState.NetworkIdle });
-        await page.WaitForSelectorAsync(".azure-ops-page .app-pane", new() { Timeout = 40_000 });
-        // The dots are injected by a MutationObserver-driven rAF in js/helpers.js, so they
-        // land a frame after the panes do.
-        await page.WaitForSelectorAsync(".app-pager-dot", new() { Timeout = 10_000 });
+        await page.WaitForSelectorAsync(".azure-uptime__scroll", new() { Timeout = 40_000 });
 
-        var snapType = await page.EvaluateAsync<string>(
-            "() => getComputedStyle(document.querySelector('[data-snap-pager]')).scrollSnapType");
-        snapType.Should().NotBe("none", "mobile portrait must page, not scroll freely");
-
-        var counts = await page.EvaluateAsync<int[]>(
-            "() => [document.querySelectorAll('[data-snap-pager] > .app-pane').length, " +
-            "document.querySelectorAll('.app-pager-dot').length]");
-        counts[0].Should().BeGreaterThan(1, "paging needs more than one pane");
-        counts[1].Should().Be(counts[0], "there must be exactly one dot per pane");
-
-        // Every ordinary pane must fit the pager's own client height.
-        var overflows = await page.EvaluateAsync<string[]>(@"() => {
-            const pager = document.querySelector('[data-snap-pager]');
-            const budget = pager.clientHeight;
-            return [...pager.querySelectorAll(':scope > .app-pane')]
-                .filter(p => !p.classList.contains('app-pane--tall'))
-                .filter(p => p.scrollHeight > budget + 1)
-                .map(p => p.className + ' needs ' + p.scrollHeight + 'px of ' + budget + 'px');
+        var todayVisible = await page.EvaluateAsync<bool>(@"() => {
+            const scroller = document.querySelector('.azure-uptime__scroll').getBoundingClientRect();
+            const cells = document.querySelector('.azure-uptime__grid').querySelectorAll('.azure-uptime__cell');
+            const days = document.querySelectorAll('.azure-uptime__label').length;
+            const today = cells[cells.length / days - 1].getBoundingClientRect();
+            return today.left >= scroller.left - 1 && today.right <= scroller.right + 1;
         }");
-        overflows.Should().BeEmpty("every ordinary pane must fit one screen at 390x844");
+        todayVisible.Should().BeTrue("a phone must open the uptime grid on the newest day, not the oldest");
 
-        // …and must actually BE a screen tall. The assertion above compares a pane's CONTENT
-        // height to the container's, which every pane passes while being a sixth of a screen
-        // tall — which is exactly what happened: `[data-snap-pager] { display: block }` lost
-        // on specificity to the scoped `.azure-ops-page { display: grid }`, the panes became
-        // six grid rows sharing 756px at 126px each, and all six rendered on top of one
-        // another with their content overflowing. Every check here passed throughout. Measure
-        // the box the visitor sees, not just the content inside it.
-        var geometry = await page.EvaluateAsync<string[]>(@"() => {
-            const pager = document.querySelector('[data-snap-pager]');
-            const budget = pager.clientHeight;
-            const bad = [];
-            if (getComputedStyle(pager).display !== 'block')
-                bad.push('pager display is ' + getComputedStyle(pager).display + ', not block');
-            for (const p of pager.querySelectorAll(':scope > .app-pane')) {
-                const h = p.getBoundingClientRect().height;
-                if (h < budget - 1)
-                    bad.push(p.className + ' renders ' + Math.round(h) + 'px of a ' + budget + 'px screen');
-            }
-            return bad;
-        }");
-        geometry.Should().BeEmpty("each pane must fill the screen it is supposed to be");
+        var overhang = await page.EvaluateAsync<string[]>(
+            @"() => [...document.querySelectorAll('main.azure-ops-page *')]
+                .filter(e => !e.closest('.azure-uptime__scroll, dialog'))
+                .filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+                .map(e => e.tagName + '.' + e.className + ' @' + Math.round(e.getBoundingClientRect().right) + 'px')");
+        overhang.Should().BeEmpty("nothing outside the uptime scroller may run off the right of a 390px screen");
     }
 
     /// <summary>
@@ -534,6 +502,12 @@ public class PortfolioUiTests : IAsyncLifetime
             // a MutationObserver; auditing before it has run reports "syncSync"-style names
             // (label-content-name-mismatch) that no visitor ever meets.
             await page.WaitForFunctionAsync("() => !document.querySelector('.rzi:not([aria-hidden])')");
+            // `.app-page` fades in from opacity 0. /settings is "ready" the instant its buttons
+            // enable, so under load axe measured its subtitle mid-fade and reported a contrast
+            // failure no visitor sees. Let every finite time-based animation land first.
+            await page.EvaluateAsync(@"() => Promise.all(document.getAnimations()
+                .filter(a => a.timeline === document.timeline && a.effect?.getTiming().iterations !== Infinity)
+                .map(a => a.finished.catch(() => {})))");
 
             (await page.Locator("main").CountAsync()).Should().Be(1, $"{route} needs exactly one main landmark at {label}");
             (await page.EvaluateAsync<bool>(@"() => {
@@ -655,6 +629,15 @@ public class PortfolioUiTests : IAsyncLifetime
                 .filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
                 .map(e => e.tagName + '.' + e.className + ' @' + Math.round(e.getBoundingClientRect().right) + 'px')");
         overhang.Should().BeEmpty($"nothing outside a scroll container may run off the right at {label}");
+
+        // …and the roster's scroller is an escape hatch, not the layout: at 390px the sign-in
+        // count column sat past its edge, cut mid-number, with nothing hinting it scrolled.
+        if (unavailable == 0)
+        {
+            var rosterOverflow = await page.EvaluateAsync<int>(
+                "() => { const s = document.querySelector('.app-table-scroll'); return s.scrollWidth - s.clientWidth; }");
+            rosterOverflow.Should().BeLessThanOrEqualTo(1, $"the roster must fit its card without a sideways scroll at {label}");
+        }
 
         await CaptureAsync(page, $"09-users-{label}.png");
     }

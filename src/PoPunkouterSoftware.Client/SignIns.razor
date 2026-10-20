@@ -9,7 +9,7 @@
 
 @* The third route, and the first one added since the app was built around exactly two.
    It is a LIST, like the catalogue on "/" and unlike the pane-shaped /azure, so it scrolls
-   ordinarily and carries no [data-snap-pager]: paging a roster fights the reader, and the
+   ordinarily, like every page: paging a roster fights the reader, and the
    row count is not knowable in advance the way /azure's six panes are. *@
 <main id="main-content" class="app-page signins-page" tabindex="-1">
     <header class="signins-header">
@@ -122,6 +122,10 @@
                              aria-label="Sign-in roster. Scrolls sideways when the table is wider than this window.">
                             <SignInRoster People="@FilteredPeople" />
                         </div>
+                        @if (FilteredPeople.Count == 0 && !string.IsNullOrWhiteSpace(_personSearch))
+                        {
+                            <p class="signin-empty" role="status">No one matches “@_personSearch”.</p>
+                        }
                     </article>
 
                     @* One table, not two rankings. It was "Reach per app" (bars) over "Cost per

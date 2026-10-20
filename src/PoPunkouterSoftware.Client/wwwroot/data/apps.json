@@ -58,21 +58,6 @@
       "githubRepo": "punkouter26/PoMode"
     },
     {
-      "id": "poredoimage-web",
-      "name": "PoRedoImage",
-      "description": "Upload a photo and get it back transformed — AI restyles, memes and art-style variations in a few seconds, saved to a gallery that follows you between sessions.",
-      "category": "productivity",
-      "status": "active",
-      "technologies": [
-        "Azure App Service",
-        "C#",
-        "Blazor"
-      ],
-      "url": "https://poredoimage-web.azurewebsites.net",
-      "healthUrl": "https://poredoimage-web.azurewebsites.net/health/live",
-      "githubRepo": "punkouter26/PoRedoImage"
-    },
-    {
       "id": "app-porepolinetracker",
       "name": "PoRepoLineTracker",
       "description": "Track lines of code across all your GitHub repositories over time — point it at an account and watch each repo grow or shrink.",

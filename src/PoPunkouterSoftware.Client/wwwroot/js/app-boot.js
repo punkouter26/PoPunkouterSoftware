@@ -69,13 +69,4 @@
             setTimeout(function () { b.className = ''; }, 300);
         }, 200);
     };
-
-    // Register Service Worker for offline PWA functionality
-    if ('serviceWorker' in navigator && window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
-        window.addEventListener('load', function () {
-            navigator.serviceWorker.register('/service-worker.js').catch(function () {
-                // Non-fatal if offline/unsupported
-            });
-        });
-    }
 })();
