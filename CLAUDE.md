@@ -24,8 +24,8 @@ its four controls saved and read by nothing, two duplicating palette commands, a
 icon rendering as the word "PALETTE". The owner then asked for a settings page that puts
 optional features behind toggles defaulting to the simplest set, and the rebuild keeps the
 rules the first one broke: it is the **only** home of theme, density, sound and effects (the
-palette's toggles were removed, it has one "Go to Settings" row), it has a header link (on
-desktop — see "A phone header is just the brand" below), every
+palette's toggles were removed, it has one "Go to Settings" row), it is reachable from Ctrl+K (its header link is hidden since 2026-10-20 — see "The header
+is just the brand" below), every
 control is read by something, and every default is the simplest choice. All four go through
 `window.appSettings` in `theme-kit.js`; each value stays owned by the kit that applies it. The
 default sign-in window is still `/users` remembering the last window picked (`pops:signin-days`).
@@ -545,11 +545,12 @@ proves a context and program were created, not that anything reached the screen.
   of the deleted Session/Logout slot, had no caller left, and were removed under the
   "every endpoint needs a consumer" rule — `/api/config` is now the only route in the Config slice.
   Do not add a real identity provider unless the owner reverses this.
-- **A phone header is just the brand.** Below 768px the four links are `display: none` and there
-  is no hamburger or drawer (owner's call, 2026-10-19 — the drawer dropped over the page). On a
-  phone the other pages are reached from the brand link home, the 404 page's list, Ctrl+K on a
-  keyboard, or a typed URL. The empty `.app-topbar-session` div is a spacer that keeps the
-  desktop nav centred; it is not a leftover.
+- **The header is just the brand, at every width.** The four links stay in `MainLayout`'s markup
+  but are `display: none` everywhere (owner's call, 2026-10-20: "the links exist but hidden from
+  UI"; phones only since 2026-10-19, when a hamburger drawer that dropped over the page went).
+  The other pages are reached from the brand link home, the 404 page's list, Ctrl+K, or a typed
+  URL. The palette's View Transition still looks the link up and simply finds it unrendered.
+  The empty `.app-topbar-session` div is a leftover spacer from the centred nav.
 - **No login UI in the header, deliberately.** `MainLayout.razor` is statically server-rendered
   (`<Routes />` carries no render mode), so `@onclick` never fires and its injected `HttpClient` has
   no `BaseAddress`. A Session/Logout slot and "MOCK DATA" banner were built, could never render, and

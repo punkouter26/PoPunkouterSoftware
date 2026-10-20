@@ -42,8 +42,8 @@
         <nav class="app-topbar" aria-label="Primary navigation">
             <a href="/" class="app-topbar-brand">PoPunkouterSoftware</a>
 
-            @* Centre region. HIDDEN below 768px — the owner's call (2026-10-19): no
-               hamburger, no drawer, the header is just the brand on a phone. *@
+            @* Centre region. HIDDEN at every width (MainLayout.razor.css) — the owner's
+               call (2026-10-20): the header is just the brand. Kept in the markup on purpose. *@
             <div class="app-topbar-nav">
                 <a href="/" class="app-topbar-link @NavClass("/")">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>Apps

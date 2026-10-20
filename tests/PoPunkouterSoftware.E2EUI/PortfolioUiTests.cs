@@ -67,13 +67,10 @@ public class PortfolioUiTests : IAsyncLifetime
         response!.Ok.Should().BeTrue();
         (await page.TitleAsync()).Should().Contain("PoPunkouterSoftware");
         await Assertions.Expect(page.GetByText("PoPunkouterSoftware").First).ToBeVisibleAsync();
-        // The top-nav links show on desktop and are HIDDEN on a phone — no hamburger, no
-        // drawer (owner's call, 2026-10-19).
+        // The top-nav links are in the markup but HIDDEN at every width (owner's call, 2026-10-20).
         var azureLink = page.Locator("a.app-topbar-link[href='/azure']");
-        if (isMobile)
-            await Assertions.Expect(azureLink).ToBeHiddenAsync();
-        else
-            await Assertions.Expect(azureLink).ToBeVisibleAsync();
+        await Assertions.Expect(azureLink).ToHaveCountAsync(1);
+        await Assertions.Expect(azureLink).ToBeHiddenAsync();
         await Assertions.Expect(page.Locator(".app-portfolio-card").First).ToBeVisibleAsync();
         await CaptureAsync(page, $"01-home-{label}.png");
     }
