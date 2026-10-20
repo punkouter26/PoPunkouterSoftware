@@ -23,62 +23,10 @@ window.downloadTextFile = function (filename, content, mimeType) {
    MainLayout is statically server-rendered (`<Routes />` carries no render mode;
    only the page components are InteractiveWebAssembly). Its OnAfterRenderAsync
    therefore never runs, so the previous `JS.InvokeVoidAsync("initNavbarScroll")`
-   was never invoked and the floating navbar was inert. Both behaviours now
-   self-initialise from this file, which the host page always loads.
+   was never invoked and the floating navbar was inert. It now self-initialises
+   from this file, which the host page always loads. (A mobile hamburger drawer
+   lived here too until 2026-10-19; a phone header is now just the brand.)
    ═════════════════════════════════════════════════════════════════════════════ */
-
-/**
- * Nav drawer: open/close the mobile topbar drawer.
- *
- * Replaces a ~200-character inline `onclick` that mutated classList, aria-expanded,
- * and textContent directly in the markup. Adds Escape-to-close and click-outside,
- * which the inline version had no room for.
- */
-window.initTopbarDrawer = function () {
-    const trigger = document.querySelector('.app-topbar-menu');
-    const drawer = document.getElementById('app-topbar-drawer');
-    if (!trigger || !drawer) return;
-    if (trigger.dataset.wired === '1') return;
-    trigger.dataset.wired = '1';
-
-    const setOpen = (open) => {
-        document.body.classList.toggle('topbar-open', open);
-        // aria-expanded only describes reality when the drawer can actually collapse.
-        // The trigger is `display: none` on desktop (>= 768px) and the centre nav is
-        // always visible, so an "expanded" attribute there lied: a screen reader
-        // heard "expanded" on a desktop where there was no drawer to expand. Hide
-        // the attribute on desktop by clearing it; on mobile it tracks the state.
-        const canCollapse = getComputedStyle(trigger).display !== 'none';
-        if (canCollapse) {
-            trigger.setAttribute('aria-expanded', String(open));
-        } else {
-            trigger.removeAttribute('aria-expanded');
-        }
-        const icon = trigger.firstElementChild;
-        if (icon) icon.textContent = open ? 'close' : 'menu';
-    };
-    const isOpen = () => document.body.classList.contains('topbar-open');
-
-    window.closeTopbarDrawer = () => setOpen(false);
-
-    trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        setOpen(!isOpen());
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isOpen()) {
-            setOpen(false);
-            trigger.focus();
-        }
-    });
-
-    document.addEventListener('click', (e) => {
-        if (isOpen() && !drawer.contains(e.target) && !trigger.contains(e.target)) {
-            setOpen(false);
-        }
-    });
-};
 
 /**
  * Track page scroll state to float/hide navbar navigation bar.
@@ -275,7 +223,6 @@ window.appRepairRadzenA11y = (function () {
    case where the script is ever moved into <head>. */
 (function bootstrapTopbar() {
     const start = () => {
-        window.initTopbarDrawer();
         window.initNavbarScroll();
         window.appRepairRadzenA11y.start();
     };

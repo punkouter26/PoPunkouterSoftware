@@ -28,9 +28,9 @@
    the header footprint via --app-header-reserve instead. *@
 <RadzenLayout>
     <RadzenHeader>
-        @* Spatial contract — Left: branding · Center: actions · Right: menu trigger.
-           Brand and the right region are both `flex: 1 1 0` so the centre nav is
-           optically centred.
+        @* Spatial contract — Left: branding · Center: links · Right: an empty spacer.
+           Brand and the spacer are both `flex: 1 1 0` so the centre nav is optically
+           centred.
 
            This layout is STATICALLY server-rendered (<Routes /> carries no render mode;
            only the page components are InteractiveWebAssembly). Nothing here may depend
@@ -38,15 +38,13 @@
            @onclick never fires, and the server's injected HttpClient has no BaseAddress
            so a relative-URI fetch throws. A "MOCK DATA" badge and a Session/Logout slot
            lived here and could never render for exactly those reasons; both were removed
-           rather than left as chrome that only looks functional. Drawer behaviour is
-           wired from js/helpers.js, which is why it works. *@
+           rather than left as chrome that only looks functional. *@
         <nav class="app-topbar" aria-label="Primary navigation">
             <a href="/" class="app-topbar-brand">PoPunkouterSoftware</a>
 
-            @* Centre region. Below 768px this collapses into a drawer; the toggle is
-               wired from js/helpers.js (initTopbarDrawer) because MainLayout is
-               statically server-rendered and cannot run Blazor event handlers. *@
-            <div id="app-topbar-drawer" class="app-topbar-nav">
+            @* Centre region. HIDDEN below 768px — the owner's call (2026-10-19): no
+               hamburger, no drawer, the header is just the brand on a phone. *@
+            <div class="app-topbar-nav">
                 <a href="/" class="app-topbar-link @NavClass("/")">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>Apps
                 </a>
@@ -61,12 +59,7 @@
                 </a>
             </div>
 
-            <div class="app-topbar-session">
-                <button type="button" class="app-topbar-menu" aria-expanded="false" aria-controls="app-topbar-drawer"
-                        aria-label="Toggle navigation menu">
-                    <span class="material-symbols-outlined" aria-hidden="true">menu</span>
-                </button>
-            </div>
+            <div class="app-topbar-session" aria-hidden="true"></div>
         </nav>
     </RadzenHeader>
     <RadzenBody>

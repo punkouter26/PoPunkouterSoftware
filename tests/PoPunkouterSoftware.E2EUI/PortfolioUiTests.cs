@@ -67,13 +67,13 @@ public class PortfolioUiTests : IAsyncLifetime
         response!.Ok.Should().BeTrue();
         (await page.TitleAsync()).Should().Contain("PoPunkouterSoftware");
         await Assertions.Expect(page.GetByText("PoPunkouterSoftware").First).ToBeVisibleAsync();
-        // The in-page "Azure status" link was retired in an earlier design pass; the route to
-        // Azure now lives in the top-nav (MainLayout). On mobile that nav collapses into the
-        // hamburger drawer, so assert the trigger there and the link itself on desktop.
+        // The top-nav links show on desktop and are HIDDEN on a phone — no hamburger, no
+        // drawer (owner's call, 2026-10-19).
+        var azureLink = page.Locator("a.app-topbar-link[href='/azure']");
         if (isMobile)
-            await Assertions.Expect(page.Locator(".app-topbar-menu")).ToBeVisibleAsync();
+            await Assertions.Expect(azureLink).ToBeHiddenAsync();
         else
-            await Assertions.Expect(page.Locator("a.app-topbar-link[href='/azure']")).ToBeVisibleAsync();
+            await Assertions.Expect(azureLink).ToBeVisibleAsync();
         await Assertions.Expect(page.Locator(".app-portfolio-card").First).ToBeVisibleAsync();
         await CaptureAsync(page, $"01-home-{label}.png");
     }
@@ -430,26 +430,6 @@ public class PortfolioUiTests : IAsyncLifetime
         // --rz-primary must resolve to the app accent, not Radzen's stock #598087 teal.
         probe[2].Should().NotBeNullOrWhiteSpace("--rz-primary is unset");
         probe[2].Should().NotContain("598087", "the accent silently fell back to Radzen stock");
-    }
-
-    /// <summary>The mobile drawer must open on tap and close on Escape.</summary>
-    [Fact]
-    public async Task Mobile_TopbarDrawer_OpensOnTapAndClosesOnEscape()
-    {
-        var page = await NewPageAsync(390, 844, isMobile: true);
-        await page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
-        await page.WaitForSelectorAsync(".app-portfolio-card", new() { Timeout = 30_000 });
-
-        var trigger = page.Locator(".app-topbar-menu");
-        await Assertions.Expect(trigger).ToBeVisibleAsync();
-        await Assertions.Expect(trigger).ToHaveAttributeAsync("aria-expanded", "false");
-
-        await trigger.ClickAsync();
-        await Assertions.Expect(trigger).ToHaveAttributeAsync("aria-expanded", "true");
-        await Assertions.Expect(page.Locator("#app-topbar-drawer")).ToBeVisibleAsync();
-
-        await page.Keyboard.PressAsync("Escape");
-        await Assertions.Expect(trigger).ToHaveAttributeAsync("aria-expanded", "false");
     }
 
     /// <summary>WCAG relative-luminance contrast ratio between two computed CSS colours.</summary>

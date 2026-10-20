@@ -135,7 +135,6 @@
 
     /* ── Layering ───────────────────────────────────────────────────────────── */
     --app-z-header: 1000;
-    --app-z-drawer: 1010;
     --app-z-skip: 10000;
 
     /* Glassmorphism is reserved for chrome (the header). Applying it per-card created
@@ -1043,12 +1042,6 @@ a {
 
 .rz-header.nav-scrolled {
     box-shadow: var(--app-shadow-chrome-raised) !important;
-}
-
-/* The drawer overflows the pill; squaring the header's clip while it is open keeps
-   the panel edges from being sliced by the 999px radius. */
-body.topbar-open .rz-header {
-    border-radius: var(--app-radius-xl);
 }
 
 /* ── Radzen layout overrides ─────────────────────────────────────────────────

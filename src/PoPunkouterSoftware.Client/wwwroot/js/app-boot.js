@@ -56,9 +56,6 @@
     window.appNavStart = function () {
         var b = getBar(); if (!b) return;
         b.className = 'is-active';
-        // Close the mobile drawer once a navigation begins, otherwise it stays open
-        // across page changes and looks like a stuck overlay.
-        if (window.closeTopbarDrawer) window.closeTopbarDrawer();
     };
 
     window.appNavEnd = function () {
