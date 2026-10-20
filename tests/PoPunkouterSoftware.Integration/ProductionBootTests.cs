@@ -29,6 +29,10 @@ public sealed class ProductionApp : WebApplicationFactory<Program>
         Serilog.Log.Logger = Serilog.Core.Logger.None;
 
         builder.UseEnvironment("Production");
+        // Program.cs reads the vault URI while the builder is still being created — before
+        // the in-memory overrides below apply — so only UseSetting keeps this boot off the
+        // real kv-poshared (it was loading every secret in it through the dev's az login).
+        builder.UseSetting("KeyVault:Uri", "");
         builder.ConfigureAppConfiguration((_, cfg) => cfg.AddInMemoryCollection(
             new Dictionary<string, string?>
             {

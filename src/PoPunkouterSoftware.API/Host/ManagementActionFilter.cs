@@ -29,7 +29,10 @@ internal sealed class ManagementActionFilter : IEndpointFilter
                 detail: "Management actions are disabled in this environment.",
                 statusCode: StatusCodes.Status403Forbidden);
 
-        var adminKey = config["Security:ManagementApiKey"];
+        // The key is a Production gate only. A local Development run loads the whole shared
+        // vault through the developer's az login, key included, so honouring it there would
+        // 401 every local Rescan and hide the buttons.
+        var adminKey = env.IsProduction() ? config["Security:ManagementApiKey"] : null;
 
         // Fail closed in Production when the flag is on but no key is configured. Outside
         // Production the flag alone is the gate (local dev has no key and needs none), but a
@@ -42,8 +45,7 @@ internal sealed class ManagementActionFilter : IEndpointFilter
                 detail: "Management actions require Security:ManagementApiKey to be configured in Production.",
                 statusCode: StatusCodes.Status403Forbidden);
 
-        // Defence-in-depth: when a key is configured (e.g. via Key Vault in Production)
-        // callers must present it in X-Management-Key. No key configured → flag gate only.
+        // Production callers must present the key in X-Management-Key.
         if (!string.IsNullOrWhiteSpace(adminKey))
         {
             var presented = http.Request.Headers["X-Management-Key"].ToString();

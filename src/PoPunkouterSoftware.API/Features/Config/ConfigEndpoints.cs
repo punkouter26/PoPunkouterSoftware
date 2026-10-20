@@ -30,7 +30,13 @@ internal static class ConfigEndpoints
                 {
                     apiBase = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api",
                     isMockMode = env.IsEnvironment("Testing"),
-                    managementActionsEnabled = config.GetValue<bool>("FeatureFlags:EnableManagementActions", env.IsDevelopment() || env.IsEnvironment("Testing")),
+                    // "Can THIS browser use them", not "is the flag on": Production always demands
+                    // the management key, which the browser never holds, so there the Sync/Rescan
+                    // buttons could only answer 401. The flag stays on in Production for the
+                    // nightly uptime-scan workflow, which does hold the key.
+                    managementActionsEnabled =
+                        config.GetValue<bool>("FeatureFlags:EnableManagementActions", env.IsDevelopment() || env.IsEnvironment("Testing"))
+                        && !env.IsProduction(),
                 }))
             .WithName("GetConfig").WithTags("Config");
 

@@ -62,7 +62,12 @@ jobs:
           node-version: '22'
 
       - name: Install Playwright (Chromium only)
-        run: npx --yes playwright@1.49.0 install --with-deps chromium
+        # `npx playwright install` fetches the browser but leaves the package itself in the
+        # npx cache, where capture.mjs's `import 'playwright'` cannot resolve it (failed every
+        # night until 2026-10-20). Install the package into ./node_modules first.
+        run: |
+          npm install --no-save playwright@1.49.0
+          npx playwright install --with-deps chromium
 
       # The live portfolio is the source of truth for what has a card, so the capture set
       # cannot drift from the render set. Waking the site first: F1 has no Always-On, and a

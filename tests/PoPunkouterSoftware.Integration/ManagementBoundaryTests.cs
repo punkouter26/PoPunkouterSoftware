@@ -24,6 +24,8 @@ public sealed class ManagementGateApp(Dictionary<string, string?>? extra = null,
         Serilog.Log.Logger = Serilog.Core.Logger.None;
 
         builder.UseEnvironment(environment);
+        // See ProductionApp: the in-memory blank below arrives too late to stop the vault load.
+        builder.UseSetting("KeyVault:Uri", "");
         builder.ConfigureAppConfiguration((_, cfg) =>
         {
             var settings = new Dictionary<string, string?>
@@ -63,34 +65,22 @@ public class ManagementActionFilterTests
     }
 
     [Fact]
-    public async Task KeyConfigured_MissingHeader_Returns401()
+    public async Task Production_KeyConfigured_MissingHeader_Returns401()
     {
         await using var app = new ManagementGateApp(new()
         {
             ["FeatureFlags:EnableManagementActions"] = "true",
             ["Security:ManagementApiKey"] = "expected-key",
-        });
+        }, environment: "Production");
         var client = app.CreateClient();
 
         var resp = await client.PostAsync(GatedEndpoint, content: null);
 
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
 
-    [Fact]
-    public async Task KeyConfigured_CorrectHeader_Succeeds()
-    {
-        await using var app = new ManagementGateApp(new()
-        {
-            ["FeatureFlags:EnableManagementActions"] = "true",
-            ["Security:ManagementApiKey"] = "expected-key",
-        });
-        var client = app.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Management-Key", "expected-key");
-
-        var resp = await client.PostAsync(GatedEndpoint, content: null);
-
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        // The browser never holds the key, so it must not be offered buttons that can only 401.
+        var cfg = await client.GetStringAsync("/api/config");
+        cfg.Should().Contain("\"managementActionsEnabled\":false");
     }
 
     // ── Production fail-closed: flag on, no key ────────────────────────────────

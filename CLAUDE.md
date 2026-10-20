@@ -624,8 +624,12 @@ proves a context and program were created, not that anything reached the screen.
 - **Management gate.** Mutating/expensive endpoints (`/api/diag/refresh`, `/api/diag/cancel-refresh`,
   `/api/diag/restart/{name}` — the Restart button on Reliability rows of the priority queue)
   carry `.RequireManagementActions()`, which enforces `FeatureFlags:EnableManagementActions` (on in
-  Development/Testing, otherwise opt-in) plus an optional `Security:ManagementApiKey` via the
-  `X-Management-Key` header. `/api/diag/ai` is deliberately unprivileged.
+  Development/Testing, otherwise opt-in) plus, **in Production only**, `Security:ManagementApiKey`
+  via the `X-Management-Key` header (Key Vault `PoPunkouterSoftware--Security--ManagementApiKey`).
+  Production only because a local run loads the whole shared vault through `az login`, key
+  included, and would 401 its own Rescan. `/api/config` reports `managementActionsEnabled: false`
+  in Production whatever the flag says — the browser never holds the key. `/api/diag/ai` is
+  deliberately unprivileged.
   Restart resolves the site from the STORED report, never from the caller, so it can only touch
   a site the scan found; it starts a stopped site and restarts a running one. In Azure it also
   needs Website Contributor, which infra deliberately does not grant — it 403s cleanly there.
@@ -1062,8 +1066,15 @@ three tiers still run locally before a push.
   grid, and a report that only ever refreshed when a visitor happened to load one past the 12h
   staleness line. **A red scheduled workflow here means the dashboard has no data**, not that a
   nightly nicety was skipped. Check its run history before believing the grid.
+  It went red again until 2026-10-20 for the same reason; the flag is now `true` in
+  `appsettings.json` and the key is in both Key Vault and the GitHub secret (same value).
+  Integration hosts blank the vault with `UseSetting("KeyVault:Uri", "")` — an in-memory
+  override arrives after `Program.cs` reads the URI, so `ProductionBootTests` used to load the
+  real vault through the developer's login.
 - [screenshots.yml](.github/workflows/screenshots.yml) — nightly (04:40 UTC) Playwright capture of
-  every card's URL at 390×844, uploaded to the `app-screenshots` blob container under the host name
+  every card's URL at 390×844 (red every night until 2026-10-20: `npx playwright install` does not
+  make `import 'playwright'` resolvable — it `npm install`s the package first now), uploaded to the
+  `app-screenshots` blob container under the host name
   the card looks up. A second pass calls PageSpeed Insights (mobile; `PAGESPEED_API_KEY`
   optional) and MERGES the scores into `lighthouse.json` in the same container, which
   `AppScreenshotService.LoadScoresAsync` reads into `PortfolioApp.Scores` — the card's chips. Exists because in-process capture cannot run on the Windows F1 sandbox.
